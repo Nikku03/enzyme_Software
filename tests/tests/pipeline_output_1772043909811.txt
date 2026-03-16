@@ -1,0 +1,524 @@
+PIPELINE DECISION
+LOW_CONF_GO
+PASS
+Mode small_gas
+M2 PASS
+M3 PASS
+TopK 4
+WARNINGS
+Token inferred heuristically from input., W_SMALL_GAS_SUBSTRATE: binding/orientation control is difficult; success depends on trap/transfer mechanism., W_TARGET_AMBIGUOUS: Target bond resolution is low confidence; proceeding with top-ranked candidate. +1 more
+Job Type
+STANDARD_TRANSFORMATION
+Selected Bond
+1-4
+Primary Route
+metallo_transfer_CF3
+Difficulty
+HARD
+Compute Active
+false
+Scaffolds
+200
+SCIENTIFIC REPORT
+PI narrative summary
+- Hypothesis: metallo_transfer_CF3 on C-H
+- Evidence: token match=module_minus1 (match_count=1), route_conf=0.074, target_res=0.830, physics_prior=0.102
+- Next experiment: A3, A1, A5
+
+Decision summary
+- Decision: LOW_CONF_GO
+- Route: metallo_transfer_CF3
+- Target bond: C-H
+- Route confidence: 0.074
+- Target resolution: 0.830
+
+Substrate reactivity (Module -1)
+- Status: PASS
+- Primary constraint: NONE
+- Confidence prior: n/a
+- Bond type: ch
+
+Mechanism contract
+- Expected nucleophile: Either
+- Allowed geometries: n/a
+- Evidence status: UNVERIFIED (No nucleophile evidence from scaffold or PDB.)
+- Evidence residues: none
+- Match status: UNVERIFIED (No nucleophile evidence from scaffold or PDB.)
+
+Target resolution audit
+- match_count: 1
+- top_score: 0.400
+- score_gap: n/a
+- confidence: 0.830
+- ambiguous: True
+
+Score ledger summary
+- Module 0:
+  - physics_prior_target_specific: 0.102 probability
+  - route_confidence: 0.410 probability
+  - overall_signal: 0.034 probability
+- Module 1:
+  - access_score: 0.589 probability
+  - reach_score: 0.503 probability
+  - retention_score: 0.269 probability
+- Module 2:
+  - deltaG_base_kJ_per_mol: 109.204 kJ/mol
+  - deltaDeltaG_kJ_per_mol: -1.500 kJ/mol
+  - strain_kJ_per_mol: 1.500 kJ/mol
+- Module 3:
+  - plan_score: 0.043 probability
+  - plan_phys: 0.000 probability
+  - expected_signal: 0.015 fraction
+
+Physics audit
+- Baseline ΔG‡ (kJ/mol): 109.204
+- Baseline k_Eyring (s^-1): 4.59e-07
+- Baseline k_eff (s^-1): 2.29e-07
+- Variant ΔG‡ (kJ/mol): 110.704
+- Variant k (s^-1): 0.0000
+- Prior success (target-specific): 0.102
+
+Evidence summary
+- Data support: 0.000
+
+Key highlights
+- Reaction family: other
+- Leaving-group score: 0.050
+- Protonation factor: 0.500
+
+Top risks
+- Mechanism evidence unverified (no detected nucleophile)
+- Mechanism mismatch: No nucleophile evidence from scaffold or PDB.
+- Retention weak (mean=0.269)
+
+Why this score
+- Route confidence 0.07 below 0.60 (Route confidence below this indicates weak mechanistic support.)
+- Target resolution 0.83 below 0.85 (Target resolution below this indicates ambiguous bond selection.)
+- Retention 0.27 below 0.45 (Retention below this implies weak binding/orientation risk.)
+- Physics prior P=0.10, k_eff=2.29e-07 s^-1
+- Plan phys 0.00, SNR=0.7
+
+Next best actions
+- Run A3 (variant_disambiguation) at pH=7.5, temperature_c=25.0
+- Run A1 (baseline) at pH=7.5, temperature_c=25.0
+- Run A5 (stress_boundary) at pH=8.0, temperature_c=25.0
+Debug report
+PIPELINE HEALTH & INTERCONNECTION
+MODULE	STATUS	RESULT	ATTENTION
+Module -1	PASS	n/a	OK
+Module 0	LOW_CONF_GO	metallo_transfer_CF3	Route confidence low
+Module 1	PASS	Top 4 scaffolds	Retention weak
+Module 2	PASS	metalloenzyme_set_metallo_transfer_CF3_047	Model risk high
+Module 3	PASS	Plan 0.041 / Phys 0.000	OK
+Working now
+Module -1 reactivity: PASS (constraint: NONE)
+Routing accepted (LOW_CONF_GO)
+Bond resolved: 1-4
+Module 1 passed (4 scaffolds ranked)
+Module 2 selected metalloenzyme_set_metallo_transfer_CF3_047
+Negative control assigned
+Physics prior P=0.1
+Results snapshot
+Module -1: PASS (constraint: NONE)
+Route: metallo_transfer_CF3
+Module 1: PASS
+Module 2: metalloenzyme_set_metallo_transfer_CF3_047
+Module 3 arms: 5
+Neg control: A4
+Needs improvement
+Route confidence low
+Retention score low
+Why this score
+Route confidence 0.07 below 0.60 (Route confidence below this indicates weak mechanistic support.)
+Target resolution 0.83 below 0.85 (Target resolution below this indicates ambiguous bond selection.)
+Retention 0.27 below 0.45 (Retention below this implies weak binding/orientation risk.)
+Physics prior P=0.10, k_eff=2.29e-07 s^-1
+Plan phys 0.00, SNR=0.7
+Handoff checks
+OK M-1 → M0: resolved_target + selected candidates
+OK M0 → M1: selected_bond
+OK M1 → M2: top_scaffolds
+OK M2 → M3: module3_handoff
+OK Shared IO: condition_profile + telemetry
+CONDITION FLOW (SHARED IO)
+pH
+7.5
+Temp C
+25
+Ionic strength
+n/a
+Solvent
+n/a
+Cofactors
+n/a
+Run ID
+ca4b4735-4bdd-4470-ac82-549fa32e7d8e
+MODULE	GIVEN EFFECT	OPTIMUM	CONFIDENCE	RETRY
+Module 0	route P=0.41	pH 7-8.5, T 35-55C	0.41 (Low)	pH 7.62, T 35C
+Module 1	topology 0.39	pH 7.00, T 35.0C	0.39	pH 7.62, T 35C
+Module 2	k_pred 0.0000	pH 7.00, T 55.0C	0.31	pH 7.25, T 40C
+Module 3	Baseline activity under user conditions.	n/a	0.04	not_applicable
+SHARED IO DETAILS
+Trace
+module0, module-1, module1, module2, module3
+Bond Spec
+C-H
+Shared IO JSON
+EVIDENCE LOG (CLOSED LOOP)
+
+Per-module datapoints recorded for this run.
+
+Load
+Download
+Run ID: ca4b4735-4bdd-4470-ac82-549fa32e7d8e
+No evidence loaded yet.
+CONFIDENCE
+Route confidence
+0.07 (7%)
+Target resolution
+0.83 (83%)
+Wetlab (target)
+0.10 (10%)
+Overall signal
+0.01 (1%)
+Wet-lab priors are shown for context, not gating.
+INTENT & ROUTING
+Requested Output
+n/a
+Intent Type
+other
+Intent Conf
+0.30
+Requires Trap
+false
+Mechanism route
+Primary: metallo_transfer_CF3
+Secondary: P450, radical_SAM, non_heme_iron
+Mechanisms: CF3_generation_and_trapping, metal-CF3 transfer + trapping, C-H activation
+Expert tracks
+metallo_transfer_CF3 (weight 0.9, required true)
+oxidative_activation (weight 0.9, required true)
+radical_SAM (weight 0.7, required false)
+radical_activation (weight 0.6, required false)
+Success definition
+Any activity: Detectable conversion or substrate turnover under plausible conditions.
+Target specific: Product-specific conversion consistent with requested transformation under plausible conditions; not optimized for industrial yield.
+MECHANISM CONTRACT
+Route ID
+metallo_transfer_CF3
+Reaction family
+other
+Expected nucleophile
+Either
+Allowed geometries
+n/a
+Policy
+KEEP_WITH_PENALTY
+Mechanism match
+Status: UNVERIFIED
+Expected: Either
+Observed: n/a
+Penalty: n/a
+UNITY ARBITRATION
+Stage
+module3
+Recommendation
+review_required
+Penalty
+0.300
+Hard veto
+true
+Weights
+physics: 0.406
+chem: 0.130
+bio: 0.290
+math: 0.174
+MODULE 0 PHYSICS AUDIT
+Temp K
+298.15
+DeltaG_dagger (kJ/mol)
+109.20
+Eyring k (s^-1)
+4.587e-07
+Horizon (s)
+3600
+Prior success P
+0.102
+
+Physics-based prior when historical routing data is sparse.
+
+TARGET RESOLUTION
+Selection Mode
+token
+Canonical Token
+c-h
+Match Count
+1
+Candidate Mode
+n/a
+Scanned Bonds
+n/a
+Candidate Matches
+n/a
+Selected bond
+Bond
+1-4
+Role
+unknown
+Role Conf
+0.40
+BOND	ROLE	SCORE	STATUS
+1-4	unknown	0.40	Selected
+Candidate bond JSON
+MODULE -1 SRE
+Status
+PASS
+Bond Type
+n/a
+Primary Role
+n/a
+Constraint
+NONE
+Confidence
+n/a
+Cache
+Miss
+Attack sites
+Electrophile
+n/a
+Leaving
+n/a
+Stabilizable
+n/a
+Eligibility
+Serine hydrolase
+n/a
+Competition
+Gap
+n/a
+Best other idx
+n/a
+Best other score
+n/a
+Equivalent sites
+n/a
+Constraint flags
+Flags
+None
+Candidate sites
+No candidate sites available.
+Route bias
+Prefer
+None
+Discourage
+None
+Strength
+n/a
+SRE CPT SIGNALS
+CPT	DELTA	DIRECTION	METHOD
+None
+Delta uses relative CPT scale; see raw JSON for detail.
+STRUCTURE CONTEXT
+Atoms
+4
+Heavy Atoms
+4
+Rings
+0
+Hetero Atoms
+3
+Bond Class
+CH_fluorinated
+Bond Type
+C-H
+Size proxies
+Approx radius
+1.20
+Approx volume
+7.24
+Min diameter
+2.40
+Bond center hint
+Atoms
+1, 4
+Anchor
+c-h
+Functional groups
+halide: 3
+alkyl_halide: 3
+COMPUTE & CONSTRAINTS
+Scaffolds
+200
+TopoGate
+strict
+QM
+qm-lite
+MD
+staged
+Review
+true
+Active
+false
+pH Min
+7
+pH Max
+8
+Temp C
+25
+Metals
+true
+Oxidation
+true
+Host
+n/a
+Assumptions
+metals_allowed default true
+oxidation_allowed default true
+constraints defaulted from route
+MODULE 1 SUMMARY
+Status
+PASS
+Mode
+small_gas
+Weights
+access 0.15, reach 0.50, retention 0.35
+Cache Hits
+0
+Cache Misses
+200
+Cache Size
+1168
+SCAFFOLD	TOTAL	ACCESS	REACH	RETENTION
+metalloenzyme_set_metallo_transfer_CF3_047	0.421	0.685	0.498	0.261
+metalloenzyme_set_radical_SAM_032	0.334	0.711	0.473	0.204
+metalloenzyme_set_metallo_transfer_CF3_059	0.343	0.478	0.413	0.238
+metalloenzyme_set_metallo_transfer_CF3_067	0.219	0.544	0.208	0.227
+Showing top 4 scaffolds.
+Physics audit
+Temp K
+298.15
+DeltaE model (kJ/mol)
+10.42
+Boltz mean
+0.016
+Boltz min/max
+0.007–0.029
+Diffusion cap
+1000000000.0000
+Rejected scaffolds
+MODULE 2 SUMMARY
+Status
+PASS
+Selected Scaffold
+metalloenzyme_set_metallo_transfer_CF3_047
+Adjusted Score
+0.000
+Retention Risk
+MEDIUM
+Nucleophile Geo
+n/a
+Best Variant
+Polar anchor (carboxylate)
+Mechanism Consistency
+Primary hypothesis: Either nucleophile Mechanism match: UNVERIFIED (penalty applied: 1.5 kJ/mol)
+Objective
+
+Improve retention without breaking access or reach.
+
+Selection rationale
+
+Selected metalloenzyme_set_metallo_transfer_CF3_047 with ranking score 1e-05. Predicted k_mean=0.00002 (CI90 0.00000-0.00001) using Eyring ranking. Retention penalty applied (MEDIUM retention risk).
+
+Retention penalty reasons
+MEDIUM retention risk
+Physics audit
+DeltaG_dagger base (kJ/mol)
+109.20
+DeltaDeltaG_dagger (kJ/mol)
+-1.50
+Strain (kJ/mol)
+1.50
+DeltaG_dagger variant (kJ/mol)
+110.70
+k variant (s^-1)
+0.0000
+Module 2 warnings
+W_DECISION_LOW_CONF_GO: proceeding with caution.
+W_INTENT_UNRECOGNIZED: intent type not explicitly supported.
+W_MECH_UNVERIFIED: No nucleophile evidence from scaffold or PDB. (confidence penalty 0.10).
+Module 2 errors
+None
+VARIANT PROPOSALS
+VARIANT	SCORE	MUTATIONS	RATIONALE
+Polar anchor (carboxylate)	0.000	{"target_role":"polar_anchor","preferred_residues":["Arg","Lys","His"],"note":"anchor deprotonated carboxylate"}	Carboxylate is negative at pH 6.5–8; add a cationic anchor.
+Hydrophobic clamp	0.000	{"target_role":"pocket_lining","preferred_residues":["Phe","Tyr","Leu","Ile"],"note":"hydrophobic clamp near aromatic ring"}	Retention weakness; add hydrophobic wall for ring packing.
+Baseline	0.000	None	Used as control for downstream comparisons.
+Oxyanion hole strengthening	0.000	{"target_role":"oxyanion_hole","preferred_residues":["Ser","Thr","Asn","Gln"],"note":"strengthen tetrahedral intermediate stabilization"}	Improve stabilization of the tetrahedral intermediate.
+pH tuning bundle	0.000	{"target_role":"general_base","preferred_residues":["His","Asp"],"note":"add His-Asp dyad to tune pKa"}	pH tuning to activate catalytic residues under fixed conditions.
+Module 3 handoff
+MODULE 3 EXPERIMENT PLAN
+Status
+PASS
+Batch ID
+1195ec73-f7e8-49dc-bdac-2ec98bec0d10
+Plan Score
+0.041
+Plan Phys
+0.000
+QC Status
+N/A
+Learning
+PLANNED
+Arms
+5
+Baseline expected outcome
+
+Baseline activity under user conditions.
+
+Baseline conditions
+
+pH 7.50, T 25.0C
+
+Arms
+A3 • variant_disambiguation • Polar anchor (carboxylate) vs Hydrophobic clamp • pH 7.50, T 25.0C
+A1 • baseline • Polar anchor (carboxylate) • pH 7.50, T 25.0C
+A5 • stress_boundary • Polar anchor (carboxylate) • pH 8.00, T 25.0C
+A4 • negative_control • no_enzyme • pH 7.50, T 25.0C
+A2 • improved_conditions • Polar anchor (carboxylate) • pH 7.25, T 40.0C
+Information gain notes
+total_eig=0.160288
+Physics audit
+Horizon (s)
+3600
+Expected signal
+0.015
+Noise floor
+0.020
+SNR
+0.73
+Protocol card
+MODULE 3 QC
+QC Status
+N/A
+Records
+5
+Router Updates
+0
+QC reasons
+None
+Module 3 JSON
+DIAGNOSTICS
+Required next input
+None
+Protonation flags
+None
+Descriptor status
+None
+DATA QUALITY
+Warnings
+Token inferred heuristically from input.
+W_SMALL_GAS_SUBSTRATE: binding/orientation control is difficult; success depends on trap/transfer mechanism.
+W_TARGET_AMBIGUOUS: Target bond resolution is low confidence; proceeding with top-ranked candidate.
+W_UNITY_ARBITRATION_VETO: cross-domain conflict detected.
+Errors
+None

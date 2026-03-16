@@ -1,0 +1,14 @@
+{
+  "case_id": "no_ch_available",
+  "input": {
+    "smiles": "FC(F)(F)C(F)(F)F",
+    "target_bond": "C-H"
+  },
+  "expect": {
+    "decision_in": ["NO_GO", "HALT_NEED_SELECTION"],
+    "halt_reason_in": ["M0_NO_MATCH", "M0_TARGET_RESOLUTION_LOW", "M0_TARGET_CLARIFICATION_REQUIRED"],
+    "module_minus1_status": "FAIL",
+    "exact_match_count": 0,
+    "module_minus1_track": "radical_hat"
+  }
+}

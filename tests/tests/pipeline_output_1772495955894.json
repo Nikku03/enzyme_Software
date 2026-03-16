@@ -1,0 +1,380 @@
+{
+  "validation_report": {
+    "version": "layer4_validation.v1",
+    "total": 12,
+    "passed": 10,
+    "failed": 2,
+    "errors": 0,
+    "templates": 0,
+    "cases": [
+      {
+        "case_id": "val_p450bm3_propane",
+        "title": "P450-BM3 propane hydroxylation",
+        "status": "pass",
+        "checks": [
+          {
+            "check": "route",
+            "expected": [
+              "P450",
+              "non_heme_iron"
+            ],
+            "got": "non_heme_iron",
+            "pass": true
+          },
+          {
+            "check": "decision",
+            "expected": [
+              "LOW_CONF_GO",
+              "NO_GO",
+              "GO"
+            ],
+            "got": "LOW_CONF_GO",
+            "pass": true
+          },
+          {
+            "check": "kcat_magnitude",
+            "expected_log10_range": [
+              -2,
+              0
+            ],
+            "got_log10": -0.29,
+            "got_kcat": 0.5169610299474594,
+            "pass": true
+          }
+        ],
+        "observed": {
+          "route": "non_heme_iron",
+          "decision": "LOW_CONF_GO",
+          "predicted_kcat_s_inv": 0.5169610299474594
+        }
+      },
+      {
+        "case_id": "val_p450bm3_toluene",
+        "title": "P450-BM3 toluene benzylic hydroxylation",
+        "status": "pass",
+        "checks": [
+          {
+            "check": "route",
+            "expected": [
+              "P450",
+              "non_heme_iron"
+            ],
+            "got": "non_heme_iron",
+            "pass": true
+          },
+          {
+            "check": "kcat_magnitude",
+            "expected_log10_range": [
+              -1,
+              2
+            ],
+            "got_log10": 1.99,
+            "got_kcat": 96.98530671668722,
+            "pass": true
+          }
+        ],
+        "observed": {
+          "route": "non_heme_iron",
+          "decision": "LOW_CONF_GO",
+          "predicted_kcat_s_inv": 96.98530671668722
+        }
+      },
+      {
+        "case_id": "val_p450cam_camphor",
+        "title": "P450cam camphor hydroxylation",
+        "status": "fail",
+        "checks": [
+          {
+            "check": "route",
+            "expected": [
+              "P450"
+            ],
+            "got": "non_heme_iron",
+            "pass": false
+          },
+          {
+            "check": "kcat_magnitude",
+            "expected_log10_range": [
+              0,
+              2
+            ],
+            "got_log10": 0.4,
+            "got_kcat": 2.5082700703806173,
+            "pass": true
+          }
+        ],
+        "observed": {
+          "route": "non_heme_iron",
+          "decision": "LOW_CONF_GO",
+          "predicted_kcat_s_inv": 2.5082700703806173
+        }
+      },
+      {
+        "case_id": "val_subtilisin_ester_amide",
+        "title": "Subtilisin amide hydrolysis",
+        "status": "pass",
+        "checks": [
+          {
+            "check": "route",
+            "expected": [
+              "serine_hydrolase",
+              "metallo_esterase"
+            ],
+            "got": "serine_hydrolase",
+            "pass": true
+          },
+          {
+            "check": "kcat_magnitude",
+            "expected_log10_range": [
+              -1,
+              1
+            ],
+            "got_log10": -0.3,
+            "got_kcat": 0.5,
+            "pass": true
+          }
+        ],
+        "observed": {
+          "route": "serine_hydrolase",
+          "decision": "LOW_CONF_GO",
+          "predicted_kcat_s_inv": 0.5
+        }
+      },
+      {
+        "case_id": "val_cutinase_ester",
+        "title": "Cutinase ester hydrolysis",
+        "status": "pass",
+        "checks": [
+          {
+            "check": "route",
+            "expected": [
+              "serine_hydrolase"
+            ],
+            "got": "serine_hydrolase",
+            "pass": true
+          },
+          {
+            "check": "kcat_magnitude",
+            "expected_log10_range": [
+              0,
+              2
+            ],
+            "got_log10": 1.7,
+            "got_kcat": 50,
+            "pass": true
+          }
+        ],
+        "observed": {
+          "route": "serine_hydrolase",
+          "decision": "LOW_CONF_GO",
+          "predicted_kcat_s_inv": 50
+        }
+      },
+      {
+        "case_id": "val_calb_resolution",
+        "title": "CalB kinetic resolution substrate",
+        "status": "pass",
+        "checks": [
+          {
+            "check": "route",
+            "expected": [
+              "serine_hydrolase"
+            ],
+            "got": "serine_hydrolase",
+            "pass": true
+          },
+          {
+            "check": "kcat_magnitude",
+            "expected_log10_range": [
+              0,
+              2
+            ],
+            "got_log10": 1.7,
+            "got_kcat": 50,
+            "pass": true
+          }
+        ],
+        "observed": {
+          "route": "serine_hydrolase",
+          "decision": "LOW_CONF_GO",
+          "predicted_kcat_s_inv": 50
+        }
+      },
+      {
+        "case_id": "val_dhaa_dce",
+        "title": "DhaA 1,2-dichloroethane",
+        "status": "pass",
+        "checks": [
+          {
+            "check": "route",
+            "expected": [
+              "haloalkane_dehalogenase"
+            ],
+            "got": "haloalkane_dehalogenase",
+            "pass": true
+          },
+          {
+            "check": "kcat_magnitude",
+            "expected_log10_range": [
+              -2,
+              1
+            ],
+            "got_log10": 1,
+            "got_kcat": 10,
+            "pass": true
+          }
+        ],
+        "observed": {
+          "route": "haloalkane_dehalogenase",
+          "decision": "LOW_CONF_GO",
+          "predicted_kcat_s_inv": 10
+        }
+      },
+      {
+        "case_id": "val_linb_chlorobutane",
+        "title": "LinB 1-chlorobutane",
+        "status": "pass",
+        "checks": [
+          {
+            "check": "route",
+            "expected": [
+              "haloalkane_dehalogenase"
+            ],
+            "got": "haloalkane_dehalogenase",
+            "pass": true
+          },
+          {
+            "check": "kcat_magnitude",
+            "expected_log10_range": [
+              -1,
+              1
+            ],
+            "got_log10": 1,
+            "got_kcat": 10,
+            "pass": true
+          }
+        ],
+        "observed": {
+          "route": "haloalkane_dehalogenase",
+          "decision": "LOW_CONF_GO",
+          "predicted_kcat_s_inv": 10
+        }
+      },
+      {
+        "case_id": "val_taud_taurine",
+        "title": "TauD taurine hydroxylation",
+        "status": "fail",
+        "checks": [
+          {
+            "check": "route",
+            "expected": [
+              "non_heme_iron",
+              "P450"
+            ],
+            "got": "non_heme_iron",
+            "pass": true
+          },
+          {
+            "check": "kcat_magnitude",
+            "expected_log10_range": [
+              0,
+              1
+            ],
+            "got_log10": 1.88,
+            "got_kcat": 76.1350509018342,
+            "pass": false
+          }
+        ],
+        "observed": {
+          "route": "non_heme_iron",
+          "decision": "LOW_CONF_GO",
+          "predicted_kcat_s_inv": 76.1350509018342
+        }
+      },
+      {
+        "case_id": "val_cf3h_impossible",
+        "title": "CF3-H activation is very difficult",
+        "status": "pass",
+        "checks": [
+          {
+            "check": "decision",
+            "expected": [
+              "NO_GO",
+              "LOW_CONF_GO"
+            ],
+            "got": "LOW_CONF_GO",
+            "pass": true
+          },
+          {
+            "check": "kcat_magnitude",
+            "expected_log10_range": [
+              -4,
+              -2
+            ],
+            "got_log10": -2.66,
+            "got_kcat": 0.0021967403106407423,
+            "pass": true
+          }
+        ],
+        "observed": {
+          "route": "metallo_transfer_CF3",
+          "decision": "LOW_CONF_GO",
+          "predicted_kcat_s_inv": 0.0021967403106407423
+        }
+      },
+      {
+        "case_id": "val_perfluorooctane_impossible",
+        "title": "Perfluorooctane has no C-H",
+        "status": "pass",
+        "checks": [
+          {
+            "check": "decision",
+            "expected": [
+              "NO_GO",
+              "HALT_NEED_SELECTION"
+            ],
+            "got": "NO_GO",
+            "pass": true
+          }
+        ],
+        "observed": {
+          "route": "n/a",
+          "decision": "NO_GO",
+          "predicted_kcat_s_inv": null
+        }
+      },
+      {
+        "case_id": "val_aspirin_ester",
+        "title": "Aspirin ester hydrolysis",
+        "status": "pass",
+        "checks": [
+          {
+            "check": "route",
+            "expected": [
+              "serine_hydrolase"
+            ],
+            "got": "serine_hydrolase",
+            "pass": true
+          },
+          {
+            "check": "kcat_magnitude",
+            "expected_log10_range": [
+              0,
+              2
+            ],
+            "got_log10": 2,
+            "got_kcat": 100,
+            "pass": true
+          }
+        ],
+        "observed": {
+          "route": "serine_hydrolase",
+          "decision": "LOW_CONF_GO",
+          "predicted_kcat_s_inv": 100
+        }
+      }
+    ]
+  },
+  "selected_case_count": 12,
+  "template_only": false
+}

@@ -1,0 +1,16 @@
+{
+  "case_id": "cysteine_hetero_rich",
+  "input": {
+    "smiles": "O=C(O)C(N)CS",
+    "target_bond": "C-H"
+  },
+  "expect": {
+    "decision_in": ["GO", "LOW_CONF_GO"],
+    "module_minus1_status": "PASS",
+    "min_match_count": 1,
+    "route_in": ["P450", "non_heme_iron"],
+    "enzyme_family_in": ["cytochrome_P450", "non_heme_iron_oxygenase"],
+    "module_minus1_track": "radical_hat",
+    "resolution_policy_prefix": "lowest_BDE_auto"
+  }
+}

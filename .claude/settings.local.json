@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(PYTHONPATH=/Users/deepika/Desktop/books/enzyme_Software/src:$PYTHONPATH python:*)",
+      "Bash(PYTHONPATH=src python:*)",
+      "Bash(python3:*)",
+      "Bash(conda env:*)",
+      "Bash(pip3 list:*)",
+      "Read(//Users/deepika/anaconda3/**)",
+      "Bash(conda activate enzyme_software)",
+      "Bash(/Users/deepika/anaconda3/envs/bondbreak/bin/python:*)",
+      "Bash(PYTHONPATH=src /Users/deepika/anaconda3/envs/bondbreak/bin/python:*)"
+    ]
+  }
+}

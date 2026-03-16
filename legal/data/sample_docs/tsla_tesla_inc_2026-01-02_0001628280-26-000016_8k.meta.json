@@ -1,0 +1,12 @@
+{
+  "ticker": "TSLA",
+  "company_name": "Tesla Inc",
+  "cik": 1318605,
+  "form": "8-K",
+  "filing_date": "2026-01-02",
+  "acceptance_datetime": "2026-01-02T14:20:13.000Z",
+  "accession_number": "0001628280-26-000016",
+  "primary_document": "tsla-20260102.htm",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026000016/0001628280-26-000016.txt",
+  "saved_file": "legal/data/sample_docs/tsla_tesla_inc_2026-01-02_0001628280-26-000016_8k.txt"
+}

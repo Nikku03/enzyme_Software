@@ -1,0 +1,12 @@
+{
+  "ticker": "AMZN",
+  "company_name": "Amazon.com Inc",
+  "cik": 1018724,
+  "form": "8-K",
+  "filing_date": "2025-11-20",
+  "acceptance_datetime": "2025-11-20T22:00:42.000Z",
+  "accession_number": "0001104659-25-114647",
+  "primary_document": "tm2530638d3_8k.htm",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/1018724/000110465925114647/0001104659-25-114647.txt",
+  "saved_file": "legal/data/sample_docs/amzn_amazon_com_inc_2025-11-20_0001104659-25-114647_8k.txt"
+}

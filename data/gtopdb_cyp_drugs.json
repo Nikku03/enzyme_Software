@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "source": "Guide to Pharmacology",
+    "url": "https://www.guidetopharmacology.org/",
+    "total_drugs": 1,
+    "cyp_distribution": {
+      "CYP2C9": 1
+    }
+  },
+  "drugs": [
+    {
+      "name": "voxelotor",
+      "smiles": "O=Cc1c(cccc1O)OCc1cccnc1c1ccnn1C(C)C",
+      "primary_cyp": "CYP2C9",
+      "source": "GtoPdb",
+      "confidence": "validated",
+      "cyp_label_source": "GtoPdb",
+      "interaction_type": "Inhibitor",
+      "interaction_action": "Inhibition"
+    }
+  ]
+}

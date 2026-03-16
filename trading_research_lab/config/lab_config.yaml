@@ -1,0 +1,62 @@
+lab:
+  maintenance_mode: false
+  random_seed: 42
+  default_source: stooq
+  default_symbols: ["SPY", "QQQ"]
+  default_start: "2010-01-01"
+
+data_vault:
+  root: "artifacts/datasets"
+  processed_format: "parquet"
+
+backtest:
+  fee_bps: 1.0
+  slippage_bps: 2.0
+  execution_delay: 1
+  stress:
+    slippage_bps: 5.0
+    delay: 2
+  walkforward:
+    train_days: 756
+    val_days: 252
+    test_days: 252
+    step_days: 252
+
+min_trades: 5
+
+scoring:
+  cagr_weight: 1.0
+  max_drawdown_weight: 0.7
+  cost_sensitivity_weight: 0.2
+  low_trade_weight: 0.1
+
+loop:
+  max_history: 10
+  stagnation_limit: 2
+  pivot_change_dimensions: 2
+  iterations: 10
+  universe_subsets:
+    - ["SPY", "QQQ"]
+    - ["SPY"]
+    - ["QQQ"]
+
+strategies:
+  families: ["sma_crossover", "breakout", "mean_reversion"]
+  sma_crossover:
+    short_window: 20
+    long_window: 50
+  breakout:
+    lookback: 20
+  mean_reversion:
+    lookback: 20
+    entry_z: 1.0
+    exit_z: 0.2
+
+risk:
+  sizing: "fixed"
+  sizing_options: ["fixed", "volatility"]
+
+timeframes: ["daily", "weekly"]
+
+entry_exit:
+  styles: ["standard", "aggressive"]

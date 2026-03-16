@@ -1,0 +1,17 @@
+{
+  "case_id": "oh_bond",
+  "input": {
+    "smiles": "CCO",
+    "target_bond": "O-H"
+  },
+  "expect": {
+    "decision_in": ["GO", "LOW_CONF_GO"],
+    "module_minus1_status": "PASS",
+    "min_match_count": 1,
+    "route_in": ["copper_radical_oxidase", "P450", "monooxygenase"],
+    "enzyme_family_in": ["cytochrome_P450", "metalloenzyme_radical", "non_heme_iron_oxygenase", "unknown"],
+    "module_minus1_track": "radical_hat",
+    "variant_label_not_contains": ["Oxyanion", "hydrolysis"],
+    "physics_non_null_fields": ["bond_length_A", "coulomb_energy_kj_mol", "polarization_ratio"]
+  }
+}

@@ -1,0 +1,518 @@
+PIPELINE DECISION
+LOW_CONF_GO
+PASS
+Mode small_gas
+M2 PASS
+M3 PASS
+TopK 5
+Job Type
+STANDARD_TRANSFORMATION
+Selected Bond
+1-3
+Primary Route
+serine_hydrolase
+Difficulty
+EASY
+Compute Active
+true
+Scaffolds
+60
+SCIENTIFIC REPORT
+PI narrative summary
+- Hypothesis: serine_hydrolase on ester__acyl_o
+- Evidence: token match=smarts (match_count=1), route_conf=0.405, target_res=0.930, physics_prior=0.351
+- Next experiment: A4, A5, A1
+
+Decision summary
+- Decision: LOW_CONF_GO
+- Route: serine_hydrolase
+- Target bond: ester__acyl_o
+- Route confidence: 0.405
+- Target resolution: 0.930
+
+Substrate reactivity (Module -1)
+- Status: FAIL
+- Primary constraint: NONE
+- Confidence prior: n/a
+- Bond type: None
+
+Mechanism contract
+- Expected nucleophile: Ser
+- Allowed geometries: serine_og
+- Evidence status: UNVERIFIED (No nucleophile evidence from scaffold or PDB.)
+- Evidence residues: none
+- Match status: UNVERIFIED (No detected nucleophile from scaffold residues.)
+
+Target resolution audit
+- match_count: 1
+- top_score: 0.900
+- score_gap: n/a
+- confidence: 0.930
+- ambiguous: False
+
+Score ledger summary
+- Module 0:
+  - physics_prior_target_specific: 0.351 probability
+  - route_confidence: 0.770 probability
+  - overall_signal: 0.451 probability
+- Module 1:
+  - access_score: 0.576 probability
+  - reach_score: 0.542 probability
+  - retention_score: 0.251 probability
+- Module 2:
+  - deltaG_base_kJ_per_mol: 87.560 kJ/mol
+  - deltaDeltaG_kJ_per_mol: -2.000 kJ/mol
+  - strain_kJ_per_mol: 1.500 kJ/mol
+- Module 3:
+  - plan_score: 0.302 probability
+  - plan_phys: 0.400 probability
+  - expected_signal: 0.439 fraction
+
+Physics audit
+- Baseline ΔG‡ (kJ/mol): 87.560
+- Baseline k_Eyring (s^-1): 0.0052
+- Baseline k_eff (s^-1): 0.0026
+- Variant ΔG‡ (kJ/mol): 87.060
+- Variant k (s^-1): 0.0032
+- Prior success (target-specific): 0.351
+
+Evidence summary
+- Data support: 0.000
+
+Key highlights
+- Reaction family: hydrolysis
+- Leaving-group score: 0.800
+- Protonation factor: 0.500
+
+Top risks
+- Mechanism evidence unverified (no detected nucleophile)
+- Mechanism mismatch: No detected nucleophile from scaffold residues.
+- Retention weak (mean=0.251)
+
+Why this score
+- Route confidence 0.41 below 0.60 (Route confidence below this indicates weak mechanistic support.)
+- Target resolution 0.93 above 0.85 (Target resolution below this indicates ambiguous bond selection.)
+- Retention 0.25 below 0.45 (Retention below this implies weak binding/orientation risk.)
+- Physics prior P=0.35, k_eff=2.59e-03 s^-1
+- Plan phys 0.40, SNR=22.0
+
+Next best actions
+- Run A4 (negative_control) at pH=7.25, temperature_c=30.0
+- Run A5 (stress_boundary) at pH=8.0, temperature_c=30.0
+- Run A1 (baseline) at pH=7.25, temperature_c=30.0
+Debug report
+PIPELINE HEALTH & INTERCONNECTION
+MODULE	STATUS	RESULT	ATTENTION
+Module -1	FAIL	n/a	Errors in SRE
+Module 0	LOW_CONF_GO	serine_hydrolase	Route confidence low
+Module 1	PASS	Top 5 scaffolds	Retention weak
+Module 2	PASS	scaffold_lib_serine_hydrolase_v1_scaffold_015	OK
+Module 3	PASS	Plan 0.287 / Phys 0.400	OK
+Working now
+Routing accepted (LOW_CONF_GO)
+Bond resolved: 1-3
+Module 1 passed (5 scaffolds ranked)
+Module 2 selected scaffold_lib_serine_hydrolase_v1_scaffold_015
+Negative control assigned
+Physics prior P=0.35
+Results snapshot
+Module -1: FAIL (constraint: NONE)
+Route: serine_hydrolase
+Module 1: PASS
+Module 2: scaffold_lib_serine_hydrolase_v1_scaffold_015
+Module 3 arms: 5
+Neg control: A4
+Needs improvement
+Route confidence low
+Retention score low
+Why this score
+Route confidence 0.41 below 0.60 (Route confidence below this indicates weak mechanistic support.)
+Target resolution 0.93 above 0.85 (Target resolution below this indicates ambiguous bond selection.)
+Retention 0.25 below 0.45 (Retention below this implies weak binding/orientation risk.)
+Physics prior P=0.35, k_eff=2.59e-03 s^-1
+Plan phys 0.40, SNR=22.0
+Handoff checks
+OK M-1 → M0: resolved_target + selected candidates
+OK M0 → M1: selected_bond
+OK M1 → M2: top_scaffolds
+OK M2 → M3: module3_handoff
+OK Shared IO: condition_profile + telemetry
+CONDITION FLOW (SHARED IO)
+pH
+7.25
+Temp C
+30
+Ionic strength
+n/a
+Solvent
+n/a
+Cofactors
+n/a
+Run ID
+78254d4b-fa24-4993-867d-56a0358b15b1
+MODULE	GIVEN EFFECT	OPTIMUM	CONFIDENCE	RETRY
+Module 0	route P=0.77	pH 6.5-8, T 25-37C	0.77 (Low)	Close to optimum
+Module 1	topology 0.41	pH 6.50, T 25.0C	0.41	Close to optimum
+Module 2	k_pred 2.0109	pH 6.50, T 37.0C	0.59	pH 6.88, T 33.5C
+Module 3	Baseline activity under user conditions.	n/a	0.30	not_applicable
+SHARED IO DETAILS
+Trace
+module0, module-1, module1, module2, module3
+Bond Spec
+ester__acyl_o
+Shared IO JSON
+EVIDENCE LOG (CLOSED LOOP)
+
+Per-module datapoints recorded for this run.
+
+Load
+Download
+Run ID: 78254d4b-fa24-4993-867d-56a0358b15b1
+No evidence loaded yet.
+CONFIDENCE
+Route confidence
+0.41 (41%)
+Target resolution
+0.93 (93%)
+Wetlab (target)
+0.63 (63%)
+Overall signal
+0.24 (24%)
+Wet-lab priors are shown for context, not gating.
+INTENT & ROUTING
+Requested Output
+n/a
+Intent Type
+hydrolysis
+Intent Conf
+0.65
+Requires Trap
+false
+Mechanism route
+Primary: serine_hydrolase
+Secondary: metallo_esterase
+Mechanisms: acyl-oxygen hydrolysis
+Expert tracks
+serine_hydrolase (weight 0.9, required false)
+metallo_esterase (weight 0.4, required false)
+Success definition
+Any activity: Detectable conversion or substrate turnover under plausible conditions.
+Target specific: Product-specific conversion consistent with requested transformation under plausible conditions; not optimized for industrial yield.
+MECHANISM CONTRACT
+Route ID
+serine_hydrolase
+Reaction family
+hydrolysis
+Expected nucleophile
+Ser
+Allowed geometries
+serine_og
+Policy
+KEEP_WITH_PENALTY
+Mechanism match
+Status: UNVERIFIED
+Expected: Ser
+Observed: n/a
+Penalty: n/a
+UNITY ARBITRATION
+Stage
+module3
+Recommendation
+monitor
+Penalty
+0.100
+Hard veto
+false
+Weights
+physics: 0.406
+chem: 0.130
+bio: 0.290
+math: 0.174
+MODULE 0 PHYSICS AUDIT
+Temp K
+303.15
+DeltaG_dagger (kJ/mol)
+87.56
+Eyring k (s^-1)
+0.0052
+Horizon (s)
+3600
+Prior success P
+0.351
+
+Physics-based prior when historical routing data is sparse.
+
+TARGET RESOLUTION
+Selection Mode
+token
+Canonical Token
+ester__acyl_o
+Match Count
+1
+Candidate Mode
+token
+Scanned Bonds
+6
+Candidate Matches
+1
+Selected bond
+Bond
+1-3
+Role
+ester__acyl_o
+Role Conf
+0.90
+BOND	ROLE	SCORE	STATUS
+1-3	ester__acyl_o	0.90	Selected
+Candidate bond JSON
+MODULE -1 SRE
+Status
+FAIL
+Bond Type
+n/a
+Primary Role
+n/a
+Constraint
+NONE
+Confidence
+n/a
+Cache
+Miss
+Attack sites
+Electrophile
+n/a
+Leaving
+n/a
+Stabilizable
+n/a
+Eligibility
+Serine hydrolase
+n/a
+Competition
+Gap
+n/a
+Best other idx
+n/a
+Best other score
+n/a
+Equivalent sites
+n/a
+Constraint flags
+Flags
+None
+Candidate sites
+No candidate sites available.
+Route bias
+Prefer
+None
+Discourage
+None
+Strength
+n/a
+Module -1 notes
+Error: no target specified for bond resolution
+SRE CPT SIGNALS
+CPT	DELTA	DIRECTION	METHOD
+None
+Delta uses relative CPT scale; see raw JSON for detail.
+STRUCTURE CONTEXT
+Atoms
+5
+Heavy Atoms
+5
+Rings
+0
+Hetero Atoms
+2
+Bond Class
+ester
+Bond Type
+ester
+Size proxies
+Approx radius
+1.20
+Approx volume
+7.24
+Min diameter
+2.40
+Bond center hint
+Atoms
+1, 3
+Anchor
+[C:1](=O)[O:2]
+Functional groups
+ester: 1
+COMPUTE & CONSTRAINTS
+Scaffolds
+60
+TopoGate
+standard
+QM
+none
+MD
+none
+Review
+true
+Active
+true
+pH Min
+6.5
+pH Max
+8
+Temp C
+30
+Metals
+true
+Oxidation
+true
+Host
+n/a
+Assumptions
+metals_allowed default true
+oxidation_allowed default true
+constraints defaulted from route
+MODULE 1 SUMMARY
+Status
+PASS
+Mode
+small_gas
+Weights
+access 0.15, reach 0.50, retention 0.35
+Cache Hits
+46
+Cache Misses
+14
+Cache Size
+1022
+SCAFFOLD	TOTAL	ACCESS	REACH	RETENTION
+scaffold_lib_serine_hydrolase_v1_scaffold_042	0.447	0.694	0.511	0.249
+scaffold_lib_serine_hydrolase_v1_scaffold_015	0.427	0.498	0.528	0.251
+scaffold_lib_serine_hydrolase_v1_scaffold_043	0.339	0.498	0.346	0.260
+scaffold_lib_serine_hydrolase_v1_scaffold_011	0.329	0.616	0.290	0.261
+scaffold_lib_serine_hydrolase_v1_scaffold_040	0.307	0.716	0.218	0.259
+Showing top 5 scaffolds.
+Physics audit
+Temp K
+303.15
+DeltaE model (kJ/mol)
+9.94
+Boltz mean
+0.016
+Boltz min/max
+0.007–0.037
+Diffusion cap
+1000000000.0000
+Rejected scaffolds
+MODULE 2 SUMMARY
+Status
+PASS
+Selected Scaffold
+scaffold_lib_serine_hydrolase_v1_scaffold_015
+Adjusted Score
+1.335
+Retention Risk
+MEDIUM
+Nucleophile Geo
+serine_og
+Best Variant
+Oxyanion hole strengthening
+Mechanism Consistency
+Primary hypothesis: serine nucleophile Mechanism match: UNVERIFIED
+Objective
+
+Improve retention without breaking access or reach.
+
+Selection rationale
+
+Selected scaffold_lib_serine_hydrolase_v1_scaffold_015 with ranking score 1.33466. Predicted k_mean=2.01087 (CI90 0.06148-7.05740) using Eyring ranking. Retention penalty applied (MEDIUM retention risk).
+
+Retention penalty reasons
+MEDIUM retention risk
+Physics audit
+DeltaG_dagger base (kJ/mol)
+87.56
+DeltaDeltaG_dagger (kJ/mol)
+-2.00
+Strain (kJ/mol)
+1.50
+DeltaG_dagger variant (kJ/mol)
+87.06
+k variant (s^-1)
+0.0063
+Module 2 warnings
+W_DECISION_LOW_CONF_GO: proceeding with caution.
+W_MECH_UNVERIFIED: No detected nucleophile from scaffold residues. (confidence penalty 0.10).
+Module 2 errors
+None
+VARIANT PROPOSALS
+VARIANT	SCORE	MUTATIONS	RATIONALE
+Oxyanion hole strengthening	1.000	{"target_role":"oxyanion_hole","preferred_residues":["Ser","Thr","Asn","Gln"],"note":"strengthen tetrahedral intermediate stabilization"}	Improve stabilization of the tetrahedral intermediate.
+Polar anchor (carboxylate)	0.800	{"target_role":"polar_anchor","preferred_residues":["Arg","Lys","His"],"note":"anchor deprotonated carboxylate"}	Carboxylate is negative at pH 6.5–8; add a cationic anchor.
+Baseline	0.800	None	Used as control for downstream comparisons.
+Hydrophobic clamp	0.520	{"target_role":"pocket_lining","preferred_residues":["Phe","Tyr","Leu","Ile"],"note":"hydrophobic clamp near aromatic ring"}	Retention weakness; add hydrophobic wall for ring packing.
+Access-preserving clamp	0.400	{"target_role":"deep_pocket_lining","preferred_residues":["Tyr","Phe"],"note":"clamp deeper in pocket to preserve access"}	Long tunnel; improve retention without blocking access.
+pH tuning bundle	0.400	{"target_role":"general_base","preferred_residues":["His","Asp"],"note":"add His-Asp dyad to tune pKa"}	pH tuning to activate catalytic residues under fixed conditions.
+Module 3 handoff
+MODULE 3 EXPERIMENT PLAN
+Status
+PASS
+Batch ID
+a624e6ae-ad3b-4c03-b4f2-b32fa58054fc
+Plan Score
+0.287
+Plan Phys
+0.400
+QC Status
+N/A
+Learning
+PLANNED
+Arms
+5
+Baseline expected outcome
+
+Baseline activity under user conditions.
+
+Baseline conditions
+
+pH 7.25, T 30.0C
+
+Arms
+A4 • negative_control • no_enzyme • pH 7.25, T 30.0C
+A5 • stress_boundary • Oxyanion hole strengthening • pH 8.00, T 30.0C
+A1 • baseline • Oxyanion hole strengthening • pH 7.25, T 30.0C
+A2 • improved_conditions • Oxyanion hole strengthening • pH 6.88, T 33.5C
+A3 • variant_disambiguation • Oxyanion hole strengthening vs Polar anchor (carboxylate) • pH 7.25, T 30.0C
+Information gain notes
+total_eig=0.153046
+Physics audit
+Horizon (s)
+3600
+Expected signal
+0.439
+Noise floor
+0.020
+SNR
+21.97
+Protocol card
+MODULE 3 QC
+QC Status
+N/A
+Records
+5
+Router Updates
+0
+QC reasons
+None
+Module 3 JSON
+DIAGNOSTICS
+Required next input
+None
+Protonation flags
+None
+Descriptor status
+None
+DATA QUALITY
+Warnings
+None
+Errors
+None

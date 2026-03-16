@@ -1,0 +1,36 @@
+{
+  "name": "bondbreak-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.js",
+  "description": "BondBreak local desktop wrapper",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^28.2.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.bondbreak.desktop",
+    "productName": "BondBreak",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js"
+    ],
+    "extraResources": [
+      {
+        "from": "../src",
+        "to": "src"
+      },
+      {
+        "from": "../web",
+        "to": "web"
+      }
+    ]
+  }
+}

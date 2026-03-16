@@ -1,0 +1,6 @@
+from __future__ import annotations
+
+MAJOR_CYP_CLASSES = ["CYP1A2", "CYP2C9", "CYP2C19", "CYP2D6", "CYP3A4"]
+ALL_CYP_CLASSES = ["CYP1A2", "CYP2A6", "CYP2B6", "CYP2C8", "CYP2C9", "CYP2C19", "CYP2D6", "CYP2E1", "CYP3A4"]
+
+__all__ = ["MAJOR_CYP_CLASSES", "ALL_CYP_CLASSES"]

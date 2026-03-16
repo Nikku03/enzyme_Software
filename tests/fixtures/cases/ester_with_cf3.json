@@ -1,0 +1,15 @@
+{
+  "case_id": "ester_with_cf3",
+  "input": {
+    "smiles": "CC(=O)OCC(F)(F)F",
+    "target_bond": "ester__acyl_o"
+  },
+  "expect": {
+    "decision_in": ["GO", "LOW_CONF_GO"],
+    "module_minus1_status": "PASS",
+    "min_match_count": 1,
+    "route_in": ["serine_hydrolase", "metallo_esterase"],
+    "enzyme_family_in": ["serine_hydrolase", "metallo_esterase"],
+    "module_minus1_track": null
+  }
+}

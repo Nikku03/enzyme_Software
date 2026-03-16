@@ -1,0 +1,348 @@
+PIPELINE DECISION
+LOW_CONF_GO
+PASS
+Mode standard
+M2 DEGRADED_OK
+M3 PASS
+TopK 8
+WARNINGS
+WARN_REQUESTED_OUTPUT_MISMATCH: requested output may not align with predicted transformation.
+Job Type
+STANDARD_TRANSFORMATION
+Selected Bond
+1-3
+Primary Route
+serine_hydrolase
+Difficulty
+MEDIUM
+Compute Active
+false
+Scaffolds
+90
+PIPELINE HEALTH & INTERCONNECTION
+MODULE	STATUS	RESULT	ATTENTION
+Module 0	LOW_CONF_GO	serine_hydrolase	Route confidence low
+Module 1	PASS	Top 8 scaffolds	Retention weak
+Module 2	DEGRADED_OK	scaffold_lib_serine_hydrolase_v1_scaffold_015	Model risk high
+Module 3	PASS	Plan 0.113 / Phys 0.000	OK
+Working now
+Routing accepted (LOW_CONF_GO)
+Bond resolved: 1-3
+Module 1 passed (8 scaffolds ranked)
+Module 2 selected scaffold_lib_serine_hydrolase_v1_scaffold_015
+Negative control assigned
+Physics prior P=0.1
+Results snapshot
+Route: serine_hydrolase
+Module 1: PASS
+Module 2: scaffold_lib_serine_hydrolase_v1_scaffold_015
+Module 3 arms: 5
+Neg control: A4
+Needs improvement
+Route confidence low
+Retention score low
+Handoff checks
+OK M0 → M1: bond_context + compute_plan
+OK M1 → M2: top_scaffolds
+OK M2 → M3: module3_handoff
+OK Shared IO: condition_profile + telemetry
+CONDITION FLOW (SHARED IO)
+pH
+7.5
+Temp C
+32
+Ionic strength
+n/a
+Solvent
+n/a
+Cofactors
+n/a
+Run ID
+6b660fd1-aa8b-4d80-9433-1cb0d51c8f06
+MODULE	GIVEN EFFECT	OPTIMUM	CONFIDENCE	RETRY
+Module 0	route P=0.54	pH 6.5-8.5, T 25-37C	0.54 (Low)	Close to optimum
+Module 1	topology 0.27	pH 6.50, T 25.0C	0.27	Close to optimum
+Module 2	k_pred 0.0288	pH 6.50, T 37.0C	0.45	pH 7, T 34.5C
+Module 3	Baseline activity under user conditions.	n/a	0.11	not_applicable
+SHARED IO DETAILS
+Trace
+module0, module1, module2, module3
+Bond Spec
+amide_C-N
+Shared IO JSON
+EVIDENCE LOG (CLOSED LOOP)
+
+Per-module datapoints recorded for this run.
+
+Load
+Download
+Run ID: 6b660fd1-aa8b-4d80-9433-1cb0d51c8f06
+No evidence loaded yet.
+CONFIDENCE
+Route confidence
+0.32 (32%)
+Target resolution
+0.90 (90%)
+Wetlab (target)
+0.46 (46%)
+Overall signal
+0.13 (13%)
+Wet-lab priors are shown for context, not gating.
+INTENT & ROUTING
+Requested Output
+Aniline
+Intent Type
+hydrolysis
+Intent Conf
+0.65
+Requires Trap
+false
+Mechanism route
+Primary: serine_hydrolase
+Secondary: amidase, metalloprotease
+Mechanisms: amide hydrolysis
+Expert tracks
+amidase (weight 0.8, required false)
+serine_hydrolase (weight 0.6, required false)
+metalloprotease (weight 0.5, required false)
+Success definition
+Any activity: Detectable conversion or substrate turnover under plausible conditions.
+Target specific: Product-specific conversion consistent with requested transformation under plausible conditions; not optimized for industrial yield.
+MODULE 0 PHYSICS AUDIT
+Temp K
+305.15
+DeltaG_dagger (kJ/mol)
+105.73
+Eyring k (s^-1)
+0.0000
+Horizon (s)
+3600
+Prior success P
+0.105
+
+Physics-based prior when historical routing data is sparse.
+
+TARGET RESOLUTION
+Selection Mode
+token
+Canonical Token
+amide__c_n
+Match Count
+1
+Candidate Mode
+token
+Scanned Bonds
+9
+Candidate Matches
+1
+Selected bond
+Bond
+1-3
+Role
+amide__c_n
+Role Conf
+0.88
+BOND	ROLE	SCORE	STATUS
+1-3	amide__c_n	0.88	Selected
+Candidate bond JSON
+STRUCTURE CONTEXT
+Atoms
+10
+Heavy Atoms
+10
+Rings
+1
+Hetero Atoms
+2
+Bond Class
+amide
+Bond Type
+amide
+Size proxies
+Approx radius
+1.20
+Approx volume
+7.24
+Min diameter
+2.40
+Bond center hint
+Atoms
+1, 3
+Anchor
+amide__c_n
+Functional groups
+amide: 1
+aryl_ring: 1
+COMPUTE & CONSTRAINTS
+Scaffolds
+90
+TopoGate
+standard
+QM
+none
+MD
+low
+Review
+true
+Active
+false
+pH Min
+6.5
+pH Max
+8.5
+Temp C
+32
+Metals
+true
+Oxidation
+true
+Host
+n/a
+Assumptions
+metals_allowed default true
+oxidation_allowed default true
+constraints defaulted from route
+MODULE 1 SUMMARY
+Status
+PASS
+Mode
+standard
+Weights
+access 0.35, reach 0.45, retention 0.20
+Cache Hits
+53
+Cache Misses
+37
+Cache Size
+432
+SCAFFOLD	TOTAL	ACCESS	REACH	RETENTION
+scaffold_lib_serine_hydrolase_v1_scaffold_015	0.474	0.498	0.543	0.275
+scaffold_lib_serine_hydrolase_v1_scaffold_043	0.391	0.498	0.356	0.284
+scaffold_lib_serine_hydrolase_v1_scaffold_073	0.384	0.678	0.226	0.224
+scaffold_lib_serine_hydrolase_v1_scaffold_032	0.355	0.621	0.201	0.234
+scaffold_lib_serine_hydrolase_v1_scaffold_025	0.326	0.525	0.204	0.250
+scaffold_lib_serine_hydrolase_v1_scaffold_053	0.317	0.652	0.231	0.205
+Showing top 6 scaffolds.
+Physics audit
+Temp K
+305.15
+DeltaE model (kJ/mol)
+9.19
+Boltz mean
+0.016
+Boltz min/max
+0.007–0.037
+Diffusion cap
+0.454
+Rejected scaffolds
+MODULE 2 SUMMARY
+Status
+DEGRADED_OK
+Selected Scaffold
+scaffold_lib_serine_hydrolase_v1_scaffold_015
+Adjusted Score
+0.018
+Retention Risk
+MEDIUM
+Nucleophile Geo
+cysteine_thiol
+Best Variant
+Oxyanion hole strengthening
+Objective
+
+Improve retention without breaking access or reach.
+
+Selection rationale
+
+Selected scaffold_lib_serine_hydrolase_v1_scaffold_015 with ranking score 0.01788. Predicted k_mean=0.02882 (CI90 0.00003-0.08844) using Eyring ranking. Retention penalty applied (MEDIUM retention risk).
+
+Retention penalty reasons
+MEDIUM retention risk
+Physics audit
+DeltaG_dagger base (kJ/mol)
+90.48
+DeltaDeltaG_dagger (kJ/mol)
+-2.00
+Strain (kJ/mol)
+1.50
+DeltaG_dagger variant (kJ/mol)
+89.98
+k variant (s^-1)
+0.0025
+Module 2 warnings
+W_DECISION_NOT_GO: generating fallback variants.
+W_MECH_MISMATCH: serine route with cysteine nucleophile (penalty 0.15).
+Module 2 errors
+None
+VARIANT PROPOSALS
+VARIANT	SCORE	MUTATIONS	RATIONALE
+Oxyanion hole strengthening	1.000	{"target_role":"oxyanion_hole","preferred_residues":["Ser","Thr","Asn","Gln"],"note":"strengthen tetrahedral intermediate stabilization"}	Improve stabilization of the tetrahedral intermediate.
+Polar anchor (carboxylate)	0.824	{"target_role":"polar_anchor","preferred_residues":["Arg","Lys","His"],"note":"anchor deprotonated carboxylate"}	Carboxylate is negative at pH 6.5–8; add a cationic anchor.
+Baseline	0.824	None	Used as control for downstream comparisons.
+Hydrophobic clamp	0.576	{"target_role":"pocket_lining","preferred_residues":["Phe","Tyr","Leu","Ile"],"note":"hydrophobic clamp near aromatic ring"}	Retention weakness; add hydrophobic wall for ring packing.
+Access-preserving clamp	0.468	{"target_role":"deep_pocket_lining","preferred_residues":["Tyr","Phe"],"note":"clamp deeper in pocket to preserve access"}	Long tunnel; improve retention without blocking access.
+pH tuning bundle	0.468	{"target_role":"general_base","preferred_residues":["His","Asp"],"note":"add His-Asp dyad to tune pKa"}	pH tuning to activate catalytic residues under fixed conditions.
+Module 3 handoff
+MODULE 3 EXPERIMENT PLAN
+Status
+PASS
+Batch ID
+fb2d494c-180d-4c81-ab64-457e8e82e023
+Plan Score
+0.113
+Plan Phys
+0.000
+QC Status
+N/A
+Learning
+PLANNED
+Arms
+5
+Baseline expected outcome
+
+Baseline activity under user conditions.
+
+Baseline conditions
+
+pH 7.50, T 32.0C
+
+Arms
+A4 • negative_control • no_enzyme • pH 7.50, T 32.0C
+A5 • stress_boundary • Oxyanion hole strengthening • pH 8.50, T 32.0C
+A1 • baseline • Oxyanion hole strengthening • pH 7.50, T 32.0C
+A2 • improved_conditions • Oxyanion hole strengthening • pH 7.00, T 34.5C
+A3 • variant_disambiguation • Oxyanion hole strengthening vs Polar anchor (carboxylate) • pH 7.50, T 32.0C
+Information gain notes
+total_eig=0.169549
+Physics audit
+Horizon (s)
+3600
+Expected signal
+n/a
+Noise floor
+0.020
+SNR
+n/a
+Protocol card
+MODULE 3 QC
+QC Status
+N/A
+Records
+5
+Router Updates
+0
+QC reasons
+None
+Module 3 JSON
+DIAGNOSTICS
+Required next input
+None
+Protonation flags
+None
+Descriptor status
+None
+DATA QUALITY
+Warnings
+WARN_REQUESTED_OUTPUT_MISMATCH: requested output may not align with predicted transformation.
+Errors
+None

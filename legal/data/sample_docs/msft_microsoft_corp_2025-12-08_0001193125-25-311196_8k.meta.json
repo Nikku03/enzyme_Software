@@ -1,0 +1,12 @@
+{
+  "ticker": "MSFT",
+  "company_name": "Microsoft Corp",
+  "cik": 789019,
+  "form": "8-K",
+  "filing_date": "2025-12-08",
+  "acceptance_datetime": "2025-12-08T21:00:35.000Z",
+  "accession_number": "0001193125-25-311196",
+  "primary_document": "d34077d8k.htm",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/789019/000119312525311196/0001193125-25-311196.txt",
+  "saved_file": "legal/data/sample_docs/msft_microsoft_corp_2025-12-08_0001193125-25-311196_8k.txt"
+}

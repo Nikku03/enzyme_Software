@@ -1,0 +1,15 @@
+{
+  "case_id": "amide",
+  "input": {
+    "smiles": "CC(=O)NC",
+    "target_bond": "amide"
+  },
+  "expect": {
+    "decision_in": ["GO", "LOW_CONF_GO"],
+    "module_minus1_status": "PASS",
+    "min_match_count": 1,
+    "route_in": ["serine_hydrolase", "amidase", "metallo_esterase"],
+    "enzyme_family_in": ["serine_hydrolase", "amidase", "metallo_esterase"],
+    "module_minus1_track": null
+  }
+}

@@ -1,0 +1,5123 @@
+{
+  "smiles": "CC(=O)OC1=CC=CC=C1C(=O)O",
+  "target_bond": "acetyl_ester_C-O",
+  "requested_output": "salicylic acid",
+  "trap_target": null,
+  "constraints": {
+    "ph_min": 6.5,
+    "ph_max": 8,
+    "temperature_c": 30,
+    "metals_allowed": true,
+    "oxidation_allowed": true,
+    "host": null
+  },
+  "data": {
+    "job_card": {
+      "decision": "GO",
+      "confidence": {
+        "feasibility_if_specified": 0.787,
+        "completeness": 1,
+        "route": 0.787,
+        "target_resolution": 0.9,
+        "wetlab_prior": 0.63,
+        "wetlab_prior_target_spec": 0.63,
+        "wetlab_prior_any_activity": 0.78,
+        "module1_total": 0.468
+      },
+      "difficulty": "EASY",
+      "difficulty_label": "EASY",
+      "difficulty_score": 0.2,
+      "job_type": "STANDARD_TRANSFORMATION",
+      "requested_output": "salicylic acid",
+      "trap_target": null,
+      "trap_target_raw": null,
+      "structure_summary": {
+        "atom_count": 13,
+        "heavy_atoms": 13,
+        "ring_count": 1,
+        "hetero_atoms": 4,
+        "rotatable_bonds": 2,
+        "functional_groups": {
+          "carboxylic_acid": 1,
+          "aryl_ring": 1,
+          "ester": 1,
+          "acid": 1
+        },
+        "ring_strain_proxy": {
+          "three_member_rings": 0,
+          "four_member_rings": 0
+        }
+      },
+      "reaction_intent": {
+        "intent_type": "hydrolysis",
+        "intent_confidence": 0.8,
+        "why": "High-confidence role and context match with unambiguous target.",
+        "requires_trap_target": false
+      },
+      "bond_context": {
+        "atom_indices": [
+          1,
+          3
+        ],
+        "element_pair": [
+          "C",
+          "O"
+        ],
+        "bond_order": 1,
+        "bond_type": "ester",
+        "bond_class": "ester",
+        "is_aromatic": false,
+        "in_ring": false,
+        "activated": true,
+        "special_activation": false,
+        "polarity": "polar",
+        "neighbor_hetero_atoms": 1,
+        "fluorine_neighbor_count": 0,
+        "bond_roles": [
+          {
+            "role": "ester__acyl_o",
+            "confidence": 0.9,
+            "tags": [
+              "acetyl"
+            ],
+            "evidence": "carbonyl_single_bond"
+          }
+        ],
+        "primary_role": "ester__acyl_o",
+        "primary_role_confidence": 0.9,
+        "role_confidence": 0.9,
+        "bond_role": "ester__acyl_o",
+        "gasteiger_charge_C": 0.30754918369195744,
+        "gasteiger_charge_H": null,
+        "gasteiger_charge_a": 0.30754918369195744,
+        "gasteiger_charge_b": -0.4258032245136218,
+        "bond_atom_symbols": [
+          "C",
+          "O"
+        ],
+        "dipole_proxy": null,
+        "is_gas_like_small_molecule": false
+      },
+      "equivalent_bonds": [
+        {
+          "signature": {
+            "symmetry_classes": [
+              8,
+              9
+            ],
+            "bond_order": 1,
+            "is_aromatic": false
+          },
+          "members": [
+            [
+              1,
+              3
+            ]
+          ]
+        }
+      ],
+      "candidate_bonds": [
+        {
+          "atom_indices": [
+            1,
+            3
+          ],
+          "element_pair": [
+            "C",
+            "O"
+          ],
+          "bond_order": 1,
+          "is_aromatic": false,
+          "bond_roles": [
+            {
+              "role": "ester__acyl_o",
+              "confidence": 0.9,
+              "tags": [
+                "acetyl"
+              ],
+              "evidence": "carbonyl_single_bond"
+            }
+          ],
+          "primary_role": "ester__acyl_o",
+          "primary_role_confidence": 0.9,
+          "local_context": {
+            "in_ring": false,
+            "is_aromatic": false,
+            "bond_order": 1,
+            "neighbor_hetero_atoms": 1
+          },
+          "score_total": 1.3,
+          "score_breakdown": {
+            "primary_role_confidence": 0.9,
+            "acetyl_context": 0.4
+          },
+          "priority_rank": 1,
+          "rejection_reason": null
+        }
+      ],
+      "candidate_meta": {
+        "mode": "token",
+        "scanned_bonds": 12,
+        "matches": 1
+      },
+      "mechanism_route": {
+        "primary": "serine_hydrolase",
+        "secondary": [
+          "metallo_esterase"
+        ],
+        "mechanisms": [
+          "acyl-oxygen hydrolysis"
+        ],
+        "cofactors": [],
+        "expert_tracks": [
+          {
+            "track": "serine_hydrolase",
+            "weight": 0.9,
+            "required": false
+          },
+          {
+            "track": "metallo_esterase",
+            "weight": 0.4,
+            "required": false
+          }
+        ],
+        "required_flags": []
+      },
+      "route_version": "v1",
+      "scaffold_library_id": "scaffold_lib_serine_hydrolase_v1",
+      "compute_plan": {
+        "scaffold_count": 16,
+        "topogate_strictness": "standard",
+        "qm_level": "none",
+        "md_budget": "none",
+        "active": true,
+        "review_required": false
+      },
+      "success_definition": {
+        "any_activity": "Detectable conversion or substrate turnover under plausible conditions.",
+        "target_specific": "Product-specific conversion consistent with requested transformation under plausible conditions; not optimized for industrial yield."
+      },
+      "module1_mode": "standard",
+      "module1_weights": {
+        "access": 0.35,
+        "reach": 0.45,
+        "retention": 0.2
+      },
+      "substrate_size_proxies": {
+        "approx_radius": 1.2,
+        "approx_volume": 7.24,
+        "min_diameter_proxy": 2.4
+      },
+      "bond_center_hint": {
+        "atom_indices": [
+          1,
+          3
+        ],
+        "local_context": {
+          "neighbor_hetero_atoms": 1,
+          "in_ring": false,
+          "is_aromatic": false,
+          "bond_type": "ester",
+          "bond_class": "ester"
+        },
+        "anchor_smarts_used": "ester__acyl_o__acetyl"
+      },
+      "requested_output_check": {
+        "requested": "salicylic acid",
+        "is_fragment": false,
+        "implies_reagent_generation": false,
+        "requires_trap_target": false,
+        "expected_products": [
+          "salicylic acid",
+          "acetic acid"
+        ],
+        "match": true,
+        "confidence": 0.95,
+        "why": "Acetyl ester hydrolysis of aspirin yields salicylic acid."
+      },
+      "reaction_condition_field": {
+        "reaction_dependence": [
+          "proton_dependent",
+          "enzyme_like"
+        ],
+        "selected_reaction_families": [
+          "serine_hydrolase",
+          "metallo_esterase"
+        ],
+        "given_conditions": {
+          "pH": 7.25,
+          "temperature_c": 30
+        },
+        "condition_feasibility": {
+          "given_conditions_score": 0.75,
+          "notes": []
+        },
+        "optimum_conditions_hint": {
+          "pH_range": [
+            6.5,
+            8
+          ],
+          "temperature_c": [
+            25,
+            37
+          ]
+        }
+      },
+      "condition_profile": {
+        "pH": 7.25,
+        "temperature_K": 303.15,
+        "temperature_C": 30,
+        "temperature_defaulted": false,
+        "ionic_strength": null,
+        "solvent": null,
+        "cofactors": [],
+        "salts_buffer": null,
+        "constraints": null
+      },
+      "reaction_task": {
+        "bond_to_break_or_form": "acetyl_ester_C-O",
+        "substrates": [
+          "CC(=O)OC1=CC=CC=C1C(=O)O"
+        ],
+        "products": [
+          "salicylic acid"
+        ],
+        "mechanism_hint": "hydrolysis",
+        "required_selectivity": null,
+        "allowed_scaffold_types": [
+          "serine_hydrolase",
+          "metallo_esterase"
+        ],
+        "safety_constraints": null
+      },
+      "causal_discovery": {
+        "causal_edges_topK": [
+          {
+            "from": "pH",
+            "to": "base_activation",
+            "strength": 0.6
+          },
+          {
+            "from": "temperature",
+            "to": "kinetics",
+            "strength": 0.5
+          }
+        ],
+        "interventions_topK": [
+          {
+            "action": "optimize_pH",
+            "rationale": "Align residue protonation with mechanism requirements.",
+            "expected_effect": "increase_success_probability"
+          },
+          {
+            "action": "stabilize_retention",
+            "rationale": "Improve dwell time in pocket.",
+            "expected_effect": "increase_success_probability"
+          }
+        ],
+        "prior_success_prob": {
+          "serine_hydrolase": {
+            "prior_success_prob": 0.55,
+            "uncertainty": 0.15
+          }
+        },
+        "route_success_probability_given_conditions": 0.9125647,
+        "uncertainty_90ci": [
+          0.591085,
+          0.977
+        ],
+        "key_causal_drivers": [
+          "Router has no historical data; fallback to heuristic routing.",
+          "Physics prior blended with heuristic confidence."
+        ],
+        "model_diagnostics": {
+          "confidence_label": "Low",
+          "data_support": 0,
+          "uncertainty_proxy": 0.25,
+          "evidence_strength": 0,
+          "n_eff": 2
+        }
+      },
+      "constraints": {
+        "ph_min": 6.5,
+        "ph_max": 8,
+        "temperature_c": 30,
+        "metals_allowed": true,
+        "oxidation_allowed": true,
+        "host": null
+      },
+      "constraints_assumed_defaults": true,
+      "assumptions_used": [
+        "metals_allowed default true",
+        "oxidation_allowed default true",
+        "constraints defaulted from route"
+      ],
+      "descriptor_status": {
+        "required": false,
+        "complete": true,
+        "missing": []
+      },
+      "substrate_protonation_flags": [
+        {
+          "group": "carboxylic_acid",
+          "count": 1,
+          "estimated_pka_range": [
+            3,
+            5
+          ],
+          "risk_level": "medium",
+          "note": "Carboxylic acids deprotonate near pH 4-5."
+        }
+      ],
+      "pipeline_halt_reason": null,
+      "resolved_target": {
+        "selection_mode": "token",
+        "requested": "acetyl_ester_C-O",
+        "canonical_token": "ester__acyl_o__acetyl",
+        "token_context": "acetyl",
+        "index_base": null,
+        "element_pair": [
+          "C",
+          "O"
+        ],
+        "match_count": 1,
+        "selected_bond": {
+          "atom_indices": [
+            1,
+            3
+          ],
+          "element_pair": [
+            "C",
+            "O"
+          ],
+          "bond_order": 1,
+          "is_aromatic": false,
+          "bond_roles": [
+            {
+              "role": "ester__acyl_o",
+              "confidence": 0.9,
+              "tags": [
+                "acetyl"
+              ],
+              "evidence": "carbonyl_single_bond"
+            }
+          ],
+          "primary_role": "ester__acyl_o",
+          "primary_role_confidence": 0.9,
+          "local_context": {
+            "in_ring": false,
+            "is_aromatic": false,
+            "bond_order": 1,
+            "neighbor_hetero_atoms": 1
+          }
+        }
+      },
+      "required_next_input": [],
+      "reasons": [
+        "Bond and constraints appear feasible for routing."
+      ],
+      "warnings": [],
+      "errors": [],
+      "physics_layer": {
+        "temperature_K": 303.15,
+        "kT_kj_per_mol": 2.5205,
+        "bond_length_A": 1.42,
+        "coulomb_energy_kj_mol": -12.813,
+        "polarization_ratio": 5.083,
+        "prior_score": 0.847,
+        "route_confidence_raw": 0.934,
+        "route_confidence_physics": 0.913,
+        "multiplier": 0.977
+      },
+      "physics_audit": {
+        "bond_class": "ester",
+        "deltaG_dagger_kJ_per_mol": 82.5,
+        "deltaG_dagger_kcal_per_mol": 19.72,
+        "temperature_K": 303.15,
+        "eyring_k_s_inv": 0.0385,
+        "horizon_s": 3600,
+        "prior_success_probability": 0.782,
+        "mechanism_family": "serine_hydrolase",
+        "mechanism_weight": 1,
+        "prior_note": "Physics prior represents feasibility under horizon; not certainty.",
+        "support": 0,
+        "evidence_strength": 0,
+        "shrink_factor": 0.6,
+        "prior_success_probability_raw": 0.97,
+        "prior_success_probability_final": 0.782
+      },
+      "physics": {
+        "baseline": {
+          "bond_class": "ester",
+          "mechanism_family": "serine_hydrolase",
+          "temperature_K": 303.15,
+          "pH": 7.25,
+          "delta_g_act_kj_mol": 82.5,
+          "delta_g_act_kcal_mol": 19.72,
+          "k_s_inv": 0.0385,
+          "half_life_s": 18.002,
+          "diffusion_cap_k_s_inv": 2940617.566,
+          "notes": [],
+          "mechanism_weight": 1,
+          "prior_success_probability": 0.782,
+          "prior_available": true,
+          "prior_success_probability_raw": 0.97,
+          "shrink_factor": 0.6
+        },
+        "routes": {
+          "serine_hydrolase": {
+            "bond_class": "ester",
+            "mechanism_family": "serine_hydrolase",
+            "temperature_K": 303.15,
+            "pH": 7.25,
+            "delta_g_act_kj_mol": 82.5,
+            "delta_g_act_kcal_mol": 19.72,
+            "k_s_inv": 0.0385,
+            "half_life_s": 18.002,
+            "diffusion_cap_k_s_inv": 2940617.566,
+            "notes": [],
+            "mechanism_weight": 1,
+            "prior_success_probability": 0.782,
+            "prior_available": true,
+            "prior_success_probability_raw": 0.97,
+            "shrink_factor": 0.6
+          },
+          "metallo_esterase": {
+            "bond_class": "ester",
+            "mechanism_family": "metallo_esterase",
+            "temperature_K": 303.15,
+            "pH": 7.25,
+            "delta_g_act_kj_mol": 82.5,
+            "delta_g_act_kcal_mol": 19.72,
+            "k_s_inv": 0.0385,
+            "half_life_s": 18.002,
+            "diffusion_cap_k_s_inv": 2940617.566,
+            "notes": [],
+            "mechanism_weight": 0.9,
+            "prior_success_probability": 0.7238,
+            "prior_available": true,
+            "prior_success_probability_raw": 0.873,
+            "shrink_factor": 0.6
+          }
+        },
+        "prior_success_probability": 0.782,
+        "mapping_notes": [
+          "Physics prior derived from kinetics_from_context (ΔG‡ → Eyring k).",
+          "Prior success mapped via logistic on log1p(expected_turnovers).",
+          "Mechanism-family weight applied to physics prior.",
+          "Physics prior represents feasibility under horizon; not certainty."
+        ]
+      },
+      "predicted_under_given_conditions": {
+        "route_success_probability": 0.913,
+        "confidence_calibrated": 0.913,
+        "uncertainty_90ci": [
+          0.591085,
+          0.977
+        ],
+        "route_p_raw": 0.934,
+        "route_p_cal": 0.934,
+        "n_eff": 2,
+        "evidence_strength": 0
+      },
+      "chosen_route": "serine_hydrolase",
+      "route_posteriors": [
+        {
+          "route": "serine_hydrolase",
+          "posterior": 0.859,
+          "p_raw": 0.859,
+          "p_cal": 0.859,
+          "support": 0,
+          "confidence": "Low",
+          "uncertainty": 0.25,
+          "bucket": [
+            "serine_hydrolase",
+            "ph_6_8|temp_295_305",
+            "ester",
+            "unknown"
+          ],
+          "drivers": [
+            "Router has no historical data; fallback to heuristic routing.",
+            "Physics prior blended with heuristic confidence."
+          ],
+          "ci90": [
+            0.393,
+            1
+          ],
+          "n_eff": 2,
+          "evidence_strength": 0
+        },
+        {
+          "route": "metallo_esterase",
+          "posterior": 0.836,
+          "p_raw": 0.836,
+          "p_cal": 0.836,
+          "support": 0,
+          "confidence": "Low",
+          "uncertainty": 0.25,
+          "bucket": [
+            "metallo_esterase",
+            "ph_6_8|temp_295_305",
+            "ester",
+            "unknown"
+          ],
+          "drivers": [
+            "Router has no historical data; fallback to heuristic routing.",
+            "Physics prior blended with heuristic confidence."
+          ],
+          "ci90": [
+            0.349,
+            1
+          ],
+          "n_eff": 2,
+          "evidence_strength": 0
+        }
+      ],
+      "confidence_label": "Low",
+      "data_support": 0,
+      "route_uncertainty": 0.25,
+      "route_explanation": [
+        "Router has no historical data; fallback to heuristic routing.",
+        "Physics prior blended with heuristic confidence."
+      ],
+      "matched_bins": {
+        "condition_bin": "ph_6_8|temp_295_305",
+        "substrate_bin": "ester",
+        "catalyst_family_bin": "unknown"
+      },
+      "route_p_raw": 0.934,
+      "route_p_cal": 0.934,
+      "route_ci90": [
+        0.591085,
+        0.977
+      ],
+      "n_eff": 2,
+      "evidence_strength": 0,
+      "optimum_conditions_estimate": {
+        "pH_range": [
+          6.5,
+          8
+        ],
+        "temperature_c": [
+          25,
+          37
+        ]
+      },
+      "delta_from_optimum": {
+        "delta_pH": 0,
+        "delta_T_C": -1
+      },
+      "confidence_calibrated": 0.913,
+      "evidence_record": {
+        "module_id": 0,
+        "inputs": {
+          "smiles": "CC(=O)OC1=CC=CC=C1C(=O)O",
+          "target_bond": "acetyl_ester_C-O",
+          "requested_output": "salicylic acid",
+          "job_type": "STANDARD_TRANSFORMATION",
+          "condition_profile": {
+            "pH": 7.25,
+            "temperature_K": 303.15,
+            "temperature_C": 30,
+            "temperature_defaulted": false,
+            "ionic_strength": null,
+            "solvent": null,
+            "cofactors": [],
+            "salts_buffer": null,
+            "constraints": null
+          }
+        },
+        "features_used": {
+          "values": {
+            "bond_role_confidence": 0.9,
+            "target_resolution_confidence": 0.9,
+            "intent_confidence": 0.8,
+            "condition_score": 0.75,
+            "has_primary_role": 1,
+            "route_primary_present": 1,
+            "descriptor_complete": 1,
+            "job_type_reagent": 0,
+            "warning_count": 0,
+            "mechanism_count": 0.25,
+            "ambiguity_flag": 0,
+            "novelty_penalty": 0,
+            "data_support": 0.7
+          },
+          "missing": [],
+          "source": "module0"
+        },
+        "score": 0.913,
+        "confidence": 0.913,
+        "uncertainty": {
+          "uncertainty_90ci": [
+            0.591085,
+            0.977
+          ]
+        },
+        "optimum_conditions": {
+          "pH_range": [
+            6.5,
+            8
+          ],
+          "temperature_c": [
+            25,
+            37
+          ]
+        },
+        "explanations": [
+          "Router has no historical data; fallback to heuristic routing.",
+          "Physics prior blended with heuristic confidence."
+        ],
+        "diagnostics": {
+          "confidence_label": "Low",
+          "data_support": 0,
+          "uncertainty_proxy": 0.25,
+          "evidence_strength": 0,
+          "n_eff": 2,
+          "matched_bins": {
+            "condition_bin": "ph_6_8|temp_295_305",
+            "substrate_bin": "ester",
+            "catalyst_family_bin": "unknown"
+          }
+        }
+      },
+      "math_contract": {
+        "confidence": {
+          "p_raw": 0.934,
+          "p_cal": 0.934,
+          "ci90": [
+            0.591085,
+            0.977
+          ],
+          "n_eff": 2
+        },
+        "predictions": {
+          "route_success_probability": {
+            "mean": 0.934,
+            "std": 0.11729939209726443,
+            "ci90": [
+              0.591085,
+              0.977
+            ]
+          }
+        },
+        "qc": {
+          "status": "N/A",
+          "reasons": [],
+          "metrics": {}
+        }
+      }
+    },
+    "shared_io": {
+      "input": {
+        "bond_spec": {
+          "target_bond": "acetyl_ester_C-O",
+          "selection_mode": "token",
+          "resolved_target": {
+            "selection_mode": "token",
+            "requested": "acetyl_ester_C-O",
+            "canonical_token": "ester__acyl_o__acetyl",
+            "token_context": "acetyl",
+            "index_base": null,
+            "element_pair": [
+              "C",
+              "O"
+            ],
+            "match_count": 1,
+            "selected_bond": {
+              "atom_indices": [
+                1,
+                3
+              ],
+              "element_pair": [
+                "C",
+                "O"
+              ],
+              "bond_order": 1,
+              "is_aromatic": false,
+              "bond_roles": [
+                {
+                  "role": "ester__acyl_o",
+                  "confidence": 0.9,
+                  "tags": [
+                    "acetyl"
+                  ],
+                  "evidence": "carbonyl_single_bond"
+                }
+              ],
+              "primary_role": "ester__acyl_o",
+              "primary_role_confidence": 0.9,
+              "local_context": {
+                "in_ring": false,
+                "is_aromatic": false,
+                "bond_order": 1,
+                "neighbor_hetero_atoms": 1
+              }
+            }
+          },
+          "context": {
+            "atom_indices": [
+              1,
+              3
+            ],
+            "element_pair": [
+              "C",
+              "O"
+            ],
+            "bond_order": 1,
+            "bond_type": "ester",
+            "bond_class": "ester",
+            "is_aromatic": false,
+            "in_ring": false,
+            "activated": true,
+            "special_activation": false,
+            "polarity": "polar",
+            "neighbor_hetero_atoms": 1,
+            "fluorine_neighbor_count": 0,
+            "bond_roles": [
+              {
+                "role": "ester__acyl_o",
+                "confidence": 0.9,
+                "tags": [
+                  "acetyl"
+                ],
+                "evidence": "carbonyl_single_bond"
+              }
+            ],
+            "primary_role": "ester__acyl_o",
+            "primary_role_confidence": 0.9,
+            "role_confidence": 0.9,
+            "bond_role": "ester__acyl_o",
+            "gasteiger_charge_C": 0.30754918369195744,
+            "gasteiger_charge_H": null,
+            "gasteiger_charge_a": 0.30754918369195744,
+            "gasteiger_charge_b": -0.4258032245136218,
+            "bond_atom_symbols": [
+              "C",
+              "O"
+            ],
+            "dipole_proxy": null,
+            "is_gas_like_small_molecule": false
+          }
+        },
+        "condition_profile": {
+          "pH": 7.25,
+          "temperature_K": 303.15,
+          "temperature_C": 30,
+          "temperature_defaulted": false,
+          "ionic_strength": null,
+          "solvent": null,
+          "cofactors": [],
+          "salts_buffer": null,
+          "constraints": null
+        },
+        "substrate_context": {
+          "smiles": "CC(=O)OC1=CC=CC=C1C(=O)O",
+          "structure_summary": {
+            "atom_count": 13,
+            "heavy_atoms": 13,
+            "ring_count": 1,
+            "hetero_atoms": 4,
+            "rotatable_bonds": 2,
+            "functional_groups": {
+              "carboxylic_acid": 1,
+              "aryl_ring": 1,
+              "ester": 1,
+              "acid": 1
+            },
+            "ring_strain_proxy": {
+              "three_member_rings": 0,
+              "four_member_rings": 0
+            }
+          },
+          "descriptors": null
+        },
+        "telemetry": {
+          "run_id": "bb387a64-3d25-4915-93a1-6347140272ab",
+          "trace": [
+            "module0",
+            "module1",
+            "module2",
+            "module3"
+          ],
+          "warnings": []
+        }
+      },
+      "outputs": {
+        "module0": {
+          "result": {
+            "decision": "GO",
+            "chosen_route": "serine_hydrolase",
+            "route_posteriors": [
+              {
+                "route": "serine_hydrolase",
+                "posterior": 0.859,
+                "p_raw": 0.859,
+                "p_cal": 0.859,
+                "support": 0,
+                "confidence": "Low",
+                "uncertainty": 0.25,
+                "bucket": [
+                  "serine_hydrolase",
+                  "ph_6_8|temp_295_305",
+                  "ester",
+                  "unknown"
+                ],
+                "drivers": [
+                  "Router has no historical data; fallback to heuristic routing.",
+                  "Physics prior blended with heuristic confidence."
+                ],
+                "ci90": [
+                  0.393,
+                  1
+                ],
+                "n_eff": 2,
+                "evidence_strength": 0
+              },
+              {
+                "route": "metallo_esterase",
+                "posterior": 0.836,
+                "p_raw": 0.836,
+                "p_cal": 0.836,
+                "support": 0,
+                "confidence": "Low",
+                "uncertainty": 0.25,
+                "bucket": [
+                  "metallo_esterase",
+                  "ph_6_8|temp_295_305",
+                  "ester",
+                  "unknown"
+                ],
+                "drivers": [
+                  "Router has no historical data; fallback to heuristic routing.",
+                  "Physics prior blended with heuristic confidence."
+                ],
+                "ci90": [
+                  0.349,
+                  1
+                ],
+                "n_eff": 2,
+                "evidence_strength": 0
+              }
+            ]
+          },
+          "given_conditions_effect": {
+            "route_success_probability": 0.913,
+            "condition_score": 0.75,
+            "route_p_raw": 0.934,
+            "route_p_cal": 0.934,
+            "route_ci90": [
+              0.591085,
+              0.977
+            ]
+          },
+          "optimum_conditions": {
+            "strategy_prior": {
+              "pH_range": [
+                6.5,
+                8
+              ],
+              "temperature_c": [
+                25,
+                37
+              ]
+            },
+            "source": "module0"
+          },
+          "confidence": {
+            "calibrated_probability": 0.913,
+            "label": "Low",
+            "support": 0,
+            "uncertainty": 0.25
+          },
+          "retry_loop_suggestion": {
+            "status": "close_enough"
+          }
+        },
+        "module1": {
+          "result": {
+            "status": "PASS",
+            "top_scaffold": "scaffold_lib_serine_hydrolase_v1_scaffold_015",
+            "selected_scaffolds": [
+              "scaffold_lib_serine_hydrolase_v1_scaffold_005",
+              "scaffold_lib_serine_hydrolase_v1_scaffold_015",
+              "scaffold_lib_serine_hydrolase_v1_scaffold_012"
+            ]
+          },
+          "given_conditions_effect": {
+            "module1_total": 0.468,
+            "topology_score": 0.616,
+            "robustness": 0.701,
+            "diffusion_cap_s_inv": 248333379.436
+          },
+          "optimum_conditions": {
+            "strategy_hint": {
+              "pH_range": [
+                6.5,
+                8
+              ],
+              "temperature_c": [
+                25,
+                37
+              ]
+            },
+            "topology_optimum": {
+              "score": 0.792,
+              "pH": 6.5,
+              "temperature_c": 25
+            }
+          },
+          "confidence": {
+            "calibrated_probability": 0.468,
+            "uncertainty": {
+              "sample_count": 64,
+              "ensemble_temperature": 303.15,
+              "energy_stats": {
+                "mean": 0.45,
+                "stdev": 0.035
+              },
+              "deltaE_model_kJ_per_mol": 8.996,
+              "boltzmann_weight_summary": {
+                "min": 0.007156,
+                "max": 0.036957,
+                "mean": 0.015625
+              },
+              "access_mean": 0.51,
+              "reach_mean": 0.556,
+              "retention_mean": 0.343,
+              "topology_mean": 0.811,
+              "total_mean": 0.497,
+              "access_stdev": 0.033,
+              "reach_stdev": 0.036,
+              "retention_stdev": 0.022,
+              "topology_stdev": 0.052,
+              "total_stdev": 0.032,
+              "access_prob": 0.037,
+              "reach_prob": 0.061,
+              "retention_prob": 0,
+              "score_ci90": {
+                "total": [
+                  0.46,
+                  0.529
+                ],
+                "retention": [
+                  0.318,
+                  0.365
+                ]
+              }
+            }
+          },
+          "retry_loop_suggestion": {
+            "status": "close_enough"
+          }
+        },
+        "module2": {
+          "result": {
+            "status": "PASS",
+            "selected_scaffold": "scaffold_lib_serine_hydrolase_v1_scaffold_015",
+            "best_variant": "V4"
+          },
+          "given_conditions_effect": {
+            "conditions": {
+              "pH": 7.25,
+              "temperature_c": 30
+            },
+            "k_pred_mean": 3.91423,
+            "k_pred_ci90": [
+              0.11967,
+              13.73743
+            ],
+            "k_dist_summary": {
+              "n": 256,
+              "mean": 1.41914,
+              "p10": 0.08247,
+              "p50": 0.54592,
+              "p90": 3.40497
+            },
+            "delta_g_mean": 17.543,
+            "delta_g_std": 0.84,
+            "physics_gate": {
+              "ratio_kT": 6.96012528129454,
+              "ok": 1,
+              "threshold_kT": 40,
+              "kT_kj_mol": 2.5205293426466997,
+              "delta_g_kj_mol": 17.543,
+              "temperature_K": 303.15
+            },
+            "model_risk": 0.88,
+            "confidence_calibrated": 0.73
+          },
+          "optimum_conditions": {
+            "pH_opt": 6.5,
+            "T_opt_C": 37,
+            "T_opt_K": 310.15,
+            "k_pred": 6.7641387469464425
+          },
+          "confidence": {
+            "calibrated_probability": 0.73,
+            "uncertainty": 0.2,
+            "main_risks": []
+          },
+          "retry_loop_suggestion": {
+            "status": "suggest_retry",
+            "proposed_conditions": {
+              "pH": 6.88,
+              "temperature_c": 33.5
+            },
+            "expected_improvement": "moderate"
+          }
+        },
+        "module3": {
+          "result": {
+            "status": "PASS",
+            "batch_id": "3cfdb006-d805-46b0-b565-36f6ac0d5fac",
+            "qc_status": null
+          },
+          "given_conditions_effect": {
+            "expected_outcome": "Baseline activity under user conditions.",
+            "conditions": {
+              "pH": 7.25,
+              "temperature_c": 30
+            }
+          },
+          "optimum_conditions": {},
+          "confidence": {
+            "calibrated_probability": 0.576
+          },
+          "retry_loop_suggestion": {
+            "status": "not_applicable"
+          }
+        }
+      }
+    },
+    "module0_strategy_router": {
+      "status": "ok",
+      "shared_io": {
+        "input": {
+          "bond_spec": {
+            "target_bond": "acetyl_ester_C-O",
+            "selection_mode": "token",
+            "resolved_target": {
+              "selection_mode": "token",
+              "requested": "acetyl_ester_C-O",
+              "canonical_token": "ester__acyl_o__acetyl",
+              "token_context": "acetyl",
+              "index_base": null,
+              "element_pair": [
+                "C",
+                "O"
+              ],
+              "match_count": 1,
+              "selected_bond": {
+                "atom_indices": [
+                  1,
+                  3
+                ],
+                "element_pair": [
+                  "C",
+                  "O"
+                ],
+                "bond_order": 1,
+                "is_aromatic": false,
+                "bond_roles": [
+                  {
+                    "role": "ester__acyl_o",
+                    "confidence": 0.9,
+                    "tags": [
+                      "acetyl"
+                    ],
+                    "evidence": "carbonyl_single_bond"
+                  }
+                ],
+                "primary_role": "ester__acyl_o",
+                "primary_role_confidence": 0.9,
+                "local_context": {
+                  "in_ring": false,
+                  "is_aromatic": false,
+                  "bond_order": 1,
+                  "neighbor_hetero_atoms": 1
+                }
+              }
+            },
+            "context": {
+              "atom_indices": [
+                1,
+                3
+              ],
+              "element_pair": [
+                "C",
+                "O"
+              ],
+              "bond_order": 1,
+              "bond_type": "ester",
+              "bond_class": "ester",
+              "is_aromatic": false,
+              "in_ring": false,
+              "activated": true,
+              "special_activation": false,
+              "polarity": "polar",
+              "neighbor_hetero_atoms": 1,
+              "fluorine_neighbor_count": 0,
+              "bond_roles": [
+                {
+                  "role": "ester__acyl_o",
+                  "confidence": 0.9,
+                  "tags": [
+                    "acetyl"
+                  ],
+                  "evidence": "carbonyl_single_bond"
+                }
+              ],
+              "primary_role": "ester__acyl_o",
+              "primary_role_confidence": 0.9,
+              "role_confidence": 0.9,
+              "bond_role": "ester__acyl_o",
+              "gasteiger_charge_C": 0.30754918369195744,
+              "gasteiger_charge_H": null,
+              "gasteiger_charge_a": 0.30754918369195744,
+              "gasteiger_charge_b": -0.4258032245136218,
+              "bond_atom_symbols": [
+                "C",
+                "O"
+              ],
+              "dipole_proxy": null,
+              "is_gas_like_small_molecule": false
+            }
+          },
+          "condition_profile": {
+            "pH": 7.25,
+            "temperature_K": 303.15,
+            "temperature_C": 30,
+            "temperature_defaulted": false,
+            "ionic_strength": null,
+            "solvent": null,
+            "cofactors": [],
+            "salts_buffer": null,
+            "constraints": null
+          },
+          "substrate_context": {
+            "smiles": "CC(=O)OC1=CC=CC=C1C(=O)O",
+            "structure_summary": {
+              "atom_count": 13,
+              "heavy_atoms": 13,
+              "ring_count": 1,
+              "hetero_atoms": 4,
+              "rotatable_bonds": 2,
+              "functional_groups": {
+                "carboxylic_acid": 1,
+                "aryl_ring": 1,
+                "ester": 1,
+                "acid": 1
+              },
+              "ring_strain_proxy": {
+                "three_member_rings": 0,
+                "four_member_rings": 0
+              }
+            },
+            "descriptors": null
+          },
+          "telemetry": {
+            "run_id": "bb387a64-3d25-4915-93a1-6347140272ab",
+            "trace": [
+              "module0",
+              "module1",
+              "module2",
+              "module3"
+            ],
+            "warnings": []
+          }
+        },
+        "outputs": {
+          "module0": {
+            "result": {
+              "decision": "GO",
+              "chosen_route": "serine_hydrolase",
+              "route_posteriors": [
+                {
+                  "route": "serine_hydrolase",
+                  "posterior": 0.859,
+                  "p_raw": 0.859,
+                  "p_cal": 0.859,
+                  "support": 0,
+                  "confidence": "Low",
+                  "uncertainty": 0.25,
+                  "bucket": [
+                    "serine_hydrolase",
+                    "ph_6_8|temp_295_305",
+                    "ester",
+                    "unknown"
+                  ],
+                  "drivers": [
+                    "Router has no historical data; fallback to heuristic routing.",
+                    "Physics prior blended with heuristic confidence."
+                  ],
+                  "ci90": [
+                    0.393,
+                    1
+                  ],
+                  "n_eff": 2,
+                  "evidence_strength": 0
+                },
+                {
+                  "route": "metallo_esterase",
+                  "posterior": 0.836,
+                  "p_raw": 0.836,
+                  "p_cal": 0.836,
+                  "support": 0,
+                  "confidence": "Low",
+                  "uncertainty": 0.25,
+                  "bucket": [
+                    "metallo_esterase",
+                    "ph_6_8|temp_295_305",
+                    "ester",
+                    "unknown"
+                  ],
+                  "drivers": [
+                    "Router has no historical data; fallback to heuristic routing.",
+                    "Physics prior blended with heuristic confidence."
+                  ],
+                  "ci90": [
+                    0.349,
+                    1
+                  ],
+                  "n_eff": 2,
+                  "evidence_strength": 0
+                }
+              ]
+            },
+            "given_conditions_effect": {
+              "route_success_probability": 0.913,
+              "condition_score": 0.75,
+              "route_p_raw": 0.934,
+              "route_p_cal": 0.934,
+              "route_ci90": [
+                0.591085,
+                0.977
+              ]
+            },
+            "optimum_conditions": {
+              "strategy_prior": {
+                "pH_range": [
+                  6.5,
+                  8
+                ],
+                "temperature_c": [
+                  25,
+                  37
+                ]
+              },
+              "source": "module0"
+            },
+            "confidence": {
+              "calibrated_probability": 0.913,
+              "label": "Low",
+              "support": 0,
+              "uncertainty": 0.25
+            },
+            "retry_loop_suggestion": {
+              "status": "close_enough"
+            }
+          }
+        }
+      },
+      "job_card_ref": "job_card"
+    },
+    "module1_topogate": {
+      "status": "PASS",
+      "halt_reason": null,
+      "cache_stats": {
+        "hits": 9,
+        "misses": 7,
+        "entries_written": 0,
+        "cache_size": 302
+      },
+      "mode": "standard",
+      "weights": {
+        "access": 0.35,
+        "reach": 0.45,
+        "retention": 0.2
+      },
+      "diffusion_cap_s_inv": 248333379.436,
+      "pareto_front": [
+        "scaffold_lib_serine_hydrolase_v1_scaffold_015",
+        "scaffold_lib_serine_hydrolase_v1_scaffold_005"
+      ],
+      "predictor_model": "heuristic_v1",
+      "condition_context": {
+        "given_conditions": {
+          "pH": 7.25,
+          "temperature_c": 30
+        },
+        "optimum_conditions_hint": {
+          "pH_range": [
+            6.5,
+            8
+          ],
+          "temperature_c": [
+            25,
+            37
+          ]
+        },
+        "multipliers": {
+          "access": 1,
+          "reach": 1,
+          "retention": 1
+        },
+        "penalties": []
+      },
+      "module1_confidence": {
+        "access": 0.576,
+        "reach": 0.542,
+        "retention": 0.335,
+        "total": 0.468,
+        "topology": 0.792,
+        "robustness": 0.811,
+        "ensemble": {
+          "sample_count": 64,
+          "ensemble_temperature": 303.15,
+          "energy_stats": {
+            "mean": 0.45,
+            "stdev": 0.035
+          },
+          "deltaE_model_kJ_per_mol": 8.996,
+          "boltzmann_weight_summary": {
+            "min": 0.007156,
+            "max": 0.036957,
+            "mean": 0.015625
+          },
+          "access_mean": 0.51,
+          "reach_mean": 0.556,
+          "retention_mean": 0.343,
+          "topology_mean": 0.811,
+          "total_mean": 0.497,
+          "access_stdev": 0.033,
+          "reach_stdev": 0.036,
+          "retention_stdev": 0.022,
+          "topology_stdev": 0.052,
+          "total_stdev": 0.032,
+          "access_prob": 0.037,
+          "reach_prob": 0.061,
+          "retention_prob": 0,
+          "score_ci90": {
+            "total": [
+              0.46,
+              0.529
+            ],
+            "retention": [
+              0.318,
+              0.365
+            ]
+          }
+        },
+        "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_015",
+        "total_raw": 0.481,
+        "physics_multiplier": 0.973
+      },
+      "module1_physics_audit": {
+        "temperature_K": 303.15,
+        "deltaE_model_kJ_per_mol": 8.996,
+        "boltzmann_weight_summary": {
+          "min": 0.007156,
+          "max": 0.036957,
+          "mean": 0.015625
+        },
+        "diffusion_cap_s_inv": 248333379.436,
+        "diffusion_D_m2_s": 5e-10,
+        "diffusion_L_A": 20.067,
+        "diffusion_tau_s": 4.02684489e-9,
+        "diffusion_k_diff_s_inv": 248333379.436,
+        "diffusion_assumptions": [
+          "diffusion cap derived from tunnel length"
+        ]
+      },
+      "physics": {
+        "diffusion": {
+          "D_m2_s": 5e-10,
+          "L_A": 20.067,
+          "tau_s": 4.02684489e-9,
+          "k_diff_s_inv": 248333379.436,
+          "kdiff": 248333379.436,
+          "pseudo_first_order_s_inv": 248333379.436,
+          "cap_factor": 0.973,
+          "assumptions": [
+            "diffusion cap derived from tunnel length",
+            "assumed counter-charge for pocket residue",
+            "assumed interaction distance 5.0A"
+          ]
+        },
+        "electrostatics": {
+          "E_kJ_mol": -0.544,
+          "boltz_factor": 1,
+          "assumptions": [
+            "diffusion cap derived from tunnel length",
+            "assumed counter-charge for pocket residue",
+            "assumed interaction distance 5.0A"
+          ]
+        },
+        "multiplier": 0.973
+      },
+      "evidence_record": {
+        "module_id": 1,
+        "inputs": {
+          "mode": "standard",
+          "conditions": {
+            "pH": 7.25,
+            "temperature_c": 30
+          }
+        },
+        "features_used": {
+          "values": {
+            "access_score": 0.498,
+            "reach_score": 0.543,
+            "retention_score": 0.335,
+            "topology_score": 0.792,
+            "module1_total": 0.468
+          },
+          "missing": [],
+          "source": "module1"
+        },
+        "score": 0.468,
+        "confidence": 0.468,
+        "uncertainty": {
+          "ensemble": {
+            "sample_count": 64,
+            "ensemble_temperature": 303.15,
+            "energy_stats": {
+              "mean": 0.45,
+              "stdev": 0.035
+            },
+            "deltaE_model_kJ_per_mol": 8.996,
+            "boltzmann_weight_summary": {
+              "min": 0.007156,
+              "max": 0.036957,
+              "mean": 0.015625
+            },
+            "access_mean": 0.51,
+            "reach_mean": 0.556,
+            "retention_mean": 0.343,
+            "topology_mean": 0.811,
+            "total_mean": 0.497,
+            "access_stdev": 0.033,
+            "reach_stdev": 0.036,
+            "retention_stdev": 0.022,
+            "topology_stdev": 0.052,
+            "total_stdev": 0.032,
+            "access_prob": 0.037,
+            "reach_prob": 0.061,
+            "retention_prob": 0,
+            "score_ci90": {
+              "total": [
+                0.46,
+                0.529
+              ],
+              "retention": [
+                0.318,
+                0.365
+              ]
+            }
+          }
+        },
+        "optimum_conditions": {
+          "pH_range": [
+            6.5,
+            8
+          ],
+          "temperature_c": [
+            25,
+            37
+          ]
+        },
+        "explanations": [],
+        "diagnostics": {
+          "model": "persistent_homology_v1"
+        }
+      },
+      "predicted_under_given_conditions": {
+        "module1_total": 0.468,
+        "confidence_calibrated": 0.468,
+        "given_conditions": {
+          "pH": 7.25,
+          "temperature_c": 30
+        }
+      },
+      "optimum_conditions_estimate": {
+        "strategy_hint": {
+          "pH_range": [
+            6.5,
+            8
+          ],
+          "temperature_c": [
+            25,
+            37
+          ]
+        },
+        "topology_optimum": {
+          "score": 0.792,
+          "pH": 6.5,
+          "temperature_c": 25
+        }
+      },
+      "delta_from_optimum": {
+        "delta_pH": null,
+        "delta_T_C": null
+      },
+      "confidence_calibrated": 0.468,
+      "ranked_scaffolds": [
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_005",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_005.pdb",
+          "pocket_center": [
+            3.228,
+            2.224,
+            4.557
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 1.915,
+            "required_bottleneck_radius": 1.8,
+            "path_length": 8.401,
+            "curvature_proxy": 0.671,
+            "entry_point": [
+              -7.929,
+              -6.404,
+              -3.031
+            ]
+          },
+          "reach_summary": {
+            "fail_code": null,
+            "reach_score": 0.605,
+            "reach_geom_score": 0.756,
+            "reachable_residues": [
+              {
+                "residue": "Lys170",
+                "reach_score": 0.774
+              },
+              {
+                "residue": "Cys217",
+                "reach_score": 0.754
+              },
+              {
+                "residue": "His166",
+                "reach_score": 0.739
+              },
+              {
+                "residue": "Glu36",
+                "reach_score": 0.671
+              },
+              {
+                "residue": "His105",
+                "reach_score": 0.494
+              }
+            ],
+            "best_candidates": [
+              {
+                "residue": "Lys170",
+                "reach_score": 0.774
+              },
+              {
+                "residue": "Cys217",
+                "reach_score": 0.754
+              },
+              {
+                "residue": "His166",
+                "reach_score": 0.739
+              }
+            ],
+            "candidate_residues_by_role": {
+              "nucleophile": [
+                "Cys217"
+              ],
+              "base": [
+                "His166",
+                "His105"
+              ],
+              "acid": [
+                "Glu36"
+              ],
+              "other": [
+                "Lys170"
+              ]
+            },
+            "mechanism_compat": {
+              "track": "serine_hydrolase",
+              "mechanism_label": "thiol_hydrolase_like",
+              "required_flags": [
+                "requires_thiol_nucleophile"
+              ],
+              "has_nucleophile": true,
+              "nucleophile_type": "Cys",
+              "has_base": true,
+              "has_acid": true,
+              "score": 0.8,
+              "notes": [
+                "Cys nucleophile; serine-hydrolase track downgraded"
+              ]
+            }
+          },
+          "attack_envelope": {
+            "apex_point": [
+              2.582,
+              1.551,
+              5.731
+            ],
+            "axis_vector": [
+              -0.431,
+              -0.449,
+              0.783
+            ],
+            "distance_band": [
+              2.5,
+              3.5
+            ],
+            "cone_angle": 30,
+            "mechanism_family": "serine_hydrolase"
+          },
+          "retention_metrics": {
+            "fail_code": null,
+            "retention_score": 0.257,
+            "retention_risk_flag": "HIGH",
+            "pocket_volume_proxy": 391.84,
+            "substrate_volume_proxy": 7.24,
+            "volume_ratio": 54.12,
+            "volume_penalty": 0.133,
+            "anchor_score": 0.34,
+            "warning_codes": [
+              "WARN_RETENTION_WEAK_BINDING"
+            ],
+            "score_multiplier": 0.85
+          },
+          "physics_access": {
+            "score": 1,
+            "ok": 1,
+            "min_bottleneck_A": 1.915,
+            "effective_radius_A": 1.1497381854684892,
+            "thermal_buffer_A": 0.0502618145315109,
+            "margin_A": 0.7652618145315109
+          },
+          "topology_signature": {
+            "mode": "standard",
+            "diagram": {
+              "h1_max_persistence": 3,
+              "h2_sum_persistence": 1.233,
+              "entropy": 0.922,
+              "curvature_proxy": 0.671,
+              "point_cloud_spread": 9.124
+            },
+            "pocket_center": [
+              3.228,
+              2.224,
+              4.557
+            ],
+            "tunnel": {
+              "bottleneck_radius": 1.915,
+              "required_bottleneck_radius": 1.8,
+              "path_length": 8.401,
+              "curvature_proxy": 0.671,
+              "entry_point": [
+                -7.929,
+                -6.404,
+                -3.031
+              ]
+            },
+            "topology_score": 0.616,
+            "robustness": 0.701
+          },
+          "topology_feasibility_score": 0.616,
+          "topology_robustness": 0.701,
+          "feasibility_score": 0.397,
+          "feasibility_flag": false,
+          "required_topology_constraints": [
+            "bottleneck_radius >= 1.8",
+            "tunnel_open_fraction >= 0.3"
+          ],
+          "condition_adjusted_scores": {
+            "access": 0.79,
+            "reach": 0.605,
+            "retention": 0.257
+          },
+          "condition_penalties": [],
+          "scores": {
+            "access_score": 0.79,
+            "reach_score": 0.605,
+            "retention_score": 0.257,
+            "raw_total": 0.6,
+            "condition_adjusted_total": 0.51,
+            "total": 0.51
+          },
+          "module1_confidence": {
+            "access": 0.585,
+            "reach": 0.605,
+            "retention": 0.257,
+            "total": 0.397,
+            "topology": 0.616,
+            "robustness": 0.701,
+            "ensemble": {
+              "sample_count": 64,
+              "ensemble_temperature": 303.15,
+              "energy_stats": {
+                "mean": 0.388,
+                "stdev": 0.041
+              },
+              "deltaE_model_kJ_per_mol": 7.767,
+              "boltzmann_weight_summary": {
+                "min": 0.007761,
+                "max": 0.03565,
+                "mean": 0.015625
+              },
+              "access_mean": 0.819,
+              "reach_mean": 0.627,
+              "retention_mean": 0.266,
+              "topology_mean": 0.639,
+              "total_mean": 0.622,
+              "access_stdev": 0.055,
+              "reach_stdev": 0.042,
+              "retention_stdev": 0.018,
+              "topology_stdev": 0.043,
+              "total_stdev": 0.042,
+              "access_prob": 1,
+              "reach_prob": 0.727,
+              "retention_prob": 0,
+              "score_ci90": {
+                "total": [
+                  0.567,
+                  0.677
+                ],
+                "retention": [
+                  0.243,
+                  0.29
+                ]
+              }
+            }
+          },
+          "module1_physics_audit": {
+            "temperature_K": 303.15,
+            "deltaE_model_kJ_per_mol": 7.767,
+            "boltzmann_weight_summary": {
+              "min": 0.007761,
+              "max": 0.03565,
+              "mean": 0.015625
+            },
+            "diffusion_cap_s_inv": 1000000000,
+            "diffusion_D_m2_s": 5e-10,
+            "diffusion_L_A": 8.401,
+            "diffusion_tau_s": 7.0576801e-10,
+            "diffusion_k_diff_s_inv": 1000000000,
+            "diffusion_assumptions": [
+              "diffusion cap derived from tunnel length"
+            ]
+          },
+          "predictor_score": 0.469,
+          "fail_codes": [
+            "WARN_RETENTION_WEAK_BINDING",
+            "PASS_TOPK_SELECTED"
+          ],
+          "pareto_rank": 0,
+          "selected_for_refinement": true
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_015",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_015.pdb",
+          "pocket_center": [
+            -1.771,
+            -1.151,
+            3.121
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 1.914,
+            "required_bottleneck_radius": 1.8,
+            "path_length": 20.067,
+            "curvature_proxy": 0.277,
+            "entry_point": [
+              2.337,
+              -4.39,
+              -0.006
+            ]
+          },
+          "reach_summary": {
+            "fail_code": null,
+            "reach_score": 0.543,
+            "reach_geom_score": 0.678,
+            "reachable_residues": [
+              {
+                "residue": "Asp138",
+                "reach_score": 0.833
+              },
+              {
+                "residue": "Cys219",
+                "reach_score": 0.795
+              },
+              {
+                "residue": "His104",
+                "reach_score": 0.407
+              }
+            ],
+            "best_candidates": [
+              {
+                "residue": "Asp138",
+                "reach_score": 0.833
+              },
+              {
+                "residue": "Cys219",
+                "reach_score": 0.795
+              },
+              {
+                "residue": "His104",
+                "reach_score": 0.407
+              }
+            ],
+            "candidate_residues_by_role": {
+              "nucleophile": [
+                "Cys219"
+              ],
+              "base": [
+                "His104"
+              ],
+              "acid": [
+                "Asp138"
+              ],
+              "other": []
+            },
+            "mechanism_compat": {
+              "track": "serine_hydrolase",
+              "mechanism_label": "thiol_hydrolase_like",
+              "required_flags": [
+                "requires_thiol_nucleophile"
+              ],
+              "has_nucleophile": true,
+              "nucleophile_type": "Cys",
+              "has_base": true,
+              "has_acid": true,
+              "score": 0.8,
+              "notes": [
+                "Cys nucleophile; serine-hydrolase track downgraded"
+              ]
+            }
+          },
+          "attack_envelope": {
+            "apex_point": [
+              -1.598,
+              -1.855,
+              1.808
+            ],
+            "axis_vector": [
+              0.115,
+              -0.469,
+              -0.875
+            ],
+            "distance_band": [
+              2.5,
+              3.5
+            ],
+            "cone_angle": 30,
+            "mechanism_family": "serine_hydrolase"
+          },
+          "retention_metrics": {
+            "fail_code": null,
+            "retention_score": 0.335,
+            "retention_risk_flag": "MEDIUM",
+            "pocket_volume_proxy": 159.41,
+            "substrate_volume_proxy": 7.24,
+            "volume_ratio": 22.02,
+            "volume_penalty": 0.329,
+            "anchor_score": 0.34,
+            "warning_codes": [],
+            "score_multiplier": 1
+          },
+          "physics_access": {
+            "score": 1,
+            "ok": 1,
+            "min_bottleneck_A": 1.914,
+            "effective_radius_A": 1.1497381854684892,
+            "thermal_buffer_A": 0.0502618145315109,
+            "margin_A": 0.7642618145315108
+          },
+          "topology_signature": {
+            "mode": "standard",
+            "diagram": {
+              "h1_max_persistence": 2.82,
+              "h2_sum_persistence": 1.88,
+              "entropy": 0.854,
+              "curvature_proxy": 0.277,
+              "point_cloud_spread": 3.491
+            },
+            "pocket_center": [
+              -1.771,
+              -1.151,
+              3.121
+            ],
+            "tunnel": {
+              "bottleneck_radius": 1.914,
+              "required_bottleneck_radius": 1.8,
+              "path_length": 20.067,
+              "curvature_proxy": 0.277,
+              "entry_point": [
+                2.337,
+                -4.39,
+                -0.006
+              ]
+            },
+            "topology_score": 0.792,
+            "robustness": 0.811
+          },
+          "topology_feasibility_score": 0.792,
+          "topology_robustness": 0.811,
+          "feasibility_score": 0.481,
+          "feasibility_flag": false,
+          "required_topology_constraints": [
+            "bottleneck_radius >= 1.8",
+            "tunnel_open_fraction >= 0.3"
+          ],
+          "condition_adjusted_scores": {
+            "access": 0.498,
+            "reach": 0.543,
+            "retention": 0.335
+          },
+          "condition_penalties": [],
+          "scores": {
+            "access_score": 0.498,
+            "reach_score": 0.543,
+            "retention_score": 0.335,
+            "raw_total": 0.486,
+            "condition_adjusted_total": 0.486,
+            "total": 0.486
+          },
+          "module1_confidence": {
+            "access": 0.576,
+            "reach": 0.542,
+            "retention": 0.335,
+            "total": 0.481,
+            "topology": 0.792,
+            "robustness": 0.811,
+            "ensemble": {
+              "sample_count": 64,
+              "ensemble_temperature": 303.15,
+              "energy_stats": {
+                "mean": 0.45,
+                "stdev": 0.035
+              },
+              "deltaE_model_kJ_per_mol": 8.996,
+              "boltzmann_weight_summary": {
+                "min": 0.007156,
+                "max": 0.036957,
+                "mean": 0.015625
+              },
+              "access_mean": 0.51,
+              "reach_mean": 0.556,
+              "retention_mean": 0.343,
+              "topology_mean": 0.811,
+              "total_mean": 0.497,
+              "access_stdev": 0.033,
+              "reach_stdev": 0.036,
+              "retention_stdev": 0.022,
+              "topology_stdev": 0.052,
+              "total_stdev": 0.032,
+              "access_prob": 0.037,
+              "reach_prob": 0.061,
+              "retention_prob": 0,
+              "score_ci90": {
+                "total": [
+                  0.46,
+                  0.529
+                ],
+                "retention": [
+                  0.318,
+                  0.365
+                ]
+              }
+            }
+          },
+          "module1_physics_audit": {
+            "temperature_K": 303.15,
+            "deltaE_model_kJ_per_mol": 8.996,
+            "boltzmann_weight_summary": {
+              "min": 0.007156,
+              "max": 0.036957,
+              "mean": 0.015625
+            },
+            "diffusion_cap_s_inv": 248333379.436,
+            "diffusion_D_m2_s": 5e-10,
+            "diffusion_L_A": 20.067,
+            "diffusion_tau_s": 4.02684489e-9,
+            "diffusion_k_diff_s_inv": 248333379.436,
+            "diffusion_assumptions": [
+              "diffusion cap derived from tunnel length"
+            ]
+          },
+          "predictor_score": 0.481,
+          "fail_codes": [
+            "PASS_TOPK_SELECTED"
+          ],
+          "pareto_rank": 0,
+          "selected_for_refinement": true
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_012",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_012.pdb",
+          "pocket_center": [
+            -4.003,
+            -2.314,
+            -1.887
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 1.702,
+            "required_bottleneck_radius": 1.8,
+            "path_length": 20.667,
+            "curvature_proxy": 0.26,
+            "entry_point": [
+              -6.951,
+              -7.755,
+              1.56
+            ],
+            "borderline_clearance": true
+          },
+          "reach_summary": {
+            "fail_code": "FAIL_MECH_COMPAT",
+            "reach_score": 0,
+            "reach_geom_score": 0.62,
+            "reachable_residues": [
+              {
+                "residue": "Met72",
+                "reach_score": 0.837
+              },
+              {
+                "residue": "Tyr72",
+                "reach_score": 0.403
+              }
+            ],
+            "best_candidates": [
+              {
+                "residue": "Met72",
+                "reach_score": 0.837
+              },
+              {
+                "residue": "Tyr72",
+                "reach_score": 0.403
+              }
+            ],
+            "candidate_residues_by_role": {
+              "nucleophile": [],
+              "base": [],
+              "acid": [],
+              "other": [
+                "Met72",
+                "Tyr72"
+              ]
+            },
+            "mechanism_compat": {
+              "track": "serine_hydrolase",
+              "mechanism_label": "serine_hydrolase",
+              "required_flags": [],
+              "has_nucleophile": false,
+              "nucleophile_type": "None",
+              "has_base": false,
+              "has_acid": false,
+              "score": 0,
+              "notes": [
+                "Missing nucleophile residue",
+                "Missing His base",
+                "Missing Asp/Glu acid"
+              ]
+            }
+          },
+          "attack_envelope": {
+            "apex_point": [
+              -4.912,
+              -1.193,
+              -1.478
+            ],
+            "axis_vector": [
+              -0.606,
+              0.747,
+              0.273
+            ],
+            "distance_band": [
+              2.5,
+              3.5
+            ],
+            "cone_angle": 30,
+            "mechanism_family": "serine_hydrolase"
+          },
+          "retention_metrics": {
+            "fail_code": null,
+            "retention_score": 0.322,
+            "retention_risk_flag": "MEDIUM",
+            "pocket_volume_proxy": 186.06,
+            "substrate_volume_proxy": 7.24,
+            "volume_ratio": 25.7,
+            "volume_penalty": 0.295,
+            "anchor_score": 0.34,
+            "warning_codes": [],
+            "score_multiplier": 1
+          },
+          "physics_access": {
+            "score": 0.9803370206465554,
+            "ok": 1,
+            "min_bottleneck_A": 1.702,
+            "effective_radius_A": 1.1497381854684892,
+            "thermal_buffer_A": 0.0502618145315109,
+            "margin_A": 0.5522618145315108
+          },
+          "topology_signature": {
+            "mode": "standard",
+            "diagram": {
+              "h1_max_persistence": 2.634,
+              "h2_sum_persistence": 1.829,
+              "entropy": 0.857,
+              "curvature_proxy": 0.26,
+              "point_cloud_spread": 3.945
+            },
+            "pocket_center": [
+              -4.003,
+              -2.314,
+              -1.887
+            ],
+            "tunnel": {
+              "bottleneck_radius": 1.702,
+              "required_bottleneck_radius": 1.8,
+              "path_length": 20.667,
+              "curvature_proxy": 0.26,
+              "entry_point": [
+                -6.951,
+                -7.755,
+                1.56
+              ],
+              "borderline_clearance": true
+            },
+            "topology_score": 0.788,
+            "robustness": 0.803
+          },
+          "topology_feasibility_score": 0.788,
+          "topology_robustness": 0.803,
+          "feasibility_score": 0.229,
+          "feasibility_flag": false,
+          "required_topology_constraints": [
+            "bottleneck_radius >= 1.8",
+            "tunnel_open_fraction >= 0.3"
+          ],
+          "condition_adjusted_scores": {
+            "access": 0.435,
+            "reach": 0,
+            "retention": 0.322
+          },
+          "condition_penalties": [],
+          "scores": {
+            "access_score": 0.435,
+            "reach_score": 0,
+            "retention_score": 0.322,
+            "raw_total": 0.217,
+            "condition_adjusted_total": 0.217,
+            "total": 0.217
+          },
+          "module1_confidence": {
+            "access": 0.516,
+            "reach": 0,
+            "retention": 0.322,
+            "total": 0.229,
+            "topology": 0.788,
+            "robustness": 0.803,
+            "ensemble": {
+              "sample_count": 64,
+              "ensemble_temperature": 303.15,
+              "energy_stats": {
+                "mean": 0.673,
+                "stdev": 0.038
+              },
+              "deltaE_model_kJ_per_mol": 13.453,
+              "boltzmann_weight_summary": {
+                "min": 0.008778,
+                "max": 0.028859,
+                "mean": 0.015625
+              },
+              "access_mean": 0.446,
+              "reach_mean": 0,
+              "retention_mean": 0.33,
+              "topology_mean": 0.808,
+              "total_mean": 0.222,
+              "access_stdev": 0.052,
+              "reach_stdev": 0,
+              "retention_stdev": 0.038,
+              "topology_stdev": 0.094,
+              "total_stdev": 0.026,
+              "access_prob": 0,
+              "reach_prob": 0,
+              "retention_prob": 0,
+              "score_ci90": {
+                "total": [
+                  0.196,
+                  0.254
+                ],
+                "retention": [
+                  0.292,
+                  0.377
+                ]
+              }
+            }
+          },
+          "module1_physics_audit": {
+            "temperature_K": 303.15,
+            "deltaE_model_kJ_per_mol": 13.453,
+            "boltzmann_weight_summary": {
+              "min": 0.008778,
+              "max": 0.028859,
+              "mean": 0.015625
+            },
+            "diffusion_cap_s_inv": 234123560.99,
+            "diffusion_D_m2_s": 5e-10,
+            "diffusion_L_A": 20.667,
+            "diffusion_tau_s": 4.271248890000001e-9,
+            "diffusion_k_diff_s_inv": 234123560.99,
+            "diffusion_assumptions": [
+              "diffusion cap derived from tunnel length"
+            ]
+          },
+          "predictor_score": 0.06,
+          "fail_codes": [
+            "FAIL_MECH_COMPAT",
+            "WARN_TUNNEL_BORDERLINE",
+            "PASS_TOPK_SELECTED"
+          ],
+          "pareto_rank": 1,
+          "selected_for_refinement": true
+        }
+      ],
+      "rejected_scaffolds": [
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_003",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_003.pdb",
+          "pocket_center": [
+            -0.125,
+            2.272,
+            2.267
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 0.982,
+            "path_length": 12.515,
+            "entry_point": [
+              4.749,
+              7.045,
+              -8.275
+            ],
+            "curvature_proxy": 0.52
+          },
+          "reach_summary": {},
+          "attack_envelope": {},
+          "retention_metrics": {},
+          "scores": {},
+          "fail_codes": [
+            "FAIL_NO_TUNNEL_COARSE"
+          ]
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_006",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_006.pdb",
+          "pocket_center": [
+            4.746,
+            -3.969,
+            3.96
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 0.881,
+            "path_length": 20.669,
+            "entry_point": [
+              -2.526,
+              9.756,
+              -6.947
+            ],
+            "curvature_proxy": 0.48
+          },
+          "reach_summary": {},
+          "attack_envelope": {},
+          "retention_metrics": {},
+          "scores": {},
+          "fail_codes": [
+            "FAIL_NO_TUNNEL_COARSE"
+          ]
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_008",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_008.pdb",
+          "pocket_center": [
+            -1.235,
+            0.795,
+            1.365
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 1.092,
+            "path_length": 14.954,
+            "entry_point": [
+              -4.456,
+              -0.264,
+              -2.076
+            ],
+            "curvature_proxy": 0.431
+          },
+          "reach_summary": {},
+          "attack_envelope": {},
+          "retention_metrics": {},
+          "scores": {},
+          "fail_codes": [
+            "FAIL_NO_TUNNEL_COARSE"
+          ]
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_010",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_010.pdb",
+          "pocket_center": null,
+          "tunnel_summary": null,
+          "reach_summary": {},
+          "attack_envelope": {},
+          "retention_metrics": {},
+          "scores": {},
+          "fail_codes": [
+            "FAIL_NO_POCKET"
+          ]
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_011",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_011.pdb",
+          "pocket_center": [
+            -1.825,
+            2.456,
+            -1.637
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 1.029,
+            "path_length": 25.051,
+            "entry_point": [
+              -6.235,
+              -9.7,
+              9.626
+            ],
+            "curvature_proxy": 0.119
+          },
+          "reach_summary": {},
+          "attack_envelope": {},
+          "retention_metrics": {},
+          "scores": {},
+          "fail_codes": [
+            "FAIL_NO_TUNNEL_COARSE"
+          ]
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_013",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_013.pdb",
+          "pocket_center": [
+            1.826,
+            0.067,
+            4.894
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 0.774,
+            "path_length": 17.675,
+            "entry_point": [
+              6.224,
+              -3.454,
+              -3.102
+            ],
+            "curvature_proxy": 0.233
+          },
+          "reach_summary": {},
+          "attack_envelope": {},
+          "retention_metrics": {},
+          "scores": {},
+          "fail_codes": [
+            "FAIL_NO_TUNNEL_COARSE"
+          ]
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_014",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_014.pdb",
+          "pocket_center": [
+            1.754,
+            -1.954,
+            1.93
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 0.845,
+            "path_length": 15.405,
+            "entry_point": [
+              1.673,
+              3.448,
+              6.704
+            ],
+            "curvature_proxy": 0.354
+          },
+          "reach_summary": {},
+          "attack_envelope": {},
+          "retention_metrics": {},
+          "scores": {},
+          "fail_codes": [
+            "FAIL_NO_TUNNEL_COARSE"
+          ]
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_002",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_002.pdb",
+          "pocket_center": [
+            -0.075,
+            -3.7,
+            2.14
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 1.03,
+            "required_bottleneck_radius": 1.8,
+            "path_length": 21.949,
+            "curvature_proxy": 0.653,
+            "entry_point": [
+              -1.979,
+              -1.978,
+              -4.328
+            ]
+          },
+          "reach_summary": {},
+          "attack_envelope": {},
+          "retention_metrics": {},
+          "scores": {},
+          "fail_codes": [
+            "FAIL_TUNNEL_TOO_NARROW"
+          ]
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_007",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_007.pdb",
+          "pocket_center": [
+            2.735,
+            -0.275,
+            -1.376
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 1.525,
+            "required_bottleneck_radius": 1.8,
+            "path_length": 13.588,
+            "curvature_proxy": 0.253,
+            "entry_point": [
+              -7.572,
+              7.681,
+              2.751
+            ]
+          },
+          "reach_summary": {},
+          "attack_envelope": {},
+          "retention_metrics": {},
+          "scores": {},
+          "fail_codes": [
+            "FAIL_TUNNEL_TOO_NARROW"
+          ]
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_004",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_004.pdb",
+          "pocket_center": [
+            2.107,
+            4.577,
+            -2.844
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 1.182,
+            "required_bottleneck_radius": 1.8,
+            "path_length": 14.687,
+            "curvature_proxy": 0.162,
+            "entry_point": [
+              0.029,
+              0.389,
+              -6.746
+            ]
+          },
+          "reach_summary": {},
+          "attack_envelope": {},
+          "retention_metrics": {},
+          "scores": {},
+          "fail_codes": [
+            "FAIL_TUNNEL_TOO_NARROW"
+          ]
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_001",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_001.pdb",
+          "pocket_center": [
+            -2.94,
+            -3.831,
+            -3.736
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 1.409,
+            "required_bottleneck_radius": 1.8,
+            "path_length": 18.189,
+            "curvature_proxy": 0.279,
+            "entry_point": [
+              -0.507,
+              -4.175,
+              -2.279
+            ]
+          },
+          "reach_summary": {},
+          "attack_envelope": {},
+          "retention_metrics": {},
+          "scores": {},
+          "fail_codes": [
+            "FAIL_TUNNEL_TOO_NARROW"
+          ]
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_016",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_016.pdb",
+          "pocket_center": [
+            4.896,
+            2.696,
+            1.911
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 1.517,
+            "required_bottleneck_radius": 1.8,
+            "path_length": 18.642,
+            "curvature_proxy": 0.573,
+            "entry_point": [
+              -6.316,
+              -0.552,
+              5.764
+            ]
+          },
+          "reach_summary": {},
+          "attack_envelope": {},
+          "retention_metrics": {},
+          "scores": {},
+          "fail_codes": [
+            "FAIL_TUNNEL_TOO_NARROW"
+          ]
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_009",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_009.pdb",
+          "pocket_center": [
+            4.633,
+            0.597,
+            2.311
+          ],
+          "tunnel_summary": {
+            "bottleneck_radius": 1.758,
+            "required_bottleneck_radius": 1.8,
+            "path_length": 9.293,
+            "curvature_proxy": 0.366,
+            "entry_point": [
+              -3.49,
+              -4.111,
+              2.057
+            ],
+            "borderline_clearance": true
+          },
+          "reach_summary": {},
+          "attack_envelope": {},
+          "retention_metrics": {},
+          "scores": {},
+          "fail_codes": [
+            "FAIL_TUNNEL_COLLAPSE"
+          ]
+        }
+      ],
+      "module2_handoff": {
+        "top_scaffolds": [
+          {
+            "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_005",
+            "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_005.pdb",
+            "attack_envelope": {
+              "apex_point": [
+                2.582,
+                1.551,
+                5.731
+              ],
+              "axis_vector": [
+                -0.431,
+                -0.449,
+                0.783
+              ],
+              "distance_band": [
+                2.5,
+                3.5
+              ],
+              "cone_angle": 30,
+              "mechanism_family": "serine_hydrolase"
+            },
+            "candidate_residues_by_role": {
+              "nucleophile": [
+                "Cys217"
+              ],
+              "base": [
+                "His166",
+                "His105"
+              ],
+              "acid": [
+                "Glu36"
+              ],
+              "other": [
+                "Lys170"
+              ]
+            },
+            "tunnel_metrics": {
+              "bottleneck_radius": 1.915,
+              "required_bottleneck_radius": 1.8,
+              "path_length": 8.401,
+              "curvature_proxy": 0.671,
+              "entry_point": [
+                -7.929,
+                -6.404,
+                -3.031
+              ]
+            },
+            "scores": {
+              "total": 0.51
+            },
+            "topology_signature": {
+              "mode": "standard",
+              "diagram": {
+                "h1_max_persistence": 3,
+                "h2_sum_persistence": 1.233,
+                "entropy": 0.922,
+                "curvature_proxy": 0.671,
+                "point_cloud_spread": 9.124
+              },
+              "pocket_center": [
+                3.228,
+                2.224,
+                4.557
+              ],
+              "tunnel": {
+                "bottleneck_radius": 1.915,
+                "required_bottleneck_radius": 1.8,
+                "path_length": 8.401,
+                "curvature_proxy": 0.671,
+                "entry_point": [
+                  -7.929,
+                  -6.404,
+                  -3.031
+                ]
+              },
+              "topology_score": 0.616,
+              "robustness": 0.701
+            },
+            "topology_feasibility_score": 0.616,
+            "topology_robustness": 0.701,
+            "feasibility_flag": false,
+            "feasibility_score": 0.397,
+            "required_topology_constraints": [
+              "bottleneck_radius >= 1.8",
+              "tunnel_open_fraction >= 0.3"
+            ],
+            "condition_adjusted_scores": {
+              "access": 0.79,
+              "reach": 0.605,
+              "retention": 0.257
+            },
+            "retention_metrics": {
+              "volume_ratio": 54.12,
+              "retention_risk_flag": "HIGH",
+              "warning_codes": [
+                "WARN_RETENTION_WEAK_BINDING"
+              ],
+              "score_multiplier": 0.85
+            },
+            "reach_summary": {
+              "mechanism_compat_score": 0.8,
+              "nucleophile_type": "Cys",
+              "mechanism_label": "thiol_hydrolase_like",
+              "required_flags": [
+                "requires_thiol_nucleophile"
+              ],
+              "nucleophile_geometry": "cysteine_thiol"
+            },
+            "bond_center_hint": {
+              "atom_indices": [
+                1,
+                3
+              ],
+              "local_context": {
+                "neighbor_hetero_atoms": 1,
+                "in_ring": false,
+                "is_aromatic": false,
+                "bond_type": "ester",
+                "bond_class": "ester"
+              },
+              "anchor_smarts_used": "ester__acyl_o__acetyl"
+            }
+          },
+          {
+            "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_015",
+            "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_015.pdb",
+            "attack_envelope": {
+              "apex_point": [
+                -1.598,
+                -1.855,
+                1.808
+              ],
+              "axis_vector": [
+                0.115,
+                -0.469,
+                -0.875
+              ],
+              "distance_band": [
+                2.5,
+                3.5
+              ],
+              "cone_angle": 30,
+              "mechanism_family": "serine_hydrolase"
+            },
+            "candidate_residues_by_role": {
+              "nucleophile": [
+                "Cys219"
+              ],
+              "base": [
+                "His104"
+              ],
+              "acid": [
+                "Asp138"
+              ],
+              "other": []
+            },
+            "tunnel_metrics": {
+              "bottleneck_radius": 1.914,
+              "required_bottleneck_radius": 1.8,
+              "path_length": 20.067,
+              "curvature_proxy": 0.277,
+              "entry_point": [
+                2.337,
+                -4.39,
+                -0.006
+              ]
+            },
+            "scores": {
+              "total": 0.486
+            },
+            "topology_signature": {
+              "mode": "standard",
+              "diagram": {
+                "h1_max_persistence": 2.82,
+                "h2_sum_persistence": 1.88,
+                "entropy": 0.854,
+                "curvature_proxy": 0.277,
+                "point_cloud_spread": 3.491
+              },
+              "pocket_center": [
+                -1.771,
+                -1.151,
+                3.121
+              ],
+              "tunnel": {
+                "bottleneck_radius": 1.914,
+                "required_bottleneck_radius": 1.8,
+                "path_length": 20.067,
+                "curvature_proxy": 0.277,
+                "entry_point": [
+                  2.337,
+                  -4.39,
+                  -0.006
+                ]
+              },
+              "topology_score": 0.792,
+              "robustness": 0.811
+            },
+            "topology_feasibility_score": 0.792,
+            "topology_robustness": 0.811,
+            "feasibility_flag": false,
+            "feasibility_score": 0.481,
+            "required_topology_constraints": [
+              "bottleneck_radius >= 1.8",
+              "tunnel_open_fraction >= 0.3"
+            ],
+            "condition_adjusted_scores": {
+              "access": 0.498,
+              "reach": 0.543,
+              "retention": 0.335
+            },
+            "retention_metrics": {
+              "volume_ratio": 22.02,
+              "retention_risk_flag": "MEDIUM",
+              "warning_codes": [],
+              "score_multiplier": 1
+            },
+            "reach_summary": {
+              "mechanism_compat_score": 0.8,
+              "nucleophile_type": "Cys",
+              "mechanism_label": "thiol_hydrolase_like",
+              "required_flags": [
+                "requires_thiol_nucleophile"
+              ],
+              "nucleophile_geometry": "cysteine_thiol"
+            },
+            "bond_center_hint": {
+              "atom_indices": [
+                1,
+                3
+              ],
+              "local_context": {
+                "neighbor_hetero_atoms": 1,
+                "in_ring": false,
+                "is_aromatic": false,
+                "bond_type": "ester",
+                "bond_class": "ester"
+              },
+              "anchor_smarts_used": "ester__acyl_o__acetyl"
+            }
+          }
+        ]
+      },
+      "math_contract": {
+        "confidence": {
+          "p_raw": 0.468,
+          "p_cal": 0.468,
+          "ci90": [
+            0.46,
+            0.529
+          ],
+          "n_eff": 64
+        },
+        "predictions": {
+          "module1_total": {
+            "mean": 0.497,
+            "std": 0.032,
+            "ci90": [
+              0.46,
+              0.529
+            ]
+          },
+          "retention_score": {
+            "mean": 0.343,
+            "std": 0.022,
+            "ci90": [
+              0.318,
+              0.365
+            ]
+          }
+        },
+        "qc": {
+          "status": "N/A",
+          "reasons": [],
+          "metrics": {}
+        }
+      }
+    },
+    "module2_active_site_refinement": {
+      "status": "PASS",
+      "halt_reason": null,
+      "selected_scaffold": {
+        "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_015",
+        "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_015.pdb",
+        "attack_envelope": {
+          "apex_point": [
+            -1.598,
+            -1.855,
+            1.808
+          ],
+          "axis_vector": [
+            0.115,
+            -0.469,
+            -0.875
+          ],
+          "distance_band": [
+            2.5,
+            3.5
+          ],
+          "cone_angle": 30,
+          "mechanism_family": "serine_hydrolase"
+        },
+        "candidate_residues_by_role": {
+          "nucleophile": [
+            "Cys219"
+          ],
+          "base": [
+            "His104"
+          ],
+          "acid": [
+            "Asp138"
+          ],
+          "other": []
+        },
+        "tunnel_metrics": {
+          "bottleneck_radius": 1.914,
+          "required_bottleneck_radius": 1.8,
+          "path_length": 20.067,
+          "curvature_proxy": 0.277,
+          "entry_point": [
+            2.337,
+            -4.39,
+            -0.006
+          ]
+        },
+        "scores": {
+          "total": 0.486
+        },
+        "retention_metrics": {
+          "volume_ratio": 22.02,
+          "retention_risk_flag": "MEDIUM",
+          "warning_codes": [],
+          "score_multiplier": 1
+        },
+        "reach_summary": {
+          "mechanism_compat_score": 0.8,
+          "nucleophile_type": "Cys",
+          "mechanism_label": "thiol_hydrolase_like",
+          "required_flags": [
+            "requires_thiol_nucleophile"
+          ],
+          "nucleophile_geometry": "cysteine_thiol"
+        },
+        "physics_gate": {
+          "ratio_kT": 6.96012528129454,
+          "ok": 1,
+          "threshold_kT": 40,
+          "kT_kj_mol": 2.5205293426466997,
+          "delta_g_kj_mol": 17.543,
+          "temperature_K": 303.15
+        },
+        "delta_g": 17.543,
+        "delta_g_mean": 17.543,
+        "delta_g_std": 0.84,
+        "k_pred": 3.91423,
+        "k_pred_mean": 3.91423,
+        "k_pred_std": 8.18261,
+        "k_pred_ci90": [
+          0.11967,
+          13.73743
+        ],
+        "k_dist_summary": {
+          "n": 256,
+          "mean": 1.41914,
+          "p10": 0.08247,
+          "p50": 0.54592,
+          "p90": 3.40497
+        },
+        "reliability": 0.734,
+        "adjusted_score": 2.87426,
+        "retention_penalty": 0.04,
+        "retention_penalty_reasons": [
+          "MEDIUM retention risk"
+        ],
+        "model_risk": 0.88
+      },
+      "selection_explain": "Selected scaffold_lib_serine_hydrolase_v1_scaffold_015 with ranking score 2.87426. Predicted k_mean=3.91423 (CI90 0.11967-13.73743) using Eyring ranking. Retention penalty applied (MEDIUM retention risk).",
+      "objective": "Improve retention without breaking access or reach.",
+      "pocket_check": {
+        "status": "skipped",
+        "reason": "PDB file not available in runtime."
+      },
+      "variant_set": [
+        {
+          "variant_id": "V4",
+          "label": "Oxyanion hole strengthening",
+          "description": "Increase donor strength near the carbonyl oxygen.",
+          "mutations": [
+            {
+              "target_role": "oxyanion_hole",
+              "preferred_residues": [
+                "Ser",
+                "Thr",
+                "Asn",
+                "Gln"
+              ],
+              "note": "strengthen tetrahedral intermediate stabilization"
+            }
+          ],
+          "rationale": "Improve stabilization of the tetrahedral intermediate.",
+          "estimated_effects": {
+            "reach": -0.01,
+            "retention": 0.001,
+            "access": -0.005
+          },
+          "score": 0.3416228525729695,
+          "category": "oxyanion_hole",
+          "requires_structural_localization": true,
+          "delta_deltaG_dagger_kJ_per_mol": -3,
+          "strain_displacement_A": 0,
+          "strain_note": "structural localization required; conservative strain floor applied",
+          "objective": "Improve retention without breaking access or reach.",
+          "nucleophile_geometry": "cysteine_thiol",
+          "physics": {
+            "ddG_bind_kcal_mol": -0.5,
+            "ddG_strain_kcal_mol": 0.478,
+            "ddG_total_kcal_mol": -0.022,
+            "rate_ratio": 1.037,
+            "assumptions": [
+              "strain floor applied for structural localization",
+              "strain from displacement proxy",
+              "ddG_bind from coarse category prior",
+              "ddG_strain from coarse category prior"
+            ]
+          },
+          "strain_energy_kJ_per_mol": 2,
+          "delta_deltaG_dagger_effective_kJ_per_mol": -3,
+          "deltaG_dagger_variant_kJ_per_mol": 72.4,
+          "k_variant_s_inv": 2.117244,
+          "rank": 1
+        },
+        {
+          "variant_id": "V2",
+          "label": "Hydrophobic clamp",
+          "description": "Add aromatic/hydrophobic packing to stabilize the aromatic ring.",
+          "mutations": [
+            {
+              "target_role": "pocket_lining",
+              "preferred_residues": [
+                "Phe",
+                "Tyr",
+                "Leu",
+                "Ile"
+              ],
+              "note": "hydrophobic clamp near aromatic ring"
+            }
+          ],
+          "rationale": "Retention weakness; add hydrophobic wall for ring packing.",
+          "estimated_effects": {
+            "reach": -0.01,
+            "retention": 0.009,
+            "access": -0.005
+          },
+          "score": 0.3135030214536121,
+          "category": "retention_clamp",
+          "requires_structural_localization": true,
+          "delta_deltaG_dagger_kJ_per_mol": -2,
+          "strain_displacement_A": 0,
+          "strain_note": "structural localization required; conservative strain floor applied",
+          "objective": "Improve retention without breaking access or reach.",
+          "nucleophile_geometry": "cysteine_thiol",
+          "physics": {
+            "ddG_bind_kcal_mol": -0.7,
+            "ddG_strain_kcal_mol": 0.478,
+            "ddG_total_kcal_mol": -0.222,
+            "rate_ratio": 1.446,
+            "assumptions": [
+              "strain floor applied for structural localization",
+              "strain from displacement proxy",
+              "ddG_bind from coarse category prior",
+              "ddG_strain from coarse category prior"
+            ]
+          },
+          "strain_energy_kJ_per_mol": 2,
+          "delta_deltaG_dagger_effective_kJ_per_mol": -2,
+          "deltaG_dagger_variant_kJ_per_mol": 73.4,
+          "k_variant_s_inv": 1.423863,
+          "rank": 2
+        },
+        {
+          "variant_id": "V3",
+          "label": "Polar anchor (carboxylate)",
+          "description": "Introduce a positive anchor for the carboxylate.",
+          "mutations": [
+            {
+              "target_role": "polar_anchor",
+              "preferred_residues": [
+                "Arg",
+                "Lys",
+                "His"
+              ],
+              "note": "anchor deprotonated carboxylate"
+            }
+          ],
+          "rationale": "Carboxylate is negative at pH 6.5–8; add a cationic anchor.",
+          "estimated_effects": {
+            "reach": -0.01,
+            "retention": 0.013,
+            "access": -0.005
+          },
+          "score": 0.29944310589393347,
+          "category": "polar_anchor",
+          "requires_structural_localization": true,
+          "delta_deltaG_dagger_kJ_per_mol": -1.5,
+          "strain_displacement_A": 0,
+          "strain_note": "structural localization required; conservative strain floor applied",
+          "objective": "Improve retention without breaking access or reach.",
+          "nucleophile_geometry": "cysteine_thiol",
+          "physics": {
+            "ddG_bind_kcal_mol": -0.8,
+            "ddG_strain_kcal_mol": 0.478,
+            "ddG_total_kcal_mol": -0.322,
+            "rate_ratio": 1.707,
+            "assumptions": [
+              "strain floor applied for structural localization",
+              "strain from displacement proxy",
+              "ddG_bind from coarse category prior",
+              "ddG_strain from coarse category prior"
+            ]
+          },
+          "strain_energy_kJ_per_mol": 2,
+          "delta_deltaG_dagger_effective_kJ_per_mol": -1.5,
+          "deltaG_dagger_variant_kJ_per_mol": 73.9,
+          "k_variant_s_inv": 1.167661,
+          "rank": 3
+        },
+        {
+          "variant_id": "V0",
+          "label": "Baseline",
+          "description": "No mutations; baseline control.",
+          "mutations": [],
+          "rationale": "Used as control for downstream comparisons.",
+          "estimated_effects": {
+            "reach": 0,
+            "retention": 0,
+            "access": 0
+          },
+          "score": 0.15346810023020915,
+          "category": "baseline",
+          "requires_structural_localization": false,
+          "delta_deltaG_dagger_kJ_per_mol": 0,
+          "strain_displacement_A": 0,
+          "strain_note": "unknown -> no strain penalty applied",
+          "objective": "Improve retention without breaking access or reach.",
+          "nucleophile_geometry": "cysteine_thiol",
+          "physics": {
+            "ddG_bind_kcal_mol": 0,
+            "ddG_strain_kcal_mol": 0,
+            "ddG_total_kcal_mol": 0,
+            "rate_ratio": 1,
+            "assumptions": []
+          },
+          "strain_energy_kJ_per_mol": 0,
+          "delta_deltaG_dagger_effective_kJ_per_mol": 0,
+          "deltaG_dagger_variant_kJ_per_mol": 73.4,
+          "k_variant_s_inv": 1.423863,
+          "rank": 4
+        },
+        {
+          "variant_id": "V5",
+          "label": "Access-preserving clamp",
+          "description": "Clamp deeper in pocket to avoid tunnel bottleneck.",
+          "mutations": [
+            {
+              "target_role": "deep_pocket_lining",
+              "preferred_residues": [
+                "Tyr",
+                "Phe"
+              ],
+              "note": "clamp deeper in pocket to preserve access"
+            }
+          ],
+          "rationale": "Long tunnel; improve retention without blocking access.",
+          "estimated_effects": {
+            "reach": -0.01,
+            "retention": -0.003,
+            "access": -0.005
+          },
+          "score": -0.24737733553004657,
+          "category": "access_preserving_clamp",
+          "requires_structural_localization": true,
+          "delta_deltaG_dagger_kJ_per_mol": 0,
+          "strain_displacement_A": 0,
+          "strain_note": "structural localization required; conservative strain floor applied",
+          "objective": "Improve retention without breaking access or reach.",
+          "nucleophile_geometry": "cysteine_thiol",
+          "physics": {
+            "ddG_bind_kcal_mol": -0.4,
+            "ddG_strain_kcal_mol": 0.478,
+            "ddG_total_kcal_mol": 0.078,
+            "rate_ratio": 0.879,
+            "assumptions": [
+              "strain floor applied for structural localization",
+              "strain from displacement proxy",
+              "ddG_bind from coarse category prior",
+              "ddG_strain from coarse category prior"
+            ]
+          },
+          "strain_energy_kJ_per_mol": 2,
+          "delta_deltaG_dagger_effective_kJ_per_mol": 0,
+          "deltaG_dagger_variant_kJ_per_mol": 75.4,
+          "k_variant_s_inv": 0.643965,
+          "rank": 5
+        },
+        {
+          "variant_id": "V1",
+          "label": "Mechanism alignment",
+          "description": "Align nucleophile identity with serine-hydrolase geometry.",
+          "mutations": [
+            {
+              "target_role": "nucleophile",
+              "preferred_residues": [
+                "Ser"
+              ],
+              "note": "align nucleophile with serine-hydrolase geometry"
+            }
+          ],
+          "rationale": "Cys nucleophile detected in a serine-hydrolase route; align to Ser.",
+          "estimated_effects": {
+            "reach": -0.01,
+            "retention": -0.011,
+            "access": -0.005
+          },
+          "score": -0.39156039117145863,
+          "category": "mechanism_alignment",
+          "requires_structural_localization": true,
+          "delta_deltaG_dagger_kJ_per_mol": 0,
+          "strain_displacement_A": 0,
+          "strain_note": "structural localization required; conservative strain floor applied",
+          "objective": "Improve retention without breaking access or reach.",
+          "nucleophile_geometry": "cysteine_thiol",
+          "physics": {
+            "ddG_bind_kcal_mol": -0.2,
+            "ddG_strain_kcal_mol": 0.478,
+            "ddG_total_kcal_mol": 0.278,
+            "rate_ratio": 0.63,
+            "assumptions": [
+              "strain floor applied for structural localization",
+              "strain from displacement proxy",
+              "ddG_bind from coarse category prior",
+              "ddG_strain from coarse category prior"
+            ]
+          },
+          "strain_energy_kJ_per_mol": 2,
+          "delta_deltaG_dagger_effective_kJ_per_mol": 0,
+          "deltaG_dagger_variant_kJ_per_mol": 75.4,
+          "k_variant_s_inv": 0.643965,
+          "rank": 6
+        },
+        {
+          "variant_id": "V6",
+          "label": "pH tuning bundle",
+          "description": "Shift catalytic pKa via dyad/triad tuning.",
+          "mutations": [
+            {
+              "target_role": "general_base",
+              "preferred_residues": [
+                "His",
+                "Asp"
+              ],
+              "note": "add His-Asp dyad to tune pKa"
+            }
+          ],
+          "rationale": "pH tuning to activate catalytic residues under fixed conditions.",
+          "estimated_effects": {
+            "reach": -0.01,
+            "retention": -0.011,
+            "access": -0.005
+          },
+          "score": -0.39156039117145863,
+          "category": "pH_tuning",
+          "requires_structural_localization": true,
+          "delta_deltaG_dagger_kJ_per_mol": 0,
+          "strain_displacement_A": 0,
+          "strain_note": "structural localization required; conservative strain floor applied",
+          "objective": "Improve retention without breaking access or reach.",
+          "nucleophile_geometry": "cysteine_thiol",
+          "physics": {
+            "ddG_bind_kcal_mol": -0.2,
+            "ddG_strain_kcal_mol": 0.478,
+            "ddG_total_kcal_mol": 0.278,
+            "rate_ratio": 0.63,
+            "assumptions": [
+              "strain floor applied for structural localization",
+              "strain from displacement proxy",
+              "ddG_bind from coarse category prior",
+              "ddG_strain from coarse category prior"
+            ]
+          },
+          "strain_energy_kJ_per_mol": 2,
+          "delta_deltaG_dagger_effective_kJ_per_mol": 0,
+          "deltaG_dagger_variant_kJ_per_mol": 75.4,
+          "k_variant_s_inv": 0.643965,
+          "rank": 7
+        }
+      ],
+      "module3_handoff": {
+        "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_015",
+        "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_015.pdb",
+        "attack_envelope": {
+          "apex_point": [
+            -1.598,
+            -1.855,
+            1.808
+          ],
+          "axis_vector": [
+            0.115,
+            -0.469,
+            -0.875
+          ],
+          "distance_band": [
+            2.5,
+            3.5
+          ],
+          "cone_angle": 30,
+          "mechanism_family": "serine_hydrolase"
+        },
+        "candidate_residues_by_role": {
+          "nucleophile": [
+            "Cys219"
+          ],
+          "base": [
+            "His104"
+          ],
+          "acid": [
+            "Asp138"
+          ],
+          "other": []
+        },
+        "bond_center_hint": {
+          "atom_indices": [
+            1,
+            3
+          ],
+          "local_context": {
+            "neighbor_hetero_atoms": 1,
+            "in_ring": false,
+            "is_aromatic": false,
+            "bond_type": "ester",
+            "bond_class": "ester"
+          },
+          "anchor_smarts_used": "ester__acyl_o__acetyl"
+        },
+        "nucleophile_geometry": "cysteine_thiol",
+        "best_variant": {
+          "variant_id": "V4",
+          "label": "Oxyanion hole strengthening",
+          "description": "Increase donor strength near the carbonyl oxygen.",
+          "mutations": [
+            {
+              "target_role": "oxyanion_hole",
+              "preferred_residues": [
+                "Ser",
+                "Thr",
+                "Asn",
+                "Gln"
+              ],
+              "note": "strengthen tetrahedral intermediate stabilization"
+            }
+          ],
+          "rationale": "Improve stabilization of the tetrahedral intermediate.",
+          "estimated_effects": {
+            "reach": -0.01,
+            "retention": 0.001,
+            "access": -0.005
+          },
+          "score": 0.3416228525729695,
+          "category": "oxyanion_hole",
+          "requires_structural_localization": true,
+          "delta_deltaG_dagger_kJ_per_mol": -3,
+          "strain_displacement_A": 0,
+          "strain_note": "structural localization required; conservative strain floor applied",
+          "objective": "Improve retention without breaking access or reach.",
+          "nucleophile_geometry": "cysteine_thiol",
+          "physics": {
+            "ddG_bind_kcal_mol": -0.5,
+            "ddG_strain_kcal_mol": 0.478,
+            "ddG_total_kcal_mol": -0.022,
+            "rate_ratio": 1.037,
+            "assumptions": [
+              "strain floor applied for structural localization",
+              "strain from displacement proxy",
+              "ddG_bind from coarse category prior",
+              "ddG_strain from coarse category prior"
+            ]
+          },
+          "strain_energy_kJ_per_mol": 2,
+          "delta_deltaG_dagger_effective_kJ_per_mol": -3,
+          "deltaG_dagger_variant_kJ_per_mol": 72.4,
+          "k_variant_s_inv": 2.117244,
+          "rank": 1
+        },
+        "best_variant_policy": "ranked_best_variant",
+        "best_variant_reason": "Selected highest-ranked variant using policy ranked_best_variant.",
+        "variant_set": [
+          {
+            "variant_id": "V4",
+            "label": "Oxyanion hole strengthening",
+            "description": "Increase donor strength near the carbonyl oxygen.",
+            "mutations": [
+              {
+                "target_role": "oxyanion_hole",
+                "preferred_residues": [
+                  "Ser",
+                  "Thr",
+                  "Asn",
+                  "Gln"
+                ],
+                "note": "strengthen tetrahedral intermediate stabilization"
+              }
+            ],
+            "rationale": "Improve stabilization of the tetrahedral intermediate.",
+            "estimated_effects": {
+              "reach": -0.01,
+              "retention": 0.001,
+              "access": -0.005
+            },
+            "score": 0.3416228525729695,
+            "category": "oxyanion_hole",
+            "requires_structural_localization": true,
+            "delta_deltaG_dagger_kJ_per_mol": -3,
+            "strain_displacement_A": 0,
+            "strain_note": "structural localization required; conservative strain floor applied",
+            "objective": "Improve retention without breaking access or reach.",
+            "nucleophile_geometry": "cysteine_thiol",
+            "physics": {
+              "ddG_bind_kcal_mol": -0.5,
+              "ddG_strain_kcal_mol": 0.478,
+              "ddG_total_kcal_mol": -0.022,
+              "rate_ratio": 1.037,
+              "assumptions": [
+                "strain floor applied for structural localization",
+                "strain from displacement proxy",
+                "ddG_bind from coarse category prior",
+                "ddG_strain from coarse category prior"
+              ]
+            },
+            "strain_energy_kJ_per_mol": 2,
+            "delta_deltaG_dagger_effective_kJ_per_mol": -3,
+            "deltaG_dagger_variant_kJ_per_mol": 72.4,
+            "k_variant_s_inv": 2.117244,
+            "rank": 1
+          },
+          {
+            "variant_id": "V2",
+            "label": "Hydrophobic clamp",
+            "description": "Add aromatic/hydrophobic packing to stabilize the aromatic ring.",
+            "mutations": [
+              {
+                "target_role": "pocket_lining",
+                "preferred_residues": [
+                  "Phe",
+                  "Tyr",
+                  "Leu",
+                  "Ile"
+                ],
+                "note": "hydrophobic clamp near aromatic ring"
+              }
+            ],
+            "rationale": "Retention weakness; add hydrophobic wall for ring packing.",
+            "estimated_effects": {
+              "reach": -0.01,
+              "retention": 0.009,
+              "access": -0.005
+            },
+            "score": 0.3135030214536121,
+            "category": "retention_clamp",
+            "requires_structural_localization": true,
+            "delta_deltaG_dagger_kJ_per_mol": -2,
+            "strain_displacement_A": 0,
+            "strain_note": "structural localization required; conservative strain floor applied",
+            "objective": "Improve retention without breaking access or reach.",
+            "nucleophile_geometry": "cysteine_thiol",
+            "physics": {
+              "ddG_bind_kcal_mol": -0.7,
+              "ddG_strain_kcal_mol": 0.478,
+              "ddG_total_kcal_mol": -0.222,
+              "rate_ratio": 1.446,
+              "assumptions": [
+                "strain floor applied for structural localization",
+                "strain from displacement proxy",
+                "ddG_bind from coarse category prior",
+                "ddG_strain from coarse category prior"
+              ]
+            },
+            "strain_energy_kJ_per_mol": 2,
+            "delta_deltaG_dagger_effective_kJ_per_mol": -2,
+            "deltaG_dagger_variant_kJ_per_mol": 73.4,
+            "k_variant_s_inv": 1.423863,
+            "rank": 2
+          },
+          {
+            "variant_id": "V3",
+            "label": "Polar anchor (carboxylate)",
+            "description": "Introduce a positive anchor for the carboxylate.",
+            "mutations": [
+              {
+                "target_role": "polar_anchor",
+                "preferred_residues": [
+                  "Arg",
+                  "Lys",
+                  "His"
+                ],
+                "note": "anchor deprotonated carboxylate"
+              }
+            ],
+            "rationale": "Carboxylate is negative at pH 6.5–8; add a cationic anchor.",
+            "estimated_effects": {
+              "reach": -0.01,
+              "retention": 0.013,
+              "access": -0.005
+            },
+            "score": 0.29944310589393347,
+            "category": "polar_anchor",
+            "requires_structural_localization": true,
+            "delta_deltaG_dagger_kJ_per_mol": -1.5,
+            "strain_displacement_A": 0,
+            "strain_note": "structural localization required; conservative strain floor applied",
+            "objective": "Improve retention without breaking access or reach.",
+            "nucleophile_geometry": "cysteine_thiol",
+            "physics": {
+              "ddG_bind_kcal_mol": -0.8,
+              "ddG_strain_kcal_mol": 0.478,
+              "ddG_total_kcal_mol": -0.322,
+              "rate_ratio": 1.707,
+              "assumptions": [
+                "strain floor applied for structural localization",
+                "strain from displacement proxy",
+                "ddG_bind from coarse category prior",
+                "ddG_strain from coarse category prior"
+              ]
+            },
+            "strain_energy_kJ_per_mol": 2,
+            "delta_deltaG_dagger_effective_kJ_per_mol": -1.5,
+            "deltaG_dagger_variant_kJ_per_mol": 73.9,
+            "k_variant_s_inv": 1.167661,
+            "rank": 3
+          },
+          {
+            "variant_id": "V0",
+            "label": "Baseline",
+            "description": "No mutations; baseline control.",
+            "mutations": [],
+            "rationale": "Used as control for downstream comparisons.",
+            "estimated_effects": {
+              "reach": 0,
+              "retention": 0,
+              "access": 0
+            },
+            "score": 0.15346810023020915,
+            "category": "baseline",
+            "requires_structural_localization": false,
+            "delta_deltaG_dagger_kJ_per_mol": 0,
+            "strain_displacement_A": 0,
+            "strain_note": "unknown -> no strain penalty applied",
+            "objective": "Improve retention without breaking access or reach.",
+            "nucleophile_geometry": "cysteine_thiol",
+            "physics": {
+              "ddG_bind_kcal_mol": 0,
+              "ddG_strain_kcal_mol": 0,
+              "ddG_total_kcal_mol": 0,
+              "rate_ratio": 1,
+              "assumptions": []
+            },
+            "strain_energy_kJ_per_mol": 0,
+            "delta_deltaG_dagger_effective_kJ_per_mol": 0,
+            "deltaG_dagger_variant_kJ_per_mol": 73.4,
+            "k_variant_s_inv": 1.423863,
+            "rank": 4
+          },
+          {
+            "variant_id": "V5",
+            "label": "Access-preserving clamp",
+            "description": "Clamp deeper in pocket to avoid tunnel bottleneck.",
+            "mutations": [
+              {
+                "target_role": "deep_pocket_lining",
+                "preferred_residues": [
+                  "Tyr",
+                  "Phe"
+                ],
+                "note": "clamp deeper in pocket to preserve access"
+              }
+            ],
+            "rationale": "Long tunnel; improve retention without blocking access.",
+            "estimated_effects": {
+              "reach": -0.01,
+              "retention": -0.003,
+              "access": -0.005
+            },
+            "score": -0.24737733553004657,
+            "category": "access_preserving_clamp",
+            "requires_structural_localization": true,
+            "delta_deltaG_dagger_kJ_per_mol": 0,
+            "strain_displacement_A": 0,
+            "strain_note": "structural localization required; conservative strain floor applied",
+            "objective": "Improve retention without breaking access or reach.",
+            "nucleophile_geometry": "cysteine_thiol",
+            "physics": {
+              "ddG_bind_kcal_mol": -0.4,
+              "ddG_strain_kcal_mol": 0.478,
+              "ddG_total_kcal_mol": 0.078,
+              "rate_ratio": 0.879,
+              "assumptions": [
+                "strain floor applied for structural localization",
+                "strain from displacement proxy",
+                "ddG_bind from coarse category prior",
+                "ddG_strain from coarse category prior"
+              ]
+            },
+            "strain_energy_kJ_per_mol": 2,
+            "delta_deltaG_dagger_effective_kJ_per_mol": 0,
+            "deltaG_dagger_variant_kJ_per_mol": 75.4,
+            "k_variant_s_inv": 0.643965,
+            "rank": 5
+          },
+          {
+            "variant_id": "V1",
+            "label": "Mechanism alignment",
+            "description": "Align nucleophile identity with serine-hydrolase geometry.",
+            "mutations": [
+              {
+                "target_role": "nucleophile",
+                "preferred_residues": [
+                  "Ser"
+                ],
+                "note": "align nucleophile with serine-hydrolase geometry"
+              }
+            ],
+            "rationale": "Cys nucleophile detected in a serine-hydrolase route; align to Ser.",
+            "estimated_effects": {
+              "reach": -0.01,
+              "retention": -0.011,
+              "access": -0.005
+            },
+            "score": -0.39156039117145863,
+            "category": "mechanism_alignment",
+            "requires_structural_localization": true,
+            "delta_deltaG_dagger_kJ_per_mol": 0,
+            "strain_displacement_A": 0,
+            "strain_note": "structural localization required; conservative strain floor applied",
+            "objective": "Improve retention without breaking access or reach.",
+            "nucleophile_geometry": "cysteine_thiol",
+            "physics": {
+              "ddG_bind_kcal_mol": -0.2,
+              "ddG_strain_kcal_mol": 0.478,
+              "ddG_total_kcal_mol": 0.278,
+              "rate_ratio": 0.63,
+              "assumptions": [
+                "strain floor applied for structural localization",
+                "strain from displacement proxy",
+                "ddG_bind from coarse category prior",
+                "ddG_strain from coarse category prior"
+              ]
+            },
+            "strain_energy_kJ_per_mol": 2,
+            "delta_deltaG_dagger_effective_kJ_per_mol": 0,
+            "deltaG_dagger_variant_kJ_per_mol": 75.4,
+            "k_variant_s_inv": 0.643965,
+            "rank": 6
+          },
+          {
+            "variant_id": "V6",
+            "label": "pH tuning bundle",
+            "description": "Shift catalytic pKa via dyad/triad tuning.",
+            "mutations": [
+              {
+                "target_role": "general_base",
+                "preferred_residues": [
+                  "His",
+                  "Asp"
+                ],
+                "note": "add His-Asp dyad to tune pKa"
+              }
+            ],
+            "rationale": "pH tuning to activate catalytic residues under fixed conditions.",
+            "estimated_effects": {
+              "reach": -0.01,
+              "retention": -0.011,
+              "access": -0.005
+            },
+            "score": -0.39156039117145863,
+            "category": "pH_tuning",
+            "requires_structural_localization": true,
+            "delta_deltaG_dagger_kJ_per_mol": 0,
+            "strain_displacement_A": 0,
+            "strain_note": "structural localization required; conservative strain floor applied",
+            "objective": "Improve retention without breaking access or reach.",
+            "nucleophile_geometry": "cysteine_thiol",
+            "physics": {
+              "ddG_bind_kcal_mol": -0.2,
+              "ddG_strain_kcal_mol": 0.478,
+              "ddG_total_kcal_mol": 0.278,
+              "rate_ratio": 0.63,
+              "assumptions": [
+                "strain floor applied for structural localization",
+                "strain from displacement proxy",
+                "ddG_bind from coarse category prior",
+                "ddG_strain from coarse category prior"
+              ]
+            },
+            "strain_energy_kJ_per_mol": 2,
+            "delta_deltaG_dagger_effective_kJ_per_mol": 0,
+            "deltaG_dagger_variant_kJ_per_mol": 75.4,
+            "k_variant_s_inv": 0.643965,
+            "rank": 7
+          }
+        ],
+        "recommended_computations": [
+          "Dock substrate poses and score attack geometry vs envelope.",
+          "Evaluate retention proxies (H-bonds, aromatic contacts).",
+          "Compare baseline vs top variants for access/reach penalties."
+        ]
+      },
+      "best_variant_policy": "ranked_best_variant",
+      "best_variant": {
+        "variant_id": "V4",
+        "label": "Oxyanion hole strengthening",
+        "description": "Increase donor strength near the carbonyl oxygen.",
+        "mutations": [
+          {
+            "target_role": "oxyanion_hole",
+            "preferred_residues": [
+              "Ser",
+              "Thr",
+              "Asn",
+              "Gln"
+            ],
+            "note": "strengthen tetrahedral intermediate stabilization"
+          }
+        ],
+        "rationale": "Improve stabilization of the tetrahedral intermediate.",
+        "estimated_effects": {
+          "reach": -0.01,
+          "retention": 0.001,
+          "access": -0.005
+        },
+        "score": 0.3416228525729695,
+        "category": "oxyanion_hole",
+        "requires_structural_localization": true,
+        "delta_deltaG_dagger_kJ_per_mol": -3,
+        "strain_displacement_A": 0,
+        "strain_note": "structural localization required; conservative strain floor applied",
+        "objective": "Improve retention without breaking access or reach.",
+        "nucleophile_geometry": "cysteine_thiol",
+        "physics": {
+          "ddG_bind_kcal_mol": -0.5,
+          "ddG_strain_kcal_mol": 0.478,
+          "ddG_total_kcal_mol": -0.022,
+          "rate_ratio": 1.037,
+          "assumptions": [
+            "strain floor applied for structural localization",
+            "strain from displacement proxy",
+            "ddG_bind from coarse category prior",
+            "ddG_strain from coarse category prior"
+          ]
+        },
+        "strain_energy_kJ_per_mol": 2,
+        "delta_deltaG_dagger_effective_kJ_per_mol": -3,
+        "deltaG_dagger_variant_kJ_per_mol": 72.4,
+        "k_variant_s_inv": 2.117244,
+        "rank": 1
+      },
+      "fallback_plan": null,
+      "design_loop": {
+        "status": "planned",
+        "steps": [
+          {
+            "name": "motif_constraints",
+            "status": "planned",
+            "inputs": [
+              "attack_envelope",
+              "nucleophile_geometry"
+            ]
+          },
+          {
+            "name": "sequence_design",
+            "status": "planned",
+            "tools": [
+              "ProteinMPNN",
+              "LigandMPNN"
+            ]
+          },
+          {
+            "name": "structure_validation",
+            "status": "planned",
+            "tools": [
+              "AlphaFold3_class"
+            ]
+          },
+          {
+            "name": "scoring",
+            "status": "planned",
+            "metrics": [
+              "binding",
+              "geometry",
+              "retention"
+            ]
+          },
+          {
+            "name": "iterate",
+            "status": "planned",
+            "policy": "active_learning"
+          }
+        ],
+        "context": {
+          "decision": "GO",
+          "selected_scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_015",
+          "variant_count": 7
+        }
+      },
+      "condition_assessment": {
+        "status": "FEASIBLE",
+        "given_conditions": {
+          "pH": 7.25,
+          "temperature_c": 30
+        },
+        "given_conditions_score": 0.75,
+        "limiting_factors": [],
+        "suggested_adjustments": {
+          "pH": 7.25,
+          "temperature_c": 31
+        },
+        "optimum_conditions": {
+          "pH_range": [
+            6.5,
+            8
+          ],
+          "temperature_c": [
+            25,
+            37
+          ]
+        },
+        "expected_outcome": {
+          "likelihood": "MODERATE",
+          "type": "detectable conversion under optimized conditions"
+        }
+      },
+      "condition_search_summary": [
+        {
+          "pH": 6.65,
+          "temperature_c": 20,
+          "score": 0.8
+        },
+        {
+          "pH": 6.65,
+          "temperature_c": 30,
+          "score": 0.8
+        },
+        {
+          "pH": 6.65,
+          "temperature_c": 40,
+          "score": 0.8
+        },
+        {
+          "pH": 7.25,
+          "temperature_c": 20,
+          "score": 0.8
+        },
+        {
+          "pH": 7.25,
+          "temperature_c": 30,
+          "score": 0.8
+        },
+        {
+          "pH": 7.25,
+          "temperature_c": 40,
+          "score": 0.8
+        }
+      ],
+      "ph_locked_mutation_plan": {
+        "status": "not_locked",
+        "mutation_bundles": []
+      },
+      "confidence_calibration": {
+        "calibrated_confidence": 0.73,
+        "uncertainty": 0.2,
+        "mechanistic_score": 0.787,
+        "empirical_reliability": 0.5,
+        "evidence_count": 0,
+        "main_uncertainty_source": "limited prior data"
+      },
+      "learning_trace": {
+        "evidence_used": "no prior runs",
+        "known_failure_modes": [],
+        "model_update": "no update"
+      },
+      "candidate_reports": [
+        {
+          "candidate_id": "scaffold_lib_serine_hydrolase_v1_scaffold_015",
+          "predicted_mechanism": "serine_hydrolase",
+          "predicted_activity_at_given_conditions": {
+            "k_pred_mean": 3.91423,
+            "k_pred_ci90": [
+              0.11967,
+              13.73743
+            ],
+            "k_dist_summary": {
+              "n": 256,
+              "mean": 1.41914,
+              "p10": 0.08247,
+              "p50": 0.54592,
+              "p90": 3.40497
+            },
+            "delta_g_mean": 17.543,
+            "delta_g_std": 0.84,
+            "success_prob_calibrated": 1,
+            "confidence_level": "High",
+            "key_condition_sensitivities": [
+              "activity increases with higher temperature"
+            ]
+          },
+          "optimum_conditions": {
+            "pH_opt_pred": 6.5,
+            "T_opt_pred_K": 310.15,
+            "T_opt_pred_C": 37,
+            "predicted_gain_vs_given_conditions": 0.728
+          },
+          "key_causal_drivers": [
+            "base_activation",
+            "kinetics"
+          ],
+          "topology_feasibility": {
+            "feasibility_flag": null,
+            "reason_tags": null
+          },
+          "mutation_plan": [
+            {
+              "variant_id": "V4",
+              "label": "Oxyanion hole strengthening",
+              "rationale": "Improve stabilization of the tetrahedral intermediate.",
+              "expected_effects": {
+                "reach": -0.01,
+                "retention": 0.001,
+                "access": -0.005
+              }
+            },
+            {
+              "variant_id": "V2",
+              "label": "Hydrophobic clamp",
+              "rationale": "Retention weakness; add hydrophobic wall for ring packing.",
+              "expected_effects": {
+                "reach": -0.01,
+                "retention": 0.009,
+                "access": -0.005
+              }
+            },
+            {
+              "variant_id": "V3",
+              "label": "Polar anchor (carboxylate)",
+              "rationale": "Carboxylate is negative at pH 6.5–8; add a cationic anchor.",
+              "expected_effects": {
+                "reach": -0.01,
+                "retention": 0.013,
+                "access": -0.005
+              }
+            }
+          ]
+        },
+        {
+          "candidate_id": "scaffold_lib_serine_hydrolase_v1_scaffold_005",
+          "predicted_mechanism": "serine_hydrolase",
+          "predicted_activity_at_given_conditions": {
+            "k_pred_mean": 3.23427,
+            "k_pred_ci90": [
+              0.14497,
+              13.1625
+            ],
+            "k_dist_summary": {
+              "n": 256,
+              "mean": 1.51456,
+              "p10": 0.10427,
+              "p50": 0.65611,
+              "p90": 4.04332
+            },
+            "delta_g_mean": 17.504,
+            "delta_g_std": 0.84,
+            "success_prob_calibrated": 1,
+            "confidence_level": "High",
+            "key_condition_sensitivities": [
+              "activity increases with higher temperature"
+            ]
+          },
+          "optimum_conditions": {
+            "pH_opt_pred": 6.5,
+            "T_opt_pred_K": 310.15,
+            "T_opt_pred_C": 37,
+            "predicted_gain_vs_given_conditions": 1.091
+          },
+          "key_causal_drivers": [
+            "base_activation",
+            "kinetics"
+          ],
+          "topology_feasibility": {
+            "feasibility_flag": null,
+            "reason_tags": null
+          },
+          "mutation_plan": [
+            {
+              "variant_id": "V4",
+              "label": "Oxyanion hole strengthening",
+              "rationale": "Improve stabilization of the tetrahedral intermediate.",
+              "expected_effects": {
+                "reach": -0.01,
+                "retention": 0.001,
+                "access": -0.005
+              }
+            },
+            {
+              "variant_id": "V2",
+              "label": "Hydrophobic clamp",
+              "rationale": "Retention weakness; add hydrophobic wall for ring packing.",
+              "expected_effects": {
+                "reach": -0.01,
+                "retention": 0.009,
+                "access": -0.005
+              }
+            },
+            {
+              "variant_id": "V3",
+              "label": "Polar anchor (carboxylate)",
+              "rationale": "Carboxylate is negative at pH 6.5–8; add a cationic anchor.",
+              "expected_effects": {
+                "reach": -0.01,
+                "retention": 0.013,
+                "access": -0.005
+              }
+            }
+          ]
+        }
+      ],
+      "final_report": {
+        "section_a_input_summary": {
+          "reaction_task": {
+            "bond_to_break_or_form": "acetyl_ester_C-O",
+            "substrates": [
+              "CC(=O)OC1=CC=CC=C1C(=O)O"
+            ],
+            "products": [
+              "salicylic acid"
+            ],
+            "mechanism_hint": "hydrolysis",
+            "required_selectivity": null,
+            "allowed_scaffold_types": [
+              "serine_hydrolase",
+              "metallo_esterase"
+            ],
+            "safety_constraints": null
+          },
+          "given_conditions": {
+            "pH": 7.25,
+            "temperature_c": 30
+          },
+          "constraints": {
+            "ph_min": 6.5,
+            "ph_max": 8,
+            "temperature_c": 30,
+            "metals_allowed": true,
+            "oxidation_allowed": true,
+            "host": null
+          }
+        },
+        "section_b_top_candidates": [
+          {
+            "candidate_id": "scaffold_lib_serine_hydrolase_v1_scaffold_015",
+            "predicted_mechanism": "serine_hydrolase",
+            "predicted_activity_at_given_conditions": {
+              "k_pred_mean": 3.91423,
+              "k_pred_ci90": [
+                0.11967,
+                13.73743
+              ],
+              "k_dist_summary": {
+                "n": 256,
+                "mean": 1.41914,
+                "p10": 0.08247,
+                "p50": 0.54592,
+                "p90": 3.40497
+              },
+              "delta_g_mean": 17.543,
+              "delta_g_std": 0.84,
+              "success_prob_calibrated": 1,
+              "confidence_level": "High",
+              "key_condition_sensitivities": [
+                "activity increases with higher temperature"
+              ]
+            },
+            "optimum_conditions": {
+              "pH_opt_pred": 6.5,
+              "T_opt_pred_K": 310.15,
+              "T_opt_pred_C": 37,
+              "predicted_gain_vs_given_conditions": 0.728
+            },
+            "key_causal_drivers": [
+              "base_activation",
+              "kinetics"
+            ],
+            "topology_feasibility": {
+              "feasibility_flag": null,
+              "reason_tags": null
+            },
+            "mutation_plan": [
+              {
+                "variant_id": "V4",
+                "label": "Oxyanion hole strengthening",
+                "rationale": "Improve stabilization of the tetrahedral intermediate.",
+                "expected_effects": {
+                  "reach": -0.01,
+                  "retention": 0.001,
+                  "access": -0.005
+                }
+              },
+              {
+                "variant_id": "V2",
+                "label": "Hydrophobic clamp",
+                "rationale": "Retention weakness; add hydrophobic wall for ring packing.",
+                "expected_effects": {
+                  "reach": -0.01,
+                  "retention": 0.009,
+                  "access": -0.005
+                }
+              },
+              {
+                "variant_id": "V3",
+                "label": "Polar anchor (carboxylate)",
+                "rationale": "Carboxylate is negative at pH 6.5–8; add a cationic anchor.",
+                "expected_effects": {
+                  "reach": -0.01,
+                  "retention": 0.013,
+                  "access": -0.005
+                }
+              }
+            ]
+          },
+          {
+            "candidate_id": "scaffold_lib_serine_hydrolase_v1_scaffold_005",
+            "predicted_mechanism": "serine_hydrolase",
+            "predicted_activity_at_given_conditions": {
+              "k_pred_mean": 3.23427,
+              "k_pred_ci90": [
+                0.14497,
+                13.1625
+              ],
+              "k_dist_summary": {
+                "n": 256,
+                "mean": 1.51456,
+                "p10": 0.10427,
+                "p50": 0.65611,
+                "p90": 4.04332
+              },
+              "delta_g_mean": 17.504,
+              "delta_g_std": 0.84,
+              "success_prob_calibrated": 1,
+              "confidence_level": "High",
+              "key_condition_sensitivities": [
+                "activity increases with higher temperature"
+              ]
+            },
+            "optimum_conditions": {
+              "pH_opt_pred": 6.5,
+              "T_opt_pred_K": 310.15,
+              "T_opt_pred_C": 37,
+              "predicted_gain_vs_given_conditions": 1.091
+            },
+            "key_causal_drivers": [
+              "base_activation",
+              "kinetics"
+            ],
+            "topology_feasibility": {
+              "feasibility_flag": null,
+              "reason_tags": null
+            },
+            "mutation_plan": [
+              {
+                "variant_id": "V4",
+                "label": "Oxyanion hole strengthening",
+                "rationale": "Improve stabilization of the tetrahedral intermediate.",
+                "expected_effects": {
+                  "reach": -0.01,
+                  "retention": 0.001,
+                  "access": -0.005
+                }
+              },
+              {
+                "variant_id": "V2",
+                "label": "Hydrophobic clamp",
+                "rationale": "Retention weakness; add hydrophobic wall for ring packing.",
+                "expected_effects": {
+                  "reach": -0.01,
+                  "retention": 0.009,
+                  "access": -0.005
+                }
+              },
+              {
+                "variant_id": "V3",
+                "label": "Polar anchor (carboxylate)",
+                "rationale": "Carboxylate is negative at pH 6.5–8; add a cationic anchor.",
+                "expected_effects": {
+                  "reach": -0.01,
+                  "retention": 0.013,
+                  "access": -0.005
+                }
+              }
+            ]
+          }
+        ],
+        "section_c_retry_recommendations": {
+          "retry_with_better_conditions": {
+            "pH": 7.25,
+            "temperature_c": 31
+          },
+          "retry_with_better_scaffold": null
+        },
+        "section_d_audit_trail": {
+          "assumptions_used": [
+            "metals_allowed default true",
+            "oxidation_allowed default true",
+            "constraints defaulted from route"
+          ],
+          "extrapolation": "condition search used heuristic ranges",
+          "uncertainty_sources": []
+        }
+      },
+      "predicted_under_given_conditions": {
+        "conditions": {
+          "pH": 7.25,
+          "temperature_c": 30
+        },
+        "k_pred_mean": 3.91423,
+        "k_pred_ci90": [
+          0.11967,
+          13.73743
+        ],
+        "k_dist_summary": {
+          "n": 256,
+          "mean": 1.41914,
+          "p10": 0.08247,
+          "p50": 0.54592,
+          "p90": 3.40497
+        },
+        "delta_g_mean": 17.543,
+        "delta_g_std": 0.84,
+        "physics_gate": {
+          "ratio_kT": 6.96012528129454,
+          "ok": 1,
+          "threshold_kT": 40,
+          "kT_kj_mol": 2.5205293426466997,
+          "delta_g_kj_mol": 17.543,
+          "temperature_K": 303.15
+        },
+        "model_risk": 0.88,
+        "confidence_calibrated": 0.73
+      },
+      "optimum_conditions_estimate": {
+        "pH_opt": 6.5,
+        "T_opt_C": 37,
+        "T_opt_K": 310.15,
+        "k_pred": 6.7641387469464425
+      },
+      "delta_from_optimum": {
+        "delta_pH": 0.75,
+        "delta_T_C": -7
+      },
+      "confidence_calibrated": 0.73,
+      "module2_physics_audit": {
+        "temperature_K": 303.15,
+        "deltaG_dagger_baseline_kJ_per_mol": 73.4,
+        "delta_deltaG_dagger_kJ_per_mol": -3,
+        "strain_energy_kJ_per_mol": 2,
+        "deltaG_dagger_variant_kJ_per_mol": 72.4,
+        "eyring_k_variant_s_inv": 2.117244,
+        "k_variant_s_inv": 2.117244
+      },
+      "evidence_record": {
+        "module_id": 2,
+        "inputs": {
+          "conditions": {
+            "pH": 7.25,
+            "temperature_c": 30
+          },
+          "selected_scaffold": "scaffold_lib_serine_hydrolase_v1_scaffold_015"
+        },
+        "features_used": {
+          "values": {
+            "k_pred_mean": 3.91423,
+            "delta_g_mean": 17.543,
+            "delta_g_std": 0.84,
+            "reliability": 0.734
+          },
+          "missing": [],
+          "source": "module2"
+        },
+        "score": 2.87426,
+        "confidence": 0.73,
+        "uncertainty": {
+          "uncertainty": 0.2
+        },
+        "optimum_conditions": {
+          "pH_opt": 6.5,
+          "T_opt_C": 37,
+          "T_opt_K": 310.15,
+          "k_pred": 6.7641387469464425
+        },
+        "explanations": [],
+        "diagnostics": {
+          "model": "eyring_v1"
+        }
+      },
+      "scaffold_rankings": [
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_015",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_015.pdb",
+          "attack_envelope": {
+            "apex_point": [
+              -1.598,
+              -1.855,
+              1.808
+            ],
+            "axis_vector": [
+              0.115,
+              -0.469,
+              -0.875
+            ],
+            "distance_band": [
+              2.5,
+              3.5
+            ],
+            "cone_angle": 30,
+            "mechanism_family": "serine_hydrolase"
+          },
+          "candidate_residues_by_role": {
+            "nucleophile": [
+              "Cys219"
+            ],
+            "base": [
+              "His104"
+            ],
+            "acid": [
+              "Asp138"
+            ],
+            "other": []
+          },
+          "tunnel_metrics": {
+            "bottleneck_radius": 1.914,
+            "required_bottleneck_radius": 1.8,
+            "path_length": 20.067,
+            "curvature_proxy": 0.277,
+            "entry_point": [
+              2.337,
+              -4.39,
+              -0.006
+            ]
+          },
+          "scores": {
+            "total": 0.486
+          },
+          "retention_metrics": {
+            "volume_ratio": 22.02,
+            "retention_risk_flag": "MEDIUM",
+            "warning_codes": [],
+            "score_multiplier": 1
+          },
+          "reach_summary": {
+            "mechanism_compat_score": 0.8,
+            "nucleophile_type": "Cys",
+            "mechanism_label": "thiol_hydrolase_like",
+            "required_flags": [
+              "requires_thiol_nucleophile"
+            ],
+            "nucleophile_geometry": "cysteine_thiol"
+          },
+          "physics_gate": {
+            "ratio_kT": 6.96012528129454,
+            "ok": 1,
+            "threshold_kT": 40,
+            "kT_kj_mol": 2.5205293426466997,
+            "delta_g_kj_mol": 17.543,
+            "temperature_K": 303.15
+          },
+          "delta_g": 17.543,
+          "delta_g_mean": 17.543,
+          "delta_g_std": 0.84,
+          "k_pred": 3.91423,
+          "k_pred_mean": 3.91423,
+          "k_pred_std": 8.18261,
+          "k_pred_ci90": [
+            0.11967,
+            13.73743
+          ],
+          "k_dist_summary": {
+            "n": 256,
+            "mean": 1.41914,
+            "p10": 0.08247,
+            "p50": 0.54592,
+            "p90": 3.40497
+          },
+          "reliability": 0.734,
+          "adjusted_score": 2.87426,
+          "retention_penalty": 0.04,
+          "retention_penalty_reasons": [
+            "MEDIUM retention risk"
+          ],
+          "model_risk": 0.88
+        },
+        {
+          "scaffold_id": "scaffold_lib_serine_hydrolase_v1_scaffold_005",
+          "pdb_path": "scaffolds/scaffold_lib_serine_hydrolase_v1/scaffold_lib_serine_hydrolase_v1_scaffold_005.pdb",
+          "attack_envelope": {
+            "apex_point": [
+              2.582,
+              1.551,
+              5.731
+            ],
+            "axis_vector": [
+              -0.431,
+              -0.449,
+              0.783
+            ],
+            "distance_band": [
+              2.5,
+              3.5
+            ],
+            "cone_angle": 30,
+            "mechanism_family": "serine_hydrolase"
+          },
+          "candidate_residues_by_role": {
+            "nucleophile": [
+              "Cys217"
+            ],
+            "base": [
+              "His166",
+              "His105"
+            ],
+            "acid": [
+              "Glu36"
+            ],
+            "other": [
+              "Lys170"
+            ]
+          },
+          "tunnel_metrics": {
+            "bottleneck_radius": 1.915,
+            "required_bottleneck_radius": 1.8,
+            "path_length": 8.401,
+            "curvature_proxy": 0.671,
+            "entry_point": [
+              -7.929,
+              -6.404,
+              -3.031
+            ]
+          },
+          "scores": {
+            "total": 0.51
+          },
+          "retention_metrics": {
+            "volume_ratio": 54.12,
+            "retention_risk_flag": "HIGH",
+            "warning_codes": [
+              "WARN_RETENTION_WEAK_BINDING"
+            ],
+            "score_multiplier": 0.85
+          },
+          "reach_summary": {
+            "mechanism_compat_score": 0.8,
+            "nucleophile_type": "Cys",
+            "mechanism_label": "thiol_hydrolase_like",
+            "required_flags": [
+              "requires_thiol_nucleophile"
+            ],
+            "nucleophile_geometry": "cysteine_thiol"
+          },
+          "physics_gate": {
+            "ratio_kT": 6.94457299259996,
+            "ok": 1,
+            "threshold_kT": 40,
+            "kT_kj_mol": 2.5205293426466997,
+            "delta_g_kj_mol": 17.504,
+            "temperature_K": 303.15
+          },
+          "delta_g": 17.504,
+          "delta_g_mean": 17.504,
+          "delta_g_std": 0.84,
+          "k_pred": 3.23427,
+          "k_pred_mean": 3.23427,
+          "k_pred_std": 4.88687,
+          "k_pred_ci90": [
+            0.14497,
+            13.1625
+          ],
+          "k_dist_summary": {
+            "n": 256,
+            "mean": 1.51456,
+            "p10": 0.10427,
+            "p50": 0.65611,
+            "p90": 4.04332
+          },
+          "reliability": 0.679,
+          "adjusted_score": 2.19625,
+          "retention_penalty": 0.13,
+          "retention_penalty_reasons": [
+            "HIGH retention risk",
+            "Weak-binding warning"
+          ],
+          "model_risk": 0.97
+        }
+      ],
+      "math_contract": {
+        "confidence": {
+          "p_raw": 0.73,
+          "p_cal": 0.73,
+          "ci90": [
+            0.53,
+            0.9299999999999999
+          ],
+          "n_eff": 16.6
+        },
+        "predictions": {
+          "k_pred": {
+            "mean": 3.91423,
+            "std": 8.18261,
+            "ci90": [
+              0.11967,
+              13.73743
+            ]
+          }
+        },
+        "qc": {
+          "status": "N/A",
+          "reasons": [],
+          "metrics": {}
+        }
+      },
+      "warnings": [],
+      "errors": []
+    },
+    "module3_experiment_designer": {
+      "status": "PASS",
+      "halt_reason": null,
+      "protocol_card": {
+        "batch_id": "3cfdb006-d805-46b0-b565-36f6ac0d5fac",
+        "arms": [
+          {
+            "type": "variant_disambiguation",
+            "candidate": {
+              "primary": {
+                "variant_id": "V4",
+                "label": "Oxyanion hole strengthening",
+                "description": "Increase donor strength near the carbonyl oxygen.",
+                "mutations": [
+                  {
+                    "target_role": "oxyanion_hole",
+                    "preferred_residues": [
+                      "Ser",
+                      "Thr",
+                      "Asn",
+                      "Gln"
+                    ],
+                    "note": "strengthen tetrahedral intermediate stabilization"
+                  }
+                ],
+                "rationale": "Improve stabilization of the tetrahedral intermediate.",
+                "estimated_effects": {
+                  "reach": -0.01,
+                  "retention": 0.001,
+                  "access": -0.005
+                },
+                "score": 0.3416228525729695,
+                "category": "oxyanion_hole",
+                "requires_structural_localization": true,
+                "delta_deltaG_dagger_kJ_per_mol": -3,
+                "strain_displacement_A": 0,
+                "strain_note": "structural localization required; conservative strain floor applied",
+                "objective": "Improve retention without breaking access or reach.",
+                "nucleophile_geometry": "cysteine_thiol",
+                "physics": {
+                  "ddG_bind_kcal_mol": -0.5,
+                  "ddG_strain_kcal_mol": 0.478,
+                  "ddG_total_kcal_mol": -0.022,
+                  "rate_ratio": 1.037,
+                  "assumptions": [
+                    "strain floor applied for structural localization",
+                    "strain from displacement proxy",
+                    "ddG_bind from coarse category prior",
+                    "ddG_strain from coarse category prior"
+                  ]
+                },
+                "strain_energy_kJ_per_mol": 2,
+                "delta_deltaG_dagger_effective_kJ_per_mol": -3,
+                "deltaG_dagger_variant_kJ_per_mol": 72.4,
+                "k_variant_s_inv": 2.117244,
+                "rank": 1
+              },
+              "compare_to": {
+                "variant_id": "V2",
+                "label": "Hydrophobic clamp",
+                "description": "Add aromatic/hydrophobic packing to stabilize the aromatic ring.",
+                "mutations": [
+                  {
+                    "target_role": "pocket_lining",
+                    "preferred_residues": [
+                      "Phe",
+                      "Tyr",
+                      "Leu",
+                      "Ile"
+                    ],
+                    "note": "hydrophobic clamp near aromatic ring"
+                  }
+                ],
+                "rationale": "Retention weakness; add hydrophobic wall for ring packing.",
+                "estimated_effects": {
+                  "reach": -0.01,
+                  "retention": 0.009,
+                  "access": -0.005
+                },
+                "score": 0.3135030214536121,
+                "category": "retention_clamp",
+                "requires_structural_localization": true,
+                "delta_deltaG_dagger_kJ_per_mol": -2,
+                "strain_displacement_A": 0,
+                "strain_note": "structural localization required; conservative strain floor applied",
+                "objective": "Improve retention without breaking access or reach.",
+                "nucleophile_geometry": "cysteine_thiol",
+                "physics": {
+                  "ddG_bind_kcal_mol": -0.7,
+                  "ddG_strain_kcal_mol": 0.478,
+                  "ddG_total_kcal_mol": -0.222,
+                  "rate_ratio": 1.446,
+                  "assumptions": [
+                    "strain floor applied for structural localization",
+                    "strain from displacement proxy",
+                    "ddG_bind from coarse category prior",
+                    "ddG_strain from coarse category prior"
+                  ]
+                },
+                "strain_energy_kJ_per_mol": 2,
+                "delta_deltaG_dagger_effective_kJ_per_mol": -2,
+                "deltaG_dagger_variant_kJ_per_mol": 73.4,
+                "k_variant_s_inv": 1.423863,
+                "rank": 2
+              }
+            },
+            "conditions": {
+              "pH": 7.25,
+              "temperature_c": 30
+            },
+            "expected_outcome": "Resolve variant performance ranking.",
+            "why": "Directly compare top variants under identical conditions.",
+            "eig": 0.025042692481272222,
+            "success_prob": 0.447102815834275,
+            "n_eff": 19.4455,
+            "prior_entropy": -0.7915381648966999,
+            "arm_id": "A3"
+          },
+          {
+            "type": "stress_boundary",
+            "candidate": {
+              "variant_id": "V4",
+              "label": "Oxyanion hole strengthening",
+              "description": "Increase donor strength near the carbonyl oxygen.",
+              "mutations": [
+                {
+                  "target_role": "oxyanion_hole",
+                  "preferred_residues": [
+                    "Ser",
+                    "Thr",
+                    "Asn",
+                    "Gln"
+                  ],
+                  "note": "strengthen tetrahedral intermediate stabilization"
+                }
+              ],
+              "rationale": "Improve stabilization of the tetrahedral intermediate.",
+              "estimated_effects": {
+                "reach": -0.01,
+                "retention": 0.001,
+                "access": -0.005
+              },
+              "score": 0.3416228525729695,
+              "category": "oxyanion_hole",
+              "requires_structural_localization": true,
+              "delta_deltaG_dagger_kJ_per_mol": -3,
+              "strain_displacement_A": 0,
+              "strain_note": "structural localization required; conservative strain floor applied",
+              "objective": "Improve retention without breaking access or reach.",
+              "nucleophile_geometry": "cysteine_thiol",
+              "physics": {
+                "ddG_bind_kcal_mol": -0.5,
+                "ddG_strain_kcal_mol": 0.478,
+                "ddG_total_kcal_mol": -0.022,
+                "rate_ratio": 1.037,
+                "assumptions": [
+                  "strain floor applied for structural localization",
+                  "strain from displacement proxy",
+                  "ddG_bind from coarse category prior",
+                  "ddG_strain from coarse category prior"
+                ]
+              },
+              "strain_energy_kJ_per_mol": 2,
+              "delta_deltaG_dagger_effective_kJ_per_mol": -3,
+              "deltaG_dagger_variant_kJ_per_mol": 72.4,
+              "k_variant_s_inv": 2.117244,
+              "rank": 1
+            },
+            "conditions": {
+              "pH": 8,
+              "temperature_c": 30
+            },
+            "expected_outcome": "Lower conversion or instability signal.",
+            "why": "Stress conditions to map boundary of activity.",
+            "eig": 0.02503036606853315,
+            "success_prob": 0.42131354601731463,
+            "n_eff": 19.4455,
+            "prior_entropy": -0.799492705506573,
+            "arm_id": "A5"
+          },
+          {
+            "type": "baseline",
+            "candidate": {
+              "variant_id": "V4",
+              "label": "Oxyanion hole strengthening",
+              "description": "Increase donor strength near the carbonyl oxygen.",
+              "mutations": [
+                {
+                  "target_role": "oxyanion_hole",
+                  "preferred_residues": [
+                    "Ser",
+                    "Thr",
+                    "Asn",
+                    "Gln"
+                  ],
+                  "note": "strengthen tetrahedral intermediate stabilization"
+                }
+              ],
+              "rationale": "Improve stabilization of the tetrahedral intermediate.",
+              "estimated_effects": {
+                "reach": -0.01,
+                "retention": 0.001,
+                "access": -0.005
+              },
+              "score": 0.3416228525729695,
+              "category": "oxyanion_hole",
+              "requires_structural_localization": true,
+              "delta_deltaG_dagger_kJ_per_mol": -3,
+              "strain_displacement_A": 0,
+              "strain_note": "structural localization required; conservative strain floor applied",
+              "objective": "Improve retention without breaking access or reach.",
+              "nucleophile_geometry": "cysteine_thiol",
+              "physics": {
+                "ddG_bind_kcal_mol": -0.5,
+                "ddG_strain_kcal_mol": 0.478,
+                "ddG_total_kcal_mol": -0.022,
+                "rate_ratio": 1.037,
+                "assumptions": [
+                  "strain floor applied for structural localization",
+                  "strain from displacement proxy",
+                  "ddG_bind from coarse category prior",
+                  "ddG_strain from coarse category prior"
+                ]
+              },
+              "strain_energy_kJ_per_mol": 2,
+              "delta_deltaG_dagger_effective_kJ_per_mol": -3,
+              "deltaG_dagger_variant_kJ_per_mol": 72.4,
+              "k_variant_s_inv": 2.117244,
+              "rank": 1
+            },
+            "conditions": {
+              "pH": 7.25,
+              "temperature_c": 30
+            },
+            "expected_outcome": "Baseline activity under user conditions.",
+            "why": "Establish baseline conversion with selected variant.",
+            "eig": 0.025042692481272222,
+            "success_prob": 0.447102815834275,
+            "n_eff": 19.4455,
+            "prior_entropy": -0.7915381648966999,
+            "arm_id": "A1"
+          },
+          {
+            "type": "negative_control",
+            "candidate": {
+              "control": "no_enzyme"
+            },
+            "conditions": {
+              "pH": 7.25,
+              "temperature_c": 30
+            },
+            "expected_outcome": "No conversion beyond background.",
+            "why": "Confirm activity is enzyme-dependent.",
+            "eig": 0.017427312628709668,
+            "success_prob": 0.02,
+            "n_eff": 19.4455,
+            "prior_entropy": -3.3534811092890138,
+            "arm_id": "A4"
+          },
+          {
+            "type": "improved_conditions",
+            "candidate": {
+              "variant_id": "V4",
+              "label": "Oxyanion hole strengthening",
+              "description": "Increase donor strength near the carbonyl oxygen.",
+              "mutations": [
+                {
+                  "target_role": "oxyanion_hole",
+                  "preferred_residues": [
+                    "Ser",
+                    "Thr",
+                    "Asn",
+                    "Gln"
+                  ],
+                  "note": "strengthen tetrahedral intermediate stabilization"
+                }
+              ],
+              "rationale": "Improve stabilization of the tetrahedral intermediate.",
+              "estimated_effects": {
+                "reach": -0.01,
+                "retention": 0.001,
+                "access": -0.005
+              },
+              "score": 0.3416228525729695,
+              "category": "oxyanion_hole",
+              "requires_structural_localization": true,
+              "delta_deltaG_dagger_kJ_per_mol": -3,
+              "strain_displacement_A": 0,
+              "strain_note": "structural localization required; conservative strain floor applied",
+              "objective": "Improve retention without breaking access or reach.",
+              "nucleophile_geometry": "cysteine_thiol",
+              "physics": {
+                "ddG_bind_kcal_mol": -0.5,
+                "ddG_strain_kcal_mol": 0.478,
+                "ddG_total_kcal_mol": -0.022,
+                "rate_ratio": 1.037,
+                "assumptions": [
+                  "strain floor applied for structural localization",
+                  "strain from displacement proxy",
+                  "ddG_bind from coarse category prior",
+                  "ddG_strain from coarse category prior"
+                ]
+              },
+              "strain_energy_kJ_per_mol": 2,
+              "delta_deltaG_dagger_effective_kJ_per_mol": -3,
+              "deltaG_dagger_variant_kJ_per_mol": 72.4,
+              "k_variant_s_inv": 2.117244,
+              "rank": 1
+            },
+            "conditions": {
+              "pH": 6.88,
+              "temperature_c": 33.5
+            },
+            "expected_outcome": "Improved activity vs baseline.",
+            "why": "Test condition shift predicted to increase performance.",
+            "eig": 0.025049244555800154,
+            "success_prob": 0.469081131131997,
+            "n_eff": 19.4455,
+            "prior_entropy": -0.7872721608917601,
+            "arm_id": "A2"
+          }
+        ],
+        "controls": {
+          "negative_control_arm_id": "A4"
+        }
+      },
+      "information_gain": {
+        "hypotheses": [
+          "conditions_limited",
+          "access_limited",
+          "retention_limited",
+          "mechanism_mismatch"
+        ],
+        "plan_score": 0.576,
+        "notes": [
+          "total_eig=0.117592"
+        ],
+        "eig_per_arm": [
+          {
+            "arm_id": "A3",
+            "type": "variant_disambiguation",
+            "eig": 0.025043,
+            "success_prob": 0.447,
+            "n_eff": 19.45,
+            "prior_entropy": -0.7915
+          },
+          {
+            "arm_id": "A5",
+            "type": "stress_boundary",
+            "eig": 0.02503,
+            "success_prob": 0.421,
+            "n_eff": 19.45,
+            "prior_entropy": -0.7995
+          },
+          {
+            "arm_id": "A1",
+            "type": "baseline",
+            "eig": 0.025043,
+            "success_prob": 0.447,
+            "n_eff": 19.45,
+            "prior_entropy": -0.7915
+          },
+          {
+            "arm_id": "A4",
+            "type": "negative_control",
+            "eig": 0.017427,
+            "success_prob": 0.02,
+            "n_eff": 19.45,
+            "prior_entropy": -3.3535
+          },
+          {
+            "arm_id": "A2",
+            "type": "improved_conditions",
+            "eig": 0.025049,
+            "success_prob": 0.469,
+            "n_eff": 19.45,
+            "prior_entropy": -0.7873
+          }
+        ],
+        "plan_score_eig": 0.162,
+        "plan_score_physics": 0.99
+      },
+      "qc_guardrails": {
+        "veto_rules": [
+          "Abort if negative control shows >5% conversion.",
+          "Abort if baseline fails to reach detectable conversion."
+        ],
+        "variance_rules": [
+          "Repeat any arm with >20% replicate variance.",
+          "Flag arms with inconsistent pH drift (>0.3)."
+        ],
+        "qc_rules": [
+          {
+            "id": "NEG_CONTROL",
+            "description": "Negative control conversion <= 0.05",
+            "status": "n/a"
+          },
+          {
+            "id": "BASELINE_VARIANCE",
+            "description": "Baseline stdev within noise floor",
+            "status": "n/a"
+          },
+          {
+            "id": "SANITY_MARGIN",
+            "description": "Baseline >= negative control + 0.1",
+            "status": "n/a"
+          },
+          {
+            "id": "LOW_INFO",
+            "description": "Outcome entropy sufficient for learning",
+            "status": "n/a"
+          }
+        ]
+      },
+      "qc_status": "N/A",
+      "qc_reasons": [],
+      "learning_update": {
+        "status": "PLANNED",
+        "records_to_write": 5,
+        "router_updates": []
+      },
+      "physics_gate": {
+        "ratio_kT": 6.96012528129454,
+        "ok": 1,
+        "threshold_kT": 40,
+        "kT_kj_mol": 2.5205293426466997,
+        "delta_g_kj_mol": 17.543,
+        "temperature_K": 303.15
+      },
+      "module3_physics_audit": {
+        "horizon_s": 3600,
+        "expected_signal": 1,
+        "noise_floor": 0.02,
+        "snr": 50,
+        "plan_score_physics": 0.99
+      },
+      "physics": {
+        "assay_time_s": 3600,
+        "noise_floor": 0.02,
+        "predicted_conversion_by_arm": {
+          "A3": 1,
+          "A5": 1,
+          "A1": 1,
+          "A4": 0,
+          "A2": 1
+        },
+        "snr_by_arm": {
+          "A3": 50,
+          "A5": 50,
+          "A1": 50,
+          "A4": 0,
+          "A2": 50
+        },
+        "detectability_factor": 1,
+        "notes": [
+          "variant_disambiguation uses k_eff * 1.2",
+          "stress_boundary uses k_eff * 0.7",
+          "improved_conditions uses k_eff * 1.4"
+        ]
+      },
+      "predicted_under_given_conditions": {
+        "expected_outcome": "Baseline activity under user conditions.",
+        "conditions": {
+          "pH": 7.25,
+          "temperature_c": 30
+        }
+      },
+      "evidence_record": {
+        "module_id": 3,
+        "inputs": {
+          "batch_id": "3cfdb006-d805-46b0-b565-36f6ac0d5fac",
+          "arm_types": [
+            "variant_disambiguation",
+            "stress_boundary",
+            "baseline",
+            "negative_control",
+            "improved_conditions"
+          ]
+        },
+        "features_used": {
+          "values": {
+            "plan_score": 0.576,
+            "eig_total": 0.117592
+          },
+          "missing": [],
+          "source": "module3"
+        },
+        "score": 0.576,
+        "confidence": 0.576,
+        "uncertainty": {},
+        "optimum_conditions": null,
+        "explanations": [],
+        "diagnostics": {
+          "eig_per_arm": [
+            {
+              "arm_id": "A3",
+              "type": "variant_disambiguation",
+              "eig": 0.025043,
+              "success_prob": 0.447,
+              "n_eff": 19.45,
+              "prior_entropy": -0.7915
+            },
+            {
+              "arm_id": "A5",
+              "type": "stress_boundary",
+              "eig": 0.02503,
+              "success_prob": 0.421,
+              "n_eff": 19.45,
+              "prior_entropy": -0.7995
+            },
+            {
+              "arm_id": "A1",
+              "type": "baseline",
+              "eig": 0.025043,
+              "success_prob": 0.447,
+              "n_eff": 19.45,
+              "prior_entropy": -0.7915
+            },
+            {
+              "arm_id": "A4",
+              "type": "negative_control",
+              "eig": 0.017427,
+              "success_prob": 0.02,
+              "n_eff": 19.45,
+              "prior_entropy": -3.3535
+            },
+            {
+              "arm_id": "A2",
+              "type": "improved_conditions",
+              "eig": 0.025049,
+              "success_prob": 0.469,
+              "n_eff": 19.45,
+              "prior_entropy": -0.7873
+            }
+          ]
+        }
+      },
+      "math_contract": {
+        "confidence": {
+          "p_raw": 0.576,
+          "p_cal": 0.576,
+          "ci90": [
+            0.576,
+            0.576
+          ],
+          "n_eff": 15.248
+        },
+        "predictions": {
+          "plan_score": {
+            "mean": 0.576,
+            "std": 0,
+            "ci90": [
+              0.576,
+              0.576
+            ]
+          }
+        },
+        "qc": {
+          "status": "N/A",
+          "reasons": [],
+          "metrics": {
+            "outcome_entropy": null,
+            "warnings": []
+          }
+        }
+      },
+      "warnings": [],
+      "errors": []
+    }
+  }
+}

@@ -1,0 +1,482 @@
+{
+  "drug": "CC(C)Cc1ccc(cc1)C(C)C(=O)O",
+  "predicted_cyp": "non_CYP_nonheme_iron_like",
+  "top_metabolism_site": {
+    "bond_id": 2,
+    "atom_indices": [
+      3,
+      22
+    ],
+    "bond_class": "ch__benzylic",
+    "bde": 375.5,
+    "reaction_class": "benzylic_hydroxylation",
+    "score": 1,
+    "score_norm": 0,
+    "source": "module_minus1"
+  },
+  "reaction_class": "benzylic_hydroxylation",
+  "ranked_sites": [
+    {
+      "bond_id": 2,
+      "atom_indices": [
+        3,
+        22
+      ],
+      "bond_class": "ch__benzylic",
+      "bde": 375.5,
+      "reaction_class": "benzylic_hydroxylation",
+      "score": 1,
+      "score_norm": 0,
+      "source": "module_minus1"
+    },
+    {
+      "bond_id": 1,
+      "atom_indices": [
+        10,
+        28
+      ],
+      "bond_class": "ch__benzylic",
+      "bde": 375.5,
+      "reaction_class": "benzylic_hydroxylation",
+      "score": 1,
+      "score_norm": 0,
+      "source": "module_minus1"
+    },
+    {
+      "bond_id": 3,
+      "atom_indices": [
+        1,
+        18
+      ],
+      "bond_class": "ch__tertiary",
+      "bde": 403.8,
+      "reaction_class": "alkyl_hydroxylation",
+      "score": 0.707342,
+      "score_norm": 0.292658,
+      "source": "module_minus1"
+    },
+    {
+      "bond_id": 4,
+      "atom_indices": [
+        0,
+        15
+      ],
+      "bond_class": "ch__primary",
+      "bde": 423,
+      "reaction_class": "alkyl_hydroxylation",
+      "score": 0.50879,
+      "score_norm": 0.49121,
+      "source": "module_minus1"
+    },
+    {
+      "bond_id": 5,
+      "atom_indices": [
+        2,
+        19
+      ],
+      "bond_class": "ch__primary",
+      "bde": 423,
+      "reaction_class": "alkyl_hydroxylation",
+      "score": 0.50879,
+      "score_norm": 0.49121,
+      "source": "module_minus1"
+    }
+  ],
+  "cyp_prediction": {
+    "ranked_sites": [
+      {
+        "site_id": "atom:10",
+        "site_type": "atom",
+        "atom_indices": [
+          10
+        ],
+        "bond_indices": [
+          10,
+          28
+        ],
+        "anchor_atom_indices": [
+          10
+        ],
+        "site_class": "benzylic_ch",
+        "reaction_class": "benzylic_hydroxylation",
+        "score": 0.860963,
+        "score_components": {
+          "base": 0.95,
+          "p_convert": 1,
+          "k_norm": 0.5683,
+          "route_conf": 0.723
+        },
+        "pipeline_target_bond": "C-H",
+        "predicted_route": "non_heme_iron",
+        "predicted_family": "non_heme_iron_oxygenase",
+        "predicted_kcat_s_inv": 2.569723677488592,
+        "predicted_p_convert": 1,
+        "route_confidence": 0.723,
+        "decision": "LOW_CONF_GO"
+      },
+      {
+        "site_id": "atom:3",
+        "site_type": "atom",
+        "atom_indices": [
+          3
+        ],
+        "bond_indices": [
+          3,
+          22
+        ],
+        "anchor_atom_indices": [
+          3
+        ],
+        "site_class": "benzylic_ch",
+        "reaction_class": "benzylic_hydroxylation",
+        "score": 0.860963,
+        "score_components": {
+          "base": 0.95,
+          "p_convert": 1,
+          "k_norm": 0.5683,
+          "route_conf": 0.723
+        },
+        "pipeline_target_bond": "C-H",
+        "predicted_route": "non_heme_iron",
+        "predicted_family": "non_heme_iron_oxygenase",
+        "predicted_kcat_s_inv": 2.569723677488592,
+        "predicted_p_convert": 1,
+        "route_confidence": 0.723,
+        "decision": "LOW_CONF_GO"
+      },
+      {
+        "site_id": "atom:1",
+        "site_type": "atom",
+        "atom_indices": [
+          1
+        ],
+        "bond_indices": [
+          1,
+          18
+        ],
+        "anchor_atom_indices": [
+          1
+        ],
+        "site_class": "aliphatic_tertiary_ch",
+        "reaction_class": "aliphatic_hydroxylation",
+        "score": 0.755963,
+        "score_components": {
+          "base": 0.74,
+          "p_convert": 1,
+          "k_norm": 0.5683,
+          "route_conf": 0.723
+        },
+        "pipeline_target_bond": "C-H",
+        "predicted_route": "non_heme_iron",
+        "predicted_family": "non_heme_iron_oxygenase",
+        "predicted_kcat_s_inv": 2.569723677488592,
+        "predicted_p_convert": 1,
+        "route_confidence": 0.723,
+        "decision": "LOW_CONF_GO"
+      },
+      {
+        "site_id": "atom:0",
+        "site_type": "atom",
+        "atom_indices": [
+          0
+        ],
+        "bond_indices": [
+          0,
+          15
+        ],
+        "anchor_atom_indices": [
+          0
+        ],
+        "site_class": "aliphatic_primary_ch",
+        "reaction_class": "aliphatic_hydroxylation",
+        "score": 0.660963,
+        "score_components": {
+          "base": 0.55,
+          "p_convert": 1,
+          "k_norm": 0.5683,
+          "route_conf": 0.723
+        },
+        "pipeline_target_bond": "C-H",
+        "predicted_route": "non_heme_iron",
+        "predicted_family": "non_heme_iron_oxygenase",
+        "predicted_kcat_s_inv": 2.569723677488592,
+        "predicted_p_convert": 1,
+        "route_confidence": 0.723,
+        "decision": "LOW_CONF_GO"
+      },
+      {
+        "site_id": "atom:11",
+        "site_type": "atom",
+        "atom_indices": [
+          11
+        ],
+        "bond_indices": [
+          11,
+          29
+        ],
+        "anchor_atom_indices": [
+          11
+        ],
+        "site_class": "aliphatic_primary_ch",
+        "reaction_class": "aliphatic_hydroxylation",
+        "score": 0.660963,
+        "score_components": {
+          "base": 0.55,
+          "p_convert": 1,
+          "k_norm": 0.5683,
+          "route_conf": 0.723
+        },
+        "pipeline_target_bond": "C-H",
+        "predicted_route": "non_heme_iron",
+        "predicted_family": "non_heme_iron_oxygenase",
+        "predicted_kcat_s_inv": 2.569723677488592,
+        "predicted_p_convert": 1,
+        "route_confidence": 0.723,
+        "decision": "LOW_CONF_GO"
+      }
+    ],
+    "summary": {
+      "best_site": "atom:10",
+      "best_reaction": "benzylic_hydroxylation",
+      "confidence": 0.860963,
+      "isoform_hint": null
+    },
+    "debug": {
+      "candidate_count": 10,
+      "pipeline_targets_used": [
+        "C-H"
+      ],
+      "condition_profile": {}
+    }
+  },
+  "site_prediction": {
+    "ranked_sites": [
+      {
+        "bond_id": 2,
+        "atom_indices": [
+          3,
+          22
+        ],
+        "bond_class": "ch__benzylic",
+        "bde": 375.5,
+        "reaction_class": "benzylic_hydroxylation",
+        "score": 1,
+        "score_norm": 0,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 1,
+        "atom_indices": [
+          10,
+          28
+        ],
+        "bond_class": "ch__benzylic",
+        "bde": 375.5,
+        "reaction_class": "benzylic_hydroxylation",
+        "score": 1,
+        "score_norm": 0,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 3,
+        "atom_indices": [
+          1,
+          18
+        ],
+        "bond_class": "ch__tertiary",
+        "bde": 403.8,
+        "reaction_class": "alkyl_hydroxylation",
+        "score": 0.707342,
+        "score_norm": 0.292658,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 4,
+        "atom_indices": [
+          0,
+          15
+        ],
+        "bond_class": "ch__primary",
+        "bde": 423,
+        "reaction_class": "alkyl_hydroxylation",
+        "score": 0.50879,
+        "score_norm": 0.49121,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 5,
+        "atom_indices": [
+          2,
+          19
+        ],
+        "bond_class": "ch__primary",
+        "bde": 423,
+        "reaction_class": "alkyl_hydroxylation",
+        "score": 0.50879,
+        "score_norm": 0.49121,
+        "source": "module_minus1"
+      }
+    ],
+    "all_ranked_sites": [
+      {
+        "bond_id": 2,
+        "atom_indices": [
+          3,
+          22
+        ],
+        "bond_class": "ch__benzylic",
+        "bde": 375.5,
+        "reaction_class": "benzylic_hydroxylation",
+        "score": 1,
+        "score_norm": 0,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 1,
+        "atom_indices": [
+          10,
+          28
+        ],
+        "bond_class": "ch__benzylic",
+        "bde": 375.5,
+        "reaction_class": "benzylic_hydroxylation",
+        "score": 1,
+        "score_norm": 0,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 3,
+        "atom_indices": [
+          1,
+          18
+        ],
+        "bond_class": "ch__tertiary",
+        "bde": 403.8,
+        "reaction_class": "alkyl_hydroxylation",
+        "score": 0.707342,
+        "score_norm": 0.292658,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 4,
+        "atom_indices": [
+          0,
+          15
+        ],
+        "bond_class": "ch__primary",
+        "bde": 423,
+        "reaction_class": "alkyl_hydroxylation",
+        "score": 0.50879,
+        "score_norm": 0.49121,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 5,
+        "atom_indices": [
+          2,
+          19
+        ],
+        "bond_class": "ch__primary",
+        "bde": 423,
+        "reaction_class": "alkyl_hydroxylation",
+        "score": 0.50879,
+        "score_norm": 0.49121,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 6,
+        "atom_indices": [
+          11,
+          29
+        ],
+        "bond_class": "ch__primary",
+        "bde": 423,
+        "reaction_class": "alkyl_hydroxylation",
+        "score": 0.50879,
+        "score_norm": 0.49121,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 11,
+        "atom_indices": [
+          -1,
+          -1
+        ],
+        "bond_class": "oh__alcohol",
+        "bde": 435.7,
+        "reaction_class": "o_hydroxylation",
+        "score": 0.377456,
+        "score_norm": 0.622544,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 7,
+        "atom_indices": [
+          5,
+          24
+        ],
+        "bond_class": "ch__aryl",
+        "bde": 472.2,
+        "reaction_class": "aromatic_hydroxylation",
+        "score": 0,
+        "score_norm": 1,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 8,
+        "atom_indices": [
+          6,
+          25
+        ],
+        "bond_class": "ch__aryl",
+        "bde": 472.2,
+        "reaction_class": "aromatic_hydroxylation",
+        "score": 0,
+        "score_norm": 1,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 9,
+        "atom_indices": [
+          8,
+          26
+        ],
+        "bond_class": "ch__aryl",
+        "bde": 472.2,
+        "reaction_class": "aromatic_hydroxylation",
+        "score": 0,
+        "score_norm": 1,
+        "source": "module_minus1"
+      },
+      {
+        "bond_id": 10,
+        "atom_indices": [
+          9,
+          27
+        ],
+        "bond_class": "ch__aryl",
+        "bde": 472.2,
+        "reaction_class": "aromatic_hydroxylation",
+        "score": 0,
+        "score_norm": 1,
+        "source": "module_minus1"
+      }
+    ],
+    "top_prediction": {
+      "bond_id": 2,
+      "atom_indices": [
+        3,
+        22
+      ],
+      "bond_class": "ch__benzylic",
+      "bde": 375.5,
+      "reaction_class": "benzylic_hydroxylation",
+      "score": 1,
+      "score_norm": 0,
+      "source": "module_minus1"
+    },
+    "isoform_hint": null
+  },
+  "ground_truth": null,
+  "expected": null
+}

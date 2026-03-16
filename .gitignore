@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.so
+
+# Virtual environments
+.venv/
+venv/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Test cache
+.pytest_cache/
+
+# OS
+.DS_Store
+
+# Desktop app
+desktop/node_modules/
+desktop/dist/
+desktop/.cache/
+
+# Training artifacts and caches
+artifacts/
+cache/
+checkpoints/
+src/enzyme_software/calibration/cache/
+src/enzyme_software/liquid_nn_v2/features/cache/
+
+# Large local datasets and structures
+data/drugbank/
+*.sdf
+*.sdf.zip
+*.xml
+*.xml.zip
+*.csv.zip

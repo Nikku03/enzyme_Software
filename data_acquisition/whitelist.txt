@@ -1,0 +1,3 @@
+# Allowed external domains for data acquisition HTTP fetches.
+# One domain per line. Example:
+# example.org

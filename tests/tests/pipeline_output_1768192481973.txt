@@ -1,0 +1,327 @@
+PIPELINE DECISION
+GO
+PASS
+Mode standard
+M2 PASS
+M3 PASS
+TopK 3
+Job Type
+STANDARD_TRANSFORMATION
+Selected Bond
+1-3
+Primary Route
+serine_hydrolase
+Difficulty
+EASY
+Compute Active
+true
+Scaffolds
+16
+PIPELINE HEALTH & INTERCONNECTION
+MODULE	STATUS	RESULT	ATTENTION
+Module 0	GO	serine_hydrolase	OK
+Module 1	PASS	Top 3 scaffolds	Retention weak
+Module 2	PASS	scaffold_lib_serine_hydrolase_v1_scaffold_015	OK
+Module 3	PASS	Plan 0.576 / Phys 0.990	OK
+Working now
+Routing accepted (GO)
+Bond resolved: 1-3
+Module 1 passed (3 scaffolds ranked)
+Module 2 selected scaffold_lib_serine_hydrolase_v1_scaffold_015
+Negative control assigned
+Physics prior P=0.78
+Needs improvement
+Retention score low
+Handoff checks
+OK M0 → M1: bond_context + compute_plan
+OK M1 → M2: top_scaffolds
+OK M2 → M3: module3_handoff
+OK Shared IO: condition profile + telemetry
+CONDITION FLOW (SHARED IO)
+pH
+7.25
+Temp C
+27
+Ionic strength
+n/a
+Solvent
+n/a
+Cofactors
+n/a
+Run ID
+d23df776-f446-4725-992d-ecfb0ab53094
+MODULE	GIVEN EFFECT	OPTIMUM	CONFIDENCE	RETRY
+Module 0	route P=0.91	pH 6.5-8, T 25-37C	0.91 (Low)	Close to optimum
+Module 1	topology 0.47	pH 6.50, T 25.0C	0.47	Close to optimum
+Module 2	k_pred 2.9542	pH 6.50, T 37.0C	0.73	pH 6.88, T 32C
+Module 3	Baseline activity under user conditions.	n/a	0.58	not_applicable
+SHARED IO DETAILS
+Trace
+module0, module1, module2, module3
+Bond Spec
+acetyl_ester_C-O
+Shared IO JSON
+CONFIDENCE
+Route confidence
+0.79 (79%)
+Target resolution
+0.90 (90%)
+Wetlab (target)
+0.63 (63%)
+Overall signal
+0.45 (45%)
+Wet-lab priors are shown for context, not gating.
+INTENT & ROUTING
+Requested Output
+salicylic acid
+Intent Type
+hydrolysis
+Intent Conf
+0.80
+Requires Trap
+false
+Mechanism route
+Primary: serine_hydrolase
+Secondary: metallo_esterase
+Mechanisms: acyl-oxygen hydrolysis
+Expert tracks
+serine_hydrolase (weight 0.9, required false)
+metallo_esterase (weight 0.4, required false)
+Success definition
+Any activity: Detectable conversion or substrate turnover under plausible conditions.
+Target specific: Product-specific conversion consistent with requested transformation under plausible conditions; not optimized for industrial yield.
+MODULE 0 PHYSICS AUDIT
+Temp K
+300.15
+DeltaG_dagger (kJ/mol)
+82.50
+Eyring k (s^-1)
+0.0275
+Horizon (s)
+3600
+Prior success P
+0.782
+
+Physics-based prior when historical routing data is sparse.
+
+TARGET RESOLUTION
+Selection Mode
+token
+Canonical Token
+ester__acyl_o__acetyl
+Match Count
+1
+Candidate Mode
+token
+Scanned Bonds
+12
+Candidate Matches
+1
+Selected bond
+Bond
+1-3
+Role
+ester__acyl_o
+Role Conf
+0.90
+BOND	ROLE	SCORE	STATUS
+1-3	ester__acyl_o	1.30	Selected
+Candidate bond JSON
+STRUCTURE CONTEXT
+Atoms
+13
+Heavy Atoms
+13
+Rings
+1
+Hetero Atoms
+4
+Bond Class
+ester
+Bond Type
+ester
+Size proxies
+Approx radius
+1.20
+Approx volume
+7.24
+Min diameter
+2.40
+Bond center hint
+Atoms
+1, 3
+Anchor
+ester__acyl_o__acetyl
+Functional groups
+carboxylic_acid: 1
+aryl_ring: 1
+ester: 1
+acid: 1
+COMPUTE & CONSTRAINTS
+Scaffolds
+16
+TopoGate
+standard
+QM
+none
+MD
+none
+Review
+false
+Active
+true
+pH Min
+6.5
+pH Max
+8
+Temp C
+27
+Metals
+true
+Oxidation
+true
+Host
+n/a
+Assumptions
+metals_allowed default true
+oxidation_allowed default true
+MODULE 1 SUMMARY
+Status
+PASS
+Mode
+standard
+Weights
+access 0.35, reach 0.45, retention 0.20
+Cache Hits
+9
+Cache Misses
+7
+Cache Size
+302
+SCAFFOLD	TOTAL	ACCESS	REACH	RETENTION
+scaffold_lib_serine_hydrolase_v1_scaffold_005	0.510	0.790	0.605	0.257
+scaffold_lib_serine_hydrolase_v1_scaffold_015	0.486	0.498	0.543	0.335
+scaffold_lib_serine_hydrolase_v1_scaffold_012	0.217	0.435	0.000	0.322
+Showing top 3 scaffolds.
+Physics audit
+Temp K
+300.15
+DeltaE model (kJ/mol)
+9.00
+Boltz mean
+0.016
+Boltz min/max
+0.007–0.037
+Diffusion cap
+248333379.436
+Rejected scaffolds
+MODULE 2 SUMMARY
+Status
+PASS
+Selected Scaffold
+scaffold_lib_serine_hydrolase_v1_scaffold_015
+Adjusted Score
+2.169
+Retention Risk
+MEDIUM
+Nucleophile Geo
+cysteine_thiol
+Best Variant
+Oxyanion hole strengthening
+Objective
+
+Improve retention without breaking access or reach.
+
+Selection rationale
+
+Selected scaffold_lib_serine_hydrolase_v1_scaffold_015 with ranking score 2.16932. Predicted k_mean=2.95423 (CI90 0.08640-10.39965) using Eyring ranking. Retention penalty applied (MEDIUM retention risk).
+
+Retention penalty reasons
+MEDIUM retention risk
+Physics audit
+DeltaG_dagger base (kJ/mol)
+73.40
+DeltaDeltaG_dagger (kJ/mol)
+-3.00
+Strain (kJ/mol)
+2.00
+DeltaG_dagger variant (kJ/mol)
+72.40
+k variant (s^-1)
+1.5731
+Module 2 warnings
+None
+Module 2 errors
+None
+VARIANT PROPOSALS
+VARIANT	SCORE	MUTATIONS	RATIONALE
+Oxyanion hole strengthening	0.213	{"target_role":"oxyanion_hole","preferred_residues":["Ser","Thr","Asn","Gln"],"note":"strengthen tetrahedral intermediate stabilization"}	Improve stabilization of the tetrahedral intermediate.
+Hydrophobic clamp	0.184	{"target_role":"pocket_lining","preferred_residues":["Phe","Tyr","Leu","Ile"],"note":"hydrophobic clamp near aromatic ring"}	Retention weakness; add hydrophobic wall for ring packing.
+Polar anchor (carboxylate)	0.170	{"target_role":"polar_anchor","preferred_residues":["Arg","Lys","His"],"note":"anchor deprotonated carboxylate"}	Carboxylate is negative at pH 6.5–8; add a cationic anchor.
+Baseline	0.023	None	Used as control for downstream comparisons.
+Access-preserving clamp	-0.382	{"target_role":"deep_pocket_lining","preferred_residues":["Tyr","Phe"],"note":"clamp deeper in pocket to preserve access"}	Long tunnel; improve retention without blocking access.
+Mechanism alignment	-0.528	{"target_role":"nucleophile","preferred_residues":["Ser"],"note":"align nucleophile with serine-hydrolase geometry"}	Cys nucleophile detected in a serine-hydrolase route; align to Ser.
+Module 3 handoff
+MODULE 3 EXPERIMENT PLAN
+Status
+PASS
+Batch ID
+94f8b4ab-5276-435f-84e9-c2bd630923c8
+Plan Score
+0.576
+Plan Phys
+0.990
+QC Status
+N/A
+Learning
+PLANNED
+Arms
+5
+Baseline expected outcome
+
+Baseline activity under user conditions.
+
+Baseline conditions
+
+pH 7.25, T 27.0C
+
+Arms
+A3 • variant_disambiguation • Oxyanion hole strengthening vs Hydrophobic clamp • pH 7.25, T 27.0C
+A5 • stress_boundary • Oxyanion hole strengthening • pH 8.00, T 27.0C
+A1 • baseline • Oxyanion hole strengthening • pH 7.25, T 27.0C
+A4 • negative_control • no_enzyme • pH 7.25, T 27.0C
+A2 • improved_conditions • Oxyanion hole strengthening • pH 6.88, T 32.0C
+Information gain notes
+total_eig=0.117546
+Physics audit
+Horizon (s)
+3600
+Expected signal
+1.000
+Noise floor
+0.020
+SNR
+50.00
+Protocol card
+MODULE 3 QC
+QC Status
+N/A
+Records
+5
+Router Updates
+0
+QC reasons
+None
+Module 3 JSON
+DIAGNOSTICS
+Required next input
+None
+Protonation flags
+{"group":"carboxylic_acid","count":1,"estimated_pka_range":[3,5],"risk_level":"medium","note":"Carboxylic acids deprotonate near pH 4-5."}
+Descriptor status
+None
+DATA QUALITY
+Warnings
+None
+Errors
+None

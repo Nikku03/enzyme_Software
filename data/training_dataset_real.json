@@ -1,0 +1,3399 @@
+{
+  "metadata": {
+    "total_drugs": 202,
+    "cyp_distribution": {
+      "CYP2C9": 32,
+      "CYP2D6": 71,
+      "CYP2C19": 29,
+      "CYP3A4": 47,
+      "CYP1A2": 23
+    },
+    "source_distribution": {
+      "manual_curation": 14,
+      "curated": 50,
+      "GtoPdb": 1,
+      "DrugCentral": 137
+    },
+    "confidence_distribution": {
+      "validated": 152,
+      "high": 50
+    },
+    "sources": [
+      "validated_30",
+      "curated_50",
+      "SuperCYP",
+      "GtoPdb",
+      "DrugCentral"
+    ]
+  },
+  "drugs": [
+    {
+      "name": "ibuprofen",
+      "smiles": "CC(C)Cc1ccc(cc1)[C@@H](C)C(=O)O",
+      "primary_cyp": "CYP2C9",
+      "site_atoms": [
+        7
+      ],
+      "expected_bond_class": "benzylic",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "warfarin",
+      "smiles": "CC(=O)C[C@@H](c1ccccc1)c1c(O)c2ccccc2oc1=O",
+      "primary_cyp": "CYP2C9",
+      "site_atoms": [
+        11
+      ],
+      "expected_bond_class": "aryl",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "diclofenac",
+      "smiles": "OC(=O)Cc1ccccc1Nc1c(Cl)cccc1Cl",
+      "primary_cyp": "CYP2C9",
+      "site_atoms": [
+        14
+      ],
+      "expected_bond_class": "aryl",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "tolbutamide",
+      "smiles": "Cc1ccc(cc1)S(=O)(=O)NC(=O)NCCCC",
+      "primary_cyp": "CYP2C9",
+      "site_atoms": [
+        0,
+        1,
+        2
+      ],
+      "expected_bond_class": "primary_CH",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "codeine",
+      "smiles": "COc1ccc2C[C@H]3N(C)CC[C@@]45[C@@H](Oc1c24)[C@H](O)C=C[C@@H]35",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "dextromethorphan",
+      "smiles": "COc1ccc2C[C@H]3N(C)CC[C@@]45[C@@H](Oc1c24)[C@@H](C=C[C@@H]35)O",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "metoprolol",
+      "smiles": "COCCc1ccc(OCC(O)CNC(C)C)cc1",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        18
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "omeprazole",
+      "smiles": "COc1ccc2[nH]c(S(=O)Cc3ncc(C)c(OC)c3C)nc2c1",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        12
+      ],
+      "expected_bond_class": "aryl",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "clopidogrel",
+      "smiles": "COC(=O)[C@H](c1ccc(Cl)cc1)N1CCc2sccc2C1",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        4
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "midazolam",
+      "smiles": "Clc1ccc2c(c1)C(=NC1=CN(C)C=N1)c1cc(F)ccc1-2",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        8,
+        14
+      ],
+      "expected_bond_class": "benzylic",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "testosterone",
+      "smiles": "C[C@]12CC[C@H]3[C@@H](CCC4=CC(=O)CC[C@@]34C)[C@@H]1CC[C@@H]2O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        6
+      ],
+      "expected_bond_class": "allylic",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "nifedipine",
+      "smiles": "COC(=O)C1=C(C)NC(C)=C(C1c1ccccc1[N+](=O)[O-])C(=O)OC",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        7
+      ],
+      "expected_bond_class": "allylic",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "caffeine",
+      "smiles": "Cn1c(=O)c2c(ncn2C)n(C)c1=O",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        0,
+        10,
+        12
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "theophylline",
+      "smiles": "Cn1c(=O)c2[nH]cnc2n(C)c1=O",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        0,
+        8
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "confidence": "validated",
+      "source": "manual_curation",
+      "cyp_label_source": "manual_curation",
+      "som_label_source": "validated"
+    },
+    {
+      "name": "Fluoxetine",
+      "smiles": "CNCCC(C1=CC=CC=C1)OC2=CC=C(C=C2)C(F)(F)F",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 12,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Paroxetine",
+      "smiles": "C1CNCC(C1C2=CC=C(C=C2)F)COC3=CC4=C(C=C3)OCO4",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        1
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 1,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        1
+      ]
+    },
+    {
+      "name": "Amitriptyline",
+      "smiles": "CN(C)CCC=C1C2=CC=CC=C2CCC3=CC=CC=C31",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Nortriptyline",
+      "smiles": "CNCCC=C1C2=CC=CC=C2CCC3=CC=CC=C31",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "allylic",
+          "confidence": 0.9041666666666667
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Imipramine",
+      "smiles": "CN(C)CCCN1C2=CC=CC=C2CCC3=CC=CC=C31",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Desipramine",
+      "smiles": "CNCCCN1C2=CC=CC=C2CCC3=CC=CC=C31",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Atomoxetine",
+      "smiles": "CC1=CC=CC=C1OC(CCNC)C2=CC=CC=C2",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        6
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 12,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 6,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        6
+      ]
+    },
+    {
+      "name": "Carvedilol",
+      "smiles": "COC1=CC=CC=C1OCCNCC(COC2=CC=CC3=C2C4=CC=CC=C4N3)O",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Oxycodone",
+      "smiles": "CN1CCC23C4C(=O)CCC2(C1CC5=C3C(=C(C=C5)OC)O4)O",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Hydrocodone",
+      "smiles": "CN1CCC23C4C1CC5=C2C(=C(C=C5)OC)OC3C(=O)CC4",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Nebivolol",
+      "smiles": "C1CC2=C(C=CC(=C2)F)OC1C(CNCC(C3CCC4=C(O3)C=CC(=C4)F)O)O",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        3
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 11,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 3,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        3
+      ]
+    },
+    {
+      "name": "Flecainide",
+      "smiles": "C1CCNC(C1)CNC(=O)C2=C(C=CC(=C2)OCC(F)(F)F)OCC(F)(F)F",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        2
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 2,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        2
+      ]
+    },
+    {
+      "name": "Perphenazine",
+      "smiles": "C1CN(CCN1CCCN2C3=CC=CC=C3SC4=C2C=C(C=C4)Cl)CCO",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Risperidone",
+      "smiles": "CC1=C(C(=O)N2CCCCC2=N1)CCN3CCC(CC3)C4=NOC5=C4C=CC(=C5)F",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        1
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 1,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        1
+      ]
+    },
+    {
+      "name": "Aripiprazole",
+      "smiles": "C1CC(=O)NC2=C1C=CC(=C2)OCCCCN3CCN(CC3)C4=C(C(=CC=C4)Cl)Cl",
+      "primary_cyp": "CYP2D6",
+      "cyp": "CYP2D6",
+      "site_atom_indices": [
+        2
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "alpha_hetero",
+          "confidence": 1.1083333333333332
+        }
+      ],
+      "primary_som": 2,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        2
+      ]
+    },
+    {
+      "name": "Esomeprazole",
+      "smiles": "CC1=CN=C(C(=C1OC)C)CS(=O)C2=NC3=C(N2)C=C(C=C3)OC",
+      "primary_cyp": "CYP2C19",
+      "cyp": "CYP2C19",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "benzylic",
+          "confidence": 0.9579166666666667
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "benzylic",
+          "confidence": 0.9579166666666667
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "benzylic",
+          "confidence": 0.9579166666666667
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Rabeprazole",
+      "smiles": "CC1=C(C=CN=C1CS(=O)C2=NC3=CC=CC=C3N2)OCCCOC",
+      "primary_cyp": "CYP2C19",
+      "cyp": "CYP2C19",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "benzylic",
+          "confidence": 0.9579166666666667
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "benzylic",
+          "confidence": 0.9579166666666667
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Voriconazole",
+      "smiles": "CC(C1=NC=NC=C1F)C(CN2C=NC=N2)(C3=C(C=C(C=C3)F)F)O",
+      "primary_cyp": "CYP2C19",
+      "cyp": "CYP2C19",
+      "site_atom_indices": [
+        1
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "benzylic",
+          "confidence": 0.9579166666666667
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "benzylic",
+          "confidence": 0.9579166666666667
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        }
+      ],
+      "primary_som": 1,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        1
+      ]
+    },
+    {
+      "name": "Proguanil",
+      "smiles": "CC(C)N=C(N)N=C(N)NC1=CC=C(C=C1)Cl",
+      "primary_cyp": "CYP2C19",
+      "cyp": "CYP2C19",
+      "site_atom_indices": [
+        1
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        }
+      ],
+      "primary_som": 1,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        1
+      ]
+    },
+    {
+      "name": "Clomipramine",
+      "smiles": "CN(C)CCCN1C2=CC=CC=C2CCC3=C1C=C(C=C3)Cl",
+      "primary_cyp": "CYP2C19",
+      "cyp": "CYP2C19",
+      "site_atom_indices": [
+        13
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 13,
+          "bond_class": "benzylic",
+          "confidence": 0.9579166666666667
+        },
+        {
+          "atom_idx": 14,
+          "bond_class": "benzylic",
+          "confidence": 0.9579166666666667
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        }
+      ],
+      "primary_som": 13,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        13
+      ]
+    },
+    {
+      "name": "Citalopram",
+      "smiles": "CN(C)CCCC1(C2=C(CO1)C=C(C=C2)C#N)C3=CC=C(C=C3)F",
+      "primary_cyp": "CYP2C19",
+      "cyp": "CYP2C19",
+      "site_atom_indices": [
+        9
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 9,
+          "bond_class": "benzylic",
+          "confidence": 0.9579166666666667
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        }
+      ],
+      "primary_som": 9,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        9
+      ]
+    },
+    {
+      "name": "Sertraline",
+      "smiles": "CNC1CCC(C2=CC=CC=C12)C3=CC(=C(C=C3)Cl)Cl",
+      "primary_cyp": "CYP2C19",
+      "cyp": "CYP2C19",
+      "site_atom_indices": [
+        2
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "benzylic",
+          "confidence": 0.9579166666666667
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "benzylic",
+          "confidence": 0.9579166666666667
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        }
+      ],
+      "primary_som": 2,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        2
+      ]
+    },
+    {
+      "name": "Hexobarbital",
+      "smiles": "CC1(C(=O)NC(=O)N(C1=O)C)C2=CCCCC2",
+      "primary_cyp": "CYP2C19",
+      "cyp": "CYP2C19",
+      "site_atom_indices": [
+        2
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        }
+      ],
+      "primary_som": 2,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        2
+      ]
+    },
+    {
+      "name": "Amodiaquine",
+      "smiles": "CCN(CC)CC1=C(C=CC(=C1)NC2=C3C=CC(=CC3=NC=C2)Cl)O",
+      "primary_cyp": "CYP2C19",
+      "cyp": "CYP2C19",
+      "site_atom_indices": [
+        5
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 5,
+          "bond_class": "benzylic",
+          "confidence": 0.9579166666666667
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        }
+      ],
+      "primary_som": 5,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        5
+      ]
+    },
+    {
+      "name": "Moclobemide",
+      "smiles": "C1COCCN1CCNC(=O)C2=CC=C(C=C2)Cl",
+      "primary_cyp": "CYP2C19",
+      "cyp": "CYP2C19",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Mephobarbital",
+      "smiles": "CCC1(C(=O)NC(=O)N(C1=O)C)C2=CC=CC=C2",
+      "primary_cyp": "CYP2C19",
+      "cyp": "CYP2C19",
+      "site_atom_indices": [
+        3
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        }
+      ],
+      "primary_som": 3,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        3
+      ]
+    },
+    {
+      "name": "Cyclophosphamide",
+      "smiles": "C1CNP(=O)(OC1)N(CCCl)CCCl",
+      "primary_cyp": "CYP2C19",
+      "cyp": "CYP2C19",
+      "site_atom_indices": [
+        1
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.95
+        }
+      ],
+      "primary_som": 1,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        1
+      ]
+    },
+    {
+      "name": "Olanzapine",
+      "smiles": "CC1=CC2=C(S1)NC3=CC=CC=C3N=C2N4CCN(CC4)C",
+      "primary_cyp": "CYP1A2",
+      "cyp": "CYP1A2",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "benzylic",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Tizanidine",
+      "smiles": "C1CN=C(N1)NC2=C(C=CC3=NSN=C32)Cl",
+      "primary_cyp": "CYP1A2",
+      "cyp": "CYP1A2",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Ramelteon",
+      "smiles": "CCC(=O)NCCC1CCC2=C1C3=C(C=C2)OCC3",
+      "primary_cyp": "CYP1A2",
+      "cyp": "CYP1A2",
+      "site_atom_indices": [
+        1
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "allylic",
+          "confidence": 0.9041666666666667
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        }
+      ],
+      "primary_som": 1,
+      "primary_bond_class": "allylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        1
+      ]
+    },
+    {
+      "name": "Agomelatine",
+      "smiles": "CC(=O)NCCC1=CC=CC2=C1C=C(C=C2)OC",
+      "primary_cyp": "CYP1A2",
+      "cyp": "CYP1A2",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "allylic",
+          "confidence": 0.9041666666666667
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "allylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Mirtazapine",
+      "smiles": "CN1CCN2C(C1)C3=CC=CC=C3CC4=C2N=CC=C4",
+      "primary_cyp": "CYP1A2",
+      "cyp": "CYP1A2",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Pirfenidone",
+      "smiles": "CC1=CN(C(=O)C=C1)C2=CC=CC=C2",
+      "primary_cyp": "CYP1A2",
+      "cyp": "CYP1A2",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "benzylic",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Ropinirole",
+      "smiles": "CCCN(CCC)CCC1=C2CC(=O)NC2=CC=C1",
+      "primary_cyp": "CYP1A2",
+      "cyp": "CYP1A2",
+      "site_atom_indices": [
+        2
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        }
+      ],
+      "primary_som": 2,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        2
+      ]
+    },
+    {
+      "name": "Zolmitriptan",
+      "smiles": "CN(C)CCC1=CNC2=C1C=C(C=C2)CC3COC(=O)N3",
+      "primary_cyp": "CYP1A2",
+      "cyp": "CYP1A2",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.8708333333333333
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Celecoxib",
+      "smiles": "CC1=CC=C(C=C1)C2=CC(=NN2C3=CC=C(C=C3)S(=O)(=O)N)C(F)(F)F",
+      "primary_cyp": "CYP2C9",
+      "cyp": "CYP2C9",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "benzylic",
+          "confidence": 1.045
+        },
+        {
+          "atom_idx": 21,
+          "bond_class": "amine_NH",
+          "confidence": 0.7833333333333333
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.7125
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Losartan",
+      "smiles": "CCCCC1=NC(=C(N1CC2=CC=C(C=C2)C3=CC=CC=C3C4=NNN=N4)CO)Cl",
+      "primary_cyp": "CYP2C9",
+      "cyp": "CYP2C9",
+      "site_atom_indices": [
+        3
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "benzylic",
+          "confidence": 1.045
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "benzylic",
+          "confidence": 1.045
+        },
+        {
+          "atom_idx": 27,
+          "bond_class": "benzylic",
+          "confidence": 1.045
+        }
+      ],
+      "primary_som": 3,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        3
+      ]
+    },
+    {
+      "name": "Piroxicam",
+      "smiles": "CN1C(=C(C2=CC=CC=C2S1(=O)=O)O)C(=O)NC3=CC=CC=N3",
+      "primary_cyp": "CYP2C9",
+      "cyp": "CYP2C9",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.7125
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.7125
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.7125
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Lornoxicam",
+      "smiles": "CN1C(=C(C2=C(S1(=O)=O)C=C(S2)Cl)O)C(=O)NC3=CC=CC=N3",
+      "primary_cyp": "CYP2C9",
+      "cyp": "CYP2C9",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.7125
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.7125
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.7125
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "alpha_hetero",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Torsemide",
+      "smiles": "CC1=CC(=CC=C1)NC2=C(C=NC=C2)S(=O)(=O)NC(=O)NC(C)C",
+      "primary_cyp": "CYP2C9",
+      "cyp": "CYP2C9",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "benzylic",
+          "confidence": 1.045
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "amine_NH",
+          "confidence": 0.7833333333333333
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.7125
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Glimepiride",
+      "smiles": "CCC1=C(CN(C1=O)C(=O)NCCC2=CC=C(C=C2)S(=O)(=O)NC(=O)NC3CCC(CC3)C)C",
+      "primary_cyp": "CYP2C9",
+      "cyp": "CYP2C9",
+      "site_atom_indices": [
+        12
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "benzylic",
+          "confidence": 1.045
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "allylic",
+          "confidence": 0.9041666666666667
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "allylic",
+          "confidence": 0.9041666666666667
+        }
+      ],
+      "primary_som": 12,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        12
+      ]
+    },
+    {
+      "name": "Sulfamethoxazole",
+      "smiles": "CC1=CC(=NO1)NS(=O)(=O)C2=CC=C(C=C2)N",
+      "primary_cyp": "CYP2C9",
+      "cyp": "CYP2C9",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "benzylic",
+          "confidence": 1.045
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "amine_NH",
+          "confidence": 0.7833333333333333
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "amine_NH",
+          "confidence": 0.7833333333333333
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Valproic acid",
+      "smiles": "CCCC(CCC)C(=O)O",
+      "primary_cyp": "CYP2C9",
+      "cyp": "CYP2C9",
+      "site_atom_indices": [
+        3
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "allylic",
+          "confidence": 0.9041666666666667
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.7125
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "secondary_CH",
+          "confidence": 0.5625
+        }
+      ],
+      "primary_som": 3,
+      "primary_bond_class": "allylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        3
+      ]
+    },
+    {
+      "name": "Alprazolam",
+      "smiles": "CC1=NN=C2N1C3=C(C=C(C=C3)Cl)C(=NC2)C4=CC=CC=C4",
+      "primary_cyp": "CYP3A4",
+      "cyp": "CYP3A4",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "benzylic",
+          "confidence": 1.045
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "benzylic",
+          "confidence": 1.045
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.7916666666666666
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "Quinidine",
+      "smiles": "COC1=CC2=C(C=CN=C2C=C1)C(C3CC4CCN3CC4C=C)O",
+      "primary_cyp": "CYP3A4",
+      "cyp": "CYP3A4",
+      "site_atom_indices": [
+        20
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 20,
+          "bond_class": "allylic",
+          "confidence": 1.1754166666666668
+        },
+        {
+          "atom_idx": 21,
+          "bond_class": "allylic",
+          "confidence": 1.1754166666666668
+        },
+        {
+          "atom_idx": 22,
+          "bond_class": "allylic",
+          "confidence": 1.1754166666666668
+        }
+      ],
+      "primary_som": 20,
+      "primary_bond_class": "allylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        20
+      ]
+    },
+    {
+      "name": "Amlodipine",
+      "smiles": "CCOC(=O)C1=C(NC(=C(C1C2=CC=CC=C2Cl)C(=O)OC)C)COCCN",
+      "primary_cyp": "CYP3A4",
+      "cyp": "CYP3A4",
+      "site_atom_indices": [
+        22
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 22,
+          "bond_class": "allylic",
+          "confidence": 1.1754166666666668
+        },
+        {
+          "atom_idx": 23,
+          "bond_class": "allylic",
+          "confidence": 1.1754166666666668
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "benzylic",
+          "confidence": 1.045
+        }
+      ],
+      "primary_som": 22,
+      "primary_bond_class": "allylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        22
+      ]
+    },
+    {
+      "name": "Erythromycin",
+      "smiles": "CCC1C(C(C(C(=O)C(CC(C(C(C(C(C(=O)O1)C)OC2CC(C(C(O2)C)O)(C)OC)C)OC3C(C(CC(O3)C)N(C)C)O)(C)O)C)C)O)(C)O",
+      "primary_cyp": "CYP3A4",
+      "cyp": "CYP3A4",
+      "site_atom_indices": [
+        5
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 5,
+          "bond_class": "allylic",
+          "confidence": 1.1754166666666668
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "allylic",
+          "confidence": 1.1754166666666668
+        },
+        {
+          "atom_idx": 14,
+          "bond_class": "allylic",
+          "confidence": 1.1754166666666668
+        }
+      ],
+      "primary_som": 5,
+      "primary_bond_class": "allylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        5
+      ]
+    },
+    {
+      "name": "Felodipine",
+      "smiles": "CCOC(=O)C1=C(NC(=C(C1C2=C(C(=CC=C2)Cl)Cl)C(=O)OC)C)C",
+      "primary_cyp": "CYP3A4",
+      "cyp": "CYP3A4",
+      "site_atom_indices": [
+        23
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 23,
+          "bond_class": "allylic",
+          "confidence": 1.1754166666666668
+        },
+        {
+          "atom_idx": 24,
+          "bond_class": "allylic",
+          "confidence": 1.1754166666666668
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "benzylic",
+          "confidence": 1.045
+        }
+      ],
+      "primary_som": 23,
+      "primary_bond_class": "allylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        23
+      ]
+    },
+    {
+      "name": "Verapamil",
+      "smiles": "CC(C)C(CCCN(C)CCC1=CC(=C(C=C1)OC)OC)(C#N)C2=CC(=C(C=C2)OC)OC",
+      "primary_cyp": "CYP3A4",
+      "cyp": "CYP3A4",
+      "site_atom_indices": [
+        10
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 10,
+          "bond_class": "benzylic",
+          "confidence": 1.045
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.7916666666666666
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "alpha_hetero",
+          "confidence": 0.7916666666666666
+        }
+      ],
+      "primary_som": 10,
+      "primary_bond_class": "benzylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        10
+      ]
+    },
+    {
+      "name": "Nisoldipine",
+      "smiles": "CC1=C(C(C(=C(N1)C)C(=O)OCC(C)C)C2=CC=CC=C2[N+](=O)[O-])C(=O)OC",
+      "primary_cyp": "CYP3A4",
+      "cyp": "CYP3A4",
+      "site_atom_indices": [
+        0
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "allylic",
+          "confidence": 1.1754166666666668
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "allylic",
+          "confidence": 1.1754166666666668
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "benzylic",
+          "confidence": 1.045
+        }
+      ],
+      "primary_som": 0,
+      "primary_bond_class": "allylic",
+      "confidence": "high",
+      "source": "curated",
+      "cyp_label_source": "curated",
+      "som_label_source": "curated",
+      "site_atoms": [
+        0
+      ]
+    },
+    {
+      "name": "voxelotor",
+      "smiles": "O=Cc1c(cccc1O)OCc1cccnc1c1ccnn1C(C)C",
+      "primary_cyp": "CYP2C9",
+      "source": "GtoPdb",
+      "confidence": "validated",
+      "cyp_label_source": "GtoPdb",
+      "interaction_type": "Inhibitor",
+      "interaction_action": "Inhibition"
+    },
+    {
+      "name": "levobupivacaine",
+      "smiles": "CCCCN1CCCC[C@H]1C(=O)NC1=C(C)C=CC=C1C",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "methoxsalen",
+      "smiles": "COC1=C2OC=CC2=CC2=C1OC(=O)C=C2",
+      "primary_cyp": "CYP1A2",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "ajmaline",
+      "smiles": "CC[C@H]1[C@@H]2C[C@H]3[C@@H]4N(C)C5=CC=CC=C5[C@]44C[C@@H]([C@H]2[C@H]4O)N3[C@@H]1O",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "aliskiren",
+      "smiles": "COCCCOC1=C(OC)C=CC(C[C@@H](C[C@H](N)[C@@H](O)C[C@@H](C(C)C)C(=O)NCC(C)(C)C(N)=O)C(C)C)=C1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "Km",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "alosetron",
+      "smiles": "CN1C2=C(C3=C1C=CC=C3)C(=O)N(CC1=C(C)N=CN1)CC2",
+      "primary_cyp": "CYP1A2",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "altretamine",
+      "smiles": "CN(C)C1=NC(=NC(=N1)N(C)C)N(C)C",
+      "primary_cyp": "CYP1A2",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "ambroxol",
+      "smiles": "NC1=C(CN[C@H]2CC[C@H](O)CC2)C=C(Br)C=C1Br",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "amoxapine",
+      "smiles": "ClC1=CC=C2OC3=C(C=CC=C3)N=C(N3CCNCC3)C2=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "amprenavir",
+      "smiles": "CC(C)CN(C[C@@H](O)[C@H](CC1=CC=CC=C1)NC(=O)O[C@H]1CCOC1)S(=O)(=O)C1=CC=C(N)C=C1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "bambuterol",
+      "smiles": "CN(C)C(=O)OC1=CC(=CC(OC(=O)N(C)C)=C1)C(O)CNC(C)(C)C",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "diphenidol",
+      "smiles": "OC(CCCN1CCCCC1)(C1=CC=CC=C1)C1=CC=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "benzbromarone",
+      "smiles": "CCC1=C(C(=O)C2=CC(Br)=C(O)C(Br)=C2)C2=C(O1)C=CC=C2",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "bicalutamide",
+      "smiles": "CC(O)(CS(=O)(=O)C1=CC=C(F)C=C1)C(=O)NC1=CC(=C(C=C1)C#N)C(F)(F)F",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "bisacodyl",
+      "smiles": "CC(=O)OC1=CC=C(C=C1)C(C1=CC=C(OC(C)=O)C=C1)C1=CC=CC=N1",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "bopindolol",
+      "smiles": "CC1=CC2=C(N1)C=CC=C2OCC(CNC(C)(C)C)OC(=O)C1=CC=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "bromhexine",
+      "smiles": "CN(CC1=C(N)C(Br)=CC(Br)=C1)C1CCCCC1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "bromocriptine",
+      "smiles": "CC(C)C[C@@H]1N2C(=O)[C@](NC(=O)[C@H]3CN(C)[C@@H]4CC5=C(Br)NC6=C5C(=CC=C6)C4=C3)(O[C@@]2(O)[C@@H]2CCCN2C1=O)C(C)C",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "bupivacaine",
+      "smiles": "CCCCN1CCCCC1C(=O)NC1=C(C)C=CC=C1C",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "bupropion",
+      "smiles": "CC(NC(C)(C)C)C(=O)C1=CC(Cl)=CC=C1",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "butenafine",
+      "smiles": "CN(CC1=CC=C(C=C1)C(C)(C)C)CC1=CC=CC2=CC=CC=C12",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "candesartan cilexetil",
+      "smiles": "CCOC1=NC2=C(N1CC1=CC=C(C=C1)C1=C(C=CC=C1)C1=NN=NN1)C(=CC=C2)C(=O)OC(C)OC(=O)OC1CCCCC1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "carmofur",
+      "smiles": "CCCCCCNC(=O)N1C=C(F)C(=O)NC1=O",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "celecoxib",
+      "smiles": "CC1=CC=C(C=C1)C1=CC(=NN1C1=CC=C(C=C1)S(N)(=O)=O)C(F)(F)F",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "chlormadinone",
+      "smiles": "CC(=O)O[C@@]1(CC[C@H]2[C@@H]3C=C(Cl)C4=CC(=O)CC[C@]4(C)[C@H]3CC[C@]12C)C(C)=O",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "cilostazol",
+      "smiles": "O=C1CCC2=CC(OCCCCC3=NN=NN3C3CCCCC3)=CC=C2N1",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "cinacalcet",
+      "smiles": "C[C@@H](NCCCC1=CC(=CC=C1)C(F)(F)F)C1=CC=CC2=C1C=CC=C2",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "cisapride",
+      "smiles": "COC1CN(CCCOC2=CC=C(F)C=C2)CCC1NC(=O)C1=C(OC)C=C(N)C(Cl)=C1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "clemastine",
+      "smiles": "CN1CCC[C@@H]1CCO[C@](C)(C1=CC=CC=C1)C1=CC=C(Cl)C=C1",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "clomifene",
+      "smiles": "CCN(CC)CCOC1=CC=C(C=C1)C(=C(Cl)C1=CC=CC=C1)C1=CC=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "clotrimazole",
+      "smiles": "ClC1=C(C=CC=C1)C(N1C=CN=C1)(C1=CC=CC=C1)C1=CC=CC=C1",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "cyclizine",
+      "smiles": "CN1CCN(CC1)C(C1=CC=CC=C1)C1=CC=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "danazol",
+      "smiles": "C[C@]12CC[C@H]3[C@@H](CCC4=CC5=C(C[C@]34C)C=NO5)[C@@H]1CC[C@@]2(O)C#C",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "alpha-Ergocryptine",
+      "smiles": "CC(C)C[C@@H]1N2C(=O)[C@](NC(=O)[C@H]3CN(C)[C@@H]4CC5=CNC6=CC=CC(=C56)C4=C3)(O[C@@]2(O)[C@@H]2CCCN2C1=O)C(C)C",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "dihydroergocristine",
+      "smiles": "CC(C)[C@@]1(NC(=O)[C@@H]2C[C@H]3[C@@H](CC4=CNC5=CC=CC3=C45)N(C)C2)O[C@@]2(O)[C@@H]3CCCN3C(=O)[C@H](CC3=CC=CC=C3)N2C1=O",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "dihydroergotamine",
+      "smiles": "CN1C[C@@H](C[C@H]2[C@H]1CC1=CNC3=CC=CC2=C13)C(=O)N[C@]1(C)O[C@@]2(O)[C@@H]3CCCN3C(=O)[C@H](CC3=CC=CC=C3)N2C1=O",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "diltiazem",
+      "smiles": "COC1=CC=C(C=C1)[C@@H]1SC2=CC=CC=C2N(CCN(C)C)C(=O)[C@@H]1OC(C)=O",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "disulfiram",
+      "smiles": "CCN(CC)C(=S)SSC(=S)N(CC)CC",
+      "primary_cyp": "CYP1A2",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "docetaxel",
+      "smiles": "CC(=O)O[C@@]12CO[C@@H]1C[C@H](O)[C@]1(C)[C@@H]2[C@H](OC(=O)C2=CC=CC=C2)[C@]2(O)C[C@H](OC(=O)[C@H](O)[C@@H](NC(=O)OC(C)(C)C)C3=CC=CC=C3)C(C)=C([C@@H](O)C1=O)C2(C)C",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "doxapram",
+      "smiles": "CCN1CC(CCN2CCOCC2)C(C1=O)(C1=CC=CC=C1)C1=CC=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "econazole",
+      "smiles": "ClC1=CC=C(COC(CN2C=CN=C2)C2=C(Cl)C=C(Cl)C=C2)C=C1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "eperisone",
+      "smiles": "CCC1=CC=C(C=C1)C(=O)C(C)CN1CCCCC1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "ergotamine",
+      "smiles": "CN1C[C@@H](C=C2[C@H]1CC1=CNC3=CC=CC2=C13)C(=O)N[C@]1(C)O[C@@]2(O)[C@@H]3CCCN3C(=O)[C@H](CC3=CC=CC=C3)N2C1=O",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "ethylestrenol",
+      "smiles": "CC[C@]1(O)CC[C@H]2[C@@H]3CCC4=CCCC[C@@H]4[C@H]3CC[C@]12C",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "felodipine",
+      "smiles": "CCOC(=O)C1=C(C)NC(C)=C(C1C1=C(Cl)C(Cl)=CC=C1)C(=O)OC",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "finasteride",
+      "smiles": "CC(C)(C)NC(=O)[C@H]1CC[C@H]2[C@@H]3CC[C@H]4NC(=O)C=C[C@]4(C)[C@H]3CC[C@]12C",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "fluoxetine",
+      "smiles": "CNCCC(OC1=CC=C(C=C1)C(F)(F)F)C1=CC=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "fluvastatin",
+      "smiles": "CC(C)N1C(\\C=C\\[C@H](O)C[C@H](O)CC(O)=O)=C(C2=C1C=CC=C2)C1=CC=C(F)C=C1",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "glibenclamide",
+      "smiles": "COC1=C(C=C(Cl)C=C1)C(=O)NCCC1=CC=C(C=C1)S(=O)(=O)NC(=O)NC1CCCCC1",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "INHIBITOR"
+    },
+    {
+      "name": "hexachlorophene",
+      "smiles": "OC1=C(Cl)C=C(Cl)C(Cl)=C1CC1=C(Cl)C(Cl)=CC(Cl)=C1O",
+      "primary_cyp": "CYP1A2",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "idebenone",
+      "smiles": "COC1=C(OC)C(=O)C(CCCCCCCCCCO)=C(C)C1=O",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "indinavir",
+      "smiles": "CC(C)(C)NC(=O)[C@@H]1CN(CC2=CN=CC=C2)CCN1C[C@@H](O)C[C@@H](CC1=CC=CC=C1)C(=O)N[C@@H]1[C@H](O)CC2=C1C=CC=C2",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "itraconazole",
+      "smiles": "CCC(C)N1N=CN(C1=O)C1=CC=C(C=C1)N1CCN(CC1)C1=CC=C(OCC2COC(CN3C=NC=N3)(O2)C2=C(Cl)C=C(Cl)C=C2)C=C1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "labetalol",
+      "smiles": "CC(CCC1=CC=CC=C1)NCC(O)C1=CC(C(N)=O)=C(O)C=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "lacidipine",
+      "smiles": "CCOC(=O)C1=C(C)NC(C)=C(C1C1=C(\\C=C\\C(=O)OC(C)(C)C)C=CC=C1)C(=O)OCC",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "lansoprazole",
+      "smiles": "CC1=C(CS(=O)C2=NC3=C(N2)C=CC=C3)N=CC=C1OCC(F)(F)F",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "leflunomide",
+      "smiles": "CC1=C(C=NO1)C(=O)NC1=CC=C(C=C1)C(F)(F)F",
+      "primary_cyp": "CYP1A2",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "lisuride",
+      "smiles": "CCN(CC)C(=O)N[C@@H]1CN(C)[C@@H]2CC3=CNC4=CC=CC(=C34)C2=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "loperamide",
+      "smiles": "CN(C)C(=O)C(CCN1CCC(O)(CC1)C1=CC=C(Cl)C=C1)(C1=CC=CC=C1)C1=CC=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "loratadine",
+      "smiles": "CCOC(=O)N1CCC(CC1)=C1C2=CC=C(Cl)C=C2CCC2=C1N=CC=C2",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "losartan",
+      "smiles": "CCCCC1=NC(Cl)=C(CO)N1CC1=CC=C(C=C1)C1=C(C=CC=C1)C1=NN=NN1",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "maprotiline",
+      "smiles": "CNCCCC12CCC(C3=CC=CC=C13)C1=C2C=CC=C1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "medroxyprogesterone",
+      "smiles": "C[C@H]1C[C@H]2[C@@H]3CC[C@](OC(C)=O)(C(C)=O)[C@@]3(C)CC[C@@H]2[C@@]2(C)CCC(=O)C=C12",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "megestrol acetate",
+      "smiles": "CC(=O)O[C@@]1(CC[C@H]2[C@@H]3C=C(C)C4=CC(=O)CC[C@]4(C)[C@H]3CC[C@]12C)C(C)=O",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "metergoline",
+      "smiles": "CN1C=C2C[C@@H]3[C@H](C[C@@H](CNC(=O)OCC4=CC=CC=C4)CN3C)C3=CC=CC1=C23",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "methapyrilene",
+      "smiles": "CN(C)CCN(CC1=CC=CS1)C1=CC=CC=N1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "methylergometrine",
+      "smiles": "CC[C@@H](CO)NC(=O)[C@H]1CN(C)[C@@H]2CC3=CNC4=CC=CC(=C34)C2=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "naltrexone",
+      "smiles": "OC1=C2O[C@H]3C(=O)CC[C@@]4(O)[C@H]5CC(C=C1)=C2[C@@]34CCN5CC1CC1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "metoclopramide",
+      "smiles": "CCN(CC)CCNC(=O)C1=C(OC)C=C(N)C(Cl)=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "metyrapone",
+      "smiles": "CC(C)(C(=O)C1=CN=CC=C1)C1=CN=CC=C1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "miconazole",
+      "smiles": "ClC1=CC(Cl)=C(COC(CN2C=CN=C2)C2=C(Cl)C=C(Cl)C=C2)C=C1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "midazolam",
+      "smiles": "CC1=NC=C2CN=C(C3=CC(Cl)=CC=C3N12)C1=C(F)C=CC=C1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "Km",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "mosapride",
+      "smiles": "CCOC1=C(C=C(Cl)C(N)=C1)C(=O)NCC1CN(CC2=CC=C(F)C=C2)CCO1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "nabumetone",
+      "smiles": "COC1=CC=C2C=C(CCC(C)=O)C=CC2=C1",
+      "primary_cyp": "CYP1A2",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "naloxone",
+      "smiles": "OC1=CC=C2C[C@H]3N(CC=C)CC[C@@]45[C@@H](OC1=C24)C(=O)CC[C@@]35O",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "nelfinavir",
+      "smiles": "CC1=C(C=CC=C1O)C(=O)N[C@@H](CSC1=CC=CC=C1)[C@H](O)CN1C[C@H]2CCCC[C@H]2C[C@H]1C(=O)NC(C)(C)C",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "nifedipine",
+      "smiles": "COC(=O)C1=C(C)NC(C)=C(C1C1=C(C=CC=C1)[N+]([O-])=O)C(=O)OC",
+      "primary_cyp": "CYP1A2",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "nimodipine",
+      "smiles": "COCCOC(=O)C1=C(C)NC(C)=C(C1C1=CC(=CC=C1)[N+]([O-])=O)C(=O)OC(C)C",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "nisoldipine",
+      "smiles": "COC(=O)C1=C(C)NC(C)=C(C1C1=C(C=CC=C1)[N+]([O-])=O)C(=O)OCC(C)C",
+      "primary_cyp": "CYP1A2",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "nitrendipine",
+      "smiles": "CCOC(=O)C1=C(C)NC(C)=C(C1C1=CC(=CC=C1)[N+]([O-])=O)C(=O)OC",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "norethindrone acetate",
+      "smiles": "CC(=O)O[C@]1(CC[C@H]2[C@@H]3CCC4=CC(=O)CC[C@@H]4[C@H]3CC[C@]12C)C#C",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "nortriptyline",
+      "smiles": "CNCCC=C1C2=CC=CC=C2CCC2=C1C=CC=C2",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "Km",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "noscapine",
+      "smiles": "COC1=CC=C2[C@H](OC(=O)C2=C1OC)[C@@H]1N(C)CCC2=C1C(OC)=C1OCOC1=C2",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "omeprazole",
+      "smiles": "COC1=CC2=C(C=C1)N=C(N2)S(=O)CC1=NC=C(C)C(OC)=C1C",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "Km",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "orphenadrine",
+      "smiles": "CN(C)CCOC(C1=CC=CC=C1)C1=C(C)C=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "oxybutynin",
+      "smiles": "CCN(CC)CC#CCOC(=O)C(O)(C1CCCCC1)C1=CC=CC=C1",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "oxymetazoline",
+      "smiles": "CC1=CC(=C(O)C(C)=C1CC1=NCCN1)C(C)(C)C",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "papaverine",
+      "smiles": "COC1=C(OC)C=C(CC2=NC=CC3=CC(OC)=C(OC)C=C23)C=C1",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "paroxetine",
+      "smiles": "FC1=CC=C(C=C1)[C@@H]1CCNC[C@H]1COC1=CC2=C(OCO2)C=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "pergolide",
+      "smiles": "CCCN1C[C@H](CSC)C[C@H]2[C@H]1CC1=CNC3=C1C2=CC=C3",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "perhexiline",
+      "smiles": "C(C(C1CCCCC1)C1CCCCC1)C1CCCCN1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "phenelzine",
+      "smiles": "NNCCC1=CC=CC=C1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "phentolamine",
+      "smiles": "CC1=CC=C(C=C1)N(CC1=NCCN1)C1=CC(O)=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "physostigmine",
+      "smiles": "CNC(=O)OC1=CC=C2N(C)[C@H]3N(C)CC[C@@]3(C)C2=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "pipamazine",
+      "smiles": "NC(=O)C1CCN(CCCN2C3=CC=CC=C3SC3=CC=C(Cl)C=C23)CC1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "primaquine",
+      "smiles": "COC1=CC(NC(C)CCCN)=C2N=CC=CC2=C1",
+      "primary_cyp": "CYP1A2",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "prochlorperazine",
+      "smiles": "CN1CCN(CCCN2C3=CC=CC=C3SC3=C2C=C(Cl)C=C3)CC1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "promazine",
+      "smiles": "CN(C)CCCN1C2=CC=CC=C2SC2=C1C=CC=C2",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "propafenone",
+      "smiles": "CCCNCC(O)COC1=C(C=CC=C1)C(=O)CCC1=CC=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "propranolol",
+      "smiles": "CC(C)NCC(O)COC1=C2C=CC=CC2=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "mepyramine",
+      "smiles": "COC1=CC=C(CN(CCN(C)C)C2=CC=CC=N2)C=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "raloxifene",
+      "smiles": "OC1=CC=C(C=C1)C1=C(C(=O)C2=CC=C(OCCN3CCCCC3)C=C2)C2=C(S1)C=C(O)C=C2",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "risperidone",
+      "smiles": "CC1=C(CCN2CCC(CC2)C2=NOC3=C2C=CC(F)=C3)C(=O)N2CCCCC2=N1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "ritonavir",
+      "smiles": "CC(C)[C@H](NC(=O)N(C)CC1=CSC(=N1)C(C)C)C(=O)N[C@H](C[C@H](O)[C@H](CC1=CC=CC=C1)NC(=O)OCC1=CN=CS1)CC1=CC=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "sertraline",
+      "smiles": "CN[C@H]1CC[C@@H](C2=CC(Cl)=C(Cl)C=C2)C2=CC=CC=C12",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "sirolimus",
+      "smiles": "CO[C@@H]1C[C@H](C[C@@H](C)[C@@H]2CC(=O)[C@H](C)\\C=C(C)\\[C@@H](O)[C@@H](OC)C(=O)[C@H](C)C[C@H](C)\\C=C\\C=C\\C=C(C)\\[C@H](C[C@@H]3CC[C@@H](C)[C@@](O)(O3)C(=O)C(=O)N3CCCC[C@H]3C(=O)O2)OC)CC[C@H]1O",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "spironolactone",
+      "smiles": "CC(=O)S[C@@H]1CC2=CC(=O)CC[C@]2(C)[C@H]2CC[C@@]3(C)[C@@H](CC[C@@]33CCC(=O)O3)[C@H]12",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "stanozolol",
+      "smiles": "C[C@]1(O)CC[C@H]2[C@@H]3CC[C@H]4CC5=C(C[C@]4(C)[C@H]3CC[C@]12C)C=NN5",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "sulconazole",
+      "smiles": "ClC1=CC=C(CS[C@@H](CN2C=CN=C2)C2=CC=C(Cl)C=C2Cl)C=C1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "sulfaphenazole",
+      "smiles": "NC1=CC=C(C=C1)S(=O)(=O)NC1=CC=NN1C1=CC=CC=C1",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "tacrine",
+      "smiles": "NC1=C2CCCCC2=NC2=CC=CC=C12",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "tacrolimus",
+      "smiles": "CO[C@@H]1C[C@@H](CC[C@H]1O)\\C=C(/C)[C@H]1OC(=O)[C@@H]2CCCCN2C(=O)C(=O)[C@]2(O)O[C@@H]([C@H](C[C@H]2C)OC)[C@H](C[C@@H](C)C\\C(C)=C\\[C@@H](CC=C)C(=O)C[C@H](O)[C@@H]1C)OC",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "terbinafine",
+      "smiles": "CN(C\\C=C\\C#CC(C)(C)C)CC1=C2C=CC=CC2=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "thiabendazole",
+      "smiles": "N1C2=C(C=CC=C2)N=C1C1=CSC=N1",
+      "primary_cyp": "CYP1A2",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "thioridazine",
+      "smiles": "CSC1=CC=C2SC3=CC=CC=C3N(CCC3CCCCN3C)C2=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "tibolone",
+      "smiles": "C[C@@H]1CC2=C(CCC(=O)C2)[C@H]2CC[C@@]3(C)[C@@H](CC[C@@]3(O)C#C)[C@H]12",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "ticlopidine",
+      "smiles": "ClC1=C(CN2CCC3=C(C2)C=CS3)C=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "topotecan",
+      "smiles": "CC[C@@]1(O)C(=O)OCC2=C1C=C1N(CC3=CC4=C(CN(C)C)C(O)=CC=C4N=C13)C2=O",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "tranylcypromine",
+      "smiles": "N[C@@H]1C[C@H]1C1=CC=CC=C1",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "triamterene",
+      "smiles": "NC1=NC2=NC(N)=C(N=C2C(N)=N1)C1=CC=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "trihexyphenidyl",
+      "smiles": "OC(CCN1CCCCC1)(C1CCCCC1)C1=CC=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "troglitazone",
+      "smiles": "CC1=C(O)C(C)=C2CCC(C)(COC3=CC=C(CC4SC(=O)NC4=O)C=C3)OC2=C1C",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "Km",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "tropicamide",
+      "smiles": "CCN(CC1=CC=NC=C1)C(=O)C(CO)C1=CC=CC=C1",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "valethamate",
+      "smiles": "CCC(C)C(C(=O)OCC[N+](C)(CC)CC)C1=CC=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "vindesine",
+      "smiles": "CC[C@]1(O)C[C@@H]2CN(C1)CCC1=C(NC3=CC=CC=C13)[C@@](C2)(C(=O)OC)C1=CC2=C(C=C1OC)N(C)[C@@H]1[C@]22CCN3CC=C[C@](CC)([C@@H]23)[C@@H](O)[C@]1(O)C(N)=O",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "Km",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "vinorelbine",
+      "smiles": "CCC1=C[C@@H]2C[N@](C1)CC1=C(NC3=C1C=CC=C3)[C@@](C2)(C(=O)OC)C1=CC2=C(C=C1OC)N(C)[C@@H]1[C@]22CCN3CC=C[C@](CC)([C@@H]23)[C@@H](OC(C)=O)[C@]1(O)C(=O)OC",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "zafirlukast",
+      "smiles": "COC1=C(CC2=CN(C)C3=C2C=C(NC(=O)OC2CCCC2)C=C3)C=CC(=C1)C(=O)NS(=O)(=O)C1=C(C)C=CC=C1",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "capsaicin",
+      "smiles": "COC1=C(O)C=CC(CNC(=O)CCCC\\C=C\\C(C)C)=C1",
+      "primary_cyp": "CYP1A2",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "oxiconazole",
+      "smiles": "ClC1=CC(Cl)=C(CO\\N=C(/CN2C=CN=C2)C2=C(Cl)C=C(Cl)C=C2)C=C1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "podophyllotoxin",
+      "smiles": "COC1=CC(=CC(OC)=C1OC)[C@H]1[C@@H]2[C@H](COC2=O)[C@@H](O)C2=CC3=C(OCO3)C=C12",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "tolnaftate",
+      "smiles": "CN(C(=S)OC1=CC2=CC=CC=C2C=C1)C1=CC(C)=CC=C1",
+      "primary_cyp": "CYP2C19",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "yohimbine",
+      "smiles": "COC(=O)[C@H]1[C@@H](O)CC[C@H]2CN3CCC4=C(NC5=C4C=CC=C5)[C@@H]3C[C@H]12",
+      "primary_cyp": "CYP2D6",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "artemisinin",
+      "smiles": "C[C@@H]1CC[C@H]2[C@@H](C)C(=O)O[C@@H]3O[C@@]4(C)CC[C@@H]1[C@@]23OO4",
+      "primary_cyp": "CYP1A2",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "gentian violet",
+      "smiles": "CN(C)C1=CC=C(C=C1)C(C1=CC=C(C=C1)N(C)C)=C1C=CC(C=C1)=[N+](C)C",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "piperonyl butoxide",
+      "smiles": "CCCCOCCOCCOCC1=CC2=C(OCO2)C=C1CCC",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "tenidap",
+      "smiles": "NC(=O)N1C(=O)\\C(=C(/O)C2=CC=CS2)C2=C1C=CC(Cl)=C2",
+      "primary_cyp": "CYP2C9",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "climbazole",
+      "smiles": "CC(C)(C)C(=O)C(OC1=CC=C(Cl)C=C1)N1C=CN=C1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "nan"
+    },
+    {
+      "name": "voxelotor",
+      "smiles": "CC(C)N1N=CC=C1C1=C(COC2=C(C=O)C(O)=CC=C2)C=CC=N1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugCentral",
+      "confidence": "validated",
+      "cyp_label_source": "DrugCentral",
+      "interaction_type": "IC50",
+      "interaction_action": "INHIBITOR"
+    }
+  ]
+}

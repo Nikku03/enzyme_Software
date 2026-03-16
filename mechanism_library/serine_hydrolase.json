@@ -1,0 +1,37 @@
+{
+  "mechanism_id": "serine_hydrolase",
+  "required_bond_types": ["ester", "amide"],
+  "eligibility": {
+    "required_bond_roles": ["ester__acyl_o", "amide__c_n", "ester", "amide"],
+    "forbidden_roles": []
+  },
+  "cpts": [
+    {
+      "id": "nucleophile_approach",
+      "cpt_kind": "NUCLEOPHILE_APPROACH",
+      "type": "geometric_constraint",
+      "score_function": "energy_penalty",
+      "constraint_type": "GEOMETRIC",
+      "direction": "penalty",
+      "fail_threshold": 5.0,
+      "severity_weight": 1.0,
+      "requires_targets": ["electrophile"],
+      "distance_angstrom": 3.2,
+      "angle_degrees": 107.0,
+      "qm_trigger_threshold_kcal": 3.0
+    },
+    {
+      "id": "oxyanion_hole",
+      "cpt_kind": "OXYANION_HOLE",
+      "type": "electrostatic_stabilization",
+      "score_function": "energy_gain",
+      "constraint_type": "ELECTROSTATIC",
+      "direction": "gain",
+      "fail_threshold": 2.0,
+      "severity_weight": 1.0,
+      "requires_targets": ["stabilizable"],
+      "distance_angstrom": 2.0,
+      "qm_trigger_threshold_kcal": 2.0
+    }
+  ]
+}

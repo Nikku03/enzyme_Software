@@ -1,0 +1,354 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Dict, Iterable, List, Optional
+
+import numpy as np
+
+from enzyme_software.liquid_nn_v2._compat import TORCH_AVAILABLE, require_torch, torch
+from enzyme_software.liquid_nn_v2.config import TrainingConfig
+from enzyme_software.liquid_nn_v2.training.loss import AdaptiveLossV2
+from enzyme_software.liquid_nn_v2.training.metrics import compute_cyp_metrics, compute_site_metrics_v2
+from enzyme_software.liquid_nn_v2.training.utils import collate_molecule_graphs, move_to_device
+
+
+if TORCH_AVAILABLE:
+    @dataclass
+    class Trainer:
+        model: object
+        config: TrainingConfig = field(default_factory=TrainingConfig)
+        device: Optional[torch.device] = None
+        cyp_class_weights: Optional[object] = None
+
+        def __post_init__(self):
+            self.device = self.device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.model.to(self.device)
+            weights = None
+            model_config = getattr(self.model, "config", None)
+            if self.cyp_class_weights is not None:
+                weights = self.cyp_class_weights.to(self.device) if hasattr(self.cyp_class_weights, "to") else torch.as_tensor(self.cyp_class_weights, dtype=torch.float32, device=self.device)
+            self.loss_fn = AdaptiveLossV2(
+                cyp_class_weights=weights,
+                tau_reg_weight=float(getattr(model_config, "tau_prior_weight", 0.01)),
+                energy_loss_weight=float(getattr(model_config, "energy_loss_weight", 0.0)),
+                deliberation_loss_weight=float(getattr(model_config, "deliberation_loss_weight", 0.0)),
+                energy_margin=float(getattr(model_config, "energy_margin", 0.15)),
+                energy_loss_clip=float(getattr(model_config, "energy_loss_clip", 2.0)),
+            )
+            self.loss_fn.to(self.device)
+            self.optimizer = torch.optim.AdamW(
+                self._trainable_parameters(),
+                lr=self.config.learning_rate,
+                weight_decay=self.config.weight_decay,
+                betas=self.config.betas,
+            )
+
+        def _trainable_parameters(self) -> List[torch.nn.Parameter]:
+            params: List[torch.nn.Parameter] = []
+            for module in (self.model, self.loss_fn):
+                for param in module.parameters():
+                    if param.requires_grad:
+                        params.append(param)
+            return params
+
+        def _check_tensor_finite(self, name: str, value) -> None:
+            if value is None or not hasattr(value, "numel") or value.numel() == 0:
+                return
+            if not bool(torch.isfinite(value).all()):
+                raise FloatingPointError(f"Non-finite tensor detected: {name}")
+
+        def _run_finite_checks(self, outputs: Dict[str, object], stats: Dict[str, float], *, epoch: Optional[int] = None, batch_idx: Optional[int] = None) -> None:
+            model_config = getattr(self.model, "config", None)
+            if not bool(getattr(model_config, "enable_finite_checks", False)):
+                return
+            self._check_tensor_finite("site_logits", outputs.get("site_logits"))
+            self._check_tensor_finite("cyp_logits", outputs.get("cyp_logits"))
+            energy_outputs = outputs.get("energy_outputs") or {}
+            if isinstance(energy_outputs, dict):
+                self._check_tensor_finite("energy_node", energy_outputs.get("node_energy"))
+                self._check_tensor_finite("energy_mol", energy_outputs.get("mol_energy"))
+            tunneling_outputs = outputs.get("tunneling_outputs") or {}
+            if isinstance(tunneling_outputs, dict):
+                self._check_tensor_finite("tunnel_prob", tunneling_outputs.get("tunnel_prob"))
+            hidden_warn = float(getattr(model_config, "instability_hidden_norm_warn", 25.0))
+            energy_warn = float(getattr(model_config, "instability_energy_warn", 8.0))
+            warnings = []
+            atom_hidden = float(stats.get("atom_hidden_norm_mean", 0.0))
+            mol_hidden = float(stats.get("mol_hidden_norm_mean", 0.0))
+            energy_max = float(stats.get("energy_max", 0.0))
+            tunnel_msg_norm = float(stats.get("tunnel_msg_norm_mean", 0.0))
+            if atom_hidden > hidden_warn:
+                warnings.append(f"atom_hidden_norm_mean={atom_hidden:.2f}")
+            if mol_hidden > hidden_warn:
+                warnings.append(f"mol_hidden_norm_mean={mol_hidden:.2f}")
+            if energy_max > energy_warn:
+                warnings.append(f"energy_max={energy_max:.2f}")
+            if tunnel_msg_norm > hidden_warn:
+                warnings.append(f"tunnel_msg_norm_mean={tunnel_msg_norm:.2f}")
+            if warnings:
+                prefix = "Instability warning"
+                if epoch is not None and batch_idx is not None:
+                    prefix += f" epoch={epoch + 1} batch={batch_idx}"
+                print(f"{prefix}: {', '.join(warnings)}", flush=True)
+
+        def _clip_gradients(self) -> None:
+            params = [param for param in self._trainable_parameters() if param.grad is not None]
+            if params:
+                torch.nn.utils.clip_grad_norm_(params, self.config.max_grad_norm)
+
+        def _prepare_batch(self, batch_or_graphs):
+            if isinstance(batch_or_graphs, dict):
+                return move_to_device(batch_or_graphs, self.device)
+            return move_to_device(collate_molecule_graphs(batch_or_graphs), self.device)
+
+        def _apply_confidence_weights(self, loss, batch):
+            graph_weights = batch.get("graph_confidence_weights")
+            if graph_weights is None or not hasattr(graph_weights, "numel") or graph_weights.numel() == 0:
+                return loss
+            return loss * graph_weights.mean().clamp(min=1.0e-6)
+
+        def compute_loss(self, batch: Dict[str, object], outputs: Dict[str, object]):
+            loss, stats = self.loss_fn(
+                outputs["site_logits"],
+                outputs["cyp_logits"],
+                batch["site_labels"],
+                batch["cyp_labels"],
+                batch["batch"],
+                batch.get("site_supervision_mask"),
+                outputs.get("tau_history"),
+                batch.get("tau_init"),
+                outputs.get("energy_outputs"),
+                outputs.get("deliberation_outputs"),
+            )
+            stats = dict(stats)
+            stats.update(self._collect_output_stats(outputs))
+            weighted_loss = self._apply_confidence_weights(loss, batch)
+            if weighted_loss is not loss:
+                stats["confidence_scale"] = float((weighted_loss / loss).detach().item()) if loss.detach().abs().item() > 1.0e-12 else 1.0
+                stats["total_loss"] = float(weighted_loss.item())
+            return weighted_loss, stats
+
+        def _collect_output_stats(self, outputs: Dict[str, object]) -> Dict[str, float]:
+            metrics: Dict[str, float] = {}
+            energy_outputs = outputs.get("energy_outputs") or {}
+            tunneling_outputs = outputs.get("tunneling_outputs") or {}
+            phase_outputs = outputs.get("phase_outputs") or {}
+            deliberation_outputs = outputs.get("deliberation_outputs") or {}
+            tau_stats = outputs.get("tau_stats") or {}
+            diagnostics = outputs.get("diagnostics") or {}
+
+            node_energy = energy_outputs.get("node_energy") if isinstance(energy_outputs, dict) else None
+            if node_energy is not None:
+                metrics["energy_mean"] = float(node_energy.detach().mean().item())
+                metrics["energy_min"] = float(node_energy.detach().min().item())
+                metrics["energy_max"] = float(node_energy.detach().max().item())
+            mol_energy = energy_outputs.get("mol_energy") if isinstance(energy_outputs, dict) else None
+            if mol_energy is not None and hasattr(mol_energy, "numel") and mol_energy.numel():
+                metrics["mol_energy_mean"] = float(mol_energy.detach().mean().item())
+                metrics["mol_energy_max"] = float(mol_energy.detach().max().item())
+            tunnel_prob = tunneling_outputs.get("tunnel_prob") if isinstance(tunneling_outputs, dict) else None
+            if tunnel_prob is not None:
+                metrics["tunnel_prob_mean"] = float(tunnel_prob.detach().mean().item())
+                metrics["tunnel_prob_max"] = float(tunnel_prob.detach().max().item())
+            tunnel_stats = diagnostics.get("graph_tunneling") if isinstance(diagnostics, dict) else None
+            if isinstance(tunnel_stats, dict):
+                metrics["tunneling_edge_count"] = float(tunnel_stats.get("tunneling_edge_count", 0.0))
+                metrics["tunnel_msg_norm_mean"] = float(tunnel_stats.get("tunnel_msg_norm_mean", 0.0))
+                metrics["tunnel_gate_mean"] = float(tunnel_stats.get("tunnel_gate_mean", 0.0))
+            hybrid_stats = diagnostics.get("hybrid_selective") if isinstance(diagnostics, dict) else None
+            if isinstance(hybrid_stats, dict):
+                metrics["tunnel_bias_mean"] = float(hybrid_stats.get("tunnel_bias_mean", 0.0))
+                metrics["tunnel_bias_max"] = float(hybrid_stats.get("tunnel_bias_max", 0.0))
+                metrics["refine_gate_mean"] = float(hybrid_stats.get("refine_gate_mean", 0.0))
+                metrics["refine_delta_mean"] = float(hybrid_stats.get("refine_delta_mean", 0.0))
+                metrics["refine_delta_max"] = float(hybrid_stats.get("refine_delta_max", 0.0))
+            phase_stats = phase_outputs.get("stats") if isinstance(phase_outputs, dict) else None
+            if phase_stats:
+                metrics["phase_mean"] = float(phase_stats.get("phase_mean", 0.0))
+                metrics["phase_var"] = float(phase_stats.get("phase_var", 0.0))
+            deliberation_stats = deliberation_outputs.get("stats") if isinstance(deliberation_outputs, dict) else None
+            if deliberation_stats:
+                metrics["deliberation_steps"] = float(deliberation_stats.get("num_steps", 0.0))
+                metrics["critic_mean"] = float(deliberation_stats.get("critic_mean", 0.0))
+                metrics["atom_gate_mean"] = float(deliberation_stats.get("atom_gate_mean", 0.0))
+                metrics["mol_gate_mean"] = float(deliberation_stats.get("mol_gate_mean", 0.0))
+                metrics["atom_hidden_norm_mean"] = float(deliberation_stats.get("atom_hidden_norm_mean", 0.0))
+                metrics["mol_hidden_norm_mean"] = float(deliberation_stats.get("mol_hidden_norm_mean", 0.0))
+            if isinstance(tau_stats, dict) and tau_stats.get("shared"):
+                final_shared = tau_stats["shared"][-1] if tau_stats["shared"] else {}
+                if final_shared:
+                    metrics["tau_mean"] = float(final_shared.get("mean", 0.0))
+                    metrics["tau_std"] = float(final_shared.get("std", 0.0))
+            if isinstance(diagnostics, dict):
+                physics_stats = diagnostics.get("physics_residual")
+                if isinstance(physics_stats, dict):
+                    atom_stats = physics_stats.get("atom")
+                    if isinstance(atom_stats, dict):
+                        metrics["physics_gate_mean"] = float(atom_stats.get("gate_mean", 0.0))
+                hidden_norms = diagnostics.get("hidden_norms")
+                if isinstance(hidden_norms, dict):
+                    metrics["som_hidden_norm_mean"] = float(hidden_norms.get("som_features_mean", 0.0))
+                    metrics["mol_feature_norm_mean"] = float(hidden_norms.get("mol_features_mean", 0.0))
+                    metrics["final_atom_norm_mean"] = float(hidden_norms.get("final_atom_mean", 0.0))
+                    metrics["final_mol_norm_mean"] = float(hidden_norms.get("final_mol_mean", 0.0))
+            return metrics
+
+        def train_epoch(self, graphs: Iterable) -> Dict[str, float]:
+            self.model.train()
+            batch = self._prepare_batch(graphs)
+            outputs = self.model(batch)
+            loss, stats = self.compute_loss(batch, outputs)
+            self._run_finite_checks(outputs, stats)
+            if not bool(torch.isfinite(loss)):
+                raise FloatingPointError(f"Non-finite loss detected in train_epoch: stats={stats}")
+            self.optimizer.zero_grad()
+            loss.backward()
+            self._clip_gradients()
+            self.optimizer.step()
+            return stats
+
+        def train_loader_epoch(self, loader) -> Dict[str, float]:
+            self.model.train()
+            history = []
+            for batch_idx, raw_batch in enumerate(loader):
+                if raw_batch is None:
+                    continue
+                batch = self._prepare_batch(raw_batch)
+                outputs = self.model(batch)
+                loss, stats = self.compute_loss(batch, outputs)
+                self._run_finite_checks(outputs, stats, batch_idx=batch_idx)
+                if not bool(torch.isfinite(loss)):
+                    raise FloatingPointError(
+                        f"Non-finite loss detected during training at batch {batch_idx}: stats={stats}"
+                    )
+                self.optimizer.zero_grad()
+                loss.backward()
+                self._clip_gradients()
+                self.optimizer.step()
+                history.append(stats)
+            if not history:
+                return {"total_loss": float("inf")}
+            keys = sorted({key for stats in history for key in stats.keys()})
+            return {
+                key: float(sum(float(stats.get(key, 0.0)) for stats in history) / len(history))
+                for key in keys
+            }
+
+        def evaluate(self, graphs: Iterable) -> Dict[str, object]:
+            self.model.eval()
+            with torch.no_grad():
+                batch = self._prepare_batch(graphs)
+                outputs = self.model(batch)
+            site_metrics = compute_site_metrics_v2(
+                outputs["site_scores"],
+                batch["site_labels"],
+                batch["batch"],
+                supervision_mask=batch.get("site_supervision_mask"),
+            )
+            cyp_metrics = compute_cyp_metrics(outputs["cyp_logits"], batch["cyp_labels"])
+            return {**site_metrics, **cyp_metrics}
+
+        def analyze_tau(self, loader=None) -> Dict[str, float]:
+            target_loader = loader
+            if target_loader is None:
+                return {"tau_bde_correlation": 0.0}
+            self.model.eval()
+            tau_values = []
+            tau_init_values = []
+            with torch.no_grad():
+                for raw_batch in target_loader:
+                    if raw_batch is None:
+                        continue
+                    batch = self._prepare_batch(raw_batch)
+                    outputs = self.model(batch)
+                    tau_history = outputs.get("tau_history") or []
+                    if tau_history:
+                        tau_values.append(tau_history[-1].detach().cpu().reshape(-1))
+                        tau_init_values.append(batch["tau_init"].detach().cpu().reshape(-1))
+            if not tau_values:
+                return {"tau_bde_correlation": 0.0}
+            tau_final = torch.cat(tau_values)
+            tau_init = torch.cat(tau_init_values)
+            corr = float(torch.corrcoef(torch.stack([tau_final, tau_init]))[0, 1].item()) if tau_final.numel() > 1 else 0.0
+            return {
+                "tau_bde_correlation": corr,
+                "tau_init_mean": float(tau_init.mean().item()),
+                "tau_init_std": float(tau_init.std().item()),
+                "tau_final_mean": float(tau_final.mean().item()),
+                "tau_final_std": float(tau_final.std().item()),
+            }
+
+        def analyze_gates(self, loader=None) -> Dict[str, float]:
+            target_loader = loader
+            if target_loader is None:
+                return {"gate_mean": 0.0}
+            self.model.eval()
+            gates = []
+            with torch.no_grad():
+                for raw_batch in target_loader:
+                    if raw_batch is None:
+                        continue
+                    batch = self._prepare_batch(raw_batch)
+                    outputs = self.model(batch)
+                    gate_values = outputs.get("gate_values")
+                    if gate_values is not None:
+                        gates.append(gate_values.detach().cpu().reshape(-1))
+            if not gates:
+                return {"gate_mean": 0.0}
+            g = torch.cat(gates)
+            return {
+                "gate_mean": float(g.mean().item()),
+                "gate_std": float(g.std().item()),
+                "gate_min": float(g.min().item()),
+                "gate_max": float(g.max().item()),
+            }
+
+        def evaluate_loader(self, loader) -> Dict[str, object]:
+            self.model.eval()
+            site_scores = []
+            site_labels = []
+            site_supervision_masks = []
+            site_batch = []
+            cyp_logits = []
+            cyp_labels = []
+            batch_offset = 0
+            with torch.no_grad():
+                for raw_batch in loader:
+                    if raw_batch is None:
+                        continue
+                    batch = self._prepare_batch(raw_batch)
+                    outputs = self.model(batch)
+                    site_scores.append(outputs["site_scores"].detach().cpu())
+                    site_labels.append(batch["site_labels"].detach().cpu())
+                    site_supervision_masks.append(
+                        batch.get("site_supervision_mask", torch.ones_like(batch["site_labels"])).detach().cpu()
+                    )
+                    site_batch.append(batch["batch"].detach().cpu() + batch_offset)
+                    cyp_logits.append(outputs["cyp_logits"].detach().cpu())
+                    cyp_labels.append(batch["cyp_labels"].detach().cpu())
+                    batch_offset += int(batch["cyp_labels"].shape[0])
+            if not site_scores:
+                return {}
+            merged_site_scores = torch.cat(site_scores, dim=0)
+            merged_site_labels = torch.cat(site_labels, dim=0)
+            merged_site_supervision_mask = torch.cat(site_supervision_masks, dim=0)
+            merged_site_batch = torch.cat(site_batch, dim=0)
+            merged_cyp_logits = torch.cat(cyp_logits, dim=0)
+            merged_cyp_labels = torch.cat(cyp_labels, dim=0)
+            site_metrics = compute_site_metrics_v2(
+                merged_site_scores,
+                merged_site_labels,
+                merged_site_batch,
+                supervision_mask=merged_site_supervision_mask,
+            )
+            cyp_metrics = compute_cyp_metrics(merged_cyp_logits, merged_cyp_labels)
+            return {**site_metrics, **cyp_metrics}
+else:  # pragma: no cover
+    @dataclass
+    class Trainer:  # type: ignore[override]
+        model: object
+        config: TrainingConfig = field(default_factory=TrainingConfig)
+        device: object = None
+
+        def __post_init__(self):
+            require_torch()

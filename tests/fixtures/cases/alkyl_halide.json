@@ -1,0 +1,16 @@
+{
+  "case_id": "alkyl_halide",
+  "input": {
+    "smiles": "CCCl",
+    "target_bond": "C-Cl"
+  },
+  "expect": {
+    "decision_in": ["GO", "LOW_CONF_GO"],
+    "module_minus1_status": "PASS",
+    "min_match_count": 1,
+    "route_in": ["haloalkane_dehalogenase", "reductive_dehalogenase"],
+    "module_minus1_track": "displacement_sn2",
+    "variant_policy": "unknown_family_minimal",
+    "variant_label_not_contains": ["Oxyanion", "hydrolysis"]
+  }
+}

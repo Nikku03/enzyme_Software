@@ -1,0 +1,1030 @@
+{
+  "metadata": {
+    "source": "SuperCYP",
+    "url": "https://insilico-cyp.charite.de/SuperCYPsPred/",
+    "total_drugs": 58,
+    "cyp_distribution": {
+      "CYP2C9": 7,
+      "CYP3A4": 18,
+      "CYP1A2": 15,
+      "CYP2C19": 8,
+      "CYP2D6": 6,
+      "CYP2B6": 1,
+      "CYP2E1": 2,
+      "CYP1A1": 1
+    }
+  },
+  "drugs": [
+    {
+      "name": "(+-)-Ibuprofen",
+      "smiles": "CC(C)CC1=CC=C(C=C1)C(C)C(=O)O",
+      "primary_cyp": "CYP2C9",
+      "all_cyp_substrates": [
+        "CYP2C19",
+        "CYP2C8",
+        "CYP2C9"
+      ],
+      "cyp_inhibitor": [
+        "CYP2C8",
+        "CYP2C9"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Digibutina",
+      "smiles": "CCCCC1C(=O)N(N(C1=O)C2=CC=CC=C2)C3=CC=CC=C3",
+      "primary_cyp": "CYP2C9",
+      "all_cyp_substrates": [
+        "CYP2C9"
+      ],
+      "cyp_inhibitor": [
+        "CYP2C9"
+      ],
+      "cyp_inducer": [
+        "CYP3A4"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Oxibutinina",
+      "smiles": "CCN(CC)CC#CCOC(=O)C(C1CCCCC1)(C2=CC=CC=C2)O",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inhibitor": [
+        "CYP2C8"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Sibutramina",
+      "smiles": "CC(C)CC(C1(CCC1)C2=CC=C(C=C2)Cl)N(C)C",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "(+) or (-)-N-Methyl-gamma-(4-(trifluoromethyl)phenoxy)benzenepropanamine",
+      "smiles": "CNCCC(C1=CC=CC=C1)OC2=CC=C(C=C2)C(F)(F)F",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A2",
+        "CYP2B6",
+        "CYP2C19",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP2D6",
+        "CYP2E1",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [
+        "CYP1A2",
+        "CYP2B6",
+        "CYP2C8",
+        "CYP2C9"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "(-)-Omeprazole magnesium",
+      "smiles": "CC1=CN=C(C(=C1OC)C)CS(=O)C2=NC3=C([N-]2)C=CC(=C3)OC.CC1=CN=C(C(=C1OC)C)CS(=O)C2=NC3=C([N-]2)C=CC(=C3)OC.[Mg+2]",
+      "primary_cyp": "CYP2C19",
+      "all_cyp_substrates": [
+        "CYP2C19",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "(1-Amino-3-(((2-((diaminomethylene)amino)-4-thiazolyl)methyl)thio)propylidene)sulfamide",
+      "smiles": "C1=C(N=C(S1)N=C(N)N)CSCCC(=NS(=O)(=O)N)N",
+      "primary_cyp": "CYP2C19",
+      "all_cyp_substrates": [
+        "CYP2C19"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "(4S)-6-Chloro-4-(cyclopropylethynyl)-1,4-dihydro-4-(trifluoromethyl)-2H-3,1-benzoxazin-2-one",
+      "smiles": "C1CC1C#CC2(C3=C(C=CC(=C3)Cl)NC(=O)O2)C(F)(F)F",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP2B6",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [
+        "CYP1A2",
+        "CYP2B6",
+        "CYP2C19",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "cyp_inducer": [
+        "CYP2B6",
+        "CYP3A4"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "(5alpha,17beta)-N-(2,5-Bis(trifluoromethyl)phenyl)-3-oxo-4-azaandrost-1-ene-17-carboxamide",
+      "smiles": "CC12CCC3C(C1CCC2C(=O)NC4=C(C=CC(=C4)C(F)(F)F)C(F)(F)F)CCC5C3(C=CC(=O)N5)C",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "(DL-erythro-alpha-2-Piperidyl-2,8-bis(trifluoromethyl)-4-quinolinemethanol",
+      "smiles": "C1CCNC(C1)C(C2=CC(=NC3=C2C=CC=C3C(F)(F)F)C(F)(F)F)O",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [
+        "CYP3A4"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "(Z)-2-Chloro-9-(omega-dimethylaminopropylidene)thioxanthene",
+      "smiles": "CN(C)CCC=C1C2=CC=CC=C2SC3=C1C=C(C=C3)Cl",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "1,1,1,3,3,3-Hexafluoro-2-(fluoromethoxy)propane",
+      "smiles": "C(OC(C(F)(F)F)C(F)(F)F)F",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP2A6",
+        "CYP2B6",
+        "CYP2E1",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "1,1,1-Trichloromethane",
+      "smiles": "C(Cl)(Cl)Cl",
+      "primary_cyp": "CYP2C19",
+      "all_cyp_substrates": [
+        "CYP2A6",
+        "CYP2C19",
+        "CYP2E1"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "1-(2-Hydroxyethyl)-4-(3-(trifluoromethyl-10-phenothiazinyl)propyl)-piperazine",
+      "smiles": "C1CN(CCN1CCCN2C3=CC=CC=C3SC4=C2C=C(C=C4)C(F)(F)F)CCO",
+      "primary_cyp": "CYP2D6",
+      "all_cyp_substrates": [
+        "CYP2D6"
+      ],
+      "cyp_inhibitor": [
+        "CYP2C8",
+        "CYP2C9",
+        "CYP2E1"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "1-(tert-Butylaminomethyl)-4-hydroxy-m-xylene-alpha1,alpha3-diol",
+      "smiles": "CC(C)(C)NCC(C1=CC(=C(C=C1)O)CO)O",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [
+        "CYP3A4"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "1-Butanone, 1-(4-fluorophenyl)-4-(4-hydroxy-4-(3-(trifluoromethyl)phenyl)-1-piperidinyl)-",
+      "smiles": "C1CN(CCC1(C2=CC(=CC=C2)C(F)(F)F)O)CCCC(=O)C3=CC=C(C=C3)F",
+      "primary_cyp": "CYP2D6",
+      "all_cyp_substrates": [
+        "CYP2D6"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "1-Chloro-2,2,2-trifluoroethyl difluoromethyl ether",
+      "smiles": "C(C(F)(F)F)(OC(F)F)Cl",
+      "primary_cyp": "CYP2B6",
+      "all_cyp_substrates": [
+        "CYP2B6",
+        "CYP2E1"
+      ],
+      "cyp_inhibitor": [
+        "CYP2B6"
+      ],
+      "cyp_inducer": [
+        "CYP2B6"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "1-Dehydromethyltestosterone",
+      "smiles": "CC12CCC3C(C1CCC2(C)O)CCC4=CC(=O)C=CC34C",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "10-(3-(4-Methyl-1-piperazinyl)propyl)-2-(trifluoromethyl)phenothiazine",
+      "smiles": "CN1CCN(CC1)CCCN2C3=CC=CC=C3SC4=C2C=C(C=C4)C(F)(F)F",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A2"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "2-Amino-6-(trifluoromethoxy)benzothiazole",
+      "smiles": "C1=CC2=C(C=C1OC(F)(F)F)SC(=N2)N",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A1",
+        "CYP1A2"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "2-beta-Carbomethoxy-3-beta-benzoxytropane",
+      "smiles": "CN1C2CCC1C(C(C2)OC(=O)C3=CC=CC=C3)C(=O)OC",
+      "primary_cyp": "CYP2D6",
+      "all_cyp_substrates": [
+        "CYP2D6",
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inhibitor": [
+        "CYP2C8",
+        "CYP2C9",
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "cyp_inducer": [
+        "CYP1A1",
+        "CYP1A2",
+        "CYP2A6",
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "2-Chloro-1,1,2-trifluoroethyl difluoromethyl ether",
+      "smiles": "C(C(OC(F)F)(F)F)(F)Cl",
+      "primary_cyp": "CYP2E1",
+      "all_cyp_substrates": [
+        "CYP2E1"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "3-(4-Methylpiperazinyliminomethyl)-rifamycin SV",
+      "smiles": "CC1C=CC=C(C(=O)NC2=C(C(=C3C(=C2O)C(=C(C4=C3C(=O)C(O4)(OC=CC(C(C(C(C(C(C1O)C)O)C)OC(=O)C)C)OC)C)C)O)O)C=NN5CCN(CC5)C)C",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A2",
+        "CYP2A6",
+        "CYP2B6",
+        "CYP2C19",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP2D6",
+        "CYP2E1",
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inhibitor": [
+        "CYP2A6",
+        "CYP2C8",
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inducer": [
+        "CYP1A1",
+        "CYP1A2",
+        "CYP2A6",
+        "CYP2B6",
+        "CYP2C18",
+        "CYP2C19",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP2D6",
+        "CYP2E1",
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "4-(2-Nitrophenyl)-2,6-dimethyl-3,5-dicarbomethoxy-1,4-dihydropyridine",
+      "smiles": "CC1=C(C(C(=C(N1)C)C(=O)OC)C2=CC=CC=C2[N+](=O)[O-])C(=O)OC",
+      "primary_cyp": "CYP2D6",
+      "all_cyp_substrates": [
+        "CYP2D6",
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inhibitor": [
+        "CYP1A1",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP2D6",
+        "CYP2E1"
+      ],
+      "cyp_inducer": [
+        "CYP2B6",
+        "CYP2C9",
+        "CYP3A4"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "4-(5-(4-Methylphenyl)-3-(trifluoromethyl)-1H-pyrazol-1-yl)benzenesulfonamide",
+      "smiles": "CC1=CC=C(C=C1)C2=CC(=NN2C3=CC=C(C=C3)S(=O)(=O)N)C(F)(F)F",
+      "primary_cyp": "CYP2C9",
+      "all_cyp_substrates": [
+        "CYP2C9",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [
+        "CYP2D6"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "4-Nitro-3-trifluoromethylisobutyranilide",
+      "smiles": "C1=CC=C(C=C1)NC(=O)C(CC(F)(F)F)C[N+](=O)[O-]",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A1",
+        "CYP1A2",
+        "CYP2C19",
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "5,5-Dimethyl-3-(4-nitro-3-(trifluoromethyl)phenyl)-2,4-imidazolidinedione",
+      "smiles": "CC1(C(=O)N(C(=O)N1)C2=CC(=C(C=C2)[N+](=O)[O-])C(F)(F)F)C",
+      "primary_cyp": "CYP2C19",
+      "all_cyp_substrates": [
+        "CYP2C19"
+      ],
+      "cyp_inhibitor": [
+        "CYP2C8",
+        "CYP2C9"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "5-(Difluoromethoxy)-2-(((3,4-dimethoxy-2-pyridyl)methyl)sulfinyl)benzimidazole",
+      "smiles": "COC1=C(C(=NC=C1)CS(=O)C2=NC3=C(N2)C=C(C=C3)OC(F)F)OC",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A2",
+        "CYP2C19",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [
+        "CYP2C19",
+        "CYP2C9"
+      ],
+      "cyp_inducer": [
+        "CYP1A2",
+        "CYP3A4"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "5-(Propylthio)-2-carbomethoxyaminobenzimidazole",
+      "smiles": "CCCSC1=CC2=C(C=C1)N=C(N2)NC(=O)OC",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A2",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [
+        "CYP1A1",
+        "CYP1A2"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "5-Methyl-N-(4-(trifluoromethyl)phenyl)-4-isoxazolecarboxamide",
+      "smiles": "CC1=C(C=NO1)C(=O)NC2=CC=C(C=C2)C(F)(F)F",
+      "primary_cyp": "CYP2C9",
+      "all_cyp_substrates": [
+        "CYP2C8",
+        "CYP2C9"
+      ],
+      "cyp_inhibitor": [
+        "CYP2C8",
+        "CYP2C9"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "7-Chloro-4-(3-diethylaminomethyl-4-hydroxyanilino)quinoline",
+      "smiles": "CCN(CC)CC1=C(C=CC(=C1)NC2=C3C=CC(=CC3=NC=C2)Cl)O",
+      "primary_cyp": "CYP1A1",
+      "all_cyp_substrates": [
+        "CYP1A1",
+        "CYP2C8"
+      ],
+      "cyp_inhibitor": [
+        "CYP2C9"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "AdoMet",
+      "smiles": "CC1=CC=C(C=C1)S(=O)(=O)[O-].C[S+](CCC(C(=O)O)N)CC1C(C(C(O1)N2C=NC3=C(N=CN=C32)N)O)O",
+      "primary_cyp": "CYP2E1",
+      "all_cyp_substrates": [
+        "CYP2E1"
+      ],
+      "cyp_inhibitor": [
+        "CYP2E1",
+        "CYP3A4"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Aldomet",
+      "smiles": "CC(CC1=CC(=C(C=C1)O)O)(C(=O)O)N",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A2",
+        "CYP2D6"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "alpha-(Aminomethyl)-p-hydroxybenzyl alcohol",
+      "smiles": "C1=CC(=CC=C1C(CN)O)O",
+      "primary_cyp": "CYP2D6",
+      "all_cyp_substrates": [
+        "CYP2D6",
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inhibitor": [
+        "CYP3A4"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "alpha-(Chloromethyl)-2-methyl-5-nitroimidazole-1-ethanol",
+      "smiles": "CC1=NC=C(N1CC(CCl)O)[N+](=O)[O-]",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Andrometh",
+      "smiles": "CC12CCC(=O)C=C1CCC3C2CCC4(C3CCC4(C)O)C",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP2B6",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Anomethrin N",
+      "smiles": "CC1(C(C1C(=O)OCC2=CC(=CC=C2)OC3=CC=CC=C3)C=C(Cl)Cl)C",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP2B6",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [
+        "CYP2B6"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Astromen",
+      "smiles": "CCC1C(C(C(C(=O)C(CC(C(C(C(C(C(=O)O1)C)OC2CC(C(C(O2)C)O)(C)OC)C)OC3C(C(CC(O3)C)N(C)C)O)(C)OC)C)C)O)(C)O",
+      "primary_cyp": "CYP2C19",
+      "all_cyp_substrates": [
+        "CYP2C19",
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inhibitor": [
+        "CYP1A2",
+        "CYP2C19",
+        "CYP3A4"
+      ],
+      "cyp_inducer": [
+        "CYP3A4"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Atenomel",
+      "smiles": "CC(C)NCC(COC1=CC=C(C=C1)CC(=O)N)O",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Bis((diethylamino)thioxomethyl) disulfide",
+      "smiles": "CCN(CC)C(=S)SSC(=S)N(CC)CC",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A2",
+        "CYP2A6",
+        "CYP2B6",
+        "CYP2D6",
+        "CYP2E1",
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inhibitor": [
+        "CYP2A6",
+        "CYP2B6",
+        "CYP2C8",
+        "CYP2D6",
+        "CYP2E1"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Bromergocryptine",
+      "smiles": "CC(C)CC1C(=O)N2CCCC2C3(N1C(=O)C(O3)(C(C)C)NC(=O)C4CN(C5CC6=C(NC7=CC=CC(=C67)C5=C4)Br)C)O",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [
+        "CYP1A2"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Buflomedil",
+      "smiles": "COC1=CC(=C(C(=C1)OC)C(=O)CCCN2CCCC2)OC",
+      "primary_cyp": "CYP2C19",
+      "all_cyp_substrates": [
+        "CYP2C19",
+        "CYP2D6"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Clomethiazole",
+      "smiles": "CC1=C(SC=N1)CCCl",
+      "primary_cyp": "CYP2C19",
+      "all_cyp_substrates": [
+        "CYP2A6",
+        "CYP2B6",
+        "CYP2C19",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [
+        "CYP2E1"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Cort-Dome",
+      "smiles": "CC12CCC(=O)C=C1CCC3C2C(CC4(C3CCC4(C(=O)CO)O)C)O",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inhibitor": [
+        "CYP3A4"
+      ],
+      "cyp_inducer": [
+        "CYP2C8",
+        "CYP3A4"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "d-N-Ethyl-alpha-methyl-m-trifluoromethylphenethylamine",
+      "smiles": "CCNC(C)CC1=CC(=CC=C1)C(F)(F)F",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A2",
+        "CYP2D6"
+      ],
+      "cyp_inhibitor": [
+        "CYP1A2",
+        "CYP2A6",
+        "CYP2C19",
+        "CYP2C9",
+        "CYP2D6",
+        "CYP2E1"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "DaunoXome",
+      "smiles": "CC1C(C(CC(O1)OC2CC(CC3=C2C(=C4C(=C3O)C(=O)C5=C(C4=O)C(=CC=C5)OC)O)(C(=O)C)O)N)O",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A1",
+        "CYP1A2",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [
+        "CYP3A4"
+      ],
+      "cyp_inducer": [
+        "CYP3A5"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "delta-Dome",
+      "smiles": "CC12CC(=O)C3C(C1CCC2(C(=O)CO)O)CCC4=CC(=O)C=CC34C",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [
+        "CYP3A4"
+      ],
+      "cyp_inducer": [
+        "CYP1A1",
+        "CYP1A2",
+        "CYP2C19",
+        "CYP3A4"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Destrometerfano",
+      "smiles": "CN1CCC23CCCCC2C1CC4=C3C=C(C=C4)OC",
+      "primary_cyp": "CYP2C9",
+      "all_cyp_substrates": [
+        "CYP2B6",
+        "CYP2C19",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP2D6",
+        "CYP2E1",
+        "CYP3A4",
+        "CYP3A5",
+        "CYP46A"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Dihydromenformon",
+      "smiles": "CC12CCC3C(C1CCC2O)CCC4=C3C=CC(=C4)O",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A1",
+        "CYP1A2",
+        "CYP2C19",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Dopomedrol",
+      "smiles": "CC1CC2C3CCC(C3(CC(C2C4(C1=CC(=O)C=C4)C)O)C)(C(=O)CO)O",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [
+        "CYP3A4"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "DTIC-Dome",
+      "smiles": "CN(C)N=NC1=C(NC=N1)C(=O)N",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A1",
+        "CYP1A2",
+        "CYP2E1"
+      ],
+      "cyp_inhibitor": [
+        "CYP1A1",
+        "CYP1A2"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Endometril",
+      "smiles": "CC12CCC3C(C1CCC2(C#C)O)CCC4=CCCCC34",
+      "primary_cyp": "CYP2C19",
+      "all_cyp_substrates": [
+        "CYP2C19",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [
+        "CYP2C19",
+        "CYP2C9"
+      ],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Dorsulfan warthausen",
+      "smiles": "CC1=C(ON=C1C)NS(=O)(=O)C2=CC=C(C=C2)N",
+      "primary_cyp": "CYP2C9",
+      "all_cyp_substrates": [
+        "CYP2C8",
+        "CYP2C9"
+      ],
+      "cyp_inhibitor": [
+        "CYP2C8",
+        "CYP2C9"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Nitrowarfarin",
+      "smiles": "CC(=O)CC(C1=CC=C(C=C1)[N+](=O)[O-])C2=C(C3=CC=CC=C3OC2=O)O",
+      "primary_cyp": "CYP2C9",
+      "all_cyp_substrates": [
+        "CYP2C9"
+      ],
+      "cyp_inhibitor": [
+        "CYP2C9"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Panwarfin",
+      "smiles": "CC(=O)CC(C1=CC=CC=C1)C2=C(C3=CC=CC=C3OC2=O)[O-].[Na+]",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A2",
+        "CYP2C18",
+        "CYP2C19",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [
+        "CYP2C19",
+        "CYP2C8",
+        "CYP2C9"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "rac-Warfarin",
+      "smiles": "CC(=O)CC(C1=CC=CC=C1)C2=C(C3=CC=CC=C3OC2=O)O",
+      "primary_cyp": "CYP1A2",
+      "all_cyp_substrates": [
+        "CYP1A2",
+        "CYP2C18",
+        "CYP2C19",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [
+        "CYP2C19",
+        "CYP2C8",
+        "CYP2C9"
+      ],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Wareezol",
+      "smiles": "COC1=CC=C(C=C1)CCN2CCC(CC2)NC3=NC4=CC=CC=C4N3CC5=CC=C(C=C5)F",
+      "primary_cyp": "CYP2D6",
+      "all_cyp_substrates": [
+        "CYP2D6",
+        "CYP3A4",
+        "CYP3A5"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    },
+    {
+      "name": "Warkeelate PS-42",
+      "smiles": "C(CN(CC(=O)[O-])CC(=O)[O-])N(CC(=O)[O-])CC(=O)[O-].[Na+].[Na+].[Na+].[Na+]",
+      "primary_cyp": "CYP3A4",
+      "all_cyp_substrates": [
+        "CYP3A4"
+      ],
+      "cyp_inhibitor": [],
+      "cyp_inducer": [],
+      "source": "SuperCYP",
+      "confidence": "validated",
+      "cyp_label_source": "SuperCYP"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+"""Module C exports: clinical pharmacogenomics dashboard helpers."""
+
+from .pharmacogenomics_dashboard import (
+    ALLELE_ACTIVITY,
+    ALLELE_FREQUENCIES,
+    CPIC_GUIDELINES,
+    CYP_INDUCERS,
+    CYP_INHIBITORS,
+    PHENOTYPE_THRESHOLDS,
+    QUANTITATIVE_PK,
+    check_drug_interactions,
+    determine_phenotype,
+    end_to_end_query,
+    generate_clinical_report,
+    generate_module_c_dashboard,
+    patient_query,
+    population_risk_summary,
+    print_ddi_report,
+    print_patient_query,
+    print_population_summary,
+)
+
+__all__ = [
+    "ALLELE_ACTIVITY",
+    "PHENOTYPE_THRESHOLDS",
+    "ALLELE_FREQUENCIES",
+    "QUANTITATIVE_PK",
+    "CPIC_GUIDELINES",
+    "CYP_INHIBITORS",
+    "CYP_INDUCERS",
+    "determine_phenotype",
+    "patient_query",
+    "check_drug_interactions",
+    "population_risk_summary",
+    "end_to_end_query",
+    "generate_clinical_report",
+    "generate_module_c_dashboard",
+    "print_patient_query",
+    "print_ddi_report",
+    "print_population_summary",
+]

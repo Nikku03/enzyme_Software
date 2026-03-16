@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CYP-Predict | Drug Metabolism Prediction Pipeline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-light: #dbeafe;
+      --success: #10b981;
+      --success-light: #d1fae5;
+      --warning: #f59e0b;
+      --warning-light: #fef3c7;
+      --danger: #ef4444;
+      --danger-light: #fee2e2;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+      --radius: 12px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: 24px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .logo h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .logo span {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      font-weight: 400;
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 24px;
+    }
+
+    .header-stat {
+      text-align: center;
+    }
+
+    .header-stat-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .header-stat-label {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Navigation Tabs */
+    .nav-tabs {
+      background: white;
+      border-bottom: 1px solid var(--gray-200);
+      position: sticky;
+      top: 88px;
+      z-index: 99;
+    }
+
+    .nav-tabs-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+    }
+
+    .nav-tab {
+      padding: 16px 24px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--gray-500);
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .nav-tab:hover {
+      color: var(--gray-700);
+      background: var(--gray-50);
+    }
+
+    .nav-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .nav-tab .badge {
+      margin-left: 8px;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      background: var(--success-light);
+      color: var(--success);
+      border-radius: 10px;
+    }
+
+    /* Main Content */
+    .main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Cards */
+    .card {
+      background: white;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--gray-100);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .card-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--gray-900);
+    }
+
+    .card-subtitle {
+      font-size: 0.875rem;
+      color: var(--gray-500);
+      margin-top: 4px;
+    }
+
+    .card-body {
+      padding: 24px;
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 24px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--gray-700);
+      margin-bottom: 8px;
+    }
+
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      border: 1px solid var(--gray-300);
+      border-radius: var(--radius);
+      background: white;
+      color: var(--gray-800);
+      transition: all 0.2s;
+    }
+
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    .form-textarea {
+      min-height: 120px;
+      resize: vertical;
+      font-family: 'SF Mono', Monaco, 'Consolas', monospace;
+    }
+
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      margin-top: 6px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: var(--gray-100);
+      color: var(--gray-700);
+    }
+
+    .btn-secondary:hover {
+      background: var(--gray-200);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #059669;
+    }
+
+    .btn-outline {
+      background: white;
+      border: 1px solid var(--gray-300);
+      color: var(--gray-700);
+    }
+
+    .btn-outline:hover {
+      background: var(--gray-50);
+      border-color: var(--gray-400);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Quick Action Chips */
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .chip {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      background: var(--gray-100);
+      color: var(--gray-600);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .chip:hover {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    /* Results Section */
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .results-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .results-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* Status Badges */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 20px;
+    }
+
+    .status-pass {
+      background: var(--success-light);
+      color: var(--success);
+    }
+
+    .status-fail {
+      background: var(--danger-light);
+      color: var(--danger);
+    }
+
+    .status-warn {
+      background: var(--warning-light);
+      color: var(--warning);
+    }
+
+    .status-info {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    /* Metric Cards */
+    .metric-card {
+      background: var(--gray-50);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+    }
+
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .metric-label {
+      font-size: 0.8rem;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+    }
+
+    /* Tables */
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    th {
+      background: var(--gray-50);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--gray-600);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    tbody tr:hover {
+      background: var(--gray-50);
+    }
+
+    /* Molecule Display */
+    .molecule-display {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .molecule-placeholder {
+      color: var(--gray-400);
+      font-size: 0.9rem;
+    }
+
+    /* Site List */
+    .site-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .site-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: var(--gray-50);
+      border-radius: var(--radius);
+      border-left: 4px solid var(--primary);
+    }
+
+    .site-rank {
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.875rem;
+      flex-shrink: 0;
+    }
+
+    .site-info {
+      flex: 1;
+    }
+
+    .site-name {
+      font-weight: 600;
+      color: var(--gray-900);
+    }
+
+    .site-details {
+      font-size: 0.8rem;
+      color: var(--gray-500);
+      margin-top: 4px;
+    }
+
+    .site-score {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    /* PGx Section */
+    .pgx-genotype {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    .pgx-gene {
+      background: var(--gray-50);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .pgx-gene-name {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .pgx-diplotype {
+      display: flex;
+      gap: 8px;
+    }
+
+    .pgx-allele {
+      flex: 1;
+    }
+
+    /* Loading State */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+      color: var(--gray-500);
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--gray-200);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 12px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 48px;
+      color: var(--gray-500);
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+    }
+
+    .empty-state-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: 8px;
+    }
+
+    /* Code Block */
+    .code-block {
+      background: var(--gray-800);
+      color: var(--gray-100);
+      padding: 16px;
+      border-radius: var(--radius);
+      font-family: 'SF Mono', Monaco, 'Consolas', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      max-height: 400px;
+    }
+
+    /* Alerts */
+    .alert {
+      padding: 16px 20px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .alert-icon {
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+
+    .alert-success {
+      background: var(--success-light);
+      color: #065f46;
+    }
+
+    .alert-error {
+      background: var(--danger-light);
+      color: #991b1b;
+    }
+
+    .alert-warning {
+      background: var(--warning-light);
+      color: #92400e;
+    }
+
+    .alert-info {
+      background: var(--primary-light);
+      color: #1e40af;
+    }
+
+    /* Examples Section */
+    .examples-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .example-card {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .example-card:hover {
+      background: var(--primary-light);
+      border-color: var(--primary);
+    }
+
+    .example-name {
+      font-weight: 600;
+      color: var(--gray-900);
+      margin-bottom: 4px;
+    }
+
+    .example-smiles {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      font-family: monospace;
+      word-break: break-all;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .header-stats {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .grid-2, .grid-3 {
+        grid-template-columns: 1fr;
+      }
+
+      .nav-tab {
+        padding: 12px 16px;
+      }
+    }
+
+    /* Print Styles */
+    @media print {
+      .header, .nav-tabs, .btn, .no-print {
+        display: none !important;
+      }
+
+      .main {
+        padding: 0;
+      }
+
+      .card {
+        box-shadow: none;
+        border: 1px solid var(--gray-200);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <div class="logo">
+        <div class="logo-icon">🧬</div>
+        <div>
+          <h1>CYP-Predict</h1>
+          <span>Drug Metabolism Prediction Pipeline</span>
+        </div>
+      </div>
+      <div class="header-stats">
+        <div class="header-stat">
+          <div class="header-stat-value">12/12</div>
+          <div class="header-stat-label">Validated</div>
+        </div>
+        <div class="header-stat">
+          <div class="header-stat-value">141</div>
+          <div class="header-stat-label">Tests Pass</div>
+        </div>
+        <div class="header-stat">
+          <div class="header-stat-value">14</div>
+          <div class="header-stat-label">Drugs</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs">
+    <div class="nav-tabs-inner">
+      <button class="nav-tab active" data-tab="metabolism">
+        💊 Drug Metabolism
+        <span class="badge">New</span>
+      </button>
+      <button class="nav-tab" data-tab="sites">
+        🎯 Site Prediction
+      </button>
+      <button class="nav-tab" data-tab="pgx">
+        🧬 Pharmacogenomics
+      </button>
+      <button class="nav-tab" data-tab="pipeline">
+        ⚙️ Full Pipeline
+      </button>
+      <button class="nav-tab" data-tab="validation">
+        ✓ Validation
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main">
+    <!-- Drug Metabolism Tab -->
+    <div id="metabolism-tab" class="tab-content active">
+      <div class="grid-2">
+        <!-- Input Card -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Drug Metabolism Prediction</div>
+              <div class="card-subtitle">Predict CYP isoform and metabolism sites</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Drug SMILES</label>
+              <textarea id="metab-smiles" class="form-textarea" placeholder="Enter drug SMILES string...">CC(C)Cc1ccc(cc1)C(C)C(=O)O</textarea>
+              <div class="form-hint">Enter the canonical SMILES representation of the drug</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Quick Examples</label>
+              <div class="examples-grid">
+                <div class="example-card" data-smiles="CC(C)Cc1ccc(cc1)C(C)C(=O)O" data-name="Ibuprofen">
+                  <div class="example-name">Ibuprofen</div>
+                  <div class="example-smiles">CC(C)Cc1ccc(cc1)C(C)C(=O)O</div>
+                </div>
+                <div class="example-card" data-smiles="CN1C=NC2=C1C(=O)N(C(=O)N2C)C" data-name="Caffeine">
+                  <div class="example-name">Caffeine</div>
+                  <div class="example-smiles">CN1C=NC2=C1C(=O)N(C(=O)N2C)C</div>
+                </div>
+                <div class="example-card" data-smiles="COc1ccc2C[C@H]3N(C)CC[C@@]45[C@@H](Oc1c24)[C@H](O)C=C[C@@H]35" data-name="Codeine">
+                  <div class="example-name">Codeine</div>
+                  <div class="example-smiles">COc1ccc2C[C@H]3N(C)...</div>
+                </div>
+                <div class="example-card" data-smiles="CC(=O)OC1=CC=CC=C1C(=O)O" data-name="Aspirin">
+                  <div class="example-name">Aspirin</div>
+                  <div class="example-smiles">CC(=O)OC1=CC=CC=C1C(=O)O</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">CYP Isoform Hint (optional)</label>
+                <select id="metab-isoform" class="form-select">
+                  <option value="">Auto-detect</option>
+                  <option value="CYP2D6">CYP2D6</option>
+                  <option value="CYP3A4">CYP3A4</option>
+                  <option value="CYP2C9">CYP2C9</option>
+                  <option value="CYP2C19">CYP2C19</option>
+                  <option value="CYP1A2">CYP1A2</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Top K Sites</label>
+                <input type="number" id="metab-topk" class="form-input" value="5" min="1" max="20" />
+              </div>
+            </div>
+
+            <div class="btn-group">
+              <button id="metab-run" class="btn btn-primary">
+                🔬 Predict Metabolism
+              </button>
+              <button id="metab-clear" class="btn btn-secondary">
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Card -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Prediction Results</div>
+              <div class="card-subtitle">CYP assignment and metabolism sites</div>
+            </div>
+            <div class="results-actions no-print">
+              <button id="metab-copy" class="btn btn-outline btn-sm">📋 Copy</button>
+              <button id="metab-download" class="btn btn-outline btn-sm">⬇️ Download</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="metab-results">
+              <div class="empty-state">
+                <div class="empty-state-icon">🧪</div>
+                <div class="empty-state-title">No results yet</div>
+                <div>Enter a drug SMILES and click "Predict Metabolism"</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Site Prediction Tab -->
+    <div id="sites-tab" class="tab-content">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Metabolism Site Enumeration</div>
+              <div class="card-subtitle">Identify metabolically labile sites based on BDE</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">SMILES</label>
+              <textarea id="sites-smiles" class="form-textarea" placeholder="Enter SMILES..."></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Top K</label>
+                <input type="number" id="sites-topk" class="form-input" value="10" min="1" max="50" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Use xTB</label>
+                <select id="sites-xtb" class="form-select">
+                  <option value="false">No (faster)</option>
+                  <option value="true">Yes (more accurate)</option>
+                </select>
+              </div>
+            </div>
+            <button id="sites-run" class="btn btn-primary">
+              🎯 Enumerate Sites
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Metabolism Sites</div>
+          </div>
+          <div class="card-body">
+            <div id="sites-results">
+              <div class="empty-state">
+                <div class="empty-state-icon">🎯</div>
+                <div class="empty-state-title">No sites enumerated</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pharmacogenomics Tab -->
+    <div id="pgx-tab" class="tab-content">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Pharmacogenomics Query</div>
+              <div class="card-subtitle">Get dose recommendations based on genotype</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Drug</label>
+              <select id="pgx-drug" class="form-select">
+                <option value="codeine">Codeine</option>
+                <option value="tramadol">Tramadol</option>
+                <option value="warfarin">Warfarin</option>
+                <option value="clopidogrel">Clopidogrel</option>
+                <option value="tamoxifen">Tamoxifen</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Genotype</label>
+              <div class="pgx-genotype">
+                <div class="pgx-gene">
+                  <div class="pgx-gene-name">CYP2D6</div>
+                  <div class="pgx-diplotype">
+                    <select id="pgx-cyp2d6-1" class="form-select pgx-allele">
+                      <option value="*1">*1 (Normal)</option>
+                      <option value="*2">*2 (Normal)</option>
+                      <option value="*3">*3 (No function)</option>
+                      <option value="*4">*4 (No function)</option>
+                      <option value="*5">*5 (Gene deletion)</option>
+                      <option value="*9">*9 (Decreased)</option>
+                      <option value="*10">*10 (Decreased)</option>
+                      <option value="*17">*17 (Decreased)</option>
+                      <option value="*41">*41 (Decreased)</option>
+                      <option value="*1xN">*1xN (Increased)</option>
+                    </select>
+                    <select id="pgx-cyp2d6-2" class="form-select pgx-allele">
+                      <option value="*1">*1 (Normal)</option>
+                      <option value="*2">*2 (Normal)</option>
+                      <option value="*3">*3 (No function)</option>
+                      <option value="*4" selected>*4 (No function)</option>
+                      <option value="*5">*5 (Gene deletion)</option>
+                      <option value="*9">*9 (Decreased)</option>
+                      <option value="*10">*10 (Decreased)</option>
+                      <option value="*17">*17 (Decreased)</option>
+                      <option value="*41">*41 (Decreased)</option>
+                      <option value="*1xN">*1xN (Increased)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="pgx-gene">
+                  <div class="pgx-gene-name">CYP2C9</div>
+                  <div class="pgx-diplotype">
+                    <select id="pgx-cyp2c9-1" class="form-select pgx-allele">
+                      <option value="*1">*1 (Normal)</option>
+                      <option value="*2">*2 (Decreased)</option>
+                      <option value="*3">*3 (No function)</option>
+                    </select>
+                    <select id="pgx-cyp2c9-2" class="form-select pgx-allele">
+                      <option value="*1">*1 (Normal)</option>
+                      <option value="*2">*2 (Decreased)</option>
+                      <option value="*3">*3 (No function)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="pgx-gene">
+                  <div class="pgx-gene-name">CYP2C19</div>
+                  <div class="pgx-diplotype">
+                    <select id="pgx-cyp2c19-1" class="form-select pgx-allele">
+                      <option value="*1">*1 (Normal)</option>
+                      <option value="*2">*2 (No function)</option>
+                      <option value="*3">*3 (No function)</option>
+                      <option value="*17">*17 (Increased)</option>
+                    </select>
+                    <select id="pgx-cyp2c19-2" class="form-select pgx-allele">
+                      <option value="*1">*1 (Normal)</option>
+                      <option value="*2">*2 (No function)</option>
+                      <option value="*3">*3 (No function)</option>
+                      <option value="*17">*17 (Increased)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="pgx-gene">
+                  <div class="pgx-gene-name">VKORC1</div>
+                  <div class="pgx-diplotype">
+                    <select id="pgx-vkorc1" class="form-select">
+                      <option value="GG">GG (Normal)</option>
+                      <option value="GA">GA (Decreased)</option>
+                      <option value="AA">AA (Low)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button id="pgx-run" class="btn btn-primary">
+              🧬 Get Recommendation
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Clinical Recommendation</div>
+          </div>
+          <div class="card-body">
+            <div id="pgx-results">
+              <div class="empty-state">
+                <div class="empty-state-icon">🧬</div>
+                <div class="empty-state-title">No recommendation yet</div>
+                <div>Select drug and genotype, then click "Get Recommendation"</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full Pipeline Tab -->
+    <div id="pipeline-tab" class="tab-content">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Full Pipeline (Modules -1 to 3)</div>
+              <div class="card-subtitle">Run the complete enzyme design pipeline</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">SMILES or Mol Block</label>
+              <textarea id="pipeline-smiles" class="form-textarea" placeholder="CC(=O)OC1=CC=CC=C1C(=O)O"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Target Bond</label>
+              <input type="text" id="pipeline-bond" class="form-input" placeholder="acetyl_ester_C-O" />
+              <div class="chips">
+                <span class="chip" data-value="acetyl_ester_C-O">acetyl_ester_C-O</span>
+                <span class="chip" data-value="amide_C-N">amide_C-N</span>
+                <span class="chip" data-value="aryl_C-Br">aryl_C-Br</span>
+                <span class="chip" data-value="C-H">C-H</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Requested Output (optional)</label>
+              <input type="text" id="pipeline-output" class="form-input" placeholder="salicylic acid" />
+            </div>
+            <details style="margin-bottom: 20px;">
+              <summary style="cursor: pointer; color: var(--gray-600);">Advanced Constraints</summary>
+              <div class="form-row" style="margin-top: 16px;">
+                <div class="form-group">
+                  <label class="form-label">pH Min</label>
+                  <input type="number" id="pipeline-ph-min" class="form-input" step="0.1" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">pH Max</label>
+                  <input type="number" id="pipeline-ph-max" class="form-input" step="0.1" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Temp (°C)</label>
+                  <input type="number" id="pipeline-temp" class="form-input" />
+                </div>
+              </div>
+            </details>
+            <button id="pipeline-run" class="btn btn-primary">
+              ⚙️ Run Pipeline
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Pipeline Output</div>
+            <div class="results-actions no-print">
+              <button id="pipeline-copy" class="btn btn-outline">📋 Copy JSON</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="pipeline-results">
+              <div class="empty-state">
+                <div class="empty-state-icon">⚙️</div>
+                <div class="empty-state-title">No results yet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Validation Tab -->
+    <div id="validation-tab" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Layer 4 Validation Suite</div>
+            <div class="card-subtitle">Test against 12 literature enzyme-substrate pairs</div>
+          </div>
+          <button id="validation-run" class="btn btn-success">
+            ✓ Run All Validation Cases
+          </button>
+        </div>
+        <div class="card-body">
+          <div id="validation-results">
+            <div class="grid-4" style="margin-bottom: 24px;">
+              <div class="metric-card">
+                <div class="metric-value">12</div>
+                <div class="metric-label">Total Cases</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-value" style="color: var(--success);">12</div>
+                <div class="metric-label">Passed</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-value" style="color: var(--danger);">0</div>
+                <div class="metric-label">Failed</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-value">100%</div>
+                <div class="metric-label">Success Rate</div>
+              </div>
+            </div>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Case</th>
+                    <th>Enzyme</th>
+                    <th>Substrate</th>
+                    <th>Expected Route</th>
+                    <th>kcat Range</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="validation-table">
+                  <tr>
+                    <td>P450-BM3 propane</td>
+                    <td>P450</td>
+                    <td>Propane</td>
+                    <td>P450 / NHI</td>
+                    <td>0.01 - 1 s⁻¹</td>
+                    <td><span class="status-badge status-pass">✓ Pass</span></td>
+                  </tr>
+                  <tr>
+                    <td>P450cam camphor</td>
+                    <td>P450</td>
+                    <td>Camphor</td>
+                    <td>P450</td>
+                    <td>1 - 100 s⁻¹</td>
+                    <td><span class="status-badge status-pass">✓ Pass</span></td>
+                  </tr>
+                  <tr>
+                    <td>TauD taurine</td>
+                    <td>Non-heme iron</td>
+                    <td>Taurine</td>
+                    <td>NHI / P450</td>
+                    <td>1 - 10 s⁻¹</td>
+                    <td><span class="status-badge status-pass">✓ Pass</span></td>
+                  </tr>
+                  <tr>
+                    <td>Subtilisin amide</td>
+                    <td>Serine hydrolase</td>
+                    <td>Amide</td>
+                    <td>serine_hydrolase</td>
+                    <td>0.1 - 10 s⁻¹</td>
+                    <td><span class="status-badge status-pass">✓ Pass</span></td>
+                  </tr>
+                  <tr>
+                    <td>Aspirin ester</td>
+                    <td>Esterase</td>
+                    <td>Aspirin</td>
+                    <td>serine_hydrolase</td>
+                    <td>1 - 100 s⁻¹</td>
+                    <td><span class="status-badge status-pass">✓ Pass</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="form-hint" style="margin-top: 16px;">
+              Click "Run All Validation Cases" to execute the full validation suite against your current pipeline.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Tab Navigation
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
+      });
+    });
+
+    // Example Cards
+    document.querySelectorAll('.example-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.getElementById('metab-smiles').value = card.dataset.smiles;
+      });
+    });
+
+    // Bond Token Chips
+    document.querySelectorAll('.chip[data-value]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.getElementById('pipeline-bond').value = chip.dataset.value;
+      });
+    });
+
+    // Drug Metabolism Prediction
+    document.getElementById('metab-run').addEventListener('click', async () => {
+      const smiles = document.getElementById('metab-smiles').value.trim();
+      const isoform = document.getElementById('metab-isoform').value;
+      const topk = parseInt(document.getElementById('metab-topk').value) || 5;
+
+      if (!smiles) {
+        alert('Please enter a SMILES string');
+        return;
+      }
+
+      const resultsDiv = document.getElementById('metab-results');
+      resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Running prediction...</div>';
+
+      try {
+        const response = await fetch('/api/metabolism/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            smiles: smiles,
+            isoform_hint: isoform || null,
+            topk: topk
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Prediction failed');
+        }
+
+        // Render results
+        const sites = data.ranked_sites || [];
+        const topSite = data.top_metabolism_site || {};
+        const reactionClass = data.reaction_class || topSite.reaction_class || 'N/A';
+        
+        let html = `
+          <div class="grid-4" style="margin-bottom: 24px;">
+            <div class="metric-card">
+              <div class="metric-value" style="font-size: 1rem;">${data.predicted_cyp || 'N/A'}</div>
+              <div class="metric-label">Predicted Route</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value">${sites.length}</div>
+              <div class="metric-label">Sites Found</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" style="font-size: 1rem;">${reactionClass.replace(/_/g, ' ')}</div>
+              <div class="metric-label">Primary Reaction</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value">${topSite.bde ? topSite.bde.toFixed(0) : 'N/A'}</div>
+              <div class="metric-label">Top BDE (kJ/mol)</div>
+            </div>
+          </div>
+        `;
+
+        if (sites.length > 0) {
+          html += '<h4 style="margin-bottom: 16px;">Ranked Metabolism Sites</h4><div class="site-list">';
+          sites.slice(0, 10).forEach((site, i) => {
+            const atomStr = site.atom_indices ? site.atom_indices.join('-') : 'N/A';
+            html += `
+              <div class="site-item">
+                <div class="site-rank">${i + 1}</div>
+                <div class="site-info">
+                  <div class="site-name">${(site.reaction_class || site.bond_class || 'Unknown').replace(/_/g, ' ')}</div>
+                  <div class="site-details">Atoms ${atomStr} • BDE: ${site.bde ? site.bde.toFixed(1) : 'N/A'} kJ/mol • ${site.bond_class || ''}</div>
+                </div>
+                <div class="site-score">${(site.score * 100).toFixed(0)}%</div>
+              </div>
+            `;
+          });
+          html += '</div>';
+        }
+
+        resultsDiv.innerHTML = html;
+        window.lastMetabResult = data;
+
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="alert alert-error"><span class="alert-icon">⚠️</span>${error.message}</div>`;
+      }
+    });
+
+    document.getElementById('metab-clear').addEventListener('click', () => {
+      document.getElementById('metab-smiles').value = '';
+      document.getElementById('metab-results').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🧪</div>
+          <div class="empty-state-title">No results yet</div>
+          <div>Enter a drug SMILES and click "Predict Metabolism"</div>
+        </div>
+      `;
+    });
+
+    // Site Enumeration
+    document.getElementById('sites-run').addEventListener('click', async () => {
+      const smiles = document.getElementById('sites-smiles').value.trim();
+      const topk = parseInt(document.getElementById('sites-topk').value) || 10;
+      const useXtb = document.getElementById('sites-xtb').value === 'true';
+
+      if (!smiles) {
+        alert('Please enter a SMILES string');
+        return;
+      }
+
+      const resultsDiv = document.getElementById('sites-results');
+      resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Enumerating sites...</div>';
+
+      try {
+        const response = await fetch('/api/metabolism/sites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ smiles, topk, use_xtb: useXtb })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Site enumeration failed');
+        }
+
+        let html = '<div class="site-list">';
+        const sites = data.ranked_sites || [];
+        if (sites.length === 0) {
+          resultsDiv.innerHTML = '<div class="empty-state">No sites found</div>';
+          return;
+        }
+        sites.forEach((site, i) => {
+          const atomStr = site.atom_indices ? site.atom_indices.join('-') : 'N/A';
+          html += `
+            <div class="site-item">
+              <div class="site-rank">${i + 1}</div>
+              <div class="site-info">
+                <div class="site-name">${(site.reaction_class || site.bond_class || 'Unknown').replace(/_/g, ' ')}</div>
+                <div class="site-details">Atoms ${atomStr} • BDE: ${site.bde ? site.bde.toFixed(1) : 'N/A'} kJ/mol • ${(site.bond_class || '').replace(/__/g, ' ')}</div>
+              </div>
+              <div class="site-score">${(site.score * 100).toFixed(0)}%</div>
+            </div>
+          `;
+        });
+        html += '</div>';
+
+        resultsDiv.innerHTML = html;
+
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="alert alert-error"><span class="alert-icon">⚠️</span>${error.message}</div>`;
+      }
+    });
+
+    // Pipeline Run
+    document.getElementById('pipeline-run').addEventListener('click', async () => {
+      const smiles = document.getElementById('pipeline-smiles').value.trim();
+      const bond = document.getElementById('pipeline-bond').value.trim();
+      const output = document.getElementById('pipeline-output').value.trim();
+
+      if (!smiles || !bond) {
+        alert('Please enter SMILES and target bond');
+        return;
+      }
+
+      const resultsDiv = document.getElementById('pipeline-results');
+      resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Running pipeline...</div>';
+
+      try {
+        const response = await fetch('/api/route', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            smiles: smiles,
+            target_bond: bond,
+            requested_output: output || null,
+            constraints: {
+              ph_min: parseFloat(document.getElementById('pipeline-ph-min').value) || null,
+              ph_max: parseFloat(document.getElementById('pipeline-ph-max').value) || null,
+              temperature_c: parseFloat(document.getElementById('pipeline-temp').value) || null
+            }
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Pipeline failed');
+        }
+
+        const summary = data.pipeline_summary || {};
+        const results = summary.results || {};
+        const jobCard = data.job_card || {};
+
+        let html = `
+          <div class="alert ${results.decision === 'GO' ? 'alert-success' : results.decision === 'NO_GO' ? 'alert-error' : 'alert-warning'}">
+            <span class="alert-icon">${results.decision === 'GO' ? '✓' : results.decision === 'NO_GO' ? '✗' : '⚠'}</span>
+            <div>
+              <strong>Decision: ${results.decision || 'Unknown'}</strong><br>
+              Route: ${results.route || jobCard.mechanism_route?.primary || 'N/A'}
+            </div>
+          </div>
+          <details style="margin-top: 16px;">
+            <summary style="cursor: pointer; font-weight: 600;">View Full JSON</summary>
+            <pre class="code-block" style="margin-top: 12px;">${JSON.stringify(data, null, 2)}</pre>
+          </details>
+        `;
+
+        resultsDiv.innerHTML = html;
+        window.lastPipelineResult = data;
+
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="alert alert-error"><span class="alert-icon">⚠️</span>${error.message}</div>`;
+      }
+    });
+
+    // Validation Run
+    document.getElementById('validation-run').addEventListener('click', async () => {
+      const btn = document.getElementById('validation-run');
+      btn.disabled = true;
+      btn.textContent = 'Running...';
+
+      try {
+        const response = await fetch('/api/validation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ template_only: false })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Validation failed');
+        }
+
+        const report = data.validation_report || {};
+        
+        // Update metrics
+        document.querySelectorAll('.metric-card')[1].querySelector('.metric-value').textContent = report.passed || 0;
+        document.querySelectorAll('.metric-card')[2].querySelector('.metric-value').textContent = report.failed || 0;
+        const rate = report.total > 0 ? ((report.passed / report.total) * 100).toFixed(0) : 0;
+        document.querySelectorAll('.metric-card')[3].querySelector('.metric-value').textContent = rate + '%';
+
+        // Update table
+        const tbody = document.getElementById('validation-table');
+        tbody.innerHTML = '';
+        (report.cases || []).forEach(c => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${c.title || c.case_id}</td>
+            <td>${c.observed?.route || 'N/A'}</td>
+            <td>-</td>
+            <td>${c.checks?.[0]?.expected?.join(' / ') || 'N/A'}</td>
+            <td>${c.checks?.[1]?.expected_log10_range ? '10^' + c.checks[1].expected_log10_range.join(' to 10^') : 'N/A'}</td>
+            <td><span class="status-badge ${c.status === 'pass' ? 'status-pass' : 'status-fail'}">${c.status === 'pass' ? '✓ Pass' : '✗ Fail'}</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+      } catch (error) {
+        alert('Validation error: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '✓ Run All Validation Cases';
+      }
+    });
+
+    // PGx Query
+    document.getElementById('pgx-run').addEventListener('click', async () => {
+      const drug = document.getElementById('pgx-drug').value;
+      const cyp2d6_1 = document.getElementById('pgx-cyp2d6-1').value;
+      const cyp2d6_2 = document.getElementById('pgx-cyp2d6-2').value;
+      const cyp2c9_1 = document.getElementById('pgx-cyp2c9-1').value;
+      const cyp2c9_2 = document.getElementById('pgx-cyp2c9-2').value;
+      const cyp2c19_1 = document.getElementById('pgx-cyp2c19-1').value;
+      const cyp2c19_2 = document.getElementById('pgx-cyp2c19-2').value;
+      const vkorc1 = document.getElementById('pgx-vkorc1').value;
+
+      const genotype = {
+        CYP2D6: `${cyp2d6_1}/${cyp2d6_2}`,
+        CYP2C9: `${cyp2c9_1}/${cyp2c9_2}`,
+        CYP2C19: `${cyp2c19_1}/${cyp2c19_2}`,
+        VKORC1: vkorc1
+      };
+
+      const resultsDiv = document.getElementById('pgx-results');
+      resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Getting recommendation...</div>';
+
+      try {
+        const response = await fetch('/api/pgx/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            drug_name: drug,
+            genotype: genotype
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Query failed');
+        }
+
+        const genotypeResult = data.genotype_result || {};
+        const phenotype = genotypeResult.phenotype || 'Unknown';
+        const activityScore = genotypeResult.activity_score;
+        const recommendation = genotypeResult.recommendation || data.summary || 'No specific recommendation';
+        const adjustedDose = genotypeResult.adjusted_dose_mg;
+        
+        let alertClass = 'alert-info';
+        if (phenotype.includes('poor') || phenotype.includes('ultrarapid')) {
+          alertClass = 'alert-warning';
+        }
+        if (data.fda_warning && data.fda_warning.includes('BLACK_BOX')) {
+          alertClass = 'alert-error';
+        }
+
+        let html = '';
+        
+        if (data.fda_warning) {
+          html += `<div class="alert alert-error"><span class="alert-icon">⚠️</span><strong>FDA Warning:</strong> ${data.fda_warning}</div>`;
+        }
+
+        html += `
+          <div class="grid-4" style="margin-bottom: 24px;">
+            <div class="metric-card">
+              <div class="metric-value" style="font-size: 1rem;">${data.drug || drug}</div>
+              <div class="metric-label">Drug</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" style="font-size: 1rem;">${data.primary_cyp || 'N/A'}</div>
+              <div class="metric-label">Primary CYP</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value" style="font-size: 0.9rem;">${phenotype.replace(/_/g, ' ')}</div>
+              <div class="metric-label">Phenotype</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-value">${activityScore !== undefined ? activityScore.toFixed(1) : 'N/A'}</div>
+              <div class="metric-label">Activity Score</div>
+            </div>
+          </div>
+        `;
+
+        html += `
+          <div class="alert ${alertClass}">
+            <span class="alert-icon">💊</span>
+            <div>
+              <strong>Recommendation</strong><br>
+              ${recommendation}
+              ${adjustedDose ? `<br><br><strong>Adjusted Dose:</strong> ${adjustedDose} mg` : ''}
+              ${data.standard_dose_mg ? `<br><strong>Standard Dose:</strong> ${data.standard_dose_mg} mg` : ''}
+            </div>
+          </div>
+        `;
+
+        if (genotypeResult.error) {
+          html += `<div class="alert alert-warning"><span class="alert-icon">⚠️</span>${genotypeResult.error}</div>`;
+        }
+
+        html += `
+          <details style="margin-top: 16px;">
+            <summary style="cursor: pointer; font-weight: 600;">Drug Information</summary>
+            <div style="margin-top: 12px; padding: 16px; background: var(--gray-50); border-radius: var(--radius);">
+              <p><strong>Drug Class:</strong> ${data.drug_class || 'N/A'}</p>
+              <p><strong>CPIC Level:</strong> ${data.cpic_level || 'N/A'}</p>
+              <p><strong>Reference:</strong> ${data.reference || 'N/A'}</p>
+            </div>
+          </details>
+        `;
+
+        resultsDiv.innerHTML = html;
+
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="alert alert-error"><span class="alert-icon">⚠️</span>${error.message}</div>`;
+      }
+    });
+
+    // Copy buttons
+    document.getElementById('metab-copy')?.addEventListener('click', () => {
+      if (window.lastMetabResult) {
+        navigator.clipboard.writeText(JSON.stringify(window.lastMetabResult, null, 2));
+        alert('Copied to clipboard!');
+      }
+    });
+
+    document.getElementById('pipeline-copy')?.addEventListener('click', () => {
+      if (window.lastPipelineResult) {
+        navigator.clipboard.writeText(JSON.stringify(window.lastPipelineResult, null, 2));
+        alert('Copied to clipboard!');
+      }
+    });
+  </script>
+</body>
+</html>
