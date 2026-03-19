@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import random
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -50,6 +51,12 @@ class FullXTBHybridDataset(CYPMetabolismDataset):
         graph = item.get("graph")
         if graph is None or self.full_xtb_cache_dir is None:
             return item
+        # Shallow-copy dict and graph so cached objects are never mutated.
+        # Without this, the first call appends 8 XTB dims (32→40), and the
+        # second call (epoch 2) would read 40-dim and append again → 48.
+        item = dict(item)
+        graph = copy.copy(graph)
+        item["graph"] = graph
 
         payload = load_or_compute_full_xtb_features(
             graph.canonical_smiles or graph.smiles,
