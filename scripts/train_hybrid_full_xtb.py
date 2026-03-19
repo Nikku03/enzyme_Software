@@ -210,11 +210,16 @@ def main() -> None:
     )
 
     manual_atom_feature_dim = 32 + FULL_XTB_FEATURE_DIM
+    # Step 1 atom_input_dim = 146 = 140 base graph features + 6 standard XTB dims.
+    # Step 2 appends FULL_XTB_FEATURE_DIM (8) instead of 6, so atom_input_dim = 140 + 8 = 148.
+    _BASE_GRAPH_ATOM_DIM = 140
+    full_xtb_atom_input_dim = _BASE_GRAPH_ATOM_DIM + FULL_XTB_FEATURE_DIM
     base_config = ModelConfig.light_advanced(
         use_manual_engine_priors=True,
         use_3d_branch=True,
         return_intermediate_stats=True,
         manual_atom_feature_dim=manual_atom_feature_dim,
+        atom_input_dim=full_xtb_atom_input_dim,
     )
     base_model = LiquidMetabolismNetV2(base_config)
     model = HybridLNNModel(base_model)
@@ -226,6 +231,7 @@ def main() -> None:
             checkpoint_path,
             device=device,
             new_manual_atom_dim=manual_atom_feature_dim,
+            new_atom_input_dim=full_xtb_atom_input_dim,
         )
         print(f"Loaded warm-start checkpoint: {checkpoint_path}", flush=True)
     else:
