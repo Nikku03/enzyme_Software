@@ -129,6 +129,8 @@ def create_micropattern_dataloaders_from_drugs(
         val_ds.structure_library = structure_library
         test_ds.structure_library = structure_library
 
+    for ds in (train_ds, val_ds, test_ds):
+        ds.precompute()
     train_exp = MicroPatternExperimentDataset(train_ds, xtb_cache_dir=xtb_cache_dir, compute_xtb_if_missing=compute_xtb_if_missing)
     val_exp = MicroPatternExperimentDataset(val_ds, xtb_cache_dir=xtb_cache_dir, compute_xtb_if_missing=compute_xtb_if_missing)
     test_exp = MicroPatternExperimentDataset(test_ds, xtb_cache_dir=xtb_cache_dir, compute_xtb_if_missing=compute_xtb_if_missing)
