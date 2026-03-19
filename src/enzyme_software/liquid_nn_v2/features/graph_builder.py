@@ -41,6 +41,10 @@ class MoleculeGraph:
     manual_engine_atom_prior_logits: Optional[np.ndarray] = None
     manual_engine_cyp_prior_logits: Optional[np.ndarray] = None
     manual_engine_route_prior: Optional[np.ndarray] = None
+    xtb_atom_features: Optional[np.ndarray] = None
+    xtb_atom_valid_mask: Optional[np.ndarray] = None
+    xtb_mol_valid: Optional[np.ndarray] = None
+    xtb_feature_status: Optional[str] = None
     atom_3d_features: Optional[np.ndarray] = None
     parsing_status: str = "ok"
     repaired: bool = False

@@ -9,7 +9,7 @@ from enzyme_software.liquid_nn_v2.data.cyp_classes import MAJOR_CYP_CLASSES
 @dataclass
 class ModelConfig:
     model_variant: str = "baseline"
-    atom_input_dim: int = 140
+    atom_input_dim: int = 146  # 140 base + 6 XTB (charge, abs_charge, charge_centered, charge_rank_norm, wbo_sum, wbo_max)
     hidden_dim: int = 128
     shared_hidden_dim: Optional[int] = None
     som_branch_dim: Optional[int] = None
@@ -89,6 +89,11 @@ class ModelConfig:
     som_head_hidden_dim: int = 96
     cyp_head_hidden_dim: int = 128
     dropout: float = 0.1
+    # Architecture improvements
+    use_cyp_site_conditioning: bool = True   # broadcast CYP logits as per-atom bias before site head
+    use_cross_atom_attention: bool = True    # 2-layer self-attention on SoM atom features before site head
+    use_bde_prior: bool = True               # learnable BDE→logit residual on top of site head
+    bde_feature_index: int = 44             # index of normalized BDE in atom feature vector (stable; XTB appended at end)
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
     cyp_names: Tuple[str, ...] = tuple(MAJOR_CYP_CLASSES)

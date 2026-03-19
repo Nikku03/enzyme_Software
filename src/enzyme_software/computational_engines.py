@@ -57,6 +57,8 @@ except Exception:  # pragma: no cover
     PDBQTWriterLegacy = None
     _MEEKO = False
 
+from enzyme_software.utils.smiles_utils import safe_prepare_mol
+
 
 @dataclass
 class PreparedMolecule:
@@ -156,9 +158,10 @@ def prepare_molecule(
         out.warnings.append("RDKit not available")
         return out
 
-    mol = Chem.MolFromSmiles(str(smiles or ""))
+    prep, parse_warnings = safe_prepare_mol(str(smiles or ""))
+    out.warnings.extend(parse_warnings)
+    mol = prep.mol
     if mol is None:
-        out.warnings.append(f"SMILES parse failed: {smiles}")
         return out
 
     if add_hs:

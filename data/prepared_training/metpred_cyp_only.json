@@ -1,0 +1,2068 @@
+{
+  "version": "1.0",
+  "count": 85,
+  "drugs": [
+    {
+      "id": "DB00316",
+      "name": "Acetaminophen",
+      "smiles": "CC(=O)Nc1ccc(O)cc1",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00261",
+      "name": "Anagrelide",
+      "smiles": "O=C1CN2Cc3c(ccc(Cl)c3Cl)N=C2N1",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00201",
+      "name": "Caffeine",
+      "smiles": "Cn1c(=O)c2c(ncn2C)n(C)c1=O",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00537",
+      "name": "Ciprofloxacin",
+      "smiles": "O=C(O)c1cn(C2CC2)c2cc(N3CCNCC3)c(F)cc2c1=O",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00924",
+      "name": "Cyclobenzaprine",
+      "smiles": "CN(C)CCC=C1c2ccccc2C=Cc2ccccc21",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "n_dealkylation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00334",
+      "name": "Olanzapine",
+      "smiles": "Cc1cc2c(s1)Nc1ccccc1N=C2N1CCN(C)CC1",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "n_oxidation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01367",
+      "name": "Rasagiline",
+      "smiles": "C#CCN[C@@H]1CCc2ccccc21",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00740",
+      "name": "Riluzole",
+      "smiles": "Nc1nc2ccc(OC(F)(F)F)cc2s1",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00268",
+      "name": "Ropinirole",
+      "smiles": "CCCN(CCC)CCc1cccc2c1CC(=O)N2",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00296",
+      "name": "Ropivacaine",
+      "smiles": "CCCN1CCCC[C@H]1C(=O)Nc1c(C)cccc1C",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "n_dealkylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00697",
+      "name": "Tizanidine",
+      "smiles": "Clc1ccc2nsnc2c1NC1=NCCN1",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00315",
+      "name": "Zolmitriptan",
+      "smiles": "CN(C)CCc1c[nH]c2ccc(C[C@H]3COC(=O)N3)cc12",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "n_oxidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00472",
+      "name": "Fluoxetine",
+      "smiles": "CNCCC(Oc1ccc(C(F)(F)F)cc1)c1ccccc1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "n_dealkylation",
+        "o_dealkylation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00222",
+      "name": "Glimepiride",
+      "smiles": "CCC1=C(C)CN(C(=O)NCCc2ccc(S(=O)(=O)NC(=O)N[C@H]3CC[C@H](C)CC3)cc2)C1=O",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01050",
+      "name": "Ibuprofen",
+      "smiles": "CC(C)Cc1ccc(C(C)C(=O)O)cc1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01029",
+      "name": "Irbesartan",
+      "smiles": "CCCCC1=NC2(CCCC2)C(=O)N1Cc1ccc(-c2ccccc2-c2nn[nH]n2)cc1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01283",
+      "name": "Lumiracoxib",
+      "smiles": "Cc1ccc(Nc2c(F)cccc2Cl)c(CC(=O)O)c1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00784",
+      "name": "Mefenamic acid",
+      "smiles": "Cc1cccc(Nc2ccccc2C(=O)O)c1C",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00814",
+      "name": "Meloxicam",
+      "smiles": "Cc1cnc(NC(=O)C2=C(O)c3ccccc3S(=O)(=O)N2C)s1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00203",
+      "name": "Sildenafil",
+      "smiles": "CCCc1nn(C)c2c(=O)[nH]c(-c3cc(S(=O)(=O)N4CCN(C)CC4)ccc3OCC)nc12",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "n_dealkylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01015",
+      "name": "Sulfamethoxazole",
+      "smiles": "Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00177",
+      "name": "Valsartan",
+      "smiles": "CCCCC(=O)N(Cc1ccc(-c2ccccc2-c2nn[nH]n2)cc1)[C@H](C(=O)O)C(C)C",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00395",
+      "name": "Carisoprodol",
+      "smiles": "CCCC(C)(COC(N)=O)COC(=O)NC(C)C",
+      "primary_cyp": "CYP2C19",
+      "all_cyps": [
+        "CYP2C19"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00349",
+      "name": "Clobazam",
+      "smiles": "CN1C(=O)CC(=O)N(c2ccccc2)c2cc(Cl)ccc21",
+      "primary_cyp": "CYP2C19",
+      "all_cyps": [
+        "CYP2C19"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "n_dealkylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00338",
+      "name": "Omeprazole",
+      "smiles": "COc1ccc2nc(S(=O)Cc3ncc(C)c(OC)c3C)[nH]c2c1",
+      "primary_cyp": "CYP2C19",
+      "all_cyps": [
+        "CYP2C19"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01174",
+      "name": "Phenobarbital",
+      "smiles": "CCC1(c2ccccc2)C(=O)NC(=O)NC1=O",
+      "primary_cyp": "CYP2C19",
+      "all_cyps": [
+        "CYP2C19"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00794",
+      "name": "Primidone",
+      "smiles": "CCC1(c2ccccc2)C(=O)NCNC1=O",
+      "primary_cyp": "CYP2C19",
+      "all_cyps": [
+        "CYP2C19"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01041",
+      "name": "Thalidomide",
+      "smiles": "O=C1CCC(N2C(=O)c3ccccc3C2=O)C(=O)N1",
+      "primary_cyp": "CYP2C19",
+      "all_cyps": [
+        "CYP2C19"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00182",
+      "name": "Amphetamine",
+      "smiles": "CC(N)Cc1ccccc1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "n_dealkylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00289",
+      "name": "Atomoxetine",
+      "smiles": "CNCC[C@@H](Oc1ccccc1C)c1ccccc1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation",
+        "reduction"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00612",
+      "name": "Bisoprolol",
+      "smiles": "CC(C)NCC(O)COc1ccc(COCCOC(C)C)cc1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00575",
+      "name": "Clonidine",
+      "smiles": "Clc1cccc(Cl)c1NC1=NCCN1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00514",
+      "name": "Dextromethorphan",
+      "smiles": "COc1ccc2c(c1)[C@]13CCCC[C@@H]1[C@H](C2)N(C)CC3",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "n_dealkylation",
+        "o_dealkylation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01142",
+      "name": "Doxepin",
+      "smiles": "CN(C)CCC=C1c2ccccc2COc2ccccc21",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01195",
+      "name": "Flecainide",
+      "smiles": "O=C(NCC1CCCCN1)c1cc(OCC(F)(F)F)ccc1OCC(F)(F)F",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "o_dealkylation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00557",
+      "name": "Hydroxyzine",
+      "smiles": "OCCOCCN1CCN(C(c2ccccc2)c2ccc(Cl)cc2)CC1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01233",
+      "name": "Metoclopramide",
+      "smiles": "CCN(CC)CCNC(=O)c1cc(Cl)c(N)cc1OC",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00264",
+      "name": "Metoprolol",
+      "smiles": "COCCc1ccc(OCC(O)CNC(C)C)cc1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "o_dealkylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00497",
+      "name": "Oxycodone",
+      "smiles": "COc1ccc2c3c1O[C@H]1C(=O)CC[C@@]4(O)[C@@H](C2)N(C)CC[C@]314",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "n_dealkylation",
+        "o_dealkylation",
+        "reduction"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00715",
+      "name": "Paroxetine",
+      "smiles": "Fc1ccc([C@@H]2CCNC[C@H]2COc2ccc3c(c2)OCO3)cc1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01069",
+      "name": "Promethazine",
+      "smiles": "CC(CN1c2ccccc2Sc2ccccc21)N(C)C",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "s_oxidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00857",
+      "name": "Terbinafine",
+      "smiles": "CN(C/C=C/C#CC(C)(C)C)Cc1cccc2ccccc12",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "n_dealkylation",
+        "reduction"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00373",
+      "name": "Timolol",
+      "smiles": "CC(C)(C)NC[C@H](O)COc1nsnc1N1CCOCC1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00193",
+      "name": "Tramadol",
+      "smiles": "COc1cccc(C2(O)CCCCC2CN(C)C)c1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "n_dealkylation",
+        "o_dealkylation",
+        "reduction"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00656",
+      "name": "Trazodone",
+      "smiles": "O=c1n(CCCN2CCN(c3cccc(Cl)c3)CC2)nc2ccccn12",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00285",
+      "name": "Venlafaxine",
+      "smiles": "COc1ccc(C(CN(C)C)C2(O)CCCCC2)cc1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "n_dealkylation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00346",
+      "name": "Alfuzosin",
+      "smiles": "COc1cc2nc(N(C)CCCNC(=O)C3CCCO3)nc(N)c2cc1OC",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "n_dealkylation",
+        "o_dealkylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00404",
+      "name": "Alprazolam",
+      "smiles": "Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1)=NC2",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00701",
+      "name": "Amprenavir",
+      "smiles": "CC(C)CN(C[C@@H](O)[C@H](Cc1ccccc1)NC(=O)O[C@H]1CCOC1)S(=O)(=O)c1ccc(N)cc1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01222",
+      "name": "Budesonide",
+      "smiles": "CCCC1O[C@@H]2C[C@H]3[C@@H]4CCC5=CC(=O)C=C[C@]5(C)[C@H]4[C@@H](O)C[C@]3(C)[C@]2(C(=O)CO)O1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00490",
+      "name": "Buspirone",
+      "smiles": "O=C1CC2(CCCC2)CC(=O)N1CCCCN1CCN(c2ncccn2)CC1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01190",
+      "name": "Clindamycin",
+      "smiles": "CCC[C@@H]1C[C@@H](C(=O)N[C@@H]([C@H]2O[C@H](SC)[C@H](O)[C@@H](O)[C@H]2O)[C@H](C)Cl)N(C)C1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "n_dealkylation",
+        "s_oxidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00872",
+      "name": "Conivaptan",
+      "smiles": "Cc1nc2c([nH]1)CCN(C(=O)c1ccc(NC(=O)c3ccccc3-c3ccccc3)cc1)c1ccccc1-2",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB04839",
+      "name": "Cyproterone acetate",
+      "smiles": "CC(=O)O[C@]1(C(C)=O)CC[C@H]2[C@@H]3C=C(Cl)C4=CC(=O)[C@@H]5C[C@@H]5[C@]4(C)[C@H]3CC[C@@]21C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "reduction"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01254",
+      "name": "Dasatinib",
+      "smiles": "Cc1nc(Nc2ncc(C(=O)Nc3c(C)cccc3Cl)s2)cc(N2CCN(CCO)CC2)n1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "reduction"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01234",
+      "name": "Dexamethasone",
+      "smiles": "C[C@@H]1C[C@H]2[C@@H]3CCC4=CC(=O)C=C[C@]4(C)[C@@]3(F)[C@@H](O)C[C@]2(C)[C@@]1(O)C(=O)CO",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01395",
+      "name": "Drospirenone",
+      "smiles": "C[C@]12CCC(=O)C=C1[C@@H]1C[C@@H]1[C@H]1[C@@H]3[C@@H]4C[C@@H]4[C@@]4(CCC(=O)O4)[C@@]3(C)CC[C@@H]12",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01126",
+      "name": "Dutasteride",
+      "smiles": "C[C@]12C=CC(=O)N[C@@H]1CC[C@@H]1[C@@H]2CC[C@]2(C)[C@@H](C(=O)Nc3cc(C(F)(F)F)ccc3C(F)(F)F)CC[C@@H]12",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "reduction"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00216",
+      "name": "Eletriptan",
+      "smiles": "CN1CCC[C@@H]1Cc1c[nH]c2ccc(CCS(=O)(=O)c3ccccc3)cc12",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "n_dealkylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00700",
+      "name": "Eplerenone",
+      "smiles": "COC(=O)[C@@H]1CC2=CC(=O)CC[C@]2(C)[C@@]23O[C@@H]2C[C@@]2(C)[C@@H](CC[C@@]24CCC(=O)O4)[C@H]13",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00530",
+      "name": "Erlotinib",
+      "smiles": "C#Cc1cccc(Nc2ncnc3cc(OCCOC)c(OCCOC)cc23)c1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01628",
+      "name": "Etoricoxib",
+      "smiles": "Cc1ccc(-c2ncc(Cl)cc2-c2ccc(S(C)(=O)=O)cc2)cn1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00196",
+      "name": "Fluconazole",
+      "smiles": "OC(Cn1cncn1)(Cn1cncn1)c1ccc(F)cc1F",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "n_oxidation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01319",
+      "name": "Fosamprenavir",
+      "smiles": "CC(C)CN(C[C@@H](OP(=O)(O)O)[C@H](Cc1ccccc1)NC(=O)O[C@H]1CCOC1)S(=O)(=O)c1ccc(N)cc1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00947",
+      "name": "Fulvestrant",
+      "smiles": "C[C@]12CC[C@@H]3c4ccc(O)cc4C[C@@H](CCCCCCCCCS(=O)CCCC(F)(F)C(F)(F)F)[C@H]3[C@@H]1CC[C@@H]2O",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00769",
+      "name": "Hydrocortamate",
+      "smiles": "CCN(CC)CC(=O)OCC(=O)[C@@]1(O)CC[C@H]2[C@@H]3CCC4=CC(=O)CC[C@]4(C)[C@H]3[C@@H](O)C[C@@]21C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00619",
+      "name": "Imatinib",
+      "smiles": "Cc1ccc(NC(=O)c2ccc(CN3CCN(C)CC3)cc2)cc1Nc1nccc(-c2cccnc2)n1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "n_dealkylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00836",
+      "name": "Loperamide",
+      "smiles": "CN(C)C(=O)C(CCN1CCC(O)(c2ccc(Cl)cc2)CC1)(c1ccccc1)c1ccccc1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "n_dealkylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00393",
+      "name": "Nimodipine",
+      "smiles": "COCCOC(=O)C1=C(C)NC(C)=C(C(=O)OC(C)C)C1c1cccc([N+](=O)[O-])c1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00717",
+      "name": "Norethisterone",
+      "smiles": "C#C[C@]1(O)CC[C@H]2[C@@H]3CCC4=CC(=O)CC[C@@H]4[C@H]3CC[C@@]21C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation",
+        "reduction"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01062",
+      "name": "Oxybutynin",
+      "smiles": "CCN(CC)CC#CCOC(=O)C(O)(c1ccccc1)C1CCCCC1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01256",
+      "name": "Retapamulin",
+      "smiles": "C=C[C@]1(C)C[C@@H](OC(=O)CS[C@@H]2C[C@H]3CC[C@@H](C2)N3C)[C@]2(C)[C@H](C)CC[C@]3(CCC(=O)[C@H]32)[C@@H](C)[C@@H]1O",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "n_dealkylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00938",
+      "name": "Salmeterol",
+      "smiles": "OCc1cc(C(O)CNCCCCCCOCCCCc2ccccc2)ccc1O",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "o_dealkylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00877",
+      "name": "Sirolimus",
+      "smiles": "CO[C@H]1C[C@@H]2CC[C@@H](C)[C@@](O)(O2)C(=O)C(=O)N2CCCC[C@H]2C(=O)O[C@H]([C@H](C)C[C@@H]2CC[C@@H](O)[C@H](OC)C2)CC(=O)[C@H](C)/C=C(\\C)[C@@H](O)[C@@H](OC)C(=O)[C@H](C)C[C@H](C)/C=C/C=C/C=C/1C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "o_dealkylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01591",
+      "name": "Solifenacin",
+      "smiles": "O=C(O[C@H]1CN2CCC1CC2)N1CCc2ccccc2[C@@H]1c1ccccc1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "n_oxidation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00398",
+      "name": "Sorafenib",
+      "smiles": "CNC(=O)c1cc(Oc2ccc(NC(=O)Nc3ccc(Cl)c(C(F)(F)F)c3)cc2)ccn1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "n_oxidation",
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB01268",
+      "name": "Sunitinib",
+      "smiles": "CCN(CC)CCNC(=O)c1c(C)[nH]c(/C=C2\\C(=O)Nc3ccc(F)cc32)c1C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00820",
+      "name": "Tadalafil",
+      "smiles": "CN1CC(=O)N2[C@H](c3ccc4c(c3)OCO4)c3[nH]c4ccccc4c3C[C@@H]2C1=O",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "glucuronidation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00911",
+      "name": "Tinidazole",
+      "smiles": "CCS(=O)(=O)CCn1c([N+](=O)[O-])cnc1C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00932",
+      "name": "Tipranavir",
+      "smiles": "CCC[C@@]1(CCc2ccccc2)CC(O)=C([C@H](CC)c2cccc(NS(=O)(=O)c3ccc(C(F)(F)F)cn3)c2)C(=O)O1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00539",
+      "name": "Toremifene",
+      "smiles": "CN(C)CCOc1ccc(/C(=C(/CCCl)c2ccccc2)c2ccccc2)cc1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00862",
+      "name": "Vardenafil",
+      "smiles": "CCCc1nc(C)c2c(=O)nc(-c3cc(S(=O)(=O)N4CCN(CC)CC4)ccc3OCC)[nH]n12",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00246",
+      "name": "Ziprasidone",
+      "smiles": "O=C1Cc2cc(CCN3CCN(c4nsc5ccccc45)CC3)c(Cl)cc2N1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "n_dealkylation",
+        "s_oxidation",
+        "glucuronidation",
+        "reduction"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00425",
+      "name": "Zolpidem",
+      "smiles": "Cc1ccc(-c2nc3ccc(C)cn3c2CC(=O)N(C)C)cc1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00909",
+      "name": "Zonisamide",
+      "smiles": "NS(=O)(=O)Cc1noc2ccccc12",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "reduction"
+      ],
+      "site_atoms": [],
+      "metabolism_sites": [],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetaPred"
+      ]
+    }
+  ],
+  "metadata": {
+    "combined_input": "data/combined_drugbank_supercyp_full_xtb_valid.json",
+    "drugbank_input": "data/drugbank_standardized.json",
+    "metxbio_input": "metxbio data.cleaned.sdf",
+    "metpred_input": "SupplemantryData.doc",
+    "xenosite_manifest": "data/xenosite_suppl/manifest.json",
+    "notes": {
+      "main_training_sets": [
+        "main5_all_models_conservative",
+        "main5_all_models_permissive"
+      ],
+      "recommended_site_training_set": "main5_all_models_conservative",
+      "recommended_xtb_training_note": "Use --compute-xtb-if-missing for new external molecules.",
+      "xenosite_note": "XenoSite supplementary data in data/xenosite_suppl is UGT-oriented pseudo-label data and is not merged into main CYP supervision.",
+      "metxbio_note": "Conservative keeps only atom-level BOM annotations; permissive also maps bond events to endpoint atoms."
+    },
+    "source_summaries": {
+      "combined": {
+        "count": 341,
+        "site_labeled": 103,
+        "source_counts": {
+          "DrugBank": 164,
+          "SuperCYP": 177
+        },
+        "site_source_counts": {
+          "DrugBank": 164,
+          "SuperCYP": 177
+        },
+        "cyp_counts": {
+          "CYP1A2": 82,
+          "CYP2C19": 22,
+          "CYP2C9": 50,
+          "CYP2D6": 67,
+          "CYP3A4": 120
+        }
+      },
+      "metxbio": {
+        "bom_rows": 1495,
+        "conservative_rows": 1384,
+        "permissive_rows": 1495,
+        "atom_annotated_rows": 1384,
+        "bond_only_rows": 111
+      },
+      "metpred": {
+        "missing_drugbank_match": 142,
+        "resolved_rows": 85
+      }
+    },
+    "dataset_summaries": {
+      "main5_all_models_conservative": {
+        "count": 1706,
+        "site_labeled": 1455,
+        "source_counts": {
+          "DrugBank": 164,
+          "MetXBioDB": 1307,
+          "MetaPred": 58,
+          "SuperCYP": 177
+        },
+        "site_source_counts": {
+          "DrugBank": 164,
+          "SuperCYP": 177,
+          "metxbiodb_atom_only": 1307,
+          "none": 58
+        },
+        "cyp_counts": {
+          "CYP1A2": 324,
+          "CYP2C19": 229,
+          "CYP2C9": 264,
+          "CYP2D6": 328,
+          "CYP3A4": 561
+        }
+      },
+      "main5_all_models_permissive": {
+        "count": 1813,
+        "site_labeled": 1566,
+        "source_counts": {
+          "DrugBank": 164,
+          "MetXBioDB": 1414,
+          "MetaPred": 58,
+          "SuperCYP": 177
+        },
+        "site_source_counts": {
+          "DrugBank": 164,
+          "SuperCYP": 177,
+          "metxbiodb_atom_plus_bond_endpoints": 1414,
+          "none": 58
+        },
+        "cyp_counts": {
+          "CYP1A2": 347,
+          "CYP2C19": 243,
+          "CYP2C9": 282,
+          "CYP2D6": 344,
+          "CYP3A4": 597
+        }
+      },
+      "main5_site_conservative": {
+        "count": 1455,
+        "site_labeled": 1455,
+        "source_counts": {
+          "DrugBank": 111,
+          "MetXBioDB": 1307,
+          "MetaPred": 19,
+          "SuperCYP": 18
+        },
+        "site_source_counts": {
+          "DrugBank": 111,
+          "SuperCYP": 18,
+          "metxbiodb_atom_only": 1307,
+          "none": 19
+        },
+        "cyp_counts": {
+          "CYP1A2": 264,
+          "CYP2C19": 210,
+          "CYP2C9": 230,
+          "CYP2D6": 282,
+          "CYP3A4": 469
+        }
+      },
+      "main5_site_permissive": {
+        "count": 1566,
+        "site_labeled": 1566,
+        "source_counts": {
+          "DrugBank": 112,
+          "MetXBioDB": 1414,
+          "MetaPred": 21,
+          "SuperCYP": 19
+        },
+        "site_source_counts": {
+          "DrugBank": 112,
+          "SuperCYP": 19,
+          "metxbiodb_atom_plus_bond_endpoints": 1414,
+          "none": 21
+        },
+        "cyp_counts": {
+          "CYP1A2": 289,
+          "CYP2C19": 224,
+          "CYP2C9": 248,
+          "CYP2D6": 299,
+          "CYP3A4": 506
+        }
+      },
+      "metpred_cyp_only": {
+        "count": 85,
+        "site_labeled": 0,
+        "source_counts": {
+          "MetaPred": 85
+        },
+        "site_source_counts": {
+          "none": 85
+        },
+        "cyp_counts": {
+          "CYP1A2": 12,
+          "CYP2C19": 6,
+          "CYP2C9": 10,
+          "CYP2D6": 18,
+          "CYP3A4": 39
+        }
+      },
+      "metxbio_main5_atom_only": {
+        "count": 1384,
+        "site_labeled": 1384,
+        "source_counts": {
+          "MetXBioDB": 1384
+        },
+        "site_source_counts": {
+          "metxbiodb_atom_only": 1384
+        },
+        "cyp_counts": {
+          "CYP1A2": 254,
+          "CYP2C19": 207,
+          "CYP2C9": 220,
+          "CYP2D6": 265,
+          "CYP3A4": 438
+        }
+      },
+      "metxbio_main5_with_bond_endpoints": {
+        "count": 1495,
+        "site_labeled": 1495,
+        "source_counts": {
+          "MetXBioDB": 1495
+        },
+        "site_source_counts": {
+          "metxbiodb_atom_plus_bond_endpoints": 1495
+        },
+        "cyp_counts": {
+          "CYP1A2": 279,
+          "CYP2C19": 221,
+          "CYP2C9": 238,
+          "CYP2D6": 282,
+          "CYP3A4": 475
+        }
+      }
+    }
+  }
+}

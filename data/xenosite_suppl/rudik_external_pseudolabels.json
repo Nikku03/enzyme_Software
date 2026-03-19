@@ -1,0 +1,3260 @@
+{
+  "task": "ugt_site_pseudolabel",
+  "count": 20,
+  "entries": [
+    {
+      "mol_index": 1,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Atovastatin",
+      "smiles": "CC(C)c1c(C(=O)Nc2ccccc2)c(-c2ccccc2)c(-c2ccc(F)cc2)n1CC[C@@H](O)C[C@@H](O)CC(=O)O",
+      "num_atoms": 76,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 26,
+          "score": 0.8379114617012697
+        },
+        {
+          "atom_index": 23,
+          "score": 0.29119410924503647
+        },
+        {
+          "atom_index": 20,
+          "score": 0.20175353017299977
+        },
+        {
+          "atom_index": 27,
+          "score": 0.0019863208912964895
+        },
+        {
+          "atom_index": 6,
+          "score": 0.0015620552229026663
+        },
+        {
+          "atom_index": 7,
+          "score": 0.001416956418819583
+        },
+        {
+          "atom_index": 16,
+          "score": 6.588863178595822e-05
+        },
+        {
+          "atom_index": 34,
+          "score": 6.573486181614619e-05
+        },
+        {
+          "atom_index": 29,
+          "score": 3.6328834513683846e-05
+        },
+        {
+          "atom_index": 24,
+          "score": 2.1073663432043053e-05
+        },
+        {
+          "atom_index": 32,
+          "score": 1.7759297579012376e-05
+        },
+        {
+          "atom_index": 40,
+          "score": 1.742277117763441e-05
+        },
+        {
+          "atom_index": 36,
+          "score": 1.7321505913341902e-05
+        },
+        {
+          "atom_index": 39,
+          "score": 1.5299740434788945e-05
+        },
+        {
+          "atom_index": 37,
+          "score": 1.5208674564570955e-05
+        },
+        {
+          "atom_index": 13,
+          "score": 1.1832739907531541e-05
+        },
+        {
+          "atom_index": 10,
+          "score": 1.1532588832548022e-05
+        },
+        {
+          "atom_index": 9,
+          "score": 1.1523149436788293e-05
+        },
+        {
+          "atom_index": 12,
+          "score": 1.1074617905388353e-05
+        },
+        {
+          "atom_index": 21,
+          "score": 1.0780730767521418e-05
+        },
+        {
+          "atom_index": 18,
+          "score": 9.335589931579091e-06
+        },
+        {
+          "atom_index": 30,
+          "score": 6.993668985227918e-06
+        },
+        {
+          "atom_index": 38,
+          "score": 4.761890099720557e-06
+        },
+        {
+          "atom_index": 2,
+          "score": 4.2905780698072715e-06
+        },
+        {
+          "atom_index": 0,
+          "score": 4.119969204542755e-06
+        },
+        {
+          "atom_index": 33,
+          "score": 3.5988792477377117e-06
+        },
+        {
+          "atom_index": 11,
+          "score": 2.608750896270173e-06
+        },
+        {
+          "atom_index": 17,
+          "score": 2.7540974159990194e-07
+        },
+        {
+          "atom_index": 3,
+          "score": 1.2962867188868127e-07
+        },
+        {
+          "atom_index": 15,
+          "score": 6.148484787848259e-08
+        },
+        {
+          "atom_index": 1,
+          "score": 4.7431141217174223e-08
+        },
+        {
+          "atom_index": 8,
+          "score": 4.5299271159048354e-08
+        },
+        {
+          "atom_index": 35,
+          "score": 4.2155998661845396e-08
+        },
+        {
+          "atom_index": 19,
+          "score": 3.666873751745364e-08
+        },
+        {
+          "atom_index": 31,
+          "score": 2.315201393372964e-08
+        },
+        {
+          "atom_index": 14,
+          "score": 2.2538882913361298e-08
+        },
+        {
+          "atom_index": 28,
+          "score": 1.9881166025434475e-08
+        },
+        {
+          "atom_index": 22,
+          "score": 1.4043741564288846e-08
+        },
+        {
+          "atom_index": 4,
+          "score": 3.3275011807303697e-09
+        },
+        {
+          "atom_index": 25,
+          "score": 2.7207740170399444e-10
+        },
+        {
+          "atom_index": 5,
+          "score": 3.810038076440948e-11
+        }
+      ],
+      "xenosite_dense_scores": [
+        4.119969204542755e-06,
+        4.7431141217174223e-08,
+        4.2905780698072715e-06,
+        1.2962867188868127e-07,
+        3.3275011807303697e-09,
+        3.810038076440948e-11,
+        0.0015620552229026663,
+        0.001416956418819583,
+        4.5299271159048354e-08,
+        1.1523149436788293e-05,
+        1.1532588832548022e-05,
+        2.608750896270173e-06,
+        1.1074617905388353e-05,
+        1.1832739907531541e-05,
+        2.2538882913361298e-08,
+        6.148484787848259e-08,
+        6.588863178595822e-05,
+        2.7540974159990194e-07,
+        9.335589931579091e-06,
+        3.666873751745364e-08,
+        0.20175353017299977,
+        1.0780730767521418e-05,
+        1.4043741564288846e-08,
+        0.29119410924503647,
+        2.1073663432043053e-05,
+        2.7207740170399444e-10,
+        0.8379114617012697,
+        0.0019863208912964895,
+        1.9881166025434475e-08,
+        3.6328834513683846e-05,
+        6.993668985227918e-06,
+        2.315201393372964e-08,
+        1.7759297579012376e-05,
+        3.5988792477377117e-06,
+        6.573486181614619e-05,
+        4.2155998661845396e-08,
+        1.7321505913341902e-05,
+        1.5208674564570955e-05,
+        4.761890099720557e-06,
+        1.5299740434788945e-05,
+        1.742277117763441e-05,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        26,
+        23,
+        20,
+        27,
+        6
+      ]
+    },
+    {
+      "mol_index": 2,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Candesartan",
+      "smiles": "CCOc1nc2cccc(C(=O)O)c2n1Cc1ccc(-c2ccccc2-c2nn[nH]n2)cc1",
+      "num_atoms": 53,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 11,
+          "score": 0.9758188856075195
+        },
+        {
+          "atom_index": 30,
+          "score": 0.5415155727689231
+        },
+        {
+          "atom_index": 31,
+          "score": 0.17515763951868
+        },
+        {
+          "atom_index": 29,
+          "score": 0.046265643329306355
+        },
+        {
+          "atom_index": 32,
+          "score": 0.0390362576690149
+        },
+        {
+          "atom_index": 4,
+          "score": 0.0021289423347953937
+        },
+        {
+          "atom_index": 12,
+          "score": 0.0017440627633504245
+        },
+        {
+          "atom_index": 2,
+          "score": 0.0006098760537301712
+        },
+        {
+          "atom_index": 0,
+          "score": 0.0003088435670310386
+        },
+        {
+          "atom_index": 6,
+          "score": 0.00010559973939487672
+        },
+        {
+          "atom_index": 8,
+          "score": 9.8262949160688e-05
+        },
+        {
+          "atom_index": 17,
+          "score": 7.248748906442326e-05
+        },
+        {
+          "atom_index": 21,
+          "score": 7.189414941316455e-05
+        },
+        {
+          "atom_index": 26,
+          "score": 6.44045695528526e-05
+        },
+        {
+          "atom_index": 7,
+          "score": 5.773781711790085e-05
+        },
+        {
+          "atom_index": 24,
+          "score": 4.029829271200415e-05
+        },
+        {
+          "atom_index": 25,
+          "score": 3.867405597910135e-05
+        },
+        {
+          "atom_index": 20,
+          "score": 3.8578090090956134e-05
+        },
+        {
+          "atom_index": 18,
+          "score": 3.742594534337633e-05
+        },
+        {
+          "atom_index": 23,
+          "score": 3.538543633708724e-05
+        },
+        {
+          "atom_index": 14,
+          "score": 2.4277720241463084e-05
+        },
+        {
+          "atom_index": 1,
+          "score": 1.6826550295813287e-06
+        },
+        {
+          "atom_index": 28,
+          "score": 6.76943926208075e-07
+        },
+        {
+          "atom_index": 15,
+          "score": 5.976823049762553e-07
+        },
+        {
+          "atom_index": 22,
+          "score": 4.650324119813288e-07
+        },
+        {
+          "atom_index": 5,
+          "score": 4.2947692140209973e-07
+        },
+        {
+          "atom_index": 3,
+          "score": 2.210921411780736e-07
+        },
+        {
+          "atom_index": 19,
+          "score": 2.0899107488204624e-07
+        },
+        {
+          "atom_index": 16,
+          "score": 1.6563526748551e-07
+        },
+        {
+          "atom_index": 9,
+          "score": 1.0963415654708522e-07
+        },
+        {
+          "atom_index": 13,
+          "score": 8.723661318655092e-08
+        },
+        {
+          "atom_index": 27,
+          "score": 6.441464768148396e-08
+        },
+        {
+          "atom_index": 10,
+          "score": 3.2023755661253943e-10
+        }
+      ],
+      "xenosite_dense_scores": [
+        0.0003088435670310386,
+        1.6826550295813287e-06,
+        0.0006098760537301712,
+        2.210921411780736e-07,
+        0.0021289423347953937,
+        4.2947692140209973e-07,
+        0.00010559973939487672,
+        5.773781711790085e-05,
+        9.8262949160688e-05,
+        1.0963415654708522e-07,
+        3.2023755661253943e-10,
+        0.9758188856075195,
+        0.0017440627633504245,
+        8.723661318655092e-08,
+        2.4277720241463084e-05,
+        5.976823049762553e-07,
+        1.6563526748551e-07,
+        7.248748906442326e-05,
+        3.742594534337633e-05,
+        2.0899107488204624e-07,
+        3.8578090090956134e-05,
+        7.189414941316455e-05,
+        4.650324119813288e-07,
+        3.538543633708724e-05,
+        4.029829271200415e-05,
+        3.867405597910135e-05,
+        6.44045695528526e-05,
+        6.441464768148396e-08,
+        6.76943926208075e-07,
+        0.046265643329306355,
+        0.5415155727689231,
+        0.17515763951868,
+        0.0390362576690149,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        11,
+        30,
+        31,
+        29,
+        32
+      ]
+    },
+    {
+      "mol_index": 3,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Carvedilol",
+      "smiles": "COc1ccccc1OCCNC[C@@H](O)COc1cccc2[nH]c3ccccc3c12",
+      "num_atoms": 56,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 14,
+          "score": 0.9575716908632185
+        },
+        {
+          "atom_index": 29,
+          "score": 0.31056858082690214
+        },
+        {
+          "atom_index": 11,
+          "score": 0.10357616442115444
+        },
+        {
+          "atom_index": 0,
+          "score": 0.006608717806038933
+        },
+        {
+          "atom_index": 8,
+          "score": 0.0021464429271949143
+        },
+        {
+          "atom_index": 16,
+          "score": 0.002027320942052409
+        },
+        {
+          "atom_index": 1,
+          "score": 0.0006302398584157698
+        },
+        {
+          "atom_index": 9,
+          "score": 0.00018583525619133992
+        },
+        {
+          "atom_index": 19,
+          "score": 0.00014121858866289848
+        },
+        {
+          "atom_index": 13,
+          "score": 0.00013681126090518548
+        },
+        {
+          "atom_index": 24,
+          "score": 0.00010650844776904613
+        },
+        {
+          "atom_index": 20,
+          "score": 0.00010400414539868357
+        },
+        {
+          "atom_index": 15,
+          "score": 0.00010063035000137505
+        },
+        {
+          "atom_index": 27,
+          "score": 7.435544119892515e-05
+        },
+        {
+          "atom_index": 26,
+          "score": 7.248324768497269e-05
+        },
+        {
+          "atom_index": 25,
+          "score": 6.363870003340691e-05
+        },
+        {
+          "atom_index": 12,
+          "score": 5.346696276158747e-05
+        },
+        {
+          "atom_index": 18,
+          "score": 4.2233782223462145e-05
+        },
+        {
+          "atom_index": 5,
+          "score": 3.94433129891965e-05
+        },
+        {
+          "atom_index": 4,
+          "score": 3.1493661124121104e-05
+        },
+        {
+          "atom_index": 6,
+          "score": 6.803953985183259e-06
+        },
+        {
+          "atom_index": 10,
+          "score": 5.999454539188625e-06
+        },
+        {
+          "atom_index": 3,
+          "score": 5.5173626187211745e-06
+        },
+        {
+          "atom_index": 28,
+          "score": 1.6375315640102456e-06
+        },
+        {
+          "atom_index": 21,
+          "score": 5.107923293041804e-07
+        },
+        {
+          "atom_index": 23,
+          "score": 5.008319037534702e-07
+        },
+        {
+          "atom_index": 2,
+          "score": 2.3199112501573118e-07
+        },
+        {
+          "atom_index": 7,
+          "score": 1.4208299713846554e-07
+        },
+        {
+          "atom_index": 22,
+          "score": 1.381407515322023e-07
+        },
+        {
+          "atom_index": 17,
+          "score": 2.953845663996184e-08
+        }
+      ],
+      "xenosite_dense_scores": [
+        0.006608717806038933,
+        0.0006302398584157698,
+        2.3199112501573118e-07,
+        5.5173626187211745e-06,
+        3.1493661124121104e-05,
+        3.94433129891965e-05,
+        6.803953985183259e-06,
+        1.4208299713846554e-07,
+        0.0021464429271949143,
+        0.00018583525619133992,
+        5.999454539188625e-06,
+        0.10357616442115444,
+        5.346696276158747e-05,
+        0.00013681126090518548,
+        0.9575716908632185,
+        0.00010063035000137505,
+        0.002027320942052409,
+        2.953845663996184e-08,
+        4.2233782223462145e-05,
+        0.00014121858866289848,
+        0.00010400414539868357,
+        5.107923293041804e-07,
+        1.381407515322023e-07,
+        5.008319037534702e-07,
+        0.00010650844776904613,
+        6.363870003340691e-05,
+        7.248324768497269e-05,
+        7.435544119892515e-05,
+        1.6375315640102456e-06,
+        0.31056858082690214,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        14,
+        29,
+        11,
+        0,
+        8
+      ]
+    },
+    {
+      "mol_index": 4,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Ciprofibrate",
+      "smiles": "CC(C)(Oc1ccc([C@H]2CC2(Cl)Cl)cc1)C(=O)O",
+      "num_atoms": 32,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 13,
+          "score": 0.9980924101145037
+        },
+        {
+          "atom_index": 12,
+          "score": 0.0014828444058781675
+        },
+        {
+          "atom_index": 16,
+          "score": 0.0007740705020563922
+        },
+        {
+          "atom_index": 7,
+          "score": 0.0006746304639853241
+        },
+        {
+          "atom_index": 15,
+          "score": 0.000442684861135064
+        },
+        {
+          "atom_index": 14,
+          "score": 0.00044247597262207
+        },
+        {
+          "atom_index": 9,
+          "score": 0.00043581807538590724
+        },
+        {
+          "atom_index": 6,
+          "score": 0.00036729589885287154
+        },
+        {
+          "atom_index": 17,
+          "score": 0.00023504148680876532
+        },
+        {
+          "atom_index": 2,
+          "score": 8.905721137306307e-06
+        },
+        {
+          "atom_index": 0,
+          "score": 8.593231227778658e-06
+        },
+        {
+          "atom_index": 5,
+          "score": 3.968903070489184e-06
+        },
+        {
+          "atom_index": 3,
+          "score": 7.131689456052493e-07
+        },
+        {
+          "atom_index": 8,
+          "score": 4.19577745706194e-07
+        },
+        {
+          "atom_index": 4,
+          "score": 7.138070797296474e-08
+        },
+        {
+          "atom_index": 11,
+          "score": 9.958563294894191e-09
+        },
+        {
+          "atom_index": 10,
+          "score": 4.5426326429221076e-09
+        },
+        {
+          "atom_index": 1,
+          "score": 1.225893626742435e-10
+        }
+      ],
+      "xenosite_dense_scores": [
+        8.593231227778658e-06,
+        1.225893626742435e-10,
+        8.905721137306307e-06,
+        7.131689456052493e-07,
+        7.138070797296474e-08,
+        3.968903070489184e-06,
+        0.00036729589885287154,
+        0.0006746304639853241,
+        4.19577745706194e-07,
+        0.00043581807538590724,
+        4.5426326429221076e-09,
+        9.958563294894191e-09,
+        0.0014828444058781675,
+        0.9980924101145037,
+        0.00044247597262207,
+        0.000442684861135064,
+        0.0007740705020563922,
+        0.00023504148680876532,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        13,
+        12,
+        16,
+        7,
+        15
+      ]
+    },
+    {
+      "mol_index": 5,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Dobutamine",
+      "smiles": "C[C@@H](CCc1ccc(O)cc1)NCCc1ccc(O)c(O)c1",
+      "num_atoms": 45,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 8,
+          "score": 0.7293827917876852
+        },
+        {
+          "atom_index": 19,
+          "score": 0.676962628120889
+        },
+        {
+          "atom_index": 17,
+          "score": 0.6712754057854484
+        },
+        {
+          "atom_index": 11,
+          "score": 0.002308673273965105
+        },
+        {
+          "atom_index": 0,
+          "score": 3.59773729789636e-05
+        },
+        {
+          "atom_index": 2,
+          "score": 6.25716833807667e-06
+        },
+        {
+          "atom_index": 13,
+          "score": 5.3809523708441815e-06
+        },
+        {
+          "atom_index": 21,
+          "score": 4.662111518388179e-06
+        },
+        {
+          "atom_index": 10,
+          "score": 2.88172291433115e-06
+        },
+        {
+          "atom_index": 5,
+          "score": 2.8666045818434875e-06
+        },
+        {
+          "atom_index": 15,
+          "score": 1.7798699234330212e-06
+        },
+        {
+          "atom_index": 3,
+          "score": 1.3369780140739764e-06
+        },
+        {
+          "atom_index": 20,
+          "score": 9.148110837524481e-07
+        },
+        {
+          "atom_index": 6,
+          "score": 4.7445269722458243e-07
+        },
+        {
+          "atom_index": 9,
+          "score": 4.51527401131941e-07
+        },
+        {
+          "atom_index": 12,
+          "score": 3.825735088733232e-07
+        },
+        {
+          "atom_index": 1,
+          "score": 1.547233056226283e-07
+        },
+        {
+          "atom_index": 14,
+          "score": 6.910267801781337e-08
+        },
+        {
+          "atom_index": 16,
+          "score": 4.890934690021506e-08
+        },
+        {
+          "atom_index": 18,
+          "score": 4.1512724179307664e-08
+        },
+        {
+          "atom_index": 4,
+          "score": 3.354633587282357e-08
+        },
+        {
+          "atom_index": 7,
+          "score": 1.5627994297725716e-08
+        }
+      ],
+      "xenosite_dense_scores": [
+        3.59773729789636e-05,
+        1.547233056226283e-07,
+        6.25716833807667e-06,
+        1.3369780140739764e-06,
+        3.354633587282357e-08,
+        2.8666045818434875e-06,
+        4.7445269722458243e-07,
+        1.5627994297725716e-08,
+        0.7293827917876852,
+        4.51527401131941e-07,
+        2.88172291433115e-06,
+        0.002308673273965105,
+        3.825735088733232e-07,
+        5.3809523708441815e-06,
+        6.910267801781337e-08,
+        1.7798699234330212e-06,
+        4.890934690021506e-08,
+        0.6712754057854484,
+        4.1512724179307664e-08,
+        0.676962628120889,
+        9.148110837524481e-07,
+        4.662111518388179e-06,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        8,
+        19,
+        17,
+        11,
+        0
+      ]
+    },
+    {
+      "mol_index": 6,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Dopamine",
+      "smiles": "NCCc1ccc(O)c(O)c1",
+      "num_atoms": 22,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 10,
+          "score": 0.771205731141064
+        },
+        {
+          "atom_index": 9,
+          "score": 0.7551599250531349
+        },
+        {
+          "atom_index": 8,
+          "score": 0.003996472074794978
+        },
+        {
+          "atom_index": 4,
+          "score": 0.0004673786619155179
+        },
+        {
+          "atom_index": 0,
+          "score": 0.0003000960363166508
+        },
+        {
+          "atom_index": 1,
+          "score": 9.219374673005686e-05
+        },
+        {
+          "atom_index": 5,
+          "score": 6.883246346572667e-05
+        },
+        {
+          "atom_index": 6,
+          "score": 2.630786904189348e-06
+        },
+        {
+          "atom_index": 7,
+          "score": 4.5214724893907865e-07
+        },
+        {
+          "atom_index": 2,
+          "score": 2.0641723677581566e-07
+        },
+        {
+          "atom_index": 3,
+          "score": 1.4440997120166998e-07
+        }
+      ],
+      "xenosite_dense_scores": [
+        0.0003000960363166508,
+        9.219374673005686e-05,
+        2.0641723677581566e-07,
+        1.4440997120166998e-07,
+        0.0004673786619155179,
+        6.883246346572667e-05,
+        2.630786904189348e-06,
+        4.5214724893907865e-07,
+        0.003996472074794978,
+        0.7551599250531349,
+        0.771205731141064,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        10,
+        9,
+        8,
+        4,
+        0
+      ]
+    },
+    {
+      "mol_index": 7,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Etacrynic acid",
+      "smiles": "C=C(CC)C(=O)c1ccc(OCC(=O)O)c(Cl)c1Cl",
+      "num_atoms": 31,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 15,
+          "score": 0.9975602899326513
+        },
+        {
+          "atom_index": 5,
+          "score": 0.019642145712429657
+        },
+        {
+          "atom_index": 16,
+          "score": 0.004510838304340202
+        },
+        {
+          "atom_index": 18,
+          "score": 0.0007403475280561434
+        },
+        {
+          "atom_index": 12,
+          "score": 0.0006493816089230545
+        },
+        {
+          "atom_index": 17,
+          "score": 0.000607728752290603
+        },
+        {
+          "atom_index": 10,
+          "score": 9.097233642140339e-05
+        },
+        {
+          "atom_index": 8,
+          "score": 5.323300162976042e-05
+        },
+        {
+          "atom_index": 0,
+          "score": 4.472357672554795e-05
+        },
+        {
+          "atom_index": 3,
+          "score": 9.245036225635607e-06
+        },
+        {
+          "atom_index": 1,
+          "score": 3.8751594242714605e-06
+        },
+        {
+          "atom_index": 7,
+          "score": 1.0143661414603432e-06
+        },
+        {
+          "atom_index": 6,
+          "score": 8.753770771218264e-07
+        },
+        {
+          "atom_index": 9,
+          "score": 7.526411574347085e-07
+        },
+        {
+          "atom_index": 13,
+          "score": 4.853144986949758e-07
+        },
+        {
+          "atom_index": 11,
+          "score": 2.1695727698715054e-07
+        },
+        {
+          "atom_index": 14,
+          "score": 2.601459348225977e-08
+        },
+        {
+          "atom_index": 2,
+          "score": 7.956572075936379e-09
+        },
+        {
+          "atom_index": 4,
+          "score": 2.1814498391796915e-09
+        }
+      ],
+      "xenosite_dense_scores": [
+        4.472357672554795e-05,
+        3.8751594242714605e-06,
+        7.956572075936379e-09,
+        9.245036225635607e-06,
+        2.1814498391796915e-09,
+        0.019642145712429657,
+        8.753770771218264e-07,
+        1.0143661414603432e-06,
+        5.323300162976042e-05,
+        7.526411574347085e-07,
+        9.097233642140339e-05,
+        2.1695727698715054e-07,
+        0.0006493816089230545,
+        4.853144986949758e-07,
+        2.601459348225977e-08,
+        0.9975602899326513,
+        0.004510838304340202,
+        0.000607728752290603,
+        0.0007403475280561434,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        15,
+        5,
+        16,
+        18,
+        12
+      ]
+    },
+    {
+      "mol_index": 8,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Ezetimibe",
+      "smiles": "O=C1[C@H](CC[C@H](O)c2ccc(F)cc2)[C@@H](c2ccc(O)cc2)N1c1ccc(F)cc1",
+      "num_atoms": 51,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 23,
+          "score": 0.9574212475588685
+        },
+        {
+          "atom_index": 0,
+          "score": 0.19531363124257953
+        },
+        {
+          "atom_index": 11,
+          "score": 0.0006640589414829131
+        },
+        {
+          "atom_index": 25,
+          "score": 9.644593660251209e-05
+        },
+        {
+          "atom_index": 20,
+          "score": 5.201993341085004e-05
+        },
+        {
+          "atom_index": 4,
+          "score": 2.9595613255845367e-05
+        },
+        {
+          "atom_index": 18,
+          "score": 2.1507194654703176e-05
+        },
+        {
+          "atom_index": 13,
+          "score": 2.119231824252932e-05
+        },
+        {
+          "atom_index": 3,
+          "score": 2.0059697052890196e-05
+        },
+        {
+          "atom_index": 32,
+          "score": 1.9149603335138034e-05
+        },
+        {
+          "atom_index": 21,
+          "score": 1.910088147632191e-05
+        },
+        {
+          "atom_index": 27,
+          "score": 1.8571591948957993e-05
+        },
+        {
+          "atom_index": 16,
+          "score": 1.6099203502109925e-05
+        },
+        {
+          "atom_index": 30,
+          "score": 1.5425513114686793e-05
+        },
+        {
+          "atom_index": 24,
+          "score": 9.933164458529798e-06
+        },
+        {
+          "atom_index": 17,
+          "score": 5.086453170813234e-06
+        },
+        {
+          "atom_index": 14,
+          "score": 4.874401337947459e-06
+        },
+        {
+          "atom_index": 31,
+          "score": 3.2130076701365435e-06
+        },
+        {
+          "atom_index": 28,
+          "score": 2.9647439129120125e-06
+        },
+        {
+          "atom_index": 9,
+          "score": 1.193934849008275e-06
+        },
+        {
+          "atom_index": 5,
+          "score": 1.315551276100179e-07
+        },
+        {
+          "atom_index": 12,
+          "score": 7.425142514054006e-08
+        },
+        {
+          "atom_index": 26,
+          "score": 6.390520982651481e-08
+        },
+        {
+          "atom_index": 1,
+          "score": 6.143801057176863e-08
+        },
+        {
+          "atom_index": 22,
+          "score": 2.9156490278398856e-08
+        },
+        {
+          "atom_index": 19,
+          "score": 2.8739597508542324e-08
+        },
+        {
+          "atom_index": 15,
+          "score": 2.5715496364538683e-08
+        },
+        {
+          "atom_index": 29,
+          "score": 2.0749142911047626e-08
+        },
+        {
+          "atom_index": 7,
+          "score": 5.289839876236692e-09
+        },
+        {
+          "atom_index": 10,
+          "score": 1.118465454715064e-10
+        }
+      ],
+      "xenosite_dense_scores": [
+        0.19531363124257953,
+        6.143801057176863e-08,
+        null,
+        2.0059697052890196e-05,
+        2.9595613255845367e-05,
+        1.315551276100179e-07,
+        null,
+        5.289839876236692e-09,
+        null,
+        1.193934849008275e-06,
+        1.118465454715064e-10,
+        0.0006640589414829131,
+        7.425142514054006e-08,
+        2.119231824252932e-05,
+        4.874401337947459e-06,
+        2.5715496364538683e-08,
+        1.6099203502109925e-05,
+        5.086453170813234e-06,
+        2.1507194654703176e-05,
+        2.8739597508542324e-08,
+        5.201993341085004e-05,
+        1.910088147632191e-05,
+        2.9156490278398856e-08,
+        0.9574212475588685,
+        9.933164458529798e-06,
+        9.644593660251209e-05,
+        6.390520982651481e-08,
+        1.8571591948957993e-05,
+        2.9647439129120125e-06,
+        2.0749142911047626e-08,
+        1.5425513114686793e-05,
+        3.2130076701365435e-06,
+        1.9149603335138034e-05,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        23,
+        0,
+        11,
+        25,
+        20
+      ]
+    },
+    {
+      "mol_index": 9,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Fenoldopam",
+      "smiles": "Oc1ccc([C@@H]2CNCCc3c2cc(O)c(O)c3Cl)cc1",
+      "num_atoms": 37,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 0,
+          "score": 0.7278707181215928
+        },
+        {
+          "atom_index": 18,
+          "score": 0.6198509934271828
+        },
+        {
+          "atom_index": 16,
+          "score": 0.6102416943234611
+        },
+        {
+          "atom_index": 9,
+          "score": 0.0030184018521276688
+        },
+        {
+          "atom_index": 3,
+          "score": 2.340428645256142e-05
+        },
+        {
+          "atom_index": 5,
+          "score": 2.1321501361180973e-05
+        },
+        {
+          "atom_index": 19,
+          "score": 8.045754559751304e-06
+        },
+        {
+          "atom_index": 2,
+          "score": 3.63699217987568e-06
+        },
+        {
+          "atom_index": 6,
+          "score": 3.303905598631159e-06
+        },
+        {
+          "atom_index": 11,
+          "score": 1.1391852460488913e-06
+        },
+        {
+          "atom_index": 14,
+          "score": 9.717912826703803e-07
+        },
+        {
+          "atom_index": 4,
+          "score": 4.4451178046359055e-07
+        },
+        {
+          "atom_index": 10,
+          "score": 2.582337182333382e-07
+        },
+        {
+          "atom_index": 7,
+          "score": 9.641535710522949e-08
+        },
+        {
+          "atom_index": 8,
+          "score": 4.950360885796524e-08
+        },
+        {
+          "atom_index": 15,
+          "score": 4.518829530487875e-08
+        },
+        {
+          "atom_index": 13,
+          "score": 4.3634584662262576e-08
+        },
+        {
+          "atom_index": 17,
+          "score": 4.2614546500506345e-08
+        },
+        {
+          "atom_index": 1,
+          "score": 3.202143265521113e-08
+        },
+        {
+          "atom_index": 20,
+          "score": 3.1188985280670985e-08
+        },
+        {
+          "atom_index": 12,
+          "score": 1.0325185431103157e-08
+        }
+      ],
+      "xenosite_dense_scores": [
+        0.7278707181215928,
+        3.202143265521113e-08,
+        3.63699217987568e-06,
+        2.340428645256142e-05,
+        4.4451178046359055e-07,
+        2.1321501361180973e-05,
+        3.303905598631159e-06,
+        9.641535710522949e-08,
+        4.950360885796524e-08,
+        0.0030184018521276688,
+        2.582337182333382e-07,
+        1.1391852460488913e-06,
+        1.0325185431103157e-08,
+        4.3634584662262576e-08,
+        9.717912826703803e-07,
+        4.518829530487875e-08,
+        0.6102416943234611,
+        4.2614546500506345e-08,
+        0.6198509934271828,
+        8.045754559751304e-06,
+        3.1188985280670985e-08,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        0,
+        18,
+        16,
+        9,
+        3
+      ]
+    },
+    {
+      "mol_index": 10,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Furosemide",
+      "smiles": "NS(=O)(=O)c1cc(C(=O)O)c(NCc2ccco2)cc1Cl",
+      "num_atoms": 32,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 19,
+          "score": 0.9846344853449924
+        },
+        {
+          "atom_index": 0,
+          "score": 0.07003680883948524
+        },
+        {
+          "atom_index": 15,
+          "score": 0.01784602717649353
+        },
+        {
+          "atom_index": 20,
+          "score": 0.004925114968437686
+        },
+        {
+          "atom_index": 9,
+          "score": 0.0011359231465955303
+        },
+        {
+          "atom_index": 2,
+          "score": 0.00020508438868633243
+        },
+        {
+          "atom_index": 3,
+          "score": 0.00020446039244141468
+        },
+        {
+          "atom_index": 7,
+          "score": 0.0001688830677382541
+        },
+        {
+          "atom_index": 6,
+          "score": 0.0001514951628299455
+        },
+        {
+          "atom_index": 17,
+          "score": 5.3478501824970676e-05
+        },
+        {
+          "atom_index": 12,
+          "score": 5.2951352559690747e-05
+        },
+        {
+          "atom_index": 14,
+          "score": 2.3034803002544226e-05
+        },
+        {
+          "atom_index": 13,
+          "score": 1.690772580564653e-05
+        },
+        {
+          "atom_index": 8,
+          "score": 1.1277281532145738e-05
+        },
+        {
+          "atom_index": 16,
+          "score": 7.889976377341678e-07
+        },
+        {
+          "atom_index": 10,
+          "score": 6.323101627382468e-07
+        },
+        {
+          "atom_index": 4,
+          "score": 4.6368006614309664e-07
+        },
+        {
+          "atom_index": 11,
+          "score": 3.303077174815056e-07
+        },
+        {
+          "atom_index": 5,
+          "score": 1.6033570834469576e-07
+        },
+        {
+          "atom_index": 1,
+          "score": 3.4630796620806926e-08
+        },
+        {
+          "atom_index": 18,
+          "score": 4.40987085313829e-10
+        }
+      ],
+      "xenosite_dense_scores": [
+        0.07003680883948524,
+        3.4630796620806926e-08,
+        0.00020508438868633243,
+        0.00020446039244141468,
+        4.6368006614309664e-07,
+        1.6033570834469576e-07,
+        0.0001514951628299455,
+        0.0001688830677382541,
+        1.1277281532145738e-05,
+        0.0011359231465955303,
+        6.323101627382468e-07,
+        3.303077174815056e-07,
+        5.2951352559690747e-05,
+        1.690772580564653e-05,
+        2.3034803002544226e-05,
+        0.01784602717649353,
+        7.889976377341678e-07,
+        5.3478501824970676e-05,
+        4.40987085313829e-10,
+        0.9846344853449924,
+        0.004925114968437686,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        19,
+        0,
+        15,
+        20,
+        9
+      ]
+    },
+    {
+      "mol_index": 11,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Ibuprofen",
+      "smiles": "CC(C)Cc1ccc([C@@H](C)C(=O)O)cc1",
+      "num_atoms": 33,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 13,
+          "score": 0.9972360360235376
+        },
+        {
+          "atom_index": 14,
+          "score": 0.0017545516453708442
+        },
+        {
+          "atom_index": 9,
+          "score": 0.001008026067260212
+        },
+        {
+          "atom_index": 6,
+          "score": 0.0009448378038687178
+        },
+        {
+          "atom_index": 5,
+          "score": 0.0009381422547612558
+        },
+        {
+          "atom_index": 8,
+          "score": 0.0008731367637802543
+        },
+        {
+          "atom_index": 2,
+          "score": 0.00017957487458776235
+        },
+        {
+          "atom_index": 0,
+          "score": 0.00014844870344785064
+        },
+        {
+          "atom_index": 11,
+          "score": 7.522113654312006e-05
+        },
+        {
+          "atom_index": 4,
+          "score": 1.2723381576570196e-05
+        },
+        {
+          "atom_index": 3,
+          "score": 4.560043444592898e-06
+        },
+        {
+          "atom_index": 7,
+          "score": 4.549212837089719e-06
+        },
+        {
+          "atom_index": 1,
+          "score": 1.5750656995197483e-06
+        },
+        {
+          "atom_index": 10,
+          "score": 2.6457173957757165e-07
+        },
+        {
+          "atom_index": 12,
+          "score": 2.0642593048245506e-09
+        }
+      ],
+      "xenosite_dense_scores": [
+        0.00014844870344785064,
+        1.5750656995197483e-06,
+        0.00017957487458776235,
+        4.560043444592898e-06,
+        1.2723381576570196e-05,
+        0.0009381422547612558,
+        0.0009448378038687178,
+        4.549212837089719e-06,
+        0.0008731367637802543,
+        0.001008026067260212,
+        2.6457173957757165e-07,
+        7.522113654312006e-05,
+        2.0642593048245506e-09,
+        0.9972360360235376,
+        0.0017545516453708442,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        13,
+        14,
+        9,
+        6,
+        5
+      ]
+    },
+    {
+      "mol_index": 12,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Losartan",
+      "smiles": "CCCCc1nc(Cl)c(CO)n1Cc1ccc(-c2ccccc2-c2nn[nH]n2)cc1",
+      "num_atoms": 53,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 10,
+          "score": 0.8794085075705134
+        },
+        {
+          "atom_index": 27,
+          "score": 0.5925338678318999
+        },
+        {
+          "atom_index": 28,
+          "score": 0.2218056550991398
+        },
+        {
+          "atom_index": 29,
+          "score": 0.08505212850516815
+        },
+        {
+          "atom_index": 26,
+          "score": 0.06478442158882147
+        },
+        {
+          "atom_index": 5,
+          "score": 0.008437527104800169
+        },
+        {
+          "atom_index": 11,
+          "score": 0.0006149830141010088
+        },
+        {
+          "atom_index": 0,
+          "score": 0.0003749118039247071
+        },
+        {
+          "atom_index": 14,
+          "score": 0.0002748451385322236
+        },
+        {
+          "atom_index": 18,
+          "score": 0.0002711455404117079
+        },
+        {
+          "atom_index": 17,
+          "score": 0.00012622878032115533
+        },
+        {
+          "atom_index": 15,
+          "score": 0.00012343262102049464
+        },
+        {
+          "atom_index": 3,
+          "score": 0.00010069388190078018
+        },
+        {
+          "atom_index": 21,
+          "score": 9.414940855936235e-05
+        },
+        {
+          "atom_index": 23,
+          "score": 9.20973217305787e-05
+        },
+        {
+          "atom_index": 22,
+          "score": 6.604479060528623e-05
+        },
+        {
+          "atom_index": 20,
+          "score": 6.249485930833701e-05
+        },
+        {
+          "atom_index": 1,
+          "score": 4.959522532197276e-05
+        },
+        {
+          "atom_index": 7,
+          "score": 2.408440715590859e-05
+        },
+        {
+          "atom_index": 9,
+          "score": 1.0164729077873228e-05
+        },
+        {
+          "atom_index": 2,
+          "score": 3.3490164260516217e-06
+        },
+        {
+          "atom_index": 4,
+          "score": 2.9673370718929047e-06
+        },
+        {
+          "atom_index": 13,
+          "score": 1.7208991074458573e-06
+        },
+        {
+          "atom_index": 25,
+          "score": 1.2889052237120054e-06
+        },
+        {
+          "atom_index": 19,
+          "score": 1.257289384861441e-06
+        },
+        {
+          "atom_index": 12,
+          "score": 1.042896033764217e-06
+        },
+        {
+          "atom_index": 16,
+          "score": 4.805393911932748e-07
+        },
+        {
+          "atom_index": 6,
+          "score": 2.98573869875367e-07
+        },
+        {
+          "atom_index": 8,
+          "score": 2.1087053580704674e-07
+        },
+        {
+          "atom_index": 24,
+          "score": 1.801826360178532e-07
+        }
+      ],
+      "xenosite_dense_scores": [
+        0.0003749118039247071,
+        4.959522532197276e-05,
+        3.3490164260516217e-06,
+        0.00010069388190078018,
+        2.9673370718929047e-06,
+        0.008437527104800169,
+        2.98573869875367e-07,
+        2.408440715590859e-05,
+        2.1087053580704674e-07,
+        1.0164729077873228e-05,
+        0.8794085075705134,
+        0.0006149830141010088,
+        1.042896033764217e-06,
+        1.7208991074458573e-06,
+        0.0002748451385322236,
+        0.00012343262102049464,
+        4.805393911932748e-07,
+        0.00012622878032115533,
+        0.0002711455404117079,
+        1.257289384861441e-06,
+        6.249485930833701e-05,
+        9.414940855936235e-05,
+        6.604479060528623e-05,
+        9.20973217305787e-05,
+        1.801826360178532e-07,
+        1.2889052237120054e-06,
+        0.06478442158882147,
+        0.5925338678318999,
+        0.2218056550991398,
+        0.08505212850516815,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        10,
+        27,
+        28,
+        29,
+        26
+      ]
+    },
+    {
+      "mol_index": 13,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Methyldopa",
+      "smiles": "C[C@](N)(Cc1ccc(O)c(O)c1)C(=O)O",
+      "num_atoms": 28,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 8,
+          "score": 0.7234722151141546
+        },
+        {
+          "atom_index": 10,
+          "score": 0.7198289787926074
+        },
+        {
+          "atom_index": 13,
+          "score": 0.44111584653642105
+        },
+        {
+          "atom_index": 14,
+          "score": 0.003913851241484388
+        },
+        {
+          "atom_index": 2,
+          "score": 0.003574119566498463
+        },
+        {
+          "atom_index": 11,
+          "score": 3.801928418570025e-05
+        },
+        {
+          "atom_index": 5,
+          "score": 3.1723441569692094e-05
+        },
+        {
+          "atom_index": 4,
+          "score": 1.8045070037299905e-05
+        },
+        {
+          "atom_index": 6,
+          "score": 8.588004462533975e-06
+        },
+        {
+          "atom_index": 0,
+          "score": 6.48488028833217e-06
+        },
+        {
+          "atom_index": 3,
+          "score": 8.213293596046261e-07
+        },
+        {
+          "atom_index": 7,
+          "score": 8.872816166407886e-08
+        },
+        {
+          "atom_index": 9,
+          "score": 5.600966773829912e-08
+        },
+        {
+          "atom_index": 12,
+          "score": 1.5246338048294128e-10
+        },
+        {
+          "atom_index": 1,
+          "score": 1.1958098740291546e-10
+        }
+      ],
+      "xenosite_dense_scores": [
+        6.48488028833217e-06,
+        1.1958098740291546e-10,
+        0.003574119566498463,
+        8.213293596046261e-07,
+        1.8045070037299905e-05,
+        3.1723441569692094e-05,
+        8.588004462533975e-06,
+        8.872816166407886e-08,
+        0.7234722151141546,
+        5.600966773829912e-08,
+        0.7198289787926074,
+        3.801928418570025e-05,
+        1.5246338048294128e-10,
+        0.44111584653642105,
+        0.003913851241484388,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        8,
+        10,
+        13,
+        14,
+        2
+      ]
+    },
+    {
+      "mol_index": 14,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Nebivolol",
+      "smiles": "O[C@H](CNC[C@H](O)[C@@H]1CCc2cc(F)ccc2O1)[C@@H]1CCc2cc(F)ccc2O1",
+      "num_atoms": 54,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 6,
+          "score": 0.966492561268772
+        },
+        {
+          "atom_index": 0,
+          "score": 0.9661004924630457
+        },
+        {
+          "atom_index": 3,
+          "score": 0.17079640657418463
+        },
+        {
+          "atom_index": 23,
+          "score": 0.003470896219285893
+        },
+        {
+          "atom_index": 12,
+          "score": 0.0024725270985799866
+        },
+        {
+          "atom_index": 8,
+          "score": 0.00020002719132410643
+        },
+        {
+          "atom_index": 19,
+          "score": 0.00019843132703536992
+        },
+        {
+          "atom_index": 20,
+          "score": 4.4531306948651397e-05
+        },
+        {
+          "atom_index": 9,
+          "score": 4.391490683634271e-05
+        },
+        {
+          "atom_index": 27,
+          "score": 3.2124047523729526e-05
+        },
+        {
+          "atom_index": 16,
+          "score": 3.0171776710169705e-05
+        },
+        {
+          "atom_index": 13,
+          "score": 1.0851361132583596e-05
+        },
+        {
+          "atom_index": 4,
+          "score": 1.002717897973838e-05
+        },
+        {
+          "atom_index": 2,
+          "score": 1.002329794840184e-05
+        },
+        {
+          "atom_index": 17,
+          "score": 8.879681352587468e-06
+        },
+        {
+          "atom_index": 14,
+          "score": 7.402872751476599e-06
+        },
+        {
+          "atom_index": 24,
+          "score": 5.014366956275344e-06
+        },
+        {
+          "atom_index": 28,
+          "score": 3.261092692702638e-06
+        },
+        {
+          "atom_index": 25,
+          "score": 3.1334213415391866e-06
+        },
+        {
+          "atom_index": 1,
+          "score": 1.4966828470787092e-06
+        },
+        {
+          "atom_index": 5,
+          "score": 1.4634697887486561e-06
+        },
+        {
+          "atom_index": 10,
+          "score": 6.88073908064571e-07
+        },
+        {
+          "atom_index": 21,
+          "score": 5.98799996744288e-07
+        },
+        {
+          "atom_index": 7,
+          "score": 4.178110102202777e-07
+        },
+        {
+          "atom_index": 18,
+          "score": 3.9047089701113705e-07
+        },
+        {
+          "atom_index": 22,
+          "score": 3.4862318522902735e-07
+        },
+        {
+          "atom_index": 11,
+          "score": 3.016480342975434e-07
+        },
+        {
+          "atom_index": 26,
+          "score": 2.1419266830235916e-07
+        },
+        {
+          "atom_index": 15,
+          "score": 1.9929303402681121e-07
+        }
+      ],
+      "xenosite_dense_scores": [
+        0.9661004924630457,
+        1.4966828470787092e-06,
+        1.002329794840184e-05,
+        0.17079640657418463,
+        1.002717897973838e-05,
+        1.4634697887486561e-06,
+        0.966492561268772,
+        4.178110102202777e-07,
+        0.00020002719132410643,
+        4.391490683634271e-05,
+        6.88073908064571e-07,
+        3.016480342975434e-07,
+        0.0024725270985799866,
+        1.0851361132583596e-05,
+        7.402872751476599e-06,
+        1.9929303402681121e-07,
+        3.0171776710169705e-05,
+        8.879681352587468e-06,
+        3.9047089701113705e-07,
+        0.00019843132703536992,
+        4.4531306948651397e-05,
+        5.98799996744288e-07,
+        3.4862318522902735e-07,
+        0.003470896219285893,
+        5.014366956275344e-06,
+        3.1334213415391866e-06,
+        2.1419266830235916e-07,
+        3.2124047523729526e-05,
+        3.261092692702638e-06,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        6,
+        0,
+        3,
+        23,
+        12
+      ]
+    },
+    {
+      "mol_index": 15,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Phenol",
+      "smiles": "Oc1ccccc1",
+      "num_atoms": 13,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 0,
+          "score": 0.9970037083842034
+        },
+        {
+          "atom_index": 5,
+          "score": 0.0014120770307595616
+        },
+        {
+          "atom_index": 3,
+          "score": 0.0013973982083216442
+        },
+        {
+          "atom_index": 2,
+          "score": 0.0012931785791546226
+        },
+        {
+          "atom_index": 6,
+          "score": 0.0012346599898809569
+        },
+        {
+          "atom_index": 4,
+          "score": 0.00027481305959454745
+        },
+        {
+          "atom_index": 1,
+          "score": 1.2626424017453809e-05
+        }
+      ],
+      "xenosite_dense_scores": [
+        0.9970037083842034,
+        1.2626424017453809e-05,
+        0.0012931785791546226,
+        0.0013973982083216442,
+        0.00027481305959454745,
+        0.0014120770307595616,
+        0.0012346599898809569,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        0,
+        5,
+        3,
+        2,
+        6
+      ]
+    },
+    {
+      "mol_index": 16,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Pitavastatin",
+      "smiles": "O=C(O)C[C@H](O)C[C@H](O)/C=C/c1c(C2CC2)nc2ccccc2c1-c1ccc(F)cc1",
+      "num_atoms": 55,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 31,
+          "score": 0.7448518996950452
+        },
+        {
+          "atom_index": 0,
+          "score": 0.31850761255432797
+        },
+        {
+          "atom_index": 6,
+          "score": 0.2357868965834158
+        },
+        {
+          "atom_index": 32,
+          "score": 0.001592290861716792
+        },
+        {
+          "atom_index": 11,
+          "score": 0.0005765622966515224
+        },
+        {
+          "atom_index": 20,
+          "score": 4.081714299903556e-05
+        },
+        {
+          "atom_index": 25,
+          "score": 3.87807386326336e-05
+        },
+        {
+          "atom_index": 16,
+          "score": 3.162941520704305e-05
+        },
+        {
+          "atom_index": 13,
+          "score": 1.75970927867136e-05
+        },
+        {
+          "atom_index": 23,
+          "score": 1.5654531758285343e-05
+        },
+        {
+          "atom_index": 15,
+          "score": 1.1705883226364843e-05
+        },
+        {
+          "atom_index": 14,
+          "score": 9.962824816156646e-06
+        },
+        {
+          "atom_index": 29,
+          "score": 9.186894180084147e-06
+        },
+        {
+          "atom_index": 3,
+          "score": 7.121031154553843e-06
+        },
+        {
+          "atom_index": 21,
+          "score": 4.770673946800408e-06
+        },
+        {
+          "atom_index": 24,
+          "score": 4.464308493646096e-06
+        },
+        {
+          "atom_index": 28,
+          "score": 1.1124882306932764e-06
+        },
+        {
+          "atom_index": 27,
+          "score": 1.037667802442725e-06
+        },
+        {
+          "atom_index": 7,
+          "score": 8.99851734989492e-07
+        },
+        {
+          "atom_index": 18,
+          "score": 2.2855144093162838e-07
+        },
+        {
+          "atom_index": 12,
+          "score": 1.917133565896977e-07
+        },
+        {
+          "atom_index": 19,
+          "score": 1.6802010714955906e-07
+        },
+        {
+          "atom_index": 8,
+          "score": 1.56935240105891e-07
+        },
+        {
+          "atom_index": 4,
+          "score": 7.997039584288021e-08
+        },
+        {
+          "atom_index": 10,
+          "score": 6.681349387340796e-08
+        },
+        {
+          "atom_index": 9,
+          "score": 6.182843518018169e-08
+        },
+        {
+          "atom_index": 17,
+          "score": 5.7675426482910466e-08
+        },
+        {
+          "atom_index": 22,
+          "score": 4.653241402527602e-08
+        },
+        {
+          "atom_index": 1,
+          "score": 1.5679001707400424e-08
+        },
+        {
+          "atom_index": 26,
+          "score": 1.2552368340585223e-08
+        },
+        {
+          "atom_index": 30,
+          "score": 5.343689147993328e-10
+        }
+      ],
+      "xenosite_dense_scores": [
+        0.31850761255432797,
+        1.5679001707400424e-08,
+        null,
+        7.121031154553843e-06,
+        7.997039584288021e-08,
+        null,
+        0.2357868965834158,
+        8.99851734989492e-07,
+        1.56935240105891e-07,
+        6.182843518018169e-08,
+        6.681349387340796e-08,
+        0.0005765622966515224,
+        1.917133565896977e-07,
+        1.75970927867136e-05,
+        9.962824816156646e-06,
+        1.1705883226364843e-05,
+        3.162941520704305e-05,
+        5.7675426482910466e-08,
+        2.2855144093162838e-07,
+        1.6802010714955906e-07,
+        4.081714299903556e-05,
+        4.770673946800408e-06,
+        4.653241402527602e-08,
+        1.5654531758285343e-05,
+        4.464308493646096e-06,
+        3.87807386326336e-05,
+        1.2552368340585223e-08,
+        1.037667802442725e-06,
+        1.1124882306932764e-06,
+        9.186894180084147e-06,
+        5.343689147993328e-10,
+        0.7448518996950452,
+        0.001592290861716792,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        31,
+        0,
+        6,
+        32,
+        11
+      ]
+    },
+    {
+      "mol_index": 17,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Propafenone",
+      "smiles": "CCCNC[C@@H](O)COc1ccccc1C(=O)CCc1ccccc1",
+      "num_atoms": 52,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 6,
+          "score": 0.9608631235023737
+        },
+        {
+          "atom_index": 16,
+          "score": 0.028279718835784107
+        },
+        {
+          "atom_index": 3,
+          "score": 0.010335846024789222
+        },
+        {
+          "atom_index": 8,
+          "score": 0.0026712759606551157
+        },
+        {
+          "atom_index": 11,
+          "score": 0.00021884242402300154
+        },
+        {
+          "atom_index": 1,
+          "score": 0.0002137575115476631
+        },
+        {
+          "atom_index": 0,
+          "score": 0.00019557588742558194
+        },
+        {
+          "atom_index": 17,
+          "score": 0.00014238272899796405
+        },
+        {
+          "atom_index": 10,
+          "score": 0.00011667682416783545
+        },
+        {
+          "atom_index": 13,
+          "score": 0.00010696572572431154
+        },
+        {
+          "atom_index": 12,
+          "score": 9.94948683426216e-05
+        },
+        {
+          "atom_index": 18,
+          "score": 4.7280602874231786e-05
+        },
+        {
+          "atom_index": 20,
+          "score": 4.1272147370365335e-05
+        },
+        {
+          "atom_index": 24,
+          "score": 4.055403369956833e-05
+        },
+        {
+          "atom_index": 21,
+          "score": 3.435103596349423e-05
+        },
+        {
+          "atom_index": 23,
+          "score": 3.4086055412243186e-05
+        },
+        {
+          "atom_index": 7,
+          "score": 1.533607468242122e-05
+        },
+        {
+          "atom_index": 22,
+          "score": 1.3495976870634721e-05
+        },
+        {
+          "atom_index": 4,
+          "score": 1.625808705370025e-06
+        },
+        {
+          "atom_index": 2,
+          "score": 1.2186751543096646e-06
+        },
+        {
+          "atom_index": 5,
+          "score": 1.0123423602240978e-06
+        },
+        {
+          "atom_index": 14,
+          "score": 5.663521024163471e-07
+        },
+        {
+          "atom_index": 19,
+          "score": 5.145019885374962e-07
+        },
+        {
+          "atom_index": 9,
+          "score": 2.143127237130186e-07
+        },
+        {
+          "atom_index": 15,
+          "score": 1.8744227042770237e-09
+        }
+      ],
+      "xenosite_dense_scores": [
+        0.00019557588742558194,
+        0.0002137575115476631,
+        1.2186751543096646e-06,
+        0.010335846024789222,
+        1.625808705370025e-06,
+        1.0123423602240978e-06,
+        0.9608631235023737,
+        1.533607468242122e-05,
+        0.0026712759606551157,
+        2.143127237130186e-07,
+        0.00011667682416783545,
+        0.00021884242402300154,
+        9.94948683426216e-05,
+        0.00010696572572431154,
+        5.663521024163471e-07,
+        1.8744227042770237e-09,
+        0.028279718835784107,
+        0.00014238272899796405,
+        4.7280602874231786e-05,
+        5.145019885374962e-07,
+        4.1272147370365335e-05,
+        3.435103596349423e-05,
+        1.3495976870634721e-05,
+        3.4086055412243186e-05,
+        4.055403369956833e-05,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        6,
+        16,
+        3,
+        8,
+        11
+      ]
+    },
+    {
+      "mol_index": 18,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Propranolol",
+      "smiles": "CC(C)NC[C@@H](O)COc1cccc2ccccc12",
+      "num_atoms": 40,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 6,
+          "score": 0.9718860200574474
+        },
+        {
+          "atom_index": 3,
+          "score": 0.021204095306770927
+        },
+        {
+          "atom_index": 8,
+          "score": 0.01723250556863649
+        },
+        {
+          "atom_index": 7,
+          "score": 0.0020610579507596037
+        },
+        {
+          "atom_index": 0,
+          "score": 0.0020547494317882174
+        },
+        {
+          "atom_index": 2,
+          "score": 0.0019964062049386234
+        },
+        {
+          "atom_index": 12,
+          "score": 0.00014125085834322998
+        },
+        {
+          "atom_index": 17,
+          "score": 0.00014025105390786977
+        },
+        {
+          "atom_index": 14,
+          "score": 0.0001367984178445751
+        },
+        {
+          "atom_index": 16,
+          "score": 0.0001070851083925913
+        },
+        {
+          "atom_index": 11,
+          "score": 9.70078254357112e-05
+        },
+        {
+          "atom_index": 15,
+          "score": 7.508884579964943e-05
+        },
+        {
+          "atom_index": 10,
+          "score": 6.259546528304205e-05
+        },
+        {
+          "atom_index": 5,
+          "score": 1.16164073098549e-05
+        },
+        {
+          "atom_index": 4,
+          "score": 4.0707011398747265e-06
+        },
+        {
+          "atom_index": 13,
+          "score": 1.2233029597263746e-06
+        },
+        {
+          "atom_index": 18,
+          "score": 8.987463474507495e-07
+        },
+        {
+          "atom_index": 1,
+          "score": 4.3269467362303964e-07
+        },
+        {
+          "atom_index": 9,
+          "score": 2.065425619563769e-07
+        }
+      ],
+      "xenosite_dense_scores": [
+        0.0020547494317882174,
+        4.3269467362303964e-07,
+        0.0019964062049386234,
+        0.021204095306770927,
+        4.0707011398747265e-06,
+        1.16164073098549e-05,
+        0.9718860200574474,
+        0.0020610579507596037,
+        0.01723250556863649,
+        2.065425619563769e-07,
+        6.259546528304205e-05,
+        9.70078254357112e-05,
+        0.00014125085834322998,
+        1.2233029597263746e-06,
+        0.0001367984178445751,
+        7.508884579964943e-05,
+        0.0001070851083925913,
+        0.00014025105390786977,
+        8.987463474507495e-07,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        6,
+        3,
+        8,
+        7,
+        0
+      ]
+    },
+    {
+      "mol_index": 19,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Rosuvastatin",
+      "smiles": "CC(C)c1nc(N(C)S(C)(=O)=O)nc(-c2ccc(F)cc2)c1/C=C/[C@@H](O)C[C@@H](O)CC(=O)O",
+      "num_atoms": 61,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 28,
+          "score": 0.6103162478211228
+        },
+        {
+          "atom_index": 24,
+          "score": 0.2695146505446295
+        },
+        {
+          "atom_index": 20,
+          "score": 0.187861949617512
+        },
+        {
+          "atom_index": 27,
+          "score": 0.0013599698738590345
+        },
+        {
+          "atom_index": 4,
+          "score": 7.248300453890607e-05
+        },
+        {
+          "atom_index": 6,
+          "score": 6.155472679723348e-05
+        },
+        {
+          "atom_index": 33,
+          "score": 6.006411282779756e-05
+        },
+        {
+          "atom_index": 34,
+          "score": 5.650375584760485e-05
+        },
+        {
+          "atom_index": 32,
+          "score": 3.856334455919741e-05
+        },
+        {
+          "atom_index": 14,
+          "score": 3.253631041155172e-05
+        },
+        {
+          "atom_index": 9,
+          "score": 2.8420499302785656e-05
+        },
+        {
+          "atom_index": 29,
+          "score": 2.2902683348688252e-05
+        },
+        {
+          "atom_index": 12,
+          "score": 7.677199536913017e-06
+        },
+        {
+          "atom_index": 2,
+          "score": 3.6598151629227846e-06
+        },
+        {
+          "atom_index": 0,
+          "score": 3.5486922057819537e-06
+        },
+        {
+          "atom_index": 21,
+          "score": 2.078869293494467e-06
+        },
+        {
+          "atom_index": 13,
+          "score": 1.9714629820143693e-06
+        },
+        {
+          "atom_index": 10,
+          "score": 1.8907389542879332e-06
+        },
+        {
+          "atom_index": 25,
+          "score": 1.854213479011367e-06
+        },
+        {
+          "atom_index": 30,
+          "score": 6.428839888702746e-07
+        },
+        {
+          "atom_index": 17,
+          "score": 4.174737381898609e-07
+        },
+        {
+          "atom_index": 7,
+          "score": 2.285142275221414e-07
+        },
+        {
+          "atom_index": 3,
+          "score": 2.190458885844626e-07
+        },
+        {
+          "atom_index": 1,
+          "score": 1.8937762131546113e-07
+        },
+        {
+          "atom_index": 16,
+          "score": 1.3702030547030452e-07
+        },
+        {
+          "atom_index": 8,
+          "score": 8.722371811189478e-08
+        },
+        {
+          "atom_index": 5,
+          "score": 6.425024823814735e-08
+        },
+        {
+          "atom_index": 18,
+          "score": 2.8245113370282156e-08
+        },
+        {
+          "atom_index": 11,
+          "score": 2.7178365850989393e-08
+        },
+        {
+          "atom_index": 15,
+          "score": 2.186526253516364e-08
+        },
+        {
+          "atom_index": 31,
+          "score": 7.673644860472457e-09
+        },
+        {
+          "atom_index": 22,
+          "score": 4.8383786582894275e-09
+        },
+        {
+          "atom_index": 26,
+          "score": 2.860033239339253e-10
+        }
+      ],
+      "xenosite_dense_scores": [
+        3.5486922057819537e-06,
+        1.8937762131546113e-07,
+        3.6598151629227846e-06,
+        2.190458885844626e-07,
+        7.248300453890607e-05,
+        6.425024823814735e-08,
+        6.155472679723348e-05,
+        2.285142275221414e-07,
+        8.722371811189478e-08,
+        2.8420499302785656e-05,
+        1.8907389542879332e-06,
+        2.7178365850989393e-08,
+        7.677199536913017e-06,
+        1.9714629820143693e-06,
+        3.253631041155172e-05,
+        2.186526253516364e-08,
+        1.3702030547030452e-07,
+        4.174737381898609e-07,
+        2.8245113370282156e-08,
+        null,
+        0.187861949617512,
+        2.078869293494467e-06,
+        4.8383786582894275e-09,
+        null,
+        0.2695146505446295,
+        1.854213479011367e-06,
+        2.860033239339253e-10,
+        0.0013599698738590345,
+        0.6103162478211228,
+        2.2902683348688252e-05,
+        6.428839888702746e-07,
+        7.673644860472457e-09,
+        3.856334455919741e-05,
+        6.006411282779756e-05,
+        5.650375584760485e-05,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        28,
+        24,
+        20,
+        27,
+        4
+      ]
+    },
+    {
+      "mol_index": 20,
+      "source": "xenosite_rudik_external",
+      "source_path": "suppl_info/Rudik_external_dataset/XenoSite_prediction_on_external_dataset.txt",
+      "task": "ugt_site_pseudolabel",
+      "name": "Telmisartan",
+      "smiles": "CCCc1nc2c(C)cc(-c3nc4ccccc4n3C)cc2n1Cc1ccc(-c2ccccc2C(=O)O)cc1",
+      "num_atoms": 69,
+      "xenosite_score_pairs": [
+        {
+          "atom_index": 37,
+          "score": 0.9925863172935067
+        },
+        {
+          "atom_index": 13,
+          "score": 0.004809172544150758
+        },
+        {
+          "atom_index": 38,
+          "score": 0.0013483718985783319
+        },
+        {
+          "atom_index": 4,
+          "score": 0.0010550863836424108
+        },
+        {
+          "atom_index": 22,
+          "score": 0.0004233402239106321
+        },
+        {
+          "atom_index": 20,
+          "score": 0.00018674392940460025
+        },
+        {
+          "atom_index": 0,
+          "score": 7.296035291677221e-05
+        },
+        {
+          "atom_index": 9,
+          "score": 3.46003147833474e-05
+        },
+        {
+          "atom_index": 29,
+          "score": 2.9642039495746634e-05
+        },
+        {
+          "atom_index": 25,
+          "score": 2.9145317220843716e-05
+        },
+        {
+          "atom_index": 32,
+          "score": 2.6681437357153393e-05
+        },
+        {
+          "atom_index": 33,
+          "score": 2.5136870356268327e-05
+        },
+        {
+          "atom_index": 16,
+          "score": 2.1151475074158172e-05
+        },
+        {
+          "atom_index": 17,
+          "score": 2.072963522831471e-05
+        },
+        {
+          "atom_index": 15,
+          "score": 1.8876010866640135e-05
+        },
+        {
+          "atom_index": 18,
+          "score": 1.7969363111160724e-05
+        },
+        {
+          "atom_index": 21,
+          "score": 1.595184628549843e-05
+        },
+        {
+          "atom_index": 34,
+          "score": 1.5714367668861067e-05
+        },
+        {
+          "atom_index": 26,
+          "score": 1.5710043895155597e-05
+        },
+        {
+          "atom_index": 28,
+          "score": 1.5096669584348812e-05
+        },
+        {
+          "atom_index": 31,
+          "score": 1.2262457937696256e-05
+        },
+        {
+          "atom_index": 11,
+          "score": 9.085943248575525e-06
+        },
+        {
+          "atom_index": 7,
+          "score": 7.359060080648511e-06
+        },
+        {
+          "atom_index": 2,
+          "score": 4.121542569605656e-06
+        },
+        {
+          "atom_index": 1,
+          "score": 1.1695277418341177e-06
+        },
+        {
+          "atom_index": 3,
+          "score": 9.938870435112897e-07
+        },
+        {
+          "atom_index": 6,
+          "score": 4.5050915074282864e-07
+        },
+        {
+          "atom_index": 19,
+          "score": 3.562306558662011e-07
+        },
+        {
+          "atom_index": 14,
+          "score": 3.1638962410886364e-07
+        },
+        {
+          "atom_index": 5,
+          "score": 2.823033750406703e-07
+        },
+        {
+          "atom_index": 12,
+          "score": 1.7544197865905862e-07
+        },
+        {
+          "atom_index": 23,
+          "score": 1.211740637334462e-07
+        },
+        {
+          "atom_index": 24,
+          "score": 1.0323379612753383e-07
+        },
+        {
+          "atom_index": 30,
+          "score": 6.667117930858708e-08
+        },
+        {
+          "atom_index": 35,
+          "score": 6.650921887442541e-08
+        },
+        {
+          "atom_index": 27,
+          "score": 5.4316381118040646e-08
+        },
+        {
+          "atom_index": 10,
+          "score": 1.6410235890619504e-08
+        },
+        {
+          "atom_index": 8,
+          "score": 7.867587859896602e-09
+        },
+        {
+          "atom_index": 36,
+          "score": 2.976745788217037e-10
+        }
+      ],
+      "xenosite_dense_scores": [
+        7.296035291677221e-05,
+        1.1695277418341177e-06,
+        4.121542569605656e-06,
+        9.938870435112897e-07,
+        0.0010550863836424108,
+        2.823033750406703e-07,
+        4.5050915074282864e-07,
+        7.359060080648511e-06,
+        7.867587859896602e-09,
+        3.46003147833474e-05,
+        1.6410235890619504e-08,
+        9.085943248575525e-06,
+        1.7544197865905862e-07,
+        0.004809172544150758,
+        3.1638962410886364e-07,
+        1.8876010866640135e-05,
+        2.1151475074158172e-05,
+        2.072963522831471e-05,
+        1.7969363111160724e-05,
+        3.562306558662011e-07,
+        0.00018674392940460025,
+        1.595184628549843e-05,
+        0.0004233402239106321,
+        1.211740637334462e-07,
+        1.0323379612753383e-07,
+        2.9145317220843716e-05,
+        1.5710043895155597e-05,
+        5.4316381118040646e-08,
+        1.5096669584348812e-05,
+        2.9642039495746634e-05,
+        6.667117930858708e-08,
+        1.2262457937696256e-05,
+        2.6681437357153393e-05,
+        2.5136870356268327e-05,
+        1.5714367668861067e-05,
+        6.650921887442541e-08,
+        2.976745788217037e-10,
+        0.9925863172935067,
+        0.0013483718985783319,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "top_atoms": [
+        37,
+        13,
+        38,
+        4,
+        22
+      ]
+    }
+  ],
+  "summary": {
+    "molecules": 20,
+    "covered_by_scores": 20,
+    "score_rows": 20
+  }
+}

@@ -22,6 +22,8 @@ import uuid
 
 from rdkit import Chem
 
+from enzyme_software.liquid_nn_v2.utils.mol_preprocessing import prepare_mol
+
 
 class AtomRole(str, Enum):
     ELECTROPHILE = "electrophile"
@@ -162,11 +164,12 @@ class AtomicTruthRegistry:
 
     @classmethod
     def from_smiles(cls, smiles: str, *, keep_hs: bool = False) -> "AtomicTruthRegistry":
-        mol = Chem.MolFromSmiles(smiles)
-        if mol is None:
+        prep = prepare_mol(smiles)
+        if prep.mol is None:
             raise ValueError(f"Invalid SMILES: {smiles}")
+        mol = prep.mol
         mol = Chem.AddHs(mol) if keep_hs else Chem.Mol(mol)
-        parent_smiles = Chem.MolToSmiles(mol, canonical=True)
+        parent_smiles = prep.canonical_smiles or Chem.MolToSmiles(mol, canonical=True)
         return cls(mol, parent_smiles=parent_smiles, keep_hs=keep_hs)
 
     @classmethod
@@ -735,11 +738,13 @@ def resolve_bond(
         if atr is None:
             atr = AtomicTruthRegistry(mol, parent_smiles=Chem.MolToSmiles(mol, canonical=True))
     else:
-        mol = Chem.MolFromSmiles(smiles_or_mol)
+        prep = prepare_mol(smiles_or_mol)
+        mol = prep.mol
         if mol is None:
             return BondResolutionResult(errors=[f"Invalid SMILES: {smiles_or_mol}"])
         if atr is None:
-            atr = AtomicTruthRegistry.from_smiles(smiles_or_mol)
+            parent_smiles = prep.canonical_smiles or Chem.MolToSmiles(mol, canonical=True)
+            atr = AtomicTruthRegistry(mol, parent_smiles=parent_smiles, keep_hs=False)
 
     if target_indices is not None:
         return resolve_bond_by_indices(mol, atr, target_indices)
@@ -990,11 +995,13 @@ def detect_groups(
             parent_smiles = Chem.MolToSmiles(mol, canonical=True)
             atr = AtomicTruthRegistry(mol, parent_smiles=parent_smiles, keep_hs=False)
     else:
-        mol = Chem.MolFromSmiles(smiles_or_mol)
+        prep = prepare_mol(smiles_or_mol)
+        mol = prep.mol
         if mol is None:
             return GroupDetectionResult(groups=[], warnings=[], errors=[f"Invalid SMILES: {smiles_or_mol}"])
         if atr is None:
-            atr = AtomicTruthRegistry.from_smiles(smiles_or_mol)
+            parent_smiles = prep.canonical_smiles or Chem.MolToSmiles(mol, canonical=True)
+            atr = AtomicTruthRegistry(mol, parent_smiles=parent_smiles, keep_hs=False)
 
     if specs is None:
         specs = [

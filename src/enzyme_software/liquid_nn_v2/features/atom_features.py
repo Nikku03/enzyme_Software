@@ -7,9 +7,14 @@ import numpy as np
 try:
     from rdkit import Chem
     from rdkit.Chem import AllChem
+    try:
+        from rdkit.Chem import rdFingerprintGenerator
+    except Exception:  # pragma: no cover - optional in older RDKit builds
+        rdFingerprintGenerator = None
 except Exception:  # pragma: no cover - optional dependency
     Chem = None
     AllChem = None
+    rdFingerprintGenerator = None
 
 from enzyme_software.liquid_nn_v2.data.bde_table import BDE_MAX, BDE_MIN
 from enzyme_software.liquid_nn_v2.features.bond_classifier import atom_type_one_hot, classify_bond, hybridization_one_hot
@@ -29,7 +34,15 @@ def _safe_partial_charges(mol) -> List[float]:
 def _morgan_bit_info(mol, radius: int = 2, n_bits: int = 64) -> Dict[int, List[Tuple[int, int]]]:
     info: Dict[int, List[Tuple[int, int]]] = {}
     try:
-        AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=n_bits, bitInfo=info)
+        if rdFingerprintGenerator is not None:
+            generator = rdFingerprintGenerator.GetMorganGenerator(radius=radius, fpSize=n_bits)
+            additional_output = rdFingerprintGenerator.AdditionalOutput()
+            additional_output.AllocateBitInfoMap()
+            generator.GetFingerprint(mol, additionalOutput=additional_output)
+            bit_info = additional_output.GetBitInfoMap() or {}
+            info.update({int(bit_idx): list(centers) for bit_idx, centers in bit_info.items()})
+        else:
+            AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=n_bits, bitInfo=info)
     except Exception:
         return {}
     return info

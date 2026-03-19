@@ -29,6 +29,7 @@ if TORCH_AVAILABLE:
             tau_max: float,
             use_contextual_tau: bool,
             dropout: float,
+            use_cross_atom_attention: bool = False,
         ):
             super().__init__()
             self.atom_proj = nn.Sequential(nn.Linear(input_dim, branch_dim), nn.LayerNorm(branch_dim), nn.SiLU())
@@ -53,6 +54,17 @@ if TORCH_AVAILABLE:
                 nn.SiLU(),
                 nn.LayerNorm(branch_dim),
             )
+            # Cross-atom attention: lets atoms compete globally before the site head
+            if use_cross_atom_attention:
+                n_heads = max(1, branch_dim // 32)  # ~4 heads for branch_dim=128
+                self.cross_attn = nn.ModuleList([
+                    nn.MultiheadAttention(embed_dim=branch_dim, num_heads=n_heads, batch_first=True, dropout=dropout)
+                    for _ in range(2)
+                ])
+                self.cross_attn_norms = nn.ModuleList([nn.LayerNorm(branch_dim) for _ in range(2)])
+            else:
+                self.cross_attn = None
+                self.cross_attn_norms = None
 
         def forward(self, shared_atoms, batch, *, edge_index, edge_attr=None, tau_init=None, steric_atom=None):
             h = self.atom_proj(shared_atoms)
@@ -77,6 +89,15 @@ if TORCH_AVAILABLE:
             competition_weights = segment_softmax(self.competition_score(h), batch, num_molecules)
             competition_summary = segment_sum(h * competition_weights, batch, num_molecules)[batch]
             refined = self.competition_proj(torch.cat([h, competition_summary], dim=-1))
+            # Cross-atom attention: pack into (B, N_max, D), attend, unpack
+            if self.cross_attn is not None:
+                padded, atom_mask = pack_atom_features(refined, batch)  # (B, N_max, D), (B, N_max) bool
+                key_pad_mask = ~atom_mask  # True = ignore (padding)
+                h_attn = padded
+                for layer, norm in zip(self.cross_attn, self.cross_attn_norms):
+                    attn_out, _ = layer(h_attn, h_attn, h_attn, key_padding_mask=key_pad_mask)
+                    h_attn = norm(h_attn + attn_out)
+                refined = h_attn[atom_mask]  # (total_atoms, D) — valid atoms only
             diagnostics = {
                 "competition_weight_mean": float(competition_weights.detach().mean().item()),
             }

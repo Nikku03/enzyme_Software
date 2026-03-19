@@ -1,0 +1,1958 @@
+{
+  "drugs": [
+    {
+      "name": "Imatinib",
+      "smiles": "CN1CCN(CC2=CC=C(C=C2)C(=O)NC2=CC(NC3=NC=CC(=N3)C3=CN=CC=C3)=C(C)C=C2)CC1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP1A2",
+        "CYP2D6",
+        "CYP2C9",
+        "CYP2C19"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        0,
+        2,
+        3
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB00619",
+      "reactions": [
+        "n_dealkylation"
+      ]
+    },
+    {
+      "name": "Budesonide",
+      "smiles": "[H][C@@]12C[C@H]3OC(CCC)O[C@@]3(C(=O)CO)[C@@]1(C)C[C@H](O)[C@@]1([H])[C@@]2([H])CCC2=CC(=O)C=C[C@]12C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        12,
+        22,
+        24
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 22,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 24,
+          "bond_class": "allylic"
+        }
+      ],
+      "id": "DB01222",
+      "reactions": [
+        "hydroxylation"
+      ]
+    },
+    {
+      "name": "Cabozantinib",
+      "smiles": "COC1=CC2=C(C=C1OC)C(OC1=CC=C(NC(=O)C3(CC3)C(=O)NC3=CC=C(F)C=C3)C=C1)=CC=N2",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP2C9"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        16,
+        24,
+        36
+      ],
+      "expected_bond_class": "other",
+      "som": [
+        {
+          "atom_idx": 16,
+          "bond_class": "other"
+        },
+        {
+          "atom_idx": 24,
+          "bond_class": "other"
+        },
+        {
+          "atom_idx": 36,
+          "bond_class": "other"
+        }
+      ],
+      "id": "DB08875",
+      "reactions": [
+        "n_oxidation"
+      ]
+    },
+    {
+      "name": "Tacrolimus",
+      "smiles": "CO[C@@H]1C[C@@H](CC[C@H]1O)\\C=C(/C)[C@H]1OC(=O)[C@@H]2CCCCN2C(=O)C(=O)[C@]2(O)O[C@@H]([C@H](C[C@H]2C)OC)[C@H](C[C@@H](C)C\\C(C)=C\\[C@@H](CC=C)C(=O)C[C@H](O)[C@H]1C)OC",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        4,
+        9,
+        11,
+        0,
+        2,
+        7
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 11,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB00864",
+      "reactions": [
+        "hydroxylation",
+        "o_dealkylation"
+      ]
+    },
+    {
+      "name": "Nebivolol",
+      "smiles": "OC(CNCC(O)C1CCC2=C(O1)C=CC(F)=C2)C1CCC2=C(O1)C=CC(F)=C2",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        9,
+        20,
+        8,
+        2,
+        4
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 9,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 20,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "secondary_CH"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB04861",
+      "reactions": [
+        "hydroxylation",
+        "n_dealkylation",
+        "glucuronidation"
+      ]
+    },
+    {
+      "name": "Tramadol",
+      "smiles": "COC1=CC=CC(=C1)C1(O)CCCCC1CN(C)C",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6",
+        "CYP3A4",
+        "CYP2B6"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        15,
+        17,
+        18,
+        0,
+        2,
+        8
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 15,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 17,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 18,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB00193",
+      "reactions": [
+        "n_dealkylation",
+        "o_dealkylation",
+        "reduction"
+      ]
+    },
+    {
+      "name": "Indacaterol",
+      "smiles": "CCC1=C(CC)C=C2CC(CC2=C1)NC[C@H](O)C1=C2C=CC(=O)NC2=C(O)C=C1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        1,
+        4,
+        8,
+        9,
+        14,
+        21
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 14,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 21,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB05039",
+      "reactions": [
+        "hydroxylation",
+        "n_dealkylation",
+        "glucuronidation"
+      ]
+    },
+    {
+      "name": "Torasemide",
+      "smiles": "CC(C)NC(=O)NS(=O)(=O)C1=C(NC2=CC=CC(C)=C2)C=CN=C1",
+      "primary_cyp": "CYP2C8",
+      "all_cyps": [
+        "CYP2C8",
+        "CYP2C9"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        18,
+        0,
+        2
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 18,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "primary_CH"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary_CH"
+        }
+      ],
+      "id": "DB00214",
+      "reactions": [
+        "hydroxylation",
+        "reduction"
+      ]
+    },
+    {
+      "name": "Momelotinib",
+      "smiles": "O=C(NCC#N)C1=CC=C(C=C1)C1=CC=NC(NC2=CC=C(C=C2)N2CCOCC2)=N1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP2C19",
+        "CYP1A2"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        1,
+        3,
+        4
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB11763",
+      "reactions": [
+        "n_dealkylation",
+        "glucuronidation"
+      ]
+    },
+    {
+      "name": "Buspirone",
+      "smiles": "O=C1CC2(CCCC2)CC(=O)N1CCCCN1CCN(CC1)C1=NC=CC=N1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        2,
+        8,
+        4
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "secondary_CH"
+        }
+      ],
+      "id": "DB00490",
+      "reactions": [
+        "hydroxylation"
+      ]
+    },
+    {
+      "name": "Tretinoin",
+      "smiles": "C\\C(\\C=C\\C1=C(C)CCCC1(C)C)=C/C=C/C(/C)=C/C(O)=O",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP2C8"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        0,
+        2,
+        3
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "allylic"
+        }
+      ],
+      "id": "DB00755",
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation"
+      ]
+    },
+    {
+      "name": "Diphenhydramine",
+      "smiles": "CN(C)CCOC(C1=CC=CC=C1)C1=CC=CC=C1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6",
+        "CYP1A2",
+        "CYP2C9",
+        "CYP2C19"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        0,
+        2,
+        3
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB01075",
+      "reactions": [
+        "n_dealkylation"
+      ]
+    },
+    {
+      "name": "Cinacalcet",
+      "smiles": "C[C@@H](NCCCC1=CC(=CC=C1)C(F)(F)F)C1=CC=CC2=CC=CC=C12",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP2D6",
+        "CYP1A2"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        1,
+        5,
+        4,
+        3
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "secondary_CH"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB01012",
+      "reactions": [
+        "hydroxylation",
+        "n_dealkylation"
+      ]
+    },
+    {
+      "name": "Rolapitant",
+      "smiles": "C[C@@H](OC[C@]1(CC[C@]2(CCC(=O)N2)CN1)C1=CC=CC=C1)C1=CC(=CC(=C1)C(F)(F)F)C(F)(F)F",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        1,
+        9,
+        5
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "secondary_CH"
+        }
+      ],
+      "id": "DB09291",
+      "reactions": [
+        "hydroxylation"
+      ]
+    },
+    {
+      "name": "Haloperidol",
+      "smiles": "OC1(CCN(CCCC(=O)C2=CC=C(F)C=C2)CC1)C1=CC=C(Cl)C=C1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP2D6"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        7,
+        2,
+        6,
+        3,
+        5,
+        17
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "secondary_CH"
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "secondary_CH"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 17,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB00502",
+      "reactions": [
+        "hydroxylation",
+        "n_dealkylation",
+        "glucuronidation",
+        "reduction"
+      ]
+    },
+    {
+      "name": "Ibrutinib",
+      "smiles": "NC1=NC=NC2=C1C(=NN2[C@@H]1CCCN(C1)C(=O)C=C)C1=CC=C(OC2=CC=CC=C2)C=C1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP2D6"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        10,
+        18,
+        19
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 10,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 18,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 19,
+          "bond_class": "allylic"
+        }
+      ],
+      "id": "DB09053",
+      "reactions": [
+        "hydroxylation",
+        "epoxidation",
+        "reduction"
+      ]
+    },
+    {
+      "name": "Tafenoquine",
+      "smiles": "COC1=CC(C)=C2C(OC3=CC=CC(=C3)C(F)(F)F)=C(OC)C=C(NC(C)CCCN)C2=N1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        5,
+        27,
+        28,
+        2,
+        23,
+        25,
+        0,
+        7,
+        24,
+        30,
+        32
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 5,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 27,
+          "bond_class": "secondary_CH"
+        },
+        {
+          "atom_idx": 28,
+          "bond_class": "secondary_CH"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 23,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 25,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 24,
+          "bond_class": "other"
+        },
+        {
+          "atom_idx": 30,
+          "bond_class": "other"
+        },
+        {
+          "atom_idx": 32,
+          "bond_class": "other"
+        }
+      ],
+      "id": "DB06608",
+      "reactions": [
+        "hydroxylation",
+        "n_dealkylation",
+        "o_dealkylation",
+        "n_oxidation",
+        "reduction"
+      ]
+    },
+    {
+      "name": "Dabrafenib",
+      "smiles": "CC(C)(C)C1=NC(=C(S1)C1=NC(N)=NC=C1)C1=C(F)C(NS(=O)(=O)C2=C(F)C=CC=C2F)=CC=C1",
+      "primary_cyp": "CYP2C8",
+      "all_cyps": [
+        "CYP2C8",
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        0,
+        2,
+        3
+      ],
+      "expected_bond_class": "primary_CH",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary_CH"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary_CH"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "primary_CH"
+        }
+      ],
+      "id": "DB08912",
+      "reactions": [
+        "hydroxylation"
+      ]
+    },
+    {
+      "name": "Tegafur-uracil",
+      "smiles": "O=C1NC=CC(=O)N1.FC1=CN(C2CCCO2)C(=O)NC1=O",
+      "primary_cyp": "CYP2A6",
+      "all_cyps": [
+        "CYP2A6"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        12,
+        13,
+        14
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "secondary_CH"
+        },
+        {
+          "atom_idx": 14,
+          "bond_class": "secondary_CH"
+        }
+      ],
+      "id": "DB09327",
+      "reactions": [
+        "hydroxylation"
+      ]
+    },
+    {
+      "name": "Finerenone",
+      "smiles": "CCOC1=NC=C(C)C2=C1[C@H](C1=CC=C(C=C1OC)C#N)C(C(N)=O)=C(C)N2",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP2C8"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        7,
+        10,
+        26
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 26,
+          "bond_class": "allylic"
+        }
+      ],
+      "id": "DB16165",
+      "reactions": [
+        "hydroxylation",
+        "epoxidation"
+      ]
+    },
+    {
+      "name": "Zoliflodacin",
+      "smiles": "[H][C@]12[C@H](C)O[C@H](C)CN1C1=C(CC22C(=O)NC(=O)NC2=O)C=C2C(ON=C2N2[C@@H](C)COC2=O)=C1F",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2",
+        "CYP2C9",
+        "CYP2C8",
+        "CYP2C19"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        7,
+        14,
+        17
+      ],
+      "expected_bond_class": "other",
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "other"
+        },
+        {
+          "atom_idx": 14,
+          "bond_class": "other"
+        },
+        {
+          "atom_idx": 17,
+          "bond_class": "other"
+        }
+      ],
+      "id": "DB12817",
+      "reactions": [
+        "n_oxidation",
+        "reduction"
+      ]
+    },
+    {
+      "name": "Cyclobenzaprine",
+      "smiles": "CN(C)CCC=C1C2=CC=CC=C2C=CC2=CC=CC=C12",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP1A2",
+        "CYP2D6"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        0,
+        2,
+        3
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB00924",
+      "reactions": [
+        "n_dealkylation",
+        "glucuronidation"
+      ]
+    },
+    {
+      "name": "Amiodarone",
+      "smiles": "CCCCC1=C(C(=O)C2=CC(I)=C(OCCN(CC)CC)C(I)=C2)C2=C(O1)C=CC=C2",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP2C8"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        3,
+        1,
+        2
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "secondary_CH"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "secondary_CH"
+        }
+      ],
+      "id": "DB01118",
+      "reactions": [
+        "hydroxylation"
+      ]
+    },
+    {
+      "name": "Azilsartan medoxomil",
+      "smiles": "CCOC1=NC2=C(N1CC1=CC=C(C=C1)C1=CC=CC=C1C1=NOC(=O)N1)C(=CC=C2)C(=O)OCC1=C(C)OC(=O)O1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9",
+        "CYP2C8",
+        "CYP2B6"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        1,
+        3,
+        24
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 24,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB08822",
+      "reactions": [
+        "o_dealkylation"
+      ]
+    },
+    {
+      "name": "Zotepine",
+      "smiles": "CN(C)CCOC1=CC2=CC=CC=C2SC2=CC=C(Cl)C=C12",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2",
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        7,
+        9,
+        10,
+        0,
+        2,
+        3
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "aryl"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "aryl"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB09225",
+      "reactions": [
+        "hydroxylation",
+        "n_dealkylation"
+      ]
+    },
+    {
+      "name": "Enasidenib",
+      "smiles": "CC(C)(O)CNC1=NC(=NC(NC2=CC(=NC=C2)C(F)(F)F)=N1)C1=NC(=CC=C1)C(F)(F)F",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2",
+        "CYP2B6",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP2C19",
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        4,
+        6,
+        8
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB13874",
+      "reactions": [
+        "n_dealkylation"
+      ]
+    },
+    {
+      "name": "Avapritinib",
+      "smiles": "CN1C=C(C=N1)C1=CN2N=CN=C(N3CCN(CC3)C3=NC=C(C=N3)[C@@](C)(N)C3=CC=C(F)C=C3)C2=C1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP2C9"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        0,
+        26,
+        2
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 26,
+          "bond_class": "primary_CH"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "aryl"
+        }
+      ],
+      "id": "DB15233",
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation"
+      ]
+    },
+    {
+      "name": "Sitagliptin",
+      "smiles": "N[C@@H](CC(=O)N1CCN2C(C1)=NN=C2C(F)(F)F)CC1=CC(F)=C(F)C=C1F",
+      "primary_cyp": "CYP2C8",
+      "all_cyps": [
+        "CYP2C8"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        7,
+        10,
+        18
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 18,
+          "bond_class": "benzylic"
+        }
+      ],
+      "id": "DB01261",
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation"
+      ]
+    },
+    {
+      "name": "Vitamin E",
+      "smiles": "CC(C)CCC[C@@H](C)CCC[C@@H](C)CCC[C@]1(C)CCC2=C(O1)C(C)=C(C)C(O)=C2C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        19,
+        24,
+        26
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 19,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 24,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 26,
+          "bond_class": "benzylic"
+        }
+      ],
+      "id": "DB00163",
+      "reactions": [
+        "hydroxylation"
+      ]
+    },
+    {
+      "name": "Doconexent",
+      "smiles": "CC\\C=C/C\\C=C/C\\C=C/C\\C=C/C\\C=C/C\\C=C/CCC(O)=O",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        1,
+        2,
+        3
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "allylic"
+        }
+      ],
+      "id": "DB03756",
+      "reactions": [
+        "hydroxylation",
+        "epoxidation"
+      ]
+    },
+    {
+      "name": "Ibrexafungerp",
+      "smiles": "[H][C@]12CC[C@@]3([H])[C@@]4(C)COC[C@@]3(C[C@H]([C@@H]4OC[C@](C)(N)C(C)(C)C)N3N=CN=C3C3=CC=NC=C3)C1=CC[C@@]1(C)[C@H](C(O)=O)[C@](C)(CC[C@]21C)[C@H](C)C(C)C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        11,
+        0,
+        34
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 11,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 34,
+          "bond_class": "allylic"
+        }
+      ],
+      "id": "DB12471",
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation"
+      ]
+    },
+    {
+      "name": "Galantamine",
+      "smiles": "[H][C@]12C[C@@H](O)C=C[C@]11CCN(C)CC3=C1C(O2)=C(OC)C=C3",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        8,
+        10,
+        11,
+        0,
+        2,
+        14,
+        9
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 8,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 11,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 14,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "other"
+        }
+      ],
+      "id": "DB00674",
+      "reactions": [
+        "n_dealkylation",
+        "o_dealkylation",
+        "n_oxidation",
+        "glucuronidation"
+      ]
+    },
+    {
+      "name": "Meloxicam",
+      "smiles": "CN1C(C(=O)NC2=NC=C(C)S2)=C(O)C2=C(C=CC=C2)S1(=O)=O",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9",
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        10,
+        8,
+        16
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 10,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "aryl"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "aryl"
+        }
+      ],
+      "id": "DB00814",
+      "reactions": [
+        "hydroxylation"
+      ]
+    },
+    {
+      "name": "Roxadustat",
+      "smiles": "CC1=NC(C(=O)NCC(O)=O)=C(O)C2=C1C=C(OC1=CC=CC=C1)C=C2",
+      "primary_cyp": "CYP2C8",
+      "all_cyps": [
+        "CYP2C8"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        0,
+        7,
+        15
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "aryl"
+        }
+      ],
+      "id": "DB04847",
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation"
+      ]
+    },
+    {
+      "name": "Methadone",
+      "smiles": "CCC(=O)C(CC(C)N(C)C)(C1=CC=CC=C1)C1=CC=CC=C1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP2B6",
+        "CYP2C19",
+        "CYP2C9",
+        "CYP2C8",
+        "CYP2D6"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        6,
+        9,
+        10
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB00333",
+      "reactions": [
+        "n_dealkylation"
+      ]
+    },
+    {
+      "name": "Diazoxide",
+      "smiles": "CC1=NS(=O)(=O)C2=C(N1)C=CC(Cl)=C2",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2",
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        0,
+        9,
+        10
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "aryl"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "aryl"
+        }
+      ],
+      "id": "DB01119",
+      "reactions": [
+        "hydroxylation"
+      ]
+    },
+    {
+      "name": "Zolpidem",
+      "smiles": "CN(C)C(=O)CC1=C(N=C2C=CC(C)=CN12)C1=CC=C(C)C=C1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP1A2",
+        "CYP2C9"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        5,
+        13,
+        20
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 5,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 20,
+          "bond_class": "benzylic"
+        }
+      ],
+      "id": "DB00425",
+      "reactions": [
+        "hydroxylation"
+      ]
+    },
+    {
+      "name": "Fluconazole",
+      "smiles": "OC(CN1C=NC=N1)(CN1C=NC=N1)C1=C(F)C=C(F)C=C1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9",
+        "CYP3A4",
+        "CYP2C19"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        2,
+        8,
+        4,
+        3,
+        5,
+        7
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "aryl"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "other"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "other"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "other"
+        }
+      ],
+      "id": "DB00196",
+      "reactions": [
+        "hydroxylation",
+        "n_oxidation",
+        "glucuronidation"
+      ]
+    },
+    {
+      "name": "Roflumilast",
+      "smiles": "FC(F)OC1=C(OCC2CC2)C=C(C=C1)C(=O)NC1=C(Cl)C=NC=C1Cl",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP1A2"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        17,
+        22
+      ],
+      "expected_bond_class": "other",
+      "som": [
+        {
+          "atom_idx": 17,
+          "bond_class": "other"
+        },
+        {
+          "atom_idx": 22,
+          "bond_class": "other"
+        }
+      ],
+      "id": "DB01656",
+      "reactions": [
+        "n_oxidation"
+      ]
+    },
+    {
+      "name": "Alfuzosin",
+      "smiles": "COC1=CC2=C(C=C1OC)C(N)=NC(=N2)N(C)CCCNC(=O)C1CCCO1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        4,
+        10,
+        13,
+        0,
+        2,
+        7
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB00346",
+      "reactions": [
+        "n_dealkylation",
+        "o_dealkylation"
+      ]
+    },
+    {
+      "name": "Vamorolone",
+      "smiles": "C[C@@H]1C[C@H]2[C@@H]3CCC4=CC(=O)C=C[C@]4(C)C3=CC[C@]2(C)[C@@]1(O)C(=O)CO",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4",
+        "CYP2C8"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        4,
+        6,
+        8
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "allylic"
+        }
+      ],
+      "id": "DB15114",
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation",
+        "reduction"
+      ]
+    },
+    {
+      "name": "Nifedipine",
+      "smiles": "COC(=O)C1=C(C)NC(C)=C(C1C1=CC=CC=C1[N+]([O-])=O)C(=O)OC",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        7
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "allylic"
+        }
+      ],
+      "id": "DB01115",
+      "reactions": [
+        "hydroxylation"
+      ]
+    },
+    {
+      "name": "Lumiracoxib",
+      "smiles": "CC1=CC=C(NC2=C(Cl)C=CC=C2F)C(CC(O)=O)=C1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        0,
+        15,
+        2
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "aryl"
+        }
+      ],
+      "id": "DB01283",
+      "reactions": [
+        "hydroxylation"
+      ]
+    },
+    {
+      "name": "warfarin",
+      "smiles": "CC(=O)C[C@@H](c1ccccc1)c1c(O)c2ccccc2oc1=O",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        11
+      ],
+      "expected_bond_class": "aryl",
+      "som": [
+        {
+          "atom_idx": 11,
+          "bond_class": "aryl"
+        }
+      ],
+      "id": "VAL002",
+      "reactions": [
+        "validated"
+      ]
+    },
+    {
+      "name": "(S)-camphor",
+      "smiles": "CC1(C)[C@H]2CC[C@]1(C)C(=O)C2",
+      "primary_cyp": "CYP2A6",
+      "all_cyps": [
+        "CYP2A6"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        10,
+        3,
+        4
+      ],
+      "expected_bond_class": "allylic",
+      "som": [
+        {
+          "atom_idx": 10,
+          "bond_class": "allylic"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "tertiary_CH"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "secondary_CH"
+        }
+      ],
+      "id": "DB11345",
+      "reactions": [
+        "hydroxylation"
+      ]
+    },
+    {
+      "name": "Etripamil",
+      "smiles": "COC(=O)C1=CC(CCN(C)CCC[C@](C#N)(C(C)C)C2=CC=C(OC)C(OC)=C2)=CC=C1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        8,
+        10,
+        11
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 8,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 11,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB12605",
+      "reactions": [
+        "n_dealkylation",
+        "glucuronidation"
+      ]
+    },
+    {
+      "name": "Eszopiclone",
+      "smiles": "CN1CCN(CC1)C(=O)O[C@@H]1N(C(=O)C2=NC=CN=C12)C1=NC=C(Cl)C=C1",
+      "primary_cyp": "CYP2C8",
+      "all_cyps": [
+        "CYP2C8",
+        "CYP2E1"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        1,
+        4,
+        11
+      ],
+      "expected_bond_class": "other",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "other"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "other"
+        },
+        {
+          "atom_idx": 11,
+          "bond_class": "other"
+        }
+      ],
+      "id": "DB00402",
+      "reactions": [
+        "n_oxidation"
+      ]
+    },
+    {
+      "name": "Pioglitazone",
+      "smiles": "CCC1=CN=C(CCOC2=CC=C(CC3SC(=O)NC3=O)C=C2)C=C1",
+      "primary_cyp": "CYP2C8",
+      "all_cyps": [
+        "CYP2C8",
+        "CYP3A4"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        1,
+        6,
+        13
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "benzylic"
+        }
+      ],
+      "id": "DB01132",
+      "reactions": [
+        "hydroxylation",
+        "glucuronidation"
+      ]
+    },
+    {
+      "name": "Loperamide",
+      "smiles": "CN(C)C(=O)C(CCN1CCC(O)(CC1)C1=CC=C(Cl)C=C1)(C1=CC=CC=C1)C1=CC=CC=C1",
+      "primary_cyp": "CYP2C8",
+      "all_cyps": [
+        "CYP2C8",
+        "CYP3A4",
+        "CYP2B6",
+        "CYP2D6"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        0,
+        2,
+        3
+      ],
+      "expected_bond_class": "alpha_hetero",
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "alpha_hetero"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "alpha_hetero"
+        }
+      ],
+      "id": "DB00836",
+      "reactions": [
+        "n_dealkylation"
+      ]
+    },
+    {
+      "name": "Imipramine",
+      "smiles": "CN(C)CCCN1C2=CC=CC=C2CCC2=CC=CC=C12",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2",
+        "CYP3A4",
+        "CYP2C19",
+        "CYP2D6"
+      ],
+      "source": "DrugBank",
+      "confidence": "validated",
+      "site_atoms": [
+        13,
+        14,
+        4
+      ],
+      "expected_bond_class": "benzylic",
+      "som": [
+        {
+          "atom_idx": 13,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 14,
+          "bond_class": "benzylic"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "secondary_CH"
+        }
+      ],
+      "id": "DB00458",
+      "reactions": [
+        "hydroxylation"
+      ]
+    }
+  ]
+}

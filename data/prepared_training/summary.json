@@ -1,0 +1,194 @@
+{
+  "combined_input": "data/combined_drugbank_supercyp_full_xtb_valid.json",
+  "drugbank_input": "data/drugbank_standardized.json",
+  "metxbio_input": "metxbio data.cleaned.sdf",
+  "metpred_input": "SupplemantryData.doc",
+  "xenosite_manifest": "data/xenosite_suppl/manifest.json",
+  "notes": {
+    "main_training_sets": [
+      "main5_all_models_conservative",
+      "main5_all_models_permissive"
+    ],
+    "recommended_site_training_set": "main5_all_models_conservative",
+    "recommended_xtb_training_note": "Use --compute-xtb-if-missing for new external molecules.",
+    "xenosite_note": "XenoSite supplementary data in data/xenosite_suppl is UGT-oriented pseudo-label data and is not merged into main CYP supervision.",
+    "metxbio_note": "Conservative keeps only atom-level BOM annotations; permissive also maps bond events to endpoint atoms."
+  },
+  "source_summaries": {
+    "combined": {
+      "count": 341,
+      "site_labeled": 103,
+      "source_counts": {
+        "DrugBank": 164,
+        "SuperCYP": 177
+      },
+      "site_source_counts": {
+        "DrugBank": 164,
+        "SuperCYP": 177
+      },
+      "cyp_counts": {
+        "CYP1A2": 82,
+        "CYP2C19": 22,
+        "CYP2C9": 50,
+        "CYP2D6": 67,
+        "CYP3A4": 120
+      }
+    },
+    "metxbio": {
+      "bom_rows": 1495,
+      "conservative_rows": 1384,
+      "permissive_rows": 1495,
+      "atom_annotated_rows": 1384,
+      "bond_only_rows": 111
+    },
+    "metpred": {
+      "missing_drugbank_match": 142,
+      "resolved_rows": 85
+    }
+  },
+  "dataset_summaries": {
+    "main5_all_models_conservative": {
+      "count": 1706,
+      "site_labeled": 1455,
+      "source_counts": {
+        "DrugBank": 164,
+        "MetXBioDB": 1307,
+        "MetaPred": 58,
+        "SuperCYP": 177
+      },
+      "site_source_counts": {
+        "DrugBank": 164,
+        "SuperCYP": 177,
+        "metxbiodb_atom_only": 1307,
+        "none": 58
+      },
+      "cyp_counts": {
+        "CYP1A2": 324,
+        "CYP2C19": 229,
+        "CYP2C9": 264,
+        "CYP2D6": 328,
+        "CYP3A4": 561
+      }
+    },
+    "main5_all_models_permissive": {
+      "count": 1813,
+      "site_labeled": 1566,
+      "source_counts": {
+        "DrugBank": 164,
+        "MetXBioDB": 1414,
+        "MetaPred": 58,
+        "SuperCYP": 177
+      },
+      "site_source_counts": {
+        "DrugBank": 164,
+        "SuperCYP": 177,
+        "metxbiodb_atom_plus_bond_endpoints": 1414,
+        "none": 58
+      },
+      "cyp_counts": {
+        "CYP1A2": 347,
+        "CYP2C19": 243,
+        "CYP2C9": 282,
+        "CYP2D6": 344,
+        "CYP3A4": 597
+      }
+    },
+    "main5_site_conservative": {
+      "count": 1455,
+      "site_labeled": 1455,
+      "source_counts": {
+        "DrugBank": 111,
+        "MetXBioDB": 1307,
+        "MetaPred": 19,
+        "SuperCYP": 18
+      },
+      "site_source_counts": {
+        "DrugBank": 111,
+        "SuperCYP": 18,
+        "metxbiodb_atom_only": 1307,
+        "none": 19
+      },
+      "cyp_counts": {
+        "CYP1A2": 264,
+        "CYP2C19": 210,
+        "CYP2C9": 230,
+        "CYP2D6": 282,
+        "CYP3A4": 469
+      }
+    },
+    "main5_site_permissive": {
+      "count": 1566,
+      "site_labeled": 1566,
+      "source_counts": {
+        "DrugBank": 112,
+        "MetXBioDB": 1414,
+        "MetaPred": 21,
+        "SuperCYP": 19
+      },
+      "site_source_counts": {
+        "DrugBank": 112,
+        "SuperCYP": 19,
+        "metxbiodb_atom_plus_bond_endpoints": 1414,
+        "none": 21
+      },
+      "cyp_counts": {
+        "CYP1A2": 289,
+        "CYP2C19": 224,
+        "CYP2C9": 248,
+        "CYP2D6": 299,
+        "CYP3A4": 506
+      }
+    },
+    "metpred_cyp_only": {
+      "count": 85,
+      "site_labeled": 0,
+      "source_counts": {
+        "MetaPred": 85
+      },
+      "site_source_counts": {
+        "none": 85
+      },
+      "cyp_counts": {
+        "CYP1A2": 12,
+        "CYP2C19": 6,
+        "CYP2C9": 10,
+        "CYP2D6": 18,
+        "CYP3A4": 39
+      }
+    },
+    "metxbio_main5_atom_only": {
+      "count": 1384,
+      "site_labeled": 1384,
+      "source_counts": {
+        "MetXBioDB": 1384
+      },
+      "site_source_counts": {
+        "metxbiodb_atom_only": 1384
+      },
+      "cyp_counts": {
+        "CYP1A2": 254,
+        "CYP2C19": 207,
+        "CYP2C9": 220,
+        "CYP2D6": 265,
+        "CYP3A4": 438
+      }
+    },
+    "metxbio_main5_with_bond_endpoints": {
+      "count": 1495,
+      "site_labeled": 1495,
+      "source_counts": {
+        "MetXBioDB": 1495
+      },
+      "site_source_counts": {
+        "metxbiodb_atom_plus_bond_endpoints": 1495
+      },
+      "cyp_counts": {
+        "CYP1A2": 279,
+        "CYP2C19": 221,
+        "CYP2C9": 238,
+        "CYP2D6": 282,
+        "CYP3A4": 475
+      }
+    }
+  }
+}

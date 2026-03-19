@@ -1,0 +1,28 @@
+{
+  "datasets": [
+    {
+      "file": "peng_external_pseudolabels.json",
+      "molecules": 54,
+      "covered_by_scores": 54,
+      "score_rows": 54
+    },
+    {
+      "file": "rudik_external_pseudolabels.json",
+      "molecules": 20,
+      "covered_by_scores": 20,
+      "score_rows": 20
+    },
+    {
+      "file": "difficult35_pseudolabels.json",
+      "structures": 34,
+      "covered_by_scores": 34,
+      "score_rows": 35
+    },
+    {
+      "file": "difficult49_pseudolabels.json",
+      "structures": 47,
+      "covered_by_scores": 47,
+      "score_rows": 49
+    }
+  ]
+}

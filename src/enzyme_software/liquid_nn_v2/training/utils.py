@@ -40,6 +40,10 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
     manual_atom_prior_parts: List[object] = []
     manual_cyp_prior_parts: List[object] = []
     manual_route_prior_parts: List[object] = []
+    xtb_atom_parts: List[object] = []
+    xtb_atom_valid_parts: List[object] = []
+    xtb_mol_valid_parts: List[object] = []
+    xtb_statuses: List[str] = []
     atom_3d_parts: List[object] = []
     parsing_statuses: List[str] = []
     canonical_smiles: List[str] = []
@@ -73,6 +77,10 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
         manual_atom_prior_parts.append(_tensor(graph.manual_engine_atom_prior_logits, dtype=torch.float32) if getattr(graph, "manual_engine_atom_prior_logits", None) is not None else None)
         manual_cyp_prior_parts.append(_tensor(graph.manual_engine_cyp_prior_logits, dtype=torch.float32) if getattr(graph, "manual_engine_cyp_prior_logits", None) is not None else None)
         manual_route_prior_parts.append(_tensor(graph.manual_engine_route_prior, dtype=torch.float32) if getattr(graph, "manual_engine_route_prior", None) is not None else None)
+        xtb_atom_parts.append(_tensor(graph.xtb_atom_features, dtype=torch.float32) if getattr(graph, "xtb_atom_features", None) is not None else None)
+        xtb_atom_valid_parts.append(_tensor(graph.xtb_atom_valid_mask, dtype=torch.float32) if getattr(graph, "xtb_atom_valid_mask", None) is not None else None)
+        xtb_mol_valid_parts.append(_tensor(graph.xtb_mol_valid, dtype=torch.float32) if getattr(graph, "xtb_mol_valid", None) is not None else None)
+        xtb_statuses.append(str(getattr(graph, "xtb_feature_status", "missing")))
         atom_3d_parts.append(_tensor(graph.atom_3d_features, dtype=torch.float32) if getattr(graph, "atom_3d_features", None) is not None else None)
         parsing_statuses.append(str(getattr(graph, "parsing_status", "unknown")))
         canonical_smiles.append(str(getattr(graph, "canonical_smiles", graph.smiles)))
@@ -102,6 +110,7 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
         "canonical_smiles": canonical_smiles,
         "repaired": repaired_flags,
         "aggressive_repair": aggressive_repair_flags,
+        "xtb_feature_status": xtb_statuses,
     }
     if site_parts:
         batch["site_labels"] = torch.cat(site_parts, dim=0)
@@ -130,6 +139,9 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
     manual_atom_prior = _stack_optional(manual_atom_prior_parts, atom_counts)
     manual_cyp_prior = _stack_optional(manual_cyp_prior_parts, mol_counts)
     manual_route_prior = _stack_optional(manual_route_prior_parts, mol_counts)
+    xtb_atom = _stack_optional(xtb_atom_parts, atom_counts)
+    xtb_atom_valid = _stack_optional(xtb_atom_valid_parts, atom_counts)
+    xtb_mol_valid = _stack_optional(xtb_mol_valid_parts, mol_counts)
     atom_3d = _stack_optional(atom_3d_parts, atom_counts)
     if manual_atom is not None:
         batch["manual_engine_atom_features"] = manual_atom
@@ -141,6 +153,12 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
         batch["manual_engine_cyp_prior_logits"] = manual_cyp_prior
     if manual_route_prior is not None:
         batch["manual_engine_route_prior"] = manual_route_prior
+    if xtb_atom is not None:
+        batch["xtb_atom_features"] = xtb_atom
+    if xtb_atom_valid is not None:
+        batch["xtb_atom_valid_mask"] = xtb_atom_valid
+    if xtb_mol_valid is not None:
+        batch["xtb_mol_valid"] = xtb_mol_valid
     if atom_3d is not None:
         batch["atom_3d_features"] = atom_3d
     if os.environ.get("LNN_DEBUG_COLLATE", "").strip().lower() in {"1", "true", "yes", "on"} and "site_labels" in batch:

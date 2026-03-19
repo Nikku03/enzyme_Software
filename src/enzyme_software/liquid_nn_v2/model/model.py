@@ -59,6 +59,7 @@ if TORCH_AVAILABLE:
                 tau_max=config.tau_max,
                 use_contextual_tau=config.use_contextual_tau,
                 dropout=config.dropout,
+                use_cross_atom_attention=config.use_cross_atom_attention,
             )
             self.cyp_branch = CYPBranch(
                 input_dim=config.shared_hidden_dim,
@@ -88,11 +89,22 @@ if TORCH_AVAILABLE:
                 fusion_mode=config.manual_prior_fusion_mode,
                 dropout=config.dropout,
             )
+            # CYP-to-site conditioning: broadcast CYP logits as per-atom bias before site head
+            self.cyp_site_conditioner = nn.Linear(config.num_cyp_classes, 1, bias=False) if config.use_cyp_site_conditioning else None
+            # BDE learned prior: residual correction on site logit from raw BDE feature
+            self.bde_prior = nn.Linear(1, 1, bias=True) if config.use_bde_prior else None
             self.last_gate_values = None
             self.last_tau_history = None
 
         def _encode_inputs(self, batch):
             x = batch["x"]
+            # Append XTB features (6D) to atom feature matrix; zero-fill when unavailable
+            xtb = batch.get("xtb_atom_features")
+            if xtb is not None:
+                x = torch.cat([x, xtb.to(dtype=x.dtype, device=x.device)], dim=-1)
+            elif x.shape[-1] < self.config.atom_input_dim:
+                pad = x.new_zeros(x.shape[0], self.config.atom_input_dim - x.shape[-1])
+                x = torch.cat([x, pad], dim=-1)
             edge_index = batch["edge_index"]
             edge_attr = batch.get("edge_attr")
             mol_batch = batch["batch"]
@@ -137,6 +149,20 @@ if TORCH_AVAILABLE:
                 "gate_values": gate_values,
                 "num_molecules": num_molecules,
             }
+
+        def _apply_cyp_conditioning(self, som_features, cyp_logits, mol_batch):
+            """Broadcast CYP logit projection as a per-atom bias."""
+            if self.cyp_site_conditioner is None:
+                return som_features
+            cyp_bias = self.cyp_site_conditioner(cyp_logits.detach())  # (B_mol, 1)
+            return som_features + cyp_bias[mol_batch]                   # (N_atoms, branch_dim) broadcast
+
+        def _apply_bde_prior(self, site_logits, raw_x):
+            """Add learnable BDE→logit residual."""
+            if self.bde_prior is None:
+                return site_logits
+            bde_raw = raw_x[:, self.config.bde_feature_index].unsqueeze(-1)  # (N, 1)
+            return site_logits + self.bde_prior(bde_raw)
 
         def _build_common_outputs(self, encoded, som_payload, cyp_payload, site_logits, cyp_logits, site_residual, cyp_residual, extra=None):
             tau_history = [*encoded["shared_tau_history"], *som_payload["tau_history"], *cyp_payload["tau_history"]]
@@ -212,16 +238,18 @@ if TORCH_AVAILABLE:
                 steric_mol=encoded["steric_payload"].get("mol_embedding") if self.config.use_3d_branch else None,
                 som_summary=som_payload["mol_summary"],
             )
-            site_logits, site_residual = self.site_head(
-                som_payload["atom_features"],
-                prior_logits=encoded["prior_payload"].get("atom_prior_logits") if self.config.use_manual_engine_priors else None,
-                prior_features=encoded["prior_payload"].get("atom_prior_embedding") if self.config.use_manual_engine_priors else None,
-            )
             cyp_logits, cyp_residual = self.cyp_head(
                 cyp_payload["mol_features"],
                 prior_logits=encoded["prior_payload"].get("cyp_prior_logits") if self.config.use_manual_engine_priors else None,
                 prior_features=encoded["prior_payload"].get("mol_prior_embedding") if self.config.use_manual_engine_priors else None,
             )
+            som_features = self._apply_cyp_conditioning(som_payload["atom_features"], cyp_logits, encoded["batch"])
+            site_logits, site_residual = self.site_head(
+                som_features,
+                prior_logits=encoded["prior_payload"].get("atom_prior_logits") if self.config.use_manual_engine_priors else None,
+                prior_features=encoded["prior_payload"].get("atom_prior_embedding") if self.config.use_manual_engine_priors else None,
+            )
+            site_logits = self._apply_bde_prior(site_logits, encoded["x"])
             return self._build_common_outputs(
                 encoded,
                 som_payload,
@@ -402,16 +430,18 @@ if TORCH_AVAILABLE:
 
             final_atom_features = deliberation_payload["atom_hidden"]
             final_mol_features = deliberation_payload["mol_hidden"]
-            site_logits, site_residual = self.site_head(
-                final_atom_features,
-                prior_logits=encoded["prior_payload"].get("atom_prior_logits") if self.config.use_manual_engine_priors else None,
-                prior_features=encoded["prior_payload"].get("atom_prior_embedding") if self.config.use_manual_engine_priors else None,
-            )
             cyp_logits, cyp_residual = self.cyp_head(
                 final_mol_features,
                 prior_logits=encoded["prior_payload"].get("cyp_prior_logits") if self.config.use_manual_engine_priors else None,
                 prior_features=encoded["prior_payload"].get("mol_prior_embedding") if self.config.use_manual_engine_priors else None,
             )
+            conditioned_atom_features = self._apply_cyp_conditioning(final_atom_features, cyp_logits, encoded["batch"])
+            site_logits, site_residual = self.site_head(
+                conditioned_atom_features,
+                prior_logits=encoded["prior_payload"].get("atom_prior_logits") if self.config.use_manual_engine_priors else None,
+                prior_features=encoded["prior_payload"].get("atom_prior_embedding") if self.config.use_manual_engine_priors else None,
+            )
+            site_logits = self._apply_bde_prior(site_logits, encoded["x"])
             if self.config.use_tunneling_module and self.config.use_tunneling_for_site_scores:
                 site_logits = site_logits + torch.log(tunneling_payload["tunnel_prob"].clamp(min=1.0e-6))
 
@@ -517,16 +547,18 @@ if TORCH_AVAILABLE:
                 steric_mol=encoded["steric_payload"].get("mol_embedding") if self.config.use_3d_branch else None,
                 som_summary=som_payload["mol_summary"],
             )
-            site_logits, site_residual = self.site_head(
-                som_payload["atom_features"],
-                prior_logits=encoded["prior_payload"].get("atom_prior_logits") if self.config.use_manual_engine_priors else None,
-                prior_features=encoded["prior_payload"].get("atom_prior_embedding") if self.config.use_manual_engine_priors else None,
-            )
             cyp_logits, cyp_residual = self.cyp_head(
                 cyp_payload["mol_features"],
                 prior_logits=encoded["prior_payload"].get("cyp_prior_logits") if self.config.use_manual_engine_priors else None,
                 prior_features=encoded["prior_payload"].get("mol_prior_embedding") if self.config.use_manual_engine_priors else None,
             )
+            som_features = self._apply_cyp_conditioning(som_payload["atom_features"], cyp_logits, encoded["batch"])
+            site_logits, site_residual = self.site_head(
+                som_features,
+                prior_logits=encoded["prior_payload"].get("atom_prior_logits") if self.config.use_manual_engine_priors else None,
+                prior_features=encoded["prior_payload"].get("atom_prior_embedding") if self.config.use_manual_engine_priors else None,
+            )
+            site_logits = self._apply_bde_prior(site_logits, encoded["x"])
 
             tunneling_payload = {"barrier": None, "tunnel_prob": None, "stats": {}}
             tunnel_bias = torch.zeros_like(site_logits)

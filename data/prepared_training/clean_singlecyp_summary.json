@@ -1,0 +1,47 @@
+{
+  "input_rows": 1706,
+  "output_rows": 535,
+  "output_site_rows": 278,
+  "subset_rows": 200,
+  "subset_site_rows": 103,
+  "removed_multi_cyp": {
+    "rows_removed": 1171,
+    "unique_smiles_removed": 368,
+    "source_counts": {
+      "SuperCYP": 23,
+      "DrugBank": 42,
+      "MetXBioDB": 1091,
+      "MetaPred": 15
+    },
+    "cyp_counts": {
+      "CYP1A2": 227,
+      "CYP2D6": 239,
+      "CYP3A4": 295,
+      "CYP2C9": 203,
+      "CYP2C19": 207
+    }
+  },
+  "cleaning_stats": {
+    "dropped_n": 30,
+    "dropped_o": 38,
+    "kept_s_oxidation_sulfur": 4,
+    "remapped_n_to_adjacent_carbon": 47,
+    "dropped_f": 7,
+    "dropped_cl": 3,
+    "dropped_s": 1,
+    "remapped_o_to_adjacent_carbon": 34
+  },
+  "source_counts": {
+    "SuperCYP": 154,
+    "MetXBioDB": 216,
+    "DrugBank": 122,
+    "MetaPred": 43
+  },
+  "cyp_counts": {
+    "CYP1A2": 97,
+    "CYP2C9": 61,
+    "CYP2C19": 22,
+    "CYP2D6": 89,
+    "CYP3A4": 266
+  }
+}

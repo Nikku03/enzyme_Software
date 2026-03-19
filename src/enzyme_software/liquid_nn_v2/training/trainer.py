@@ -42,6 +42,16 @@ if TORCH_AVAILABLE:
                 weight_decay=self.config.weight_decay,
                 betas=self.config.betas,
             )
+            self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer,
+                mode="max",
+                factor=self.config.scheduler_factor,
+                patience=self.config.scheduler_patience,
+                min_lr=1e-6,
+            )
+
+        def step_scheduler(self, val_metric: float) -> None:
+            self.scheduler.step(val_metric)
 
         def _trainable_parameters(self) -> List[torch.nn.Parameter]:
             params: List[torch.nn.Parameter] = []
@@ -102,10 +112,7 @@ if TORCH_AVAILABLE:
             return move_to_device(collate_molecule_graphs(batch_or_graphs), self.device)
 
         def _apply_confidence_weights(self, loss, batch):
-            graph_weights = batch.get("graph_confidence_weights")
-            if graph_weights is None or not hasattr(graph_weights, "numel") or graph_weights.numel() == 0:
-                return loss
-            return loss * graph_weights.mean().clamp(min=1.0e-6)
+            return loss
 
         def compute_loss(self, batch: Dict[str, object], outputs: Dict[str, object]):
             loss, stats = self.loss_fn(
@@ -115,6 +122,8 @@ if TORCH_AVAILABLE:
                 batch["cyp_labels"],
                 batch["batch"],
                 batch.get("site_supervision_mask"),
+                batch.get("graph_confidence_weights"),
+                batch.get("node_confidence_weights"),
                 outputs.get("tau_history"),
                 batch.get("tau_init"),
                 outputs.get("energy_outputs"),

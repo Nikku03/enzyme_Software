@@ -3,8 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Any, Set
+from contextlib import nullcontext
 
 from rdkit import Chem
+from rdkit import rdBase
 from rdkit.Chem import AllChem
 from rdkit.Chem.rdMolTransforms import GetBondLength, GetAngleDeg
 import math
@@ -862,10 +864,13 @@ class ChemicallyAwareFragmentBuilder:
             )
 
         frag = rw.GetMol()
-        try:
-            Chem.SanitizeMol(frag)
-        except Exception as exc:
-            raise FragmentBuildError("fragment sanitization failed after capping", details={"error": str(exc)})
+        block_logs = getattr(rdBase, "BlockLogs", None)
+        log_context = block_logs() if callable(block_logs) else nullcontext()
+        with log_context:
+            try:
+                Chem.SanitizeMol(frag)
+            except Exception as exc:
+                raise FragmentBuildError("fragment sanitization failed after capping", details={"error": str(exc)})
 
         return cap_records
 
@@ -882,6 +887,8 @@ class ChemicallyAwareFragmentBuilder:
         warnings: List[str] = []
         uuid_to_frag = mapping["parent_uuid_to_frag_idx"]
         frag_to_uuid = mapping["frag_idx_to_parent_uuid"]
+        block_logs = getattr(rdBase, "BlockLogs", None)
+        log_context = block_logs() if callable(block_logs) else nullcontext()
 
         if len(uuid_to_frag) != len(frag_to_uuid):
             warnings.append("mapping is not bijective")
@@ -895,17 +902,14 @@ class ChemicallyAwareFragmentBuilder:
             if any(atom.GetAtomicNum() == 0 for atom in frag_mol.GetAtoms()):
                 warnings.append("fragment contains dummy atoms")
 
-        try:
-            Chem.SanitizeMol(frag_mol)
-        except Exception as exc:
-            warnings.append(f"sanitize_failed: {exc}")
-
-        if expects_ring and frag_mol.GetRingInfo().NumRings() == 0:
+        with log_context:
             try:
-                Chem.Kekulize(frag_mol, clearAromaticFlags=True)
                 Chem.SanitizeMol(frag_mol)
             except Exception as exc:
-                warnings.append(f"ring perception failed: {exc}")
+                warnings.append(f"sanitize_failed: {exc}")
+
+        if expects_ring and frag_mol.GetRingInfo().NumRings() == 0:
+            warnings.append("ring perception failed: fragment lost ring context")
 
         # Charge conservation on retained atoms (ignore caps)
         parent_charge = sum(parent_mol.GetAtomWithIdx(i).GetFormalCharge() for i in kept_indices)

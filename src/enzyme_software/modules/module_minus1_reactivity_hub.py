@@ -22,6 +22,7 @@ from enzyme_software.modules.sre_fragment_builder import (
 )
 from enzyme_software.evidence_store import add_datapoints
 from enzyme_software.unity_layer import record_interlink
+from enzyme_software.utils.smiles_utils import safe_prepare_mol
 
 try:
     from rdkit import Chem
@@ -267,7 +268,8 @@ def run_module_minus1_reactivity_hub(
             errors=["rdkit_unavailable"],
         )
 
-    mol = Chem.MolFromSmiles(smiles)
+    prep, parse_warnings = safe_prepare_mol(smiles)
+    mol = prep.mol
     if mol is None:
         return _build_output(
             status="FAIL",
@@ -289,11 +291,16 @@ def run_module_minus1_reactivity_hub(
             reactivity={},
             cache_key=None,
             cache_hit=False,
-            warnings=[],
-            errors=["SMILES parse failed."],
+            warnings=parse_warnings,
+            errors=["smiles_parse_failed"],
         )
+    warnings.extend(parse_warnings)
 
-    atr = AtomicTruthRegistry.from_smiles(smiles)
+    atr = AtomicTruthRegistry(
+        mol,
+        parent_smiles=prep.canonical_smiles or Chem.MolToSmiles(mol, canonical=True),
+        keep_hs=False,
+    )
     detection = detect_groups(mol, atr=atr)
     warnings.extend(detection.warnings)
 

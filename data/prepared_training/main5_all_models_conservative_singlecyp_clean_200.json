@@ -1,0 +1,2555 @@
+{
+  "n_drugs": 200,
+  "n_site_labeled": 103,
+  "summary": {
+    "input_rows": 1706,
+    "output_rows": 535,
+    "output_site_rows": 278,
+    "subset_rows": 200,
+    "subset_site_rows": 103,
+    "removed_multi_cyp": {
+      "rows_removed": 1171,
+      "unique_smiles_removed": 368,
+      "source_counts": {
+        "SuperCYP": 23,
+        "DrugBank": 42,
+        "MetXBioDB": 1091,
+        "MetaPred": 15
+      },
+      "cyp_counts": {
+        "CYP1A2": 227,
+        "CYP2D6": 239,
+        "CYP3A4": 295,
+        "CYP2C9": 203,
+        "CYP2C19": 207
+      }
+    },
+    "cleaning_stats": {
+      "dropped_n": 30,
+      "dropped_o": 38,
+      "kept_s_oxidation_sulfur": 4,
+      "remapped_n_to_adjacent_carbon": 47,
+      "dropped_f": 7,
+      "dropped_cl": 3,
+      "dropped_s": 1,
+      "remapped_o_to_adjacent_carbon": 34
+    },
+    "source_counts": {
+      "SuperCYP": 154,
+      "MetXBioDB": 216,
+      "DrugBank": 122,
+      "MetaPred": 43
+    },
+    "cyp_counts": {
+      "CYP1A2": 97,
+      "CYP2C9": 61,
+      "CYP2C19": 22,
+      "CYP2D6": 89,
+      "CYP3A4": 266
+    }
+  },
+  "count": 83,
+  "drugs": [
+    {
+      "id": "metxbiodb:CZIHNRWJTSTCEX-UHFFFAOYSA-N:CYP1A2",
+      "name": "2-acetylaminofluorene",
+      "smiles": "CC(=O)Nc1ccc2c(c1)Cc1ccccc1-2",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        5,
+        9,
+        10,
+        12,
+        15
+      ],
+      "metabolism_sites": [
+        5,
+        9,
+        10,
+        12,
+        15
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:KNYYMGDYROYBRE-UHFFFAOYSA-N:CYP1A2",
+      "name": "7-methoxyresorufin",
+      "smiles": "COc1ccc2nc3ccc(=O)cc-3oc2c1",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "cleavage",
+        "oxidation"
+      ],
+      "site_atoms": [
+        8
+      ],
+      "metabolism_sites": [
+        8
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "DB11932",
+      "name": "Abametapir",
+      "smiles": "Cc1ccc(-c2ccc(C)cn2)nc1",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        0,
+        2,
+        13
+      ],
+      "metabolism_sites": [
+        0,
+        2,
+        13
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "benzylic",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "metxbiodb:XGOYIMQSIKSOBS-UHFFFAOYSA-N:CYP1A2",
+      "name": "DMXAA",
+      "smiles": "Cc1ccc2c(=O)c3cccc(CC(=O)O)c3oc2c1C",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        8
+      ],
+      "metabolism_sites": [
+        8
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "DB12265",
+      "name": "Fexinidazole",
+      "smiles": "CSc1ccc(OCc2ncc([N+](=O)[O-])n2C)cc1",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "s-oxidation"
+      ],
+      "site_atoms": [
+        1
+      ],
+      "metabolism_sites": [
+        1
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "other",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "metxbiodb:TZBJGXHYKVUXJN-UHFFFAOYSA-N:CYP1A2",
+      "name": "Genistein",
+      "smiles": "O=c1c(-c2ccc(O)cc2)coc2cc(O)cc(O)c12",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        8,
+        14,
+        17
+      ],
+      "metabolism_sites": [
+        8,
+        14,
+        17
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "DB00904",
+      "name": "Ondansetron",
+      "smiles": "Cc1nccn1CC1CCc2c(c3ccccc3n2C)C1=O",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2",
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "glucuronidation",
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        0,
+        6,
+        19
+      ],
+      "metabolism_sites": [
+        0,
+        6,
+        19
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "benzylic",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "metxbiodb:UQVKZNNCIHJZLS-UHFFFAOYSA-N:CYP1A2",
+      "name": "PhIP",
+      "smiles": "Cn1c(N)nc2ncc(-c3ccccc3)cc21",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        0,
+        12
+      ],
+      "metabolism_sites": [
+        0,
+        12
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "DB09118",
+      "name": "Stiripentol",
+      "smiles": "CC(C)(C)C(O)/C=C/c1ccc2c(c1)OCO2",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2",
+        "CYP2C19",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "glucuronidation",
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        4,
+        6,
+        7
+      ],
+      "metabolism_sites": [
+        4,
+        6,
+        7
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "benzylic",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "DB00315",
+      "name": "Zolmitriptan",
+      "smiles": "CN(C)CCc1c[nH]c2ccc(C[C@H]3COC(=O)N3)cc12",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "cleavage",
+        "n-oxidation",
+        "n_oxidation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        8,
+        12,
+        13
+      ],
+      "metabolism_sites": [
+        8,
+        12,
+        13
+      ],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB",
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "metxbiodb:FZERHIULMFGESH-UHFFFAOYSA-N:CYP1A2",
+      "name": "acetanilide",
+      "smiles": "CC(=O)Nc1ccccc1",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        1,
+        7
+      ],
+      "metabolism_sites": [
+        1,
+        7
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:OMJKFYKNWZZKTK-POHAHGRESA-N:CYP1A2",
+      "name": "dacarbazine",
+      "smiles": "CN(C)N/N=C1\\N=CN=C1C(N)=O",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "cleavage",
+        "oxidation"
+      ],
+      "site_atoms": [
+        7
+      ],
+      "metabolism_sites": [
+        7
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:PFRYFZZSECNQOL-WUKNDPDISA-N:CYP1A2",
+      "name": "o-Aminoazotoluene",
+      "smiles": "Cc1cc(/N=N/c2ccccc2C)ccc1N",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        0,
+        9,
+        15
+      ],
+      "metabolism_sites": [
+        0,
+        9,
+        15
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:LLEMOWNGBBNAJR-UHFFFAOYSA-N:CYP1A2",
+      "name": "o-phenylphenol",
+      "smiles": "Oc1ccccc1-c1ccccc1",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        5
+      ],
+      "metabolism_sites": [
+        5
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:QCSNJTIWCIMFFY-UHFFFAOYSA-N:CYP1A2",
+      "name": "p-isopropyloxyacetanilide",
+      "smiles": "CC(=O)Nc1ccc(OC(C)C)cc1",
+      "primary_cyp": "CYP1A2",
+      "all_cyps": [
+        "CYP1A2"
+      ],
+      "reactions": [
+        "cleavage",
+        "hydroxylation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        12,
+        13
+      ],
+      "metabolism_sites": [
+        12,
+        13
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "DB03756",
+      "name": "Doconexent",
+      "smiles": "CC/C=C\\C/C=C\\C/C=C\\C/C=C\\C/C=C\\C/C=C\\CCC(=O)O",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "epoxidation",
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        1,
+        2,
+        3
+      ],
+      "metabolism_sites": [
+        1,
+        2,
+        3
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "allylic",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "DB12147",
+      "name": "Erdafitinib",
+      "smiles": "COc1cc(OC)cc(N(CCNC(C)C)c2ccc3ncc(-c4cnn(C)c4)nc3c2)c1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "o_dealkylation"
+      ],
+      "site_atoms": [
+        0,
+        2,
+        8
+      ],
+      "metabolism_sites": [
+        0,
+        2,
+        8
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "alpha_hetero",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "DB01029",
+      "name": "Irbesartan",
+      "smiles": "CCCCC1=NC2(CCCC2)C(=O)N1Cc1ccc(-c2ccccc2-c2nn[nH]n2)cc1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "glucuronidation",
+        "hydroxylation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        7,
+        8,
+        11
+      ],
+      "metabolism_sites": [
+        7,
+        8,
+        11
+      ],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB",
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB12390",
+      "name": "Seladelpar",
+      "smiles": "CCO[C@H](COc1ccc(C(F)(F)F)cc1)CSc1ccc(OCC(=O)O)c(C)c1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "s-oxidation"
+      ],
+      "site_atoms": [
+        17
+      ],
+      "metabolism_sites": [
+        17
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "other",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "DB01015",
+      "name": "Sulfamethoxazole",
+      "smiles": "Cc1cc(NS(=O)(=O)c2ccc(N)cc2)no1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "glucuronidation",
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        0,
+        2,
+        8,
+        9
+      ],
+      "metabolism_sites": [
+        0,
+        2,
+        8,
+        9
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "medium",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "benzylic",
+      "source_details": [
+        "DrugBank",
+        "MetXBioDB",
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "metxbiodb:SYTBZMRGLBWNTM-JTQLQIEISA-N:CYP2C9",
+      "name": "flurbiprofen",
+      "smiles": "C[C@H](C(=O)O)c1ccc(-c2ccccc2)c(F)c1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        12
+      ],
+      "metabolism_sites": [
+        12
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:POULHZVOKOAJMA-UHFFFAOYSA-N:CYP2C9",
+      "name": "lauric_acid",
+      "smiles": "CCCCCCCCCCCC(=O)O",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        1
+      ],
+      "metabolism_sites": [
+        1
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:YXNIWVFDFGNCED-NNVCNDCRSA-N:CYP2C9",
+      "name": "licofelone_M1",
+      "smiles": "CC1(C)Cc2c(-c3ccccc3)c(-c3ccc(Cl)cc3)c(CC(=O)OC[C@@H]3O[C@@H](O)[C@@H](O)[C@H](O)[C@@H]3O)n2C1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        14
+      ],
+      "metabolism_sites": [
+        14
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:NGBFQHCMQULJNZ-UHFFFAOYSA-N:CYP2C9",
+      "name": "torasemide",
+      "smiles": "Cc1cccc(Nc2ccncc2S(=O)(=O)NC(=O)NC(C)C)c1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        22
+      ],
+      "metabolism_sites": [
+        22
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:UOBJOWXNMYOTGQ-UHFFFAOYSA-N:CYP2C9",
+      "name": "vivid_red",
+      "smiles": "O=c1ccc2nc3ccc(OCOCc4ccccc4)cc3oc-2c1",
+      "primary_cyp": "CYP2C9",
+      "all_cyps": [
+        "CYP2C9"
+      ],
+      "reactions": [
+        "cleavage",
+        "oxidation"
+      ],
+      "site_atoms": [
+        15
+      ],
+      "metabolism_sites": [
+        15
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:ISZNZKHCRKXXAU-UHFFFAOYSA-N:CYP2C19",
+      "name": "chlorproguanil",
+      "smiles": "CC(C)/N=C(N)/N=C(\\N)Nc1ccc(Cl)c(Cl)c1",
+      "primary_cyp": "CYP2C19",
+      "all_cyps": [
+        "CYP2C19"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        1
+      ],
+      "metabolism_sites": [
+        1
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:ZSTKHSQDNIGFLM-UHFFFAOYSA-N:CYP2D6",
+      "name": "5_MDMT",
+      "smiles": "COc1ccc2[nH]cc(CCN(C)C)c2c1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "cleavage",
+        "oxidation"
+      ],
+      "site_atoms": [
+        7
+      ],
+      "metabolism_sites": [
+        7
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:PMXMIIMHBWHSKN-IBGZPJMESA-N:CYP2D6",
+      "name": "9_OH_risperidone",
+      "smiles": "Cc1nc2n(c(=O)c1CCN1CCC(c3noc4cc(F)ccc34)CC1)CCC[C@@H]2O",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        27
+      ],
+      "metabolism_sites": [
+        27
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "DB00289",
+      "name": "Atomoxetine",
+      "smiles": "CNCC[C@@H](Oc1ccccc1C)c1ccccc1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2C19",
+        "CYP2D6"
+      ],
+      "reactions": [
+        "glucuronidation",
+        "hydroxylation",
+        "reduction"
+      ],
+      "site_atoms": [
+        3,
+        4,
+        12
+      ],
+      "metabolism_sites": [
+        3,
+        4,
+        12
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "medium",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "benzylic",
+      "source_details": [
+        "DrugBank",
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00185",
+      "name": "Cevimeline",
+      "smiles": "CC1O[C@@]2(CS1)CN1CCC2CC1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "n_oxidation",
+        "s-oxidation"
+      ],
+      "site_atoms": [
+        5,
+        6,
+        8,
+        12
+      ],
+      "metabolism_sites": [
+        5,
+        6,
+        8,
+        12
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "other",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "metxbiodb:JWPGJSVJDAJRLW-UHFFFAOYSA-N:CYP2D6",
+      "name": "Debrisoquin",
+      "smiles": "N=C(N)N1CCc2ccccc2C1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        8,
+        9,
+        11
+      ],
+      "metabolism_sites": [
+        8,
+        9,
+        11
+      ],
+      "source": "SuperCYP",
+      "site_source": "SuperCYP",
+      "confidence": "medium",
+      "full_xtb_status": "ok",
+      "som": [],
+      "source_details": [
+        "MetXBioDB",
+        "SuperCYP"
+      ]
+    },
+    {
+      "id": "DB00674",
+      "name": "Galantamine",
+      "smiles": "COc1ccc2c3c1O[C@H]1C[C@@H](O)C=C[C@@]31CCN(C)C2",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "glucuronidation",
+        "n_dealkylation",
+        "n_oxidation",
+        "o_dealkylation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        0,
+        2,
+        5,
+        10,
+        15,
+        16,
+        17,
+        19,
+        20
+      ],
+      "metabolism_sites": [
+        0,
+        2,
+        5,
+        10,
+        15,
+        16,
+        17,
+        19,
+        20
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "medium",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "alpha_hetero",
+      "source_details": [
+        "DrugBank",
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:OEHAYUOVELTAPG-VIFPVBQESA-N:CYP2D6",
+      "name": "METHOXYPHENAMINE",
+      "smiles": "CN[C@@H](C)Cc1ccccc1OC",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "cleavage",
+        "hydroxylation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        2,
+        4
+      ],
+      "metabolism_sites": [
+        2,
+        4
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:LVXVIPZBNJSUKL-NJAPINKUSA-N:CYP2D6",
+      "name": "MMDL",
+      "smiles": "CO[C@]12C[C@@H](CO)CN(C)[C@@H]1Cc1cn(C)c3cccc2c13",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "cleavage",
+        "oxidation"
+      ],
+      "site_atoms": [
+        5
+      ],
+      "metabolism_sites": [
+        5
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "DB00264",
+      "name": "Metoprolol",
+      "smiles": "COCCc1ccc(OCC(O)CNC(C)C)cc1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "o_dealkylation"
+      ],
+      "site_atoms": [
+        18
+      ],
+      "metabolism_sites": [
+        18
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "medium",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "alpha_hetero",
+      "source_details": [
+        "DrugBank",
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB00830",
+      "name": "Phenmetrazine",
+      "smiles": "CC1NCCOC1c1ccccc1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "glucuronidation",
+        "hydroxylation",
+        "n_dealkylation"
+      ],
+      "site_atoms": [
+        0,
+        1,
+        3,
+        6,
+        8
+      ],
+      "metabolism_sites": [
+        0,
+        1,
+        3,
+        6,
+        8
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "benzylic",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "DB01069",
+      "name": "Promethazine",
+      "smiles": "CC(CN1c2ccccc2Sc2ccccc21)N(C)C",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "s-oxidation"
+      ],
+      "site_atoms": [
+        0,
+        5,
+        6,
+        10
+      ],
+      "metabolism_sites": [
+        0,
+        5,
+        6,
+        10
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "medium",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "primary_CH",
+      "source_details": [
+        "DrugBank",
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "metxbiodb:JACPUZOKPSTMTK-UHFFFAOYSA-N:CYP2D6",
+      "name": "ROX_M_5",
+      "smiles": "OCCCOc1cccc(CN2CCCCC2)c1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "cleavage",
+        "oxidation"
+      ],
+      "site_atoms": [
+        2,
+        3
+      ],
+      "metabolism_sites": [
+        2,
+        3
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "DB00285",
+      "name": "Venlafaxine",
+      "smiles": "COc1ccc(C(CN(C)C)C2(O)CCCCC2)cc1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2C9",
+        "CYP2C19",
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "glucuronidation",
+        "n_dealkylation"
+      ],
+      "site_atoms": [
+        11,
+        13,
+        14
+      ],
+      "metabolism_sites": [
+        11,
+        13,
+        14
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "medium",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "alpha_hetero",
+      "source_details": [
+        "DrugBank",
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "DB09185",
+      "name": "Viloxazine",
+      "smiles": "CCOc1ccccc1OCC1CNCCO1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "glucuronidation",
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        0,
+        4,
+        5
+      ],
+      "metabolism_sites": [
+        0,
+        4,
+        5
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "primary_CH",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "metxbiodb:WZXHSWVDAYOFPE-UHFFFAOYSA-N:CYP2D6",
+      "name": "brofaromine",
+      "smiles": "COc1cc(Br)c2oc(C3CCNCC3)cc2c1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "cleavage",
+        "oxidation"
+      ],
+      "site_atoms": [
+        13
+      ],
+      "metabolism_sites": [
+        13
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:VCVQSRCYSKKPBA-GFCCVEGCSA-N:CYP2D6",
+      "name": "bunitrolol",
+      "smiles": "CC(C)(C)NC[C@@H](O)COc1ccccc1C#N",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        6
+      ],
+      "metabolism_sites": [
+        6
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:PTJADDMMFYXMMG-IBGZPJMESA-N:CYP2D6",
+      "name": "demethyl-citalopram",
+      "smiles": "CNCCC[C@@]1(c2ccc(F)cc2)OCc2cc(C#N)ccc21",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "cleavage",
+        "oxidation"
+      ],
+      "site_atoms": [
+        2
+      ],
+      "metabolism_sites": [
+        2
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:PLRACCBDVIHHLZ-UHFFFAOYSA-N:CYP2D6",
+      "name": "mptp",
+      "smiles": "CN1CC=C(c2ccccc2)CC1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "cleavage",
+        "hydroxylation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        0,
+        2
+      ],
+      "metabolism_sites": [
+        0,
+        2
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:ZVQUCWXZCKWZBP-CQSZACIVSA-N:CYP2D6",
+      "name": "r_568",
+      "smiles": "COc1cccc([C@@H](C)NCCCc2ccccc2Cl)c1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "cleavage",
+        "oxidation"
+      ],
+      "site_atoms": [
+        12
+      ],
+      "metabolism_sites": [
+        12
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:DZGWFCGJZKJUFP-UHFFFAOYSA-N:CYP2D6",
+      "name": "tyramine",
+      "smiles": "NCCc1ccc(O)cc1",
+      "primary_cyp": "CYP2D6",
+      "all_cyps": [
+        "CYP2D6"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        1,
+        4
+      ],
+      "metabolism_sites": [
+        1,
+        4
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:LAHWLEDBADHJGA-UHFFFAOYSA-N:CYP3A4",
+      "name": "2-2prime-4-5-5prime-pentachlorobiphenyl",
+      "smiles": "Clc1ccc(Cl)c(-c2cc(Cl)c(Cl)cc2Cl)c1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        7
+      ],
+      "metabolism_sites": [
+        7
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:FSPRLRPJSPWQNC-HNNXBMFYSA-N:CYP3A4",
+      "name": "3_hpph",
+      "smiles": "O=C1NC(=O)[C@](c2ccccc2)(c2cccc(O)c2)N1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        15
+      ],
+      "metabolism_sites": [
+        15
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:BDOGTORASJEUBW-UHFFFAOYSA-N:CYP3A4",
+      "name": "7-butoxycoumarin",
+      "smiles": "CCCCOc1ccc2ccc(=O)oc2c1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "hydroxylation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        3,
+        8,
+        9
+      ],
+      "metabolism_sites": [
+        3,
+        8,
+        9
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:HYKWMZVCUBUWMM-UHFFFAOYSA-N:CYP3A4",
+      "name": "7-hexoxycoumarin",
+      "smiles": "CCCCCCOc1ccc2ccc(=O)oc2c1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "hydroxylation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        2,
+        3,
+        5,
+        10
+      ],
+      "metabolism_sites": [
+        2,
+        3,
+        5,
+        10
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "DB01217",
+      "name": "Anastrozole",
+      "smiles": "CC(C)(C#N)c1cc(Cn2cncn2)cc(C(C)(C)C#N)c1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "glucuronidation",
+        "hydroxylation",
+        "n_dealkylation"
+      ],
+      "site_atoms": [
+        0,
+        2,
+        3,
+        12,
+        14
+      ],
+      "metabolism_sites": [
+        0,
+        2,
+        3,
+        12,
+        14
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "benzylic",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "metxbiodb:JYGXADMDTFJGBT-FFICGRQZSA-N:CYP3A4",
+      "name": "CORTISOL",
+      "smiles": "C[C@]12CCC(=O)C=C1CC[C@H]1[C@H]2[C@@H](O)C[C@@]2(C)[C@@H]1CC[C@]2(O)C(=O)CO",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        11
+      ],
+      "metabolism_sites": [
+        11
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "DB01012",
+      "name": "Cinacalcet",
+      "smiles": "C[C@@H](NCCCc1cccc(C(F)(F)F)c1)c1cccc2ccccc12",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP1A2",
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "n_dealkylation"
+      ],
+      "site_atoms": [
+        1,
+        3,
+        4,
+        5
+      ],
+      "metabolism_sites": [
+        1,
+        3,
+        4,
+        5
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "benzylic",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "DB11637",
+      "name": "Delamanid",
+      "smiles": "C[C@]1(COc2ccc(N3CCC(Oc4ccc(OC(F)(F)F)cc4)CC3)cc2)Cn2cc([N+](=O)[O-])nc2O1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "n_dealkylation"
+      ],
+      "site_atoms": [
+        7,
+        13,
+        16,
+        18,
+        28
+      ],
+      "metabolism_sites": [
+        7,
+        13,
+        16,
+        18,
+        28
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "benzylic",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "DB05039",
+      "name": "Indacaterol",
+      "smiles": "CCc1cc2c(cc1CC)CC(NC[C@H](O)c1ccc(O)c3[nH]c(=O)ccc13)C2",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "glucuronidation",
+        "hydroxylation",
+        "n_dealkylation"
+      ],
+      "site_atoms": [
+        1,
+        4,
+        5,
+        11,
+        14
+      ],
+      "metabolism_sites": [
+        1,
+        4,
+        5,
+        11,
+        14
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "benzylic",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "DB11757",
+      "name": "Istradefylline",
+      "smiles": "CCn1c(=O)c2c(nc(/C=C/c3ccc(OC)c(OC)c3)n2C)n(CC)c1=O",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP1A2",
+        "CYP2C9",
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "glucuronidation",
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        22
+      ],
+      "metabolism_sites": [
+        22
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "benzylic",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "metxbiodb:ZONTWFMTDBGILI-WDSKDSINSA-N:CYP3A4",
+      "name": "N_ac_DFEC",
+      "smiles": "CC(=O)N[C@@H](CSC(F)(F)[C@@H](OCF)C(F)F)C(=O)O",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "s-oxidation"
+      ],
+      "site_atoms": [
+        4
+      ],
+      "metabolism_sites": [
+        4
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "DB14881",
+      "name": "Oliceridine",
+      "smiles": "COc1ccsc1CNCC[C@@]1(c2ccccn2)CCOC2(CCCC2)C1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP2C9",
+        "CYP2C19",
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "glucuronidation",
+        "n_dealkylation"
+      ],
+      "site_atoms": [
+        3,
+        9,
+        25
+      ],
+      "metabolism_sites": [
+        3,
+        9,
+        25
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "alpha_hetero",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "DB04938",
+      "name": "Ospemifene",
+      "smiles": "OCCOc1ccc(/C(=C(/CCCl)c2ccccc2)c2ccccc2)cc1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP2C9",
+        "CYP2C19",
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        5,
+        14,
+        15
+      ],
+      "metabolism_sites": [
+        5,
+        14,
+        15
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "allylic",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "DB12834",
+      "name": "Secnidazole",
+      "smiles": "Cc1ncc([N+](=O)[O-])n1CC(C)O",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "glucuronidation",
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        9,
+        10
+      ],
+      "metabolism_sites": [
+        9,
+        10
+      ],
+      "source": "DrugBank",
+      "site_source": "DrugBank",
+      "confidence": "validated",
+      "full_xtb_status": "ok",
+      "som": [],
+      "expected_bond_class": "benzylic",
+      "source_details": [
+        "DrugBank"
+      ]
+    },
+    {
+      "id": "DB00246",
+      "name": "Ziprasidone",
+      "smiles": "O=C1Cc2cc(CCN3CCN(c4nsc5ccccc45)CC3)c(Cl)cc2N1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "glucuronidation",
+        "n_dealkylation",
+        "oxidation",
+        "reduction",
+        "s-oxidation"
+      ],
+      "site_atoms": [
+        18,
+        19
+      ],
+      "metabolism_sites": [
+        18,
+        19
+      ],
+      "source": "MetaPred",
+      "site_source": "none",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB",
+        "MetaPred"
+      ]
+    },
+    {
+      "id": "metxbiodb:KJHKTHWMRKYKJE-UQJYGFKOSA-N:CYP3A4",
+      "name": "abt_378",
+      "smiles": "Cc1cccc(C)c1OCC(=O)N[C@@H](Cc1ccccc1)[C@@H](O)C[C@H](Cc1ccccc1)NC(=O)[C@@H](C(C)C)N1CCCNC1=O",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "oxidation"
+      ],
+      "site_atoms": [
+        21
+      ],
+      "metabolism_sites": [
+        21
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:VTNQPKFIQCLBDU-UHFFFAOYSA-N:CYP3A4",
+      "name": "acetochlor",
+      "smiles": "CCOCN(C(=O)CCl)c1c(C)cccc1CC",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "oxidation"
+      ],
+      "site_atoms": [
+        3
+      ],
+      "metabolism_sites": [
+        3
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:RMRJXGBAOAMLHD-LDFHUFRKSA-N:CYP3A4",
+      "name": "buprenorphine",
+      "smiles": "CO[C@]12CC[C@@]3(C[C@@H]1[C@@](C)(O)C(C)(C)C)[C@H]1Cc4ccc(O)c5c4[C@@]3(CCN1CC1CC1)[C@H]2O5",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "hydroxylation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        11,
+        25,
+        32
+      ],
+      "metabolism_sites": [
+        11,
+        25,
+        32
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:RUDATBOHQWOJDD-SHOXBNBYSA-N:CYP3A4",
+      "name": "chenodeoxycholic_acid",
+      "smiles": "C[C@H](CCC(=O)O)[C@H]1CC[C@H]2[C@@H]3[C@@H](O)C[C@H]4C[C@H](O)CC[C@]4(C)[C@H]3CC[C@]12C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        22
+      ],
+      "metabolism_sites": [
+        22
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:DCSUBABJRXZOMT-RBBKRZOGSA-N:CYP3A4",
+      "name": "cisapride",
+      "smiles": "COc1cc(N)c(Cl)cc1C(=O)N[C@H]1CCN(CCCOc2ccc(F)cc2)C[C@H]1OC",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "hydroxylation",
+        "oxidation",
+        "unspoxidation",
+        "unspreduction"
+      ],
+      "site_atoms": [
+        19,
+        23,
+        29,
+        31
+      ],
+      "metabolism_sites": [
+        19,
+        23,
+        29,
+        31
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:ZYGHJZDHTFUPRJ-UHFFFAOYSA-N:CYP3A4",
+      "name": "coumarin",
+      "smiles": "O=c1ccc2ccccc2o1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "epoxidation",
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        2
+      ],
+      "metabolism_sites": [
+        2
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:KXGVEGMKQFWNSR-DNZDVJRKSA-N:CYP3A4",
+      "name": "deoxycholic_acid",
+      "smiles": "C[C@H](CCC(=O)O)[C@H]1CC[C@H]2[C@@H]3CC[C@H]4C[C@H](O)CC[C@]4(C)[C@H]3C[C@@H](O)[C@]12C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        15
+      ],
+      "metabolism_sites": [
+        15
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:FMGSKLZLMKYGDP-USOAJAOKSA-N:CYP3A4",
+      "name": "dhea",
+      "smiles": "C[C@]12CC[C@H](O)CC1=CC[C@@H]1[C@@H]2CC[C@]2(C)C(=O)CC[C@@H]12",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        14
+      ],
+      "metabolism_sites": [
+        14
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:ZDZOTLJHXYCWBA-VCVYQWHSSA-N:CYP3A4",
+      "name": "docetaxel",
+      "smiles": "CC(=O)O[C@@]12CO[C@@H]1C[C@H](O)[C@@]1(C)C(=O)[C@H](O)C3=C(C)[C@@H](OC(=O)[C@H](O)[C@@H](NC(=O)OC(C)(C)C)c4ccccc4)C[C@@](O)([C@@H](OC(=O)c4ccccc4)[C@H]21)C3(C)C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        17,
+        24,
+        26
+      ],
+      "metabolism_sites": [
+        17,
+        24,
+        26
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:JTAGHJPZEDNHHA-UHFFFAOYSA-N:CYP3A4",
+      "name": "ecabapide",
+      "smiles": "CNC(=O)c1cccc(NCC(=O)NCCc2ccc(OC)c(OC)c2)c1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "hydroxylation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        0,
+        11
+      ],
+      "metabolism_sites": [
+        0,
+        11
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:FOHHNHSLJDZUGQ-RUZDIDTESA-N:CYP3A4",
+      "name": "halofantrine",
+      "smiles": "CCCCN(CCCC)CC[C@@H](O)c1cc2c(Cl)cc(Cl)cc2c2cc(C(F)(F)F)ccc12",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "oxidation"
+      ],
+      "site_atoms": [
+        6,
+        9
+      ],
+      "metabolism_sites": [
+        6,
+        9
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:AWJUIBRHMBBTKR-UHFFFAOYSA-N:CYP3A4",
+      "name": "isoquinoline",
+      "smiles": "c1ccc2cnccc2c1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "n-oxidation"
+      ],
+      "site_atoms": [
+        2
+      ],
+      "metabolism_sites": [
+        2
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:DDLIGBOFAVUZHB-UHFFFAOYSA-N:CYP3A4",
+      "name": "midazolam",
+      "smiles": "Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        4,
+        16
+      ],
+      "metabolism_sites": [
+        4,
+        16
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:VKHAHZOOUSRJNA-GCNJZUOMSA-N:CYP3A4",
+      "name": "mifepristone",
+      "smiles": "CC#C[C@]1(O)CC[C@H]2[C@@H]3CCC4=CC(=O)CCC4=C3[C@@H](c3ccc(N(C)C)cc3)C[C@@]21C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "hydroxylation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        27,
+        28,
+        31
+      ],
+      "metabolism_sites": [
+        27,
+        28,
+        31
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:GCIKSSRWRFVXBI-UHFFFAOYSA-N:CYP3A4",
+      "name": "mk_0457",
+      "smiles": "Cc1cc(Nc2cc(N3CCN(C)CC3)nc(Sc3ccc(NC(=O)C4CC4)cc3)n2)n[nH]1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "n-oxidation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        7
+      ],
+      "metabolism_sites": [
+        7
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:ICXVGHUORQNRQF-NOSXKOESSA-N:CYP3A4",
+      "name": "morphine",
+      "smiles": "CN1C[C@@H]2Cc3ccc(O)c4c3[C@]3(C1)[C@@H]2C=C[C@@H](O)[C@@H]3O4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "oxidation"
+      ],
+      "site_atoms": [
+        8
+      ],
+      "metabolism_sites": [
+        8
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:VRBKIVRKKCLPHA-UHFFFAOYSA-N:CYP3A4",
+      "name": "nefazodone",
+      "smiles": "CCc1nn(CCCN2CCN(c3cccc(Cl)c3)CC2)c(=O)n1CCOc1ccccc1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "hydroxylation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        2,
+        24,
+        29
+      ],
+      "metabolism_sites": [
+        2,
+        24,
+        29
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:YJSTYQGZKJHXLN-SSFAQJFESA-N:CYP3A4",
+      "name": "org_30659",
+      "smiles": "C#C[C@]1(O)C=C[C@H]2[C@@H]3CCC4=CC(=O)CC[C@H]4[C@H]3C(=C)C[C@@]21C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        8
+      ],
+      "metabolism_sites": [
+        8
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:KWEMUXODTDSRRP-HEHNFIMWSA-N:CYP3A4",
+      "name": "py74",
+      "smiles": "COc1cc([N+](=O)[O-])ccc1N/N=C(\\C(C)=O)C(=O)Nc1ccccc1OC",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "hydroxylation"
+      ],
+      "site_atoms": [
+        20
+      ],
+      "metabolism_sites": [
+        20
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:QGBIFMJAQARMNQ-QISPFCDLSA-N:CYP3A4",
+      "name": "rpr_106541",
+      "smiles": "CCC[C@@H]1O[C@@H]2C[C@H]3[C@@H]4C[C@H](F)C5=CC(=O)CC[C@]5(C)[C@@]4(F)[C@@H](O)C[C@]3(C)[C@]2(SC)O1",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "s-oxidation"
+      ],
+      "site_atoms": [
+        22
+      ],
+      "metabolism_sites": [
+        22
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:XZDDMPMZGYEESG-VNHFGJPGSA-N:CYP3A4",
+      "name": "sdz_imm_125",
+      "smiles": "C/C=C/C[C@@H](C)[C@@H](O)[C@H]1C(=O)N[C@@H](CC)C(=O)N(C)CC(=O)N(C)[C@@H](CC(C)C)C(=O)N[C@@H](C(C)C)C(=O)N(C)[C@@H](CC(C)C)C(=O)N[C@@H](C)C(=O)N[C@H](COCCO)C(=O)N(C)[C@@H](CC(C)C)C(=O)N(C)[C@@H](CC(C)C)C(=O)N(C)[C@@H](C(C)C)C(=O)N1C",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "hydroxylation",
+        "oxidation"
+      ],
+      "site_atoms": [
+        57,
+        62,
+        63,
+        85
+      ],
+      "metabolism_sites": [
+        57,
+        62,
+        63,
+        85
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    },
+    {
+      "id": "metxbiodb:NRUKOCRGYNPUPR-QBPJDGROSA-N:CYP3A4",
+      "name": "teniposide",
+      "smiles": "COc1cc([C@@H]2c3cc4c(cc3[C@@H](O[C@@H]3O[C@@H]5CO[C@@H](c6cccs6)O[C@H]5[C@H](O)[C@H]3O)[C@H]3COC(=O)[C@H]23)OCO4)cc(OC)c1O",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "reactions": [
+        "cleavage",
+        "oxidation"
+      ],
+      "site_atoms": [
+        5,
+        26
+      ],
+      "metabolism_sites": [
+        5,
+        26
+      ],
+      "source": "MetXBioDB",
+      "site_source": "metxbiodb_atom_only",
+      "confidence": "medium",
+      "full_xtb_status": "external_uncomputed",
+      "som": [],
+      "source_details": [
+        "MetXBioDB"
+      ]
+    }
+  ]
+}
