@@ -37,6 +37,14 @@ class FullXTBHybridDataset(CYPMetabolismDataset):
         self.full_xtb_cache_dir = full_xtb_cache_dir
         self.compute_full_xtb_if_missing = bool(compute_full_xtb_if_missing)
 
+    def precompute(self):
+        # Cache base features only (32-dim), NOT XTB-augmented (40-dim).
+        # __getitem__ adds XTB on top of cached base features → 32+8=40 total.
+        # Without this override, precompute caches 40-dim items and __getitem__
+        # would add XTB again → 48 dims, causing a dimension mismatch.
+        if self._cache is None:
+            self._cache = [CYPMetabolismDataset.__getitem__(self, i) for i in range(len(self.drugs))]
+
     def __getitem__(self, idx):
         item = super().__getitem__(idx)
         graph = item.get("graph")
