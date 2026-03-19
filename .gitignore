@@ -27,7 +27,8 @@ desktop/.cache/
 
 # Training artifacts and caches
 artifacts/
-cache/
+cache/*
+!cache/full_xtb
 checkpoints/
 src/enzyme_software/calibration/cache/
 src/enzyme_software/liquid_nn_v2/features/cache/

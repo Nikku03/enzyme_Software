@@ -1,0 +1,72 @@
+{
+  "canonical_smiles": "CC(=O)O",
+  "xtb_valid": true,
+  "atom_valid_mask": [
+    [
+      1.0
+    ],
+    [
+      0.0
+    ],
+    [
+      0.0
+    ],
+    [
+      0.0
+    ]
+  ],
+  "atom_features": [
+    [
+      0.6919999718666077,
+      0.002358490601181984,
+      0.6919999718666077,
+      0.6919999718666077,
+      0.0,
+      0.0,
+      0.5,
+      0.8460000157356262
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  ],
+  "feature_names": [
+    "bde_corrected_norm",
+    "bde_inverse",
+    "bde_vertical_norm",
+    "bde_adiabatic_norm",
+    "relaxation_energy_norm",
+    "bde_deviation_norm",
+    "xtb_confidence",
+    "lookup_bde_norm"
+  ],
+  "status": "ok",
+  "error": null
+}
