@@ -28,81 +28,51 @@ TEST_COMPOUNDS: List[Dict[str, object]] = [
         "name": "Warfarin",
         "smiles": "CC(=O)CC(c1ccccc1)c2c(O)c3ccccc3oc2=O",
         "primary_cyp": "CYP2C9",
-        "site_atoms": [6, 7],
-        "site_type": "aromatic hydroxylation",
-        "clinical_notes": "Narrow therapeutic index, CYP2C9 polymorphisms critical",
     },
     {
         "name": "Omeprazole",
         "smiles": "COc1ccc2nc(Cc3ncc(C)c(OC)c3C)[nH]c2c1S(=O)C",
         "primary_cyp": "CYP2C19",
-        "site_atoms": [19],
-        "site_type": "sulfoxidation",
-        "clinical_notes": "Proton pump inhibitor, CYP2C19 poor metabolizers",
     },
     {
         "name": "Codeine",
         "smiles": "COc1ccc2C3CC4=CC=C(O)C5Oc1c2C35CCN4C",
         "primary_cyp": "CYP2D6",
-        "site_atoms": [0],
-        "site_type": "O-demethylation -> morphine",
-        "clinical_notes": "Prodrug, CYP2D6 ultra-rapid metabolizers at risk",
     },
     {
         "name": "Caffeine",
         "smiles": "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
         "primary_cyp": "CYP1A2",
-        "site_atoms": [0, 7, 12],
-        "site_type": "N-demethylation",
-        "clinical_notes": "CYP1A2 probe substrate, smoking induces metabolism",
     },
     {
         "name": "Diazepam",
         "smiles": "CN1C(=O)CN=C(c2ccccc2)c3cc(Cl)ccc13",
         "primary_cyp": "CYP3A4",
-        "site_atoms": [0, 1],
-        "site_type": "N-demethylation -> nordiazepam",
-        "clinical_notes": "Benzodiazepine, also CYP2C19 substrate",
     },
     {
         "name": "Tolbutamide",
         "smiles": "Cc1ccc(cc1)S(=O)(=O)NC(=O)NCCC",
         "primary_cyp": "CYP2C9",
-        "site_atoms": [0],
-        "site_type": "methyl hydroxylation",
-        "clinical_notes": "CYP2C9 probe substrate, sulfonylurea",
     },
     {
         "name": "Atomoxetine",
         "smiles": "Cc1ccccc1OC(CCNC)c2ccccc2",
         "primary_cyp": "CYP2D6",
-        "site_atoms": [0, 8],
-        "site_type": "aromatic hydroxylation",
-        "clinical_notes": "ADHD medication, CYP2D6 polymorphisms affect exposure",
     },
     {
         "name": "Nifedipine",
         "smiles": "COC(=O)C1=C(C)NC(C)=C(C1c2ccccc2[N+](=O)[O-])C(=O)OC",
         "primary_cyp": "CYP3A4",
-        "site_atoms": [11],
-        "site_type": "oxidation to pyridine",
-        "clinical_notes": "Calcium channel blocker, photosensitive",
     },
     {
         "name": "Phenytoin",
         "smiles": "O=C1NC(=O)C(N1)(c2ccccc2)c3ccccc3",
         "primary_cyp": "CYP2C9",
-        "site_atoms": [10, 16],
-        "site_type": "aromatic hydroxylation (para)",
-        "clinical_notes": "Anticonvulsant, non-linear kinetics",
     },
     {
         "name": "Propranolol",
         "smiles": "CC(C)NCC(O)COc1cccc2ccccc12",
         "primary_cyp": "CYP2D6",
-        "site_atoms": [10, 11, 12, 13],
-        "site_type": "aromatic hydroxylation",
-        "clinical_notes": "Beta-blocker, also CYP1A2 substrate",
     },
 ]
 
@@ -161,6 +131,48 @@ def _evaluate(compound: Dict[str, object], ranking: List[Tuple[int, float]], pre
     }
 
 
+def _specialist_blend(
+    raw_predictions: Dict[str, object],
+    cahml_pred_cyp: str,
+    top_k: int = 5,
+) -> Tuple[List[Tuple[int, float]], str]:
+    """Specialist routing:
+    - Top-1 site  : argmax of avg(hybrid_lnn, hybrid_full_xtb) scores
+    - Top-2+ sites: micropattern_xtb ranking, excluding the top-1 atom
+    - CYP         : CAHML prediction
+    Falls back gracefully if any model is missing.
+    """
+    lnn = raw_predictions.get("hybrid_lnn")
+    xtb = raw_predictions.get("hybrid_full_xtb")
+    micro = raw_predictions.get("micropattern_xtb")
+
+    # Build top-1 score vector (avg of available lnn/xtb)
+    parts = []
+    if lnn is not None:
+        parts.append(lnn["site_scores"].float().view(-1))
+    if xtb is not None:
+        parts.append(xtb["site_scores"].float().view(-1))
+    top1_scores = torch.stack(parts).mean(dim=0) if parts else None
+
+    # Build top-3+ score vector (micropattern, else fall back)
+    top3_scores = micro["site_scores"].float().view(-1) if micro is not None else top1_scores
+
+    if top1_scores is None:
+        return [], cahml_pred_cyp
+
+    top1_atom = int(torch.argmax(top1_scores).item())
+    top1_score = float(top1_scores[top1_atom].item())
+
+    if top3_scores is not None:
+        micro_order = torch.argsort(top3_scores, descending=True).tolist()
+        fill = [(int(i), float(top3_scores[i].item())) for i in micro_order if i != top1_atom]
+    else:
+        fill = []
+
+    ranking = [(top1_atom, top1_score)] + fill
+    return ranking[:top_k], cahml_pred_cyp
+
+
 def _load_meta_model(checkpoint_path: Path, device, *, n_models: int, atom_feature_dim: int, global_feature_dim: int) -> MultiHeadMetaLearner:
     payload = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     cfg = payload.get("config") or {}
@@ -195,6 +207,30 @@ def _load_cahml_model(checkpoint_path: Path, device) -> CAHML:
     return model
 
 
+def _prepare_cahml_features(model: CAHML, chemistry, device):
+    mol_features = chemistry.mol_features_raw.to(device)
+    atom_features = chemistry.atom_features_raw.to(device)
+    smarts_matches = chemistry.smarts_matches.to(device)
+
+    first_linear = model.atom_encoder.net[0]
+    expected_total_dim = int(first_linear.in_features)
+    raw_atom_dim = int(atom_features.shape[-1])
+    expected_smarts_dim = max(0, expected_total_dim - raw_atom_dim)
+    current_smarts_dim = int(smarts_matches.shape[-1])
+
+    if current_smarts_dim > expected_smarts_dim:
+        smarts_matches = smarts_matches[:, :expected_smarts_dim]
+    elif current_smarts_dim < expected_smarts_dim:
+        pad = torch.zeros(
+            (smarts_matches.shape[0], expected_smarts_dim - current_smarts_dim),
+            dtype=smarts_matches.dtype,
+            device=smarts_matches.device,
+        )
+        smarts_matches = torch.cat([smarts_matches, pad], dim=-1)
+
+    return mol_features, atom_features, smarts_matches
+
+
 def _print_model_block(title: str, ranking: List[Tuple[int, float]], pred_cyp: str, cyp_rows: List[Tuple[str, float]]) -> None:
     print(title)
     print("  Top site candidates:")
@@ -206,6 +242,25 @@ def _print_model_block(title: str, ranking: List[Tuple[int, float]], pred_cyp: s
         print(f"    {cyp_name}: {prob:.3f}")
 
 
+def _load_panel(path: Path | None) -> List[Dict[str, object]]:
+    if path is None:
+        return list(TEST_COMPOUNDS)
+    payload = json.loads(path.read_text())
+    compounds = payload.get("compounds") or payload.get("drugs") or payload
+    normalized: List[Dict[str, object]] = []
+    for row in compounds:
+        item = dict(row)
+        if "site_atoms" not in item and "metabolism_sites" in item:
+            item["site_atoms"] = list(item.get("metabolism_sites") or [])
+        if "site_type" not in item and "site_types" in item:
+            site_types = list(item.get("site_types") or [])
+            item["site_type"] = ", ".join(str(v) for v in site_types)
+        if "clinical_notes" not in item and "notes" in item:
+            item["clinical_notes"] = item.get("notes")
+        normalized.append(item)
+    return normalized
+
+
 def main() -> None:
     require_torch()
     parser = argparse.ArgumentParser(description="Test 10 compounds with the base ensemble and multi-head meta learner")
@@ -214,15 +269,21 @@ def main() -> None:
     parser.add_argument("--stack-cahml-under-multihead", action="store_true", help="Append CAHML as a fourth expert before running the multi-head checkpoint")
     parser.add_argument("--structure-sdf", default="3D structures.sdf")
     parser.add_argument("--device", default=None)
+    parser.add_argument("--panel-json", default="", help="Custom panel JSON with `compounds` or `drugs` list")
     parser.add_argument("--output-json", default="data/test_10_compounds.json")
     args = parser.parse_args()
 
+    panel_path = Path(args.panel_json) if args.panel_json else None
+    if panel_path is not None and not panel_path.exists():
+        raise FileNotFoundError(f"Panel JSON not found: {panel_path}")
+    panel_compounds = _load_panel(panel_path)
+
     output_json = Path(args.output_json)
     output_json.parent.mkdir(parents=True, exist_ok=True)
-    output_json.write_text(json.dumps({"drugs": TEST_COMPOUNDS}, indent=2))
+    output_json.write_text(json.dumps({"drugs": panel_compounds}, indent=2))
 
     device = _resolve_device(args.device)
-    _print_header("10-COMPOUND TEST SET")
+    _print_header(f"{len(panel_compounds)}-COMPOUND TEST SET")
     print(f"Device: {device}")
     print(f"Saved panel JSON: {output_json}")
     print("Resolving meta checkpoint...", flush=True)
@@ -276,11 +337,9 @@ def main() -> None:
 
     summary: List[Dict[str, object]] = []
 
-    for compound in TEST_COMPOUNDS:
+    for compound in panel_compounds:
         _print_header(f"TESTING {compound['name']}")
         print(f"CYP: {compound['primary_cyp']}")
-        print(f"Known sites: {compound['site_atoms']} ({compound['site_type']})")
-        print(f"Notes: {compound['clinical_notes']}")
 
         raw_predictions = predictor.predict_all(compound)
         base_stacked = None
@@ -290,12 +349,13 @@ def main() -> None:
             chemistry = chemistry_extractor.extract(str(compound["smiles"]))
             if chemistry is None:
                 raise RuntimeError("Failed to extract chemistry features for CAHML stacked evaluation")
+            mol_features, atom_features, smarts_matches = _prepare_cahml_features(cahml_model, chemistry, device)
             base_stacked = base_stacker.stack(raw_predictions)
             with torch.no_grad():
                 cahml_stack_out = cahml_model(
-                    chemistry.mol_features_raw.to(device),
-                    chemistry.atom_features_raw.to(device),
-                    chemistry.smarts_matches.to(device),
+                    mol_features,
+                    atom_features,
+                    smarts_matches,
                     base_stacked["site_scores_raw"].to(device),
                     base_stacked["cyp_probs_raw"].to(device),
                 )
@@ -320,7 +380,6 @@ def main() -> None:
                 "ranking": ranking,
                 "pred_cyp": pred_cyp,
                 "cyp_rows": cyp_rows,
-                "eval": _evaluate(compound, ranking, pred_cyp),
             }
 
         with torch.no_grad():
@@ -333,25 +392,24 @@ def main() -> None:
         meta_ranking = _top_rows(site_scores.detach().cpu())
         meta_cyp_probs = torch.softmax(cyp_logits.detach().cpu(), dim=-1)
         meta_pred_cyp, meta_cyp_rows = _predict_cyp_from_probs(meta_cyp_probs)
-        meta_eval = _evaluate(compound, meta_ranking, meta_pred_cyp)
-        cahml_eval = None
+        # ── specialist blend (always available once base models ran) ─────────
         cahml_summary = None
         if cahml_model is not None and chemistry_extractor is not None:
             chemistry = chemistry_extractor.extract(str(compound["smiles"]))
             if chemistry is not None:
+                mol_features, atom_features, smarts_matches = _prepare_cahml_features(cahml_model, chemistry, device)
                 cahml_inputs = base_stacked if base_stacked is not None else stacked
                 with torch.no_grad():
                     cahml_out = cahml_model(
-                        chemistry.mol_features_raw.to(device),
-                        chemistry.atom_features_raw.to(device),
-                        chemistry.smarts_matches.to(device),
+                        mol_features,
+                        atom_features,
+                        smarts_matches,
                         cahml_inputs["site_scores_raw"].to(device),
                         cahml_inputs["cyp_probs_raw"].to(device),
                     )
                 cahml_ranking = _top_rows(cahml_out["site_scores"].detach().cpu())
                 cahml_pred_cyp = CYP_LIST[int(cahml_out["cyp_prediction"])]
                 cahml_cyp_rows = _predict_cyp_from_probs(torch.softmax(cahml_out["cyp_logits"].detach().cpu(), dim=-1))[1]
-                cahml_eval = _evaluate(compound, cahml_ranking, cahml_pred_cyp)
                 cahml_summary = {
                     "ranking": cahml_ranking,
                     "pred_cyp": cahml_pred_cyp,
@@ -360,8 +418,13 @@ def main() -> None:
                     "reaction_confidence": float(cahml_out["reaction_confidence"]),
                     "trusted_model": cahml_out["explanation"]["trusted_model"],
                     "confidence_level": cahml_out["explanation"]["confidence_level"],
-                    "eval": cahml_eval,
                 }
+
+        # Compute specialist blend (needs cahml_pred_cyp from above block)
+        specialist_ranking = None
+        specialist_cyp = None
+        if cahml_summary is not None:
+            specialist_ranking, specialist_cyp = _specialist_blend(raw_predictions, cahml_summary["pred_cyp"])
 
         for model_name in ["hybrid_lnn", "hybrid_full_xtb", "micropattern_xtb"]:
             if model_name in model_results:
@@ -388,42 +451,35 @@ def main() -> None:
                 f"  Explanation: trusted_model={cahml_summary['trusted_model']} "
                 f"confidence={cahml_summary['confidence_level']}"
             )
-
-        print("Evaluation:")
-        for model_name in ["hybrid_lnn", "hybrid_full_xtb", "micropattern_xtb"]:
-            if model_name in model_results:
-                ev = model_results[model_name]["eval"]
-                print(f"  {model_name}: top1={ev['top1_correct']} top3={ev['top3_correct']} cyp={ev['cyp_correct']}")
-        print(f"  multi_head: top1={meta_eval['top1_correct']} top3={meta_eval['top3_correct']} cyp={meta_eval['cyp_correct']}")
-        if cahml_eval is not None:
-            print(f"  cahml: top1={cahml_eval['top1_correct']} top3={cahml_eval['top3_correct']} cyp={cahml_eval['cyp_correct']}")
+        if specialist_ranking is not None:
+            _print_model_block("Specialist blend:", specialist_ranking, specialist_cyp, [])
 
         summary.append(
             {
                 "name": compound["name"],
-                "hybrid_lnn": model_results.get("hybrid_lnn", {}).get("eval"),
-                "hybrid_full_xtb": model_results.get("hybrid_full_xtb", {}).get("eval"),
-                "micropattern_xtb": model_results.get("micropattern_xtb", {}).get("eval"),
-                "multi_head": meta_eval,
-                "cahml": cahml_eval,
+                "smiles": compound["smiles"],
+                "predicted_cyp": {
+                    "hybrid_lnn":      model_results.get("hybrid_lnn",      {}).get("pred_cyp"),
+                    "hybrid_full_xtb": model_results.get("hybrid_full_xtb", {}).get("pred_cyp"),
+                    "micropattern_xtb":model_results.get("micropattern_xtb",{}).get("pred_cyp"),
+                    "multi_head":      meta_pred_cyp,
+                    "cahml":           cahml_summary["pred_cyp"] if cahml_summary else None,
+                    "specialist":      specialist_cyp,
+                },
+                "top5_sites": {
+                    "hybrid_lnn":      model_results.get("hybrid_lnn",      {}).get("ranking"),
+                    "hybrid_full_xtb": model_results.get("hybrid_full_xtb", {}).get("ranking"),
+                    "micropattern_xtb":model_results.get("micropattern_xtb",{}).get("ranking"),
+                    "multi_head":      meta_ranking[:5],
+                    "cahml":           cahml_summary["ranking"][:5] if cahml_summary else None,
+                    "specialist":      specialist_ranking[:5] if specialist_ranking else None,
+                },
                 "site_attention": [float(v) for v in stats["site_attention"].detach().cpu().tolist()],
-                "cyp_attention": [float(v) for v in stats["cyp_attention"].detach().cpu().tolist()],
+                "cyp_attention":  [float(v) for v in stats["cyp_attention"].detach().cpu().tolist()],
             }
         )
 
     _print_header("SUMMARY")
-    completed = [row for row in summary if row.get("multi_head") is not None]
-    total = max(1, len(completed))
-    for label in ["hybrid_lnn", "hybrid_full_xtb", "micropattern_xtb", "multi_head", "cahml"]:
-        rows = [row[label] for row in completed if row.get(label) is not None]
-        if not rows:
-            continue
-        top1 = sum(1 for row in rows if row["top1_correct"])
-        top3 = sum(1 for row in rows if row["top3_correct"])
-        cyp = sum(1 for row in rows if row["cyp_correct"])
-        print(f"{label}: top1={top1}/{len(rows)} ({top1/max(1, len(rows)):.1%}) | top3={top3}/{len(rows)} ({top3/max(1, len(rows)):.1%}) | cyp={cyp}/{len(rows)} ({cyp/max(1, len(rows)):.1%})")
-
-    print("\nPer compound:")
     print(json.dumps(summary, indent=2))
 
 

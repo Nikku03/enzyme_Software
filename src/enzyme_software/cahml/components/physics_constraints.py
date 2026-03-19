@@ -40,6 +40,8 @@ class PhysicsConstraints:
                 pattern_idx = self.pattern_index.get(pattern_name)
                 if pattern_idx is None or atom_idx >= smarts_matches.shape[0]:
                     continue
+                if pattern_idx >= smarts_matches.shape[1]:
+                    continue
                 if smarts_matches[atom_idx, pattern_idx].item() <= 0.5:
                     continue
                 if action == "block":

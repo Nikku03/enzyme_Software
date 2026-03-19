@@ -3,111 +3,52 @@
     {
       "name": "Warfarin",
       "smiles": "CC(=O)CC(c1ccccc1)c2c(O)c3ccccc3oc2=O",
-      "primary_cyp": "CYP2C9",
-      "site_atoms": [
-        6,
-        7
-      ],
-      "site_type": "aromatic hydroxylation",
-      "clinical_notes": "Narrow therapeutic index, CYP2C9 polymorphisms critical"
+      "primary_cyp": "CYP2C9"
     },
     {
       "name": "Omeprazole",
       "smiles": "COc1ccc2nc(Cc3ncc(C)c(OC)c3C)[nH]c2c1S(=O)C",
-      "primary_cyp": "CYP2C19",
-      "site_atoms": [
-        19
-      ],
-      "site_type": "sulfoxidation",
-      "clinical_notes": "Proton pump inhibitor, CYP2C19 poor metabolizers"
+      "primary_cyp": "CYP2C19"
     },
     {
       "name": "Codeine",
       "smiles": "COc1ccc2C3CC4=CC=C(O)C5Oc1c2C35CCN4C",
-      "primary_cyp": "CYP2D6",
-      "site_atoms": [
-        0
-      ],
-      "site_type": "O-demethylation -> morphine",
-      "clinical_notes": "Prodrug, CYP2D6 ultra-rapid metabolizers at risk"
+      "primary_cyp": "CYP2D6"
     },
     {
       "name": "Caffeine",
       "smiles": "Cn1cnc2c1c(=O)n(C)c(=O)n2C",
-      "primary_cyp": "CYP1A2",
-      "site_atoms": [
-        0,
-        7,
-        12
-      ],
-      "site_type": "N-demethylation",
-      "clinical_notes": "CYP1A2 probe substrate, smoking induces metabolism"
+      "primary_cyp": "CYP1A2"
     },
     {
       "name": "Diazepam",
       "smiles": "CN1C(=O)CN=C(c2ccccc2)c3cc(Cl)ccc13",
-      "primary_cyp": "CYP3A4",
-      "site_atoms": [
-        0,
-        1
-      ],
-      "site_type": "N-demethylation -> nordiazepam",
-      "clinical_notes": "Benzodiazepine, also CYP2C19 substrate"
+      "primary_cyp": "CYP3A4"
     },
     {
       "name": "Tolbutamide",
       "smiles": "Cc1ccc(cc1)S(=O)(=O)NC(=O)NCCC",
-      "primary_cyp": "CYP2C9",
-      "site_atoms": [
-        0
-      ],
-      "site_type": "methyl hydroxylation",
-      "clinical_notes": "CYP2C9 probe substrate, sulfonylurea"
+      "primary_cyp": "CYP2C9"
     },
     {
       "name": "Atomoxetine",
       "smiles": "Cc1ccccc1OC(CCNC)c2ccccc2",
-      "primary_cyp": "CYP2D6",
-      "site_atoms": [
-        0,
-        8
-      ],
-      "site_type": "aromatic hydroxylation",
-      "clinical_notes": "ADHD medication, CYP2D6 polymorphisms affect exposure"
+      "primary_cyp": "CYP2D6"
     },
     {
       "name": "Nifedipine",
       "smiles": "COC(=O)C1=C(C)NC(C)=C(C1c2ccccc2[N+](=O)[O-])C(=O)OC",
-      "primary_cyp": "CYP3A4",
-      "site_atoms": [
-        11
-      ],
-      "site_type": "oxidation to pyridine",
-      "clinical_notes": "Calcium channel blocker, photosensitive"
+      "primary_cyp": "CYP3A4"
     },
     {
       "name": "Phenytoin",
       "smiles": "O=C1NC(=O)C(N1)(c2ccccc2)c3ccccc3",
-      "primary_cyp": "CYP2C9",
-      "site_atoms": [
-        10,
-        16
-      ],
-      "site_type": "aromatic hydroxylation (para)",
-      "clinical_notes": "Anticonvulsant, non-linear kinetics"
+      "primary_cyp": "CYP2C9"
     },
     {
       "name": "Propranolol",
       "smiles": "CC(C)NCC(O)COc1cccc2ccccc12",
-      "primary_cyp": "CYP2D6",
-      "site_atoms": [
-        10,
-        11,
-        12,
-        13
-      ],
-      "site_type": "aromatic hydroxylation",
-      "clinical_notes": "Beta-blocker, also CYP1A2 substrate"
+      "primary_cyp": "CYP2D6"
     }
   ]
 }
