@@ -4,11 +4,13 @@
 #   bash train_all.sh 2>&1 | tee logs/train_all_$(date +%Y%m%d).log
 set -euo pipefail
 
-# ── Python: use bondbreak env (has torch 2.8 + rdkit + MPS) ─────────────────
-PYTHON="/Users/deepika/anaconda3/envs/bondbreak/bin/python"
+# ── Python: auto-detect or override with PYTHON env var ──────────────────────
+# Local Mac (bondbreak env):  PYTHON=/Users/deepika/anaconda3/envs/bondbreak/bin/python bash train_all.sh
+# Google Colab / Linux:       bash train_all.sh   (uses system python)
+PYTHON="${PYTHON:-python}"
 export PYTHONPATH="$(pwd)/src"
-export KMP_DUPLICATE_LIB_OK=TRUE          # prevents OpenMP crash in bondbreak
-export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0  # let MPS use memory as needed without hard cap
+export KMP_DUPLICATE_LIB_OK=TRUE             # prevents OpenMP conflict on some systems
+# export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0  # Mac MPS only — harmless no-op elsewhere
 
 # ── Config ───────────────────────────────────────────────────────────────────
 DATASET="data/prepared_training/main5_all_models_conservative.json"

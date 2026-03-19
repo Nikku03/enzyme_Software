@@ -1,0 +1,18 @@
+# Enzyme Software — Python dependencies
+# Install: pip install -r requirements.txt
+#
+# NOTE: torch is pre-installed on Google Colab — no need to reinstall it.
+# On a fresh machine: pip install torch --index-url https://download.pytorch.org/whl/cu121
+
+# Core ML
+torch>=2.2.0
+numpy>=1.26.0
+
+# Chemistry (required — not pre-installed on Colab)
+rdkit>=2023.9.1
+
+# XTB quantum chemistry (optional — Steps 2 & 3 only)
+# Without XTB: those steps zero-pad the quantum features and still train fine.
+# To install XTB binary on Linux/Colab:
+#   conda install -c conda-forge xtb   OR   micromamba install -c conda-forge xtb
+# xtb-python>=22.1  # Python bindings only — does NOT install the xtb binary
