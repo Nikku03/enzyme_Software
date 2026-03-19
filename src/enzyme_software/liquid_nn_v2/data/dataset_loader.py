@@ -86,11 +86,15 @@ class CYPMetabolismDataset(Dataset):
             supported = set(self.cyp_classes)
             self.drugs = [d for d in drugs if str(d.get("cyp") or d.get("primary_cyp") or "") in supported]
         print(f"Loaded {len(self.drugs)} drugs for {split} split")
+        self._cache: Optional[List] = None
+        self._cache = [self[i] for i in range(len(self.drugs))]
 
     def __len__(self):
         return len(self.drugs)
 
     def __getitem__(self, idx) -> Dict[str, object]:
+        if self._cache is not None:
+            return self._cache[idx]
         drug = self.drugs[idx]
         smiles = str(drug.get("smiles", ""))
         cyp = str(drug.get("cyp") or drug.get("primary_cyp") or "")
@@ -215,9 +219,9 @@ def create_dataloaders(
     train_ds = CYPMetabolismDataset(split="train", augment=True, **common)
     val_ds = CYPMetabolismDataset(split="val", augment=False, **common)
     test_ds = CYPMetabolismDataset(split="test", augment=False, **common)
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=2, pin_memory=True, persistent_workers=True)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=2, pin_memory=True, persistent_workers=True)
-    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=2, pin_memory=True, persistent_workers=True)
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=0, pin_memory=False)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=False)
+    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=False)
     return train_loader, val_loader, test_loader
 
 
@@ -240,7 +244,7 @@ def create_dataloaders_from_drugs(
     train_ds = CYPMetabolismDataset(split="train", augment=True, cyp_classes=cyp_classes, drugs=train_drugs, structure_library=structure_library, use_manual_engine_features=use_manual_engine_features, manual_target_bond=manual_target_bond, manual_feature_cache_dir=manual_feature_cache_dir, allow_partial_sanitize=allow_partial_sanitize, allow_aggressive_repair=allow_aggressive_repair, drop_failed=drop_failed)
     val_ds = CYPMetabolismDataset(split="val", augment=False, cyp_classes=cyp_classes, drugs=val_drugs, structure_library=structure_library, use_manual_engine_features=use_manual_engine_features, manual_target_bond=manual_target_bond, manual_feature_cache_dir=manual_feature_cache_dir, allow_partial_sanitize=allow_partial_sanitize, allow_aggressive_repair=allow_aggressive_repair, drop_failed=drop_failed)
     test_ds = CYPMetabolismDataset(split="test", augment=False, cyp_classes=cyp_classes, drugs=test_drugs, structure_library=structure_library, use_manual_engine_features=use_manual_engine_features, manual_target_bond=manual_target_bond, manual_feature_cache_dir=manual_feature_cache_dir, allow_partial_sanitize=allow_partial_sanitize, allow_aggressive_repair=allow_aggressive_repair, drop_failed=drop_failed)
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=2, pin_memory=True, persistent_workers=True)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=2, pin_memory=True, persistent_workers=True)
-    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=2, pin_memory=True, persistent_workers=True)
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=0, pin_memory=False)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=False)
+    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=False)
     return train_loader, val_loader, test_loader

@@ -132,9 +132,9 @@ def create_micropattern_dataloaders_from_drugs(
     train_exp = MicroPatternExperimentDataset(train_ds, xtb_cache_dir=xtb_cache_dir, compute_xtb_if_missing=compute_xtb_if_missing)
     val_exp = MicroPatternExperimentDataset(val_ds, xtb_cache_dir=xtb_cache_dir, compute_xtb_if_missing=compute_xtb_if_missing)
     test_exp = MicroPatternExperimentDataset(test_ds, xtb_cache_dir=xtb_cache_dir, compute_xtb_if_missing=compute_xtb_if_missing)
-    train_loader = DataLoader(train_exp, batch_size=batch_size, shuffle=True, collate_fn=base_collate_fn, num_workers=2, pin_memory=True, persistent_workers=True)
-    val_loader = DataLoader(val_exp, batch_size=batch_size, shuffle=False, collate_fn=base_collate_fn, num_workers=2, pin_memory=True, persistent_workers=True)
-    test_loader = DataLoader(test_exp, batch_size=batch_size, shuffle=False, collate_fn=base_collate_fn, num_workers=2, pin_memory=True, persistent_workers=True)
+    train_loader = DataLoader(train_exp, batch_size=batch_size, shuffle=True, collate_fn=base_collate_fn, num_workers=0, pin_memory=False)
+    val_loader = DataLoader(val_exp, batch_size=batch_size, shuffle=False, collate_fn=base_collate_fn, num_workers=0, pin_memory=False)
+    test_loader = DataLoader(test_exp, batch_size=batch_size, shuffle=False, collate_fn=base_collate_fn, num_workers=0, pin_memory=False)
     return train_loader, val_loader, test_loader
 
 

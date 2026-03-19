@@ -117,7 +117,7 @@ def create_full_xtb_dataloaders_from_drugs(
     train_ds = FullXTBHybridDataset(split="train", augment=True, drugs=train_drugs, **common)
     val_ds = FullXTBHybridDataset(split="val", augment=False, drugs=val_drugs, **common)
     test_ds = FullXTBHybridDataset(split="test", augment=False, drugs=test_drugs, **common)
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=2, pin_memory=True, persistent_workers=True)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=2, pin_memory=True, persistent_workers=True)
-    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=2, pin_memory=True, persistent_workers=True)
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=0, pin_memory=False)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=False)
+    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=False)
     return train_loader, val_loader, test_loader
