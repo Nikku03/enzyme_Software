@@ -107,6 +107,7 @@ def _make_config(args, fold_idx: int, work_path: Path) -> CAHMLConfig:
         weight_decay=args.weight_decay,
         epochs=args.epochs,
         patience=args.patience,
+        min_epochs=args.min_epochs,
         seed=args.seed,
         mirank_weight=args.mirank_weight,
         bce_weight=args.bce_weight,
@@ -135,6 +136,9 @@ def main() -> None:
     parser.add_argument("--n-folds", type=int, default=5)
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--patience", type=int, default=15)
+    parser.add_argument("--min-epochs", type=int, default=30,
+                        help="Minimum epochs before early stopping can fire (default 30 — "
+                             "guards against noisy top1 on small per-fold val sets)")
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--hidden-dim", type=int, default=64)

@@ -352,7 +352,7 @@ if TORCH_AVAILABLE:
                     else:
                         patience_left -= 1
                     self._save_progress(best_state=best_state, last_val=last_val, status="running")
-                    if patience_left <= 0:
+                    if patience_left <= 0 and epoch >= int(self.config.min_epochs):
                         break
             except KeyboardInterrupt:
                 saved = self._save_progress(best_state=best_state, last_val=last_val, status="interrupted")

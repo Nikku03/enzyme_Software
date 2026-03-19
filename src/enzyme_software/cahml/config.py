@@ -120,6 +120,7 @@ class CAHMLConfig:
     dropout: float = 0.1
     epochs: int = 100
     patience: int = 15
+    min_epochs: int = 0
     train_ratio: float = 0.7
     val_ratio: float = 0.15
     seed: int = 42
