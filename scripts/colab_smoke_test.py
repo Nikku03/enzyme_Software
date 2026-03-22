@@ -103,8 +103,7 @@ def main() -> None:
 
     if args.forward_only:
         trainer.eval()
-        with torch.no_grad():
-            metrics = trainer.validation_step(batch)
+        metrics = trainer.validation_step(batch)
     else:
         trainer.train()
         metrics = trainer.training_step(batch)
