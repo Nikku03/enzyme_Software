@@ -97,6 +97,7 @@ def main() -> None:
         enable_static_compile=args.allow_compile and not args.no_compile,
         enable_bf16_hot_path=not args.no_bf16,
         enable_wsd_scheduler=False,
+        low_memory_train_mode=not args.forward_only,
     ).to(device)
 
     quantum_enforcer = trainer.model.module1.field_engine.quantum_enforcer

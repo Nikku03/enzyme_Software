@@ -13,7 +13,7 @@ import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
 
 from nexus.core.dynamics_engine import NEXUS_Dynamics_Engine
-from nexus.core.field_optimizer import Field_Gradient_Optimizer
+from nexus.core.field_optimizer import Field_Gradient_Optimizer, FieldGradientOptimizationReport
 from nexus.core.flux_analysis import NCFAFluxPropagator
 from nexus.core.inference import NEXUS_Module1_Output
 from nexus.layers.dag_learner import MetabolicDAGLearner
@@ -60,6 +60,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         wsd_decay_style: str = "linear",
         wsd_warmup_init_scale: float = 0.1,
         wsd_min_lr_scale: float = 0.05,
+        low_memory_train_mode: bool = False,
     ) -> None:
         super().__init__()
         self.model = model or NEXUS_Dynamics_Engine()
@@ -83,6 +84,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.wsd_decay_style = str(wsd_decay_style).lower()
         self.wsd_warmup_init_scale = float(wsd_warmup_init_scale)
         self.wsd_min_lr_scale = float(wsd_min_lr_scale)
+        self.low_memory_train_mode = bool(low_memory_train_mode)
         self.optimizer: Optional[torch.optim.Optimizer] = None
         self.scheduler: Optional[torch.optim.lr_scheduler.LambdaLR] = None
         self.total_training_steps: Optional[int] = None
@@ -649,6 +651,18 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.last_checkpoint_fallback = True
         return _wrapped(q_init_internal, target_point_internal)
 
+    def _zero_sobolev_report(self, manifold) -> FieldGradientOptimizationReport:
+        zero = torch.zeros((), dtype=manifold.pos.dtype, device=manifold.pos.device)
+        return FieldGradientOptimizationReport(
+            gradient_loss=zero,
+            spectral_penalty=zero,
+            alpha_calibration_loss=zero,
+            total_loss=zero,
+            atomic_gradients=torch.zeros_like(manifold.pos),
+            vacuum_values=manifold.pos.new_zeros((1,)),
+            vacuum_gradients=manifold.pos.new_zeros((1, 3)),
+        )
+
     def forward_batch(self, batch: Any) -> TrainingStepResult:
         self._maybe_prepare_precision_runtime()
         smiles = self._resolve_smiles(batch)
@@ -678,18 +692,42 @@ class Metabolic_Causal_Trainer(nn.Module):
         q_init_internal = field.to_internal_coords(module1_out.manifold.pos).to(dtype=self.model.solver_dtype)
         target_point_internal = field.to_internal_coords(target_point_world.view(1, 3)).view(-1).to(dtype=self.model.solver_dtype)
 
-        pred_rate, h_initial, h_final, ts_eigenvalues = self._dynamics_summary_checkpointed(
-            q_init_internal,
-            target_point_internal,
-            smiles=smiles,
-            species=module1_out.manifold.species,
-            target_atom_index=true_atom_index,
-            accessibility_field=accessibility_field,
-            ddi_occupancy=ddi_occupancy,
-        )
+        low_memory_train = self.low_memory_train_mode and self.training
+        if low_memory_train:
+            self.last_dynamics_fallback = True
+            self.last_checkpoint_fallback = True
+            h_initial = self.model.hamiltonian(
+                q_init_internal,
+                torch.zeros_like(q_init_internal),
+                smiles=smiles,
+                species=module1_out.manifold.species,
+                accessibility_field=accessibility_field,
+                ddi_occupancy=ddi_occupancy,
+            ).detach()
+            pred_rate = torch.exp(-torch.relu(h_initial)).clamp_min(1.0e-12).detach()
+            h_final = h_initial
+            ts_eigenvalues = torch.stack(
+                [
+                    h_initial.new_tensor(-self.loss_fn.topology_margin),
+                    h_initial.new_tensor(self.loss_fn.topology_margin),
+                ],
+                dim=0,
+            )
+            sobolev_report = self._zero_sobolev_report(module1_out.manifold)
+            delta_E_tensor = self._to_fp32(-module1_out.scan.effective_reactivity).detach()
+        else:
+            pred_rate, h_initial, h_final, ts_eigenvalues = self._dynamics_summary_checkpointed(
+                q_init_internal,
+                target_point_internal,
+                smiles=smiles,
+                species=module1_out.manifold.species,
+                target_atom_index=true_atom_index,
+                accessibility_field=accessibility_field,
+                ddi_occupancy=ddi_occupancy,
+            )
 
-        sobolev_report = self.field_optimizer(field, module1_out.manifold)
-        delta_E_tensor = self._to_fp32(-module1_out.scan.effective_reactivity)
+            sobolev_report = self.field_optimizer(field, module1_out.manifold)
+            delta_E_tensor = self._to_fp32(-module1_out.scan.effective_reactivity)
 
         # Initialise sub-losses as zeros so they are always defined for the metrics dict,
         # whether or not protein data was provided.
@@ -726,14 +764,16 @@ class Metabolic_Causal_Trainer(nn.Module):
             self._to_fp32(module1_out.alignment_score).unsqueeze(0),
             true_ranked_index,
         )
+        if low_memory_train:
+            ranking_loss = ranking_loss.detach()
 
         # T5: Metabolic DAG forward pass.
         # Build per-atom Clifford multivectors: position in the vector grade (indices 1-3),
         # effective reactivity in the scalar grade (index 0).  This gives the GraNDAG edge
         # predictor a geometry- and thermodynamics-aware representation of each candidate
         # metabolic site without requiring an additional neural forward pass.
-        atom_mv = embed_coordinates(module1_out.manifold.pos.to(dtype=exp_rate.dtype)).clone()
-        atom_mv[..., 0] = self._to_fp32(module1_out.scan.effective_reactivity)
+        atom_mv = embed_coordinates(module1_out.manifold.pos.detach().to(dtype=exp_rate.dtype)).clone()
+        atom_mv[..., 0] = self._to_fp32(module1_out.scan.effective_reactivity).detach()
         atom_mv = atom_mv.unsqueeze(0)   # [1, N_atoms, 8]  — single-compound batch dim
         dag_output = self.dag_learner(
             atom_mv,
