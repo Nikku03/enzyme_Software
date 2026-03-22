@@ -31,6 +31,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-bf16", action="store_true", help="Disable bf16 hot path")
     parser.add_argument("--integration-resolution", type=int, default=8, help="Quantum normalization grid resolution; lower is safer for smoke tests")
     parser.add_argument("--integration-chunk-size", type=int, default=128, help="Quantum normalization chunk size; lower reduces peak memory")
+    parser.add_argument("--scan-n-points", type=int, default=12, help="Reaction-volume shell points for the smoke test")
+    parser.add_argument("--scan-radius", type=float, default=1.25, help="Reaction-volume scan radius for the smoke test")
+    parser.add_argument("--scan-query-chunk-size", type=int, default=8, help="Chunk size for field queries during scan")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu", choices=("cpu", "cuda"))
     return parser.parse_args()
 
@@ -96,6 +99,10 @@ def main() -> None:
     quantum_enforcer = trainer.model.module1.field_engine.quantum_enforcer
     quantum_enforcer.integration_resolution = max(int(args.integration_resolution), 4)
     quantum_enforcer.integration_chunk_size = max(int(args.integration_chunk_size), 16)
+    query_engine = trainer.model.module1.field_engine.query_engine
+    query_engine.n_points = max(int(args.scan_n_points), 4)
+    query_engine.radius = float(args.scan_radius)
+    query_engine.query_chunk_size = max(int(args.scan_query_chunk_size), 1)
 
     if device.type == "cuda":
         torch.cuda.empty_cache()
@@ -115,7 +122,10 @@ def main() -> None:
         "static_compile="
         f"{trainer.enable_static_compile}  bf16_hot_path={trainer.enable_bf16_hot_path}  "
         f"integration_resolution={quantum_enforcer.integration_resolution}  "
-        f"integration_chunk_size={quantum_enforcer.integration_chunk_size}"
+        f"integration_chunk_size={quantum_enforcer.integration_chunk_size}  "
+        f"scan_n_points={query_engine.n_points}  "
+        f"scan_radius={query_engine.radius}  "
+        f"scan_query_chunk_size={query_engine.query_chunk_size}"
     )
     for key in sorted(scalars):
         print(f"{key}={scalars[key]}")

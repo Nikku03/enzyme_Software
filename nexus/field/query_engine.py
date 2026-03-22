@@ -56,6 +56,7 @@ class SubAtomicQueryEngine(nn.Module):
         self,
         radius: float = 2.5,
         n_points: int = 96,
+        query_chunk_size: int = 16,
         shell_fractions: Optional[Sequence[float]] = None,
         min_clearance: float = 1.15,
         steric_softness: float = 10.0,
@@ -74,6 +75,7 @@ class SubAtomicQueryEngine(nn.Module):
         super().__init__()
         self.radius = float(radius)
         self.n_points = int(n_points)
+        self.query_chunk_size = int(query_chunk_size)
         self.shell_fractions = tuple(shell_fractions or (0.35, 0.55, 0.75, 0.90, 1.00))
         self.min_clearance = float(min_clearance)
         self.steric_softness = float(steric_softness)
@@ -156,19 +158,38 @@ class SubAtomicQueryEngine(nn.Module):
 
     def probe_reaction_volume(self, field, grid_points: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, Dict[str, torch.Tensor]]:
         flat_grid = grid_points.reshape(-1, 3).clone().requires_grad_(True)
-        components = field.query_components(flat_grid)
-        psi_flat = components["total"]
-        grad_flat = torch.autograd.grad(
-            outputs=psi_flat.sum(),
-            inputs=flat_grid,
-            retain_graph=True,
-            create_graph=True,
-            allow_unused=False,
-        )[0]
+        component_chunks: Dict[str, list[torch.Tensor]] = {}
+        psi_chunks = []
+        grad_chunks = []
+        chunk_size = max(int(self.query_chunk_size), 1)
+
+        for start in range(0, flat_grid.size(0), chunk_size):
+            stop = min(start + chunk_size, flat_grid.size(0))
+            flat_chunk = flat_grid[start:stop].clone().requires_grad_(True)
+            components = field.query_components(flat_chunk)
+            psi_chunk = components["total"]
+            grad_chunk = torch.autograd.grad(
+                outputs=psi_chunk.sum(),
+                inputs=flat_chunk,
+                retain_graph=True,
+                create_graph=True,
+                allow_unused=False,
+            )[0]
+            psi_chunks.append(psi_chunk)
+            grad_chunks.append(grad_chunk)
+            for key, value in components.items():
+                if torch.is_tensor(value) and value.dim() > 0 and value.size(0) == flat_chunk.size(0):
+                    component_chunks.setdefault(key, []).append(value)
+                elif key not in component_chunks:
+                    component_chunks[key] = [value]
+
+        psi_flat = torch.cat(psi_chunks, dim=0)
+        grad_flat = torch.cat(grad_chunks, dim=0)
         psi = psi_flat.view(grid_points.size(0), grid_points.size(1))
         grad = grad_flat.view(grid_points.size(0), grid_points.size(1), 3)
         reshaped = {}
-        for key, value in components.items():
+        for key, values in component_chunks.items():
+            value = values[0] if len(values) == 1 else torch.cat(values, dim=0)
             if torch.is_tensor(value) and value.dim() > 0 and value.size(0) == flat_grid.size(0):
                 reshaped[key] = value.view(grid_points.size(0), grid_points.size(1), *value.shape[1:])
             else:
