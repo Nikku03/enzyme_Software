@@ -10,7 +10,7 @@ from nexus.core.multiscale_engine import MultiScale_Topology_Engine, MultiScaleE
 from nexus.field.hypernetwork import FieldConditioning, ReactivityHyperNetwork
 from nexus.field.query_engine import SubAtomicQueryEngine, SubAtomicQueryResult
 from nexus.field.splatter import TensorSplatter, TensorSplatterState
-from nexus.field.siren_base import DynamicSIREN, SIREN_OMEGA_0
+from nexus.field.siren_base import DynamicLayerParams, DynamicSIREN, SIREN_OMEGA_0
 from nexus.physics.observables import QuantumDescriptorExtractor
 from nexus.physics.quantum_bounds import HohenbergKohn_Field_Enforcer, QuantumBoundingBox
 
@@ -35,6 +35,16 @@ class ContinuousReactivityField:
     def _siren_dtype(self) -> torch.dtype:
         return next(self.engine.siren_field.parameters()).dtype
 
+    def _cast_hidden_params(self, *, dtype: torch.dtype, device: torch.device) -> list[DynamicLayerParams]:
+        return [
+            DynamicLayerParams(
+                row_scale=params.row_scale.to(dtype=dtype, device=device),
+                col_scale=params.col_scale.to(dtype=dtype, device=device),
+                bias_shift=params.bias_shift.to(dtype=dtype, device=device),
+            )
+            for params in self.conditioning.hidden_params
+        ]
+
     def to_internal_coords(self, coords: torch.Tensor) -> torch.Tensor:
         coords64 = coords.to(dtype=torch.float64)
         centered = coords64 - self.centroid.to(dtype=torch.float64).view(*([1] * (coords64.ndim - 1)), 3)
@@ -49,11 +59,12 @@ class ContinuousReactivityField:
         internal = self.to_internal_coords(coords)
         siren_dtype = self._siren_dtype()
         siren_input = (internal / self.max_radius.clamp_min(1.0e-8)).to(dtype=siren_dtype)
+        hidden_params = self._cast_hidden_params(dtype=siren_dtype, device=siren_input.device)
         splat_input = internal.to(dtype=self.splatter_state.atom_coords.dtype)
         siren_out = self.engine.siren_field(
             siren_input,
             self.atom_coords.to(dtype=siren_dtype, device=siren_input.device),
-            self.conditioning.hidden_params.to(dtype=siren_dtype, device=siren_input.device),
+            hidden_params,
             self.conditioning.output_row_scale.to(dtype=siren_dtype, device=siren_input.device),
             self.conditioning.output_col_scale.to(dtype=siren_dtype, device=siren_input.device),
             self.conditioning.output_bias_shift.to(dtype=siren_dtype, device=siren_input.device),
@@ -109,11 +120,12 @@ class ContinuousReactivityField:
         internal = self.to_internal_coords(coords)
         siren_dtype = self._siren_dtype()
         siren_input = (internal / self.max_radius.clamp_min(1.0e-8)).to(dtype=siren_dtype)
+        hidden_params = self._cast_hidden_params(dtype=siren_dtype, device=siren_input.device)
         splat_input = internal.to(dtype=self.splatter_state.atom_coords.dtype)
         siren_out = self.engine.siren_field(
             siren_input,
             self.atom_coords.to(dtype=siren_dtype, device=siren_input.device),
-            self.conditioning.hidden_params.to(dtype=siren_dtype, device=siren_input.device),
+            hidden_params,
             self.conditioning.output_row_scale.to(dtype=siren_dtype, device=siren_input.device),
             self.conditioning.output_col_scale.to(dtype=siren_dtype, device=siren_input.device),
             self.conditioning.output_bias_shift.to(dtype=siren_dtype, device=siren_input.device),
