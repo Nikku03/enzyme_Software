@@ -12,7 +12,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0"]
-ml = ["numpy>=1.26", "torch>=2.2", "matplotlib>=3.8"]
+ml = ["numpy>=1.26", "torch>=2.2", "matplotlib>=3.8", "pot>=0.9.6"]
 
 [project.scripts]
 enzyme = "enzyme_software.cli:main"
