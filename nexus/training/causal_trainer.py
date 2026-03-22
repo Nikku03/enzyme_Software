@@ -401,6 +401,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "rank": 128 if is_deep else 32,
                         "update_proj_gap": 200,
                         "scale": 0.25,
+                        "proj_type": "std",
                         "lr": 1.0e-4,
                         "weight_decay": 1.0e-5,
                     })
