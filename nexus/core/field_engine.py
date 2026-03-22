@@ -32,6 +32,9 @@ class ContinuousReactivityField:
     quantum_enforcer: HohenbergKohn_Field_Enforcer
     query_engine: Optional[SubAtomicQueryEngine] = None
 
+    def _siren_dtype(self) -> torch.dtype:
+        return next(self.engine.siren_field.parameters()).dtype
+
     def to_internal_coords(self, coords: torch.Tensor) -> torch.Tensor:
         coords64 = coords.to(dtype=torch.float64)
         centered = coords64 - self.centroid.to(dtype=torch.float64).view(*([1] * (coords64.ndim - 1)), 3)
@@ -44,15 +47,16 @@ class ContinuousReactivityField:
 
     def raw_query(self, coords: torch.Tensor, return_latent: bool = False):
         internal = self.to_internal_coords(coords)
-        siren_input = (internal / self.max_radius.clamp_min(1.0e-8)).to(dtype=self.conditioning.molecular_context.dtype)
+        siren_dtype = self._siren_dtype()
+        siren_input = (internal / self.max_radius.clamp_min(1.0e-8)).to(dtype=siren_dtype)
         splat_input = internal.to(dtype=self.splatter_state.atom_coords.dtype)
         siren_out = self.engine.siren_field(
             siren_input,
-            self.atom_coords.to(dtype=siren_input.dtype, device=siren_input.device),
-            self.conditioning.hidden_params,
-            self.conditioning.output_row_scale,
-            self.conditioning.output_col_scale,
-            self.conditioning.output_bias_shift,
+            self.atom_coords.to(dtype=siren_dtype, device=siren_input.device),
+            self.conditioning.hidden_params.to(dtype=siren_dtype, device=siren_input.device),
+            self.conditioning.output_row_scale.to(dtype=siren_dtype, device=siren_input.device),
+            self.conditioning.output_col_scale.to(dtype=siren_dtype, device=siren_input.device),
+            self.conditioning.output_bias_shift.to(dtype=siren_dtype, device=siren_input.device),
             return_latent=return_latent,
         )
         if return_latent:
@@ -103,15 +107,16 @@ class ContinuousReactivityField:
         compute_observables: bool = False,
     ) -> Dict[str, torch.Tensor]:
         internal = self.to_internal_coords(coords)
-        siren_input = (internal / self.max_radius.clamp_min(1.0e-8)).to(dtype=self.conditioning.molecular_context.dtype)
+        siren_dtype = self._siren_dtype()
+        siren_input = (internal / self.max_radius.clamp_min(1.0e-8)).to(dtype=siren_dtype)
         splat_input = internal.to(dtype=self.splatter_state.atom_coords.dtype)
         siren_out = self.engine.siren_field(
             siren_input,
-            self.atom_coords.to(dtype=siren_input.dtype, device=siren_input.device),
-            self.conditioning.hidden_params,
-            self.conditioning.output_row_scale,
-            self.conditioning.output_col_scale,
-            self.conditioning.output_bias_shift,
+            self.atom_coords.to(dtype=siren_dtype, device=siren_input.device),
+            self.conditioning.hidden_params.to(dtype=siren_dtype, device=siren_input.device),
+            self.conditioning.output_row_scale.to(dtype=siren_dtype, device=siren_input.device),
+            self.conditioning.output_col_scale.to(dtype=siren_dtype, device=siren_input.device),
+            self.conditioning.output_bias_shift.to(dtype=siren_dtype, device=siren_input.device),
             return_latent=compute_observables,
         )
         if compute_observables:
