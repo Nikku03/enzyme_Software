@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, Subset
 
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn
 from nexus.training.causal_trainer import Metabolic_Causal_Trainer, load_compound_records
@@ -35,6 +35,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--num-workers", type=int, default=0)
+    parser.add_argument("--max-samples", type=int, default=0, help="Optional limit on number of samples used from the dataset")
+    parser.add_argument("--log-every", type=int, default=10, help="Print running metrics every N batches")
     parser.add_argument("--steps", type=int, default=8, help="Dynamics rollout steps")
     parser.add_argument("--dt", type=float, default=0.001, help="Dynamics step size")
     parser.add_argument("--no-checkpoint", action="store_true", help="Disable checkpointed dynamics")
@@ -79,6 +81,19 @@ def main() -> None:
             pin_memory=True,
         )
 
+    if args.max_samples > 0:
+        limit = min(int(args.max_samples), len(dataset))
+        dataset = Subset(dataset, range(limit))
+        collate = geometric_collate_fn if args.sdf_dataset else collate_single
+        loader = DataLoader(
+            dataset,
+            batch_size=1,
+            shuffle=True,
+            collate_fn=collate,
+            num_workers=args.num_workers,
+            pin_memory=True,
+        )
+
     trainer = Metabolic_Causal_Trainer(
         dynamics_steps=args.steps,
         dynamics_dt=args.dt,
@@ -91,7 +106,26 @@ def main() -> None:
 
     history: List[Dict[str, float]] = []
     for epoch in range(args.epochs):
-        metrics = trainer.fit_epoch(loader, train=True)
+        reducer: Dict[str, List[float]] = {}
+        trainer.train(True)
+        total_batches = len(loader)
+        for batch_idx, batch in enumerate(loader, start=1):
+            metrics_t = trainer.training_step(batch)
+            for key, value in metrics_t.items():
+                if hasattr(value, "detach"):
+                    reducer.setdefault(key, []).append(float(value.detach().cpu().item()))
+                else:
+                    reducer.setdefault(key, []).append(float(value))
+            if args.log_every > 0 and (batch_idx == 1 or batch_idx % args.log_every == 0 or batch_idx == total_batches):
+                running = {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
+                print(
+                    f"epoch={epoch + 1} batch={batch_idx}/{total_batches} "
+                    f"loss_total={running.get('loss_total', float('nan')):.6g} "
+                    f"pred_rate={running.get('pred_rate', float('nan')):.6g} "
+                    f"dag_loss={running.get('dag_causal_loss', float('nan')):.6g}",
+                    flush=True,
+                )
+        metrics = {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
         history.append(metrics)
         print(f"epoch={epoch + 1} metrics={metrics}", flush=True)
 
