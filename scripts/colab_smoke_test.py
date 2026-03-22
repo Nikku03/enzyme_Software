@@ -22,7 +22,7 @@ DEFAULT_SDF = "data/ATTNSOM/cyp_dataset/3A4.sdf"
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a Colab-friendly NEXUS smoke test")
     parser.add_argument("--sdf", default=DEFAULT_SDF, help="Path to an isoform SDF file")
-    parser.add_argument("--sample-index", type=int, default=0, help="Dataset sample index")
+    parser.add_argument("--sample-index", type=int, default=-1, help="Dataset sample index; use -1 to auto-pick the smallest molecule")
     parser.add_argument("--steps", type=int, default=2, help="Dynamics rollout steps for the smoke test")
     parser.add_argument("--dt", type=float, default=0.001, help="Dynamics step size")
     parser.add_argument("--forward-only", action="store_true", help="Skip optimizer/backward and run validation_step only")
@@ -53,6 +53,9 @@ def _move_to_device(obj: Any, device: torch.device) -> Any:
 def _select_item(dataset: ZaretzkiMetabolicDataset, preferred_index: int) -> Dict[str, Any]:
     if 0 <= preferred_index < len(dataset):
         return dataset[preferred_index]
+    if preferred_index < 0:
+        best_index = min(range(len(dataset)), key=lambda idx: int(dataset.mols[idx].GetNumAtoms()))
+        return dataset[best_index]
     raise IndexError(f"sample-index {preferred_index} out of range for dataset of size {len(dataset)}")
 
 
@@ -103,6 +106,8 @@ def main() -> None:
     query_engine.n_points = max(int(args.scan_n_points), 4)
     query_engine.radius = float(args.scan_radius)
     query_engine.query_chunk_size = max(int(args.scan_query_chunk_size), 1)
+    query_engine.shell_fractions = (0.5, 1.0)
+    query_engine.refine_steps = 1
 
     if device.type == "cuda":
         torch.cuda.empty_cache()

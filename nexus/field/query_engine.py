@@ -171,8 +171,8 @@ class SubAtomicQueryEngine(nn.Module):
             grad_chunk = torch.autograd.grad(
                 outputs=psi_chunk.sum(),
                 inputs=flat_chunk,
-                retain_graph=True,
-                create_graph=True,
+                retain_graph=False,
+                create_graph=False,
                 allow_unused=False,
             )[0]
             psi_chunks.append(psi_chunk)
