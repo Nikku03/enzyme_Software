@@ -35,6 +35,9 @@ class ContinuousReactivityField:
     def _siren_dtype(self) -> torch.dtype:
         return next(self.engine.siren_field.parameters()).dtype
 
+    def _splatter_dtype(self) -> torch.dtype:
+        return next(self.engine.tensor_splatter.parameters()).dtype
+
     def _cast_hidden_params(self, *, dtype: torch.dtype, device: torch.device) -> list[DynamicLayerParams]:
         return [
             DynamicLayerParams(
@@ -44,6 +47,21 @@ class ContinuousReactivityField:
             )
             for params in self.conditioning.hidden_params
         ]
+
+    def _cast_splatter_state(self, *, dtype: torch.dtype, device: torch.device) -> TensorSplatterState:
+        state = self.splatter_state
+        return TensorSplatterState(
+            atom_coords=state.atom_coords.to(dtype=dtype, device=device),
+            species=state.species.to(device=device),
+            even_scalar=state.even_scalar.to(dtype=dtype, device=device),
+            odd_scalar=state.odd_scalar.to(dtype=dtype, device=device),
+            odd_vector=state.odd_vector.to(dtype=dtype, device=device),
+            even_vector=state.even_vector.to(dtype=dtype, device=device),
+            even_tensor=state.even_tensor.to(dtype=dtype, device=device),
+            odd_tensor=state.odd_tensor.to(dtype=dtype, device=device),
+            alpha=state.alpha.to(dtype=dtype, device=device),
+            alpha_target=state.alpha_target.to(dtype=dtype, device=device),
+        )
 
     def to_internal_coords(self, coords: torch.Tensor) -> torch.Tensor:
         coords64 = coords.to(dtype=torch.float64)
@@ -58,9 +76,11 @@ class ContinuousReactivityField:
     def raw_query(self, coords: torch.Tensor, return_latent: bool = False):
         internal = self.to_internal_coords(coords)
         siren_dtype = self._siren_dtype()
+        splatter_dtype = self._splatter_dtype()
         siren_input = (internal / self.max_radius.clamp_min(1.0e-8)).to(dtype=siren_dtype)
         hidden_params = self._cast_hidden_params(dtype=siren_dtype, device=siren_input.device)
-        splat_input = internal.to(dtype=self.splatter_state.atom_coords.dtype)
+        splatter_state = self._cast_splatter_state(dtype=splatter_dtype, device=siren_input.device)
+        splat_input = internal.to(dtype=splatter_dtype, device=siren_input.device)
         siren_out = self.engine.siren_field(
             siren_input,
             self.atom_coords.to(dtype=siren_dtype, device=siren_input.device),
@@ -74,7 +94,7 @@ class ContinuousReactivityField:
             siren, latent = siren_out
         else:
             siren = siren_out
-        splat = self.engine.tensor_splatter(splat_input, self.splatter_state)
+        splat = self.engine.tensor_splatter(splat_input, splatter_state)
         total = siren + splat["total"]
         if return_latent:
             return total, latent
@@ -119,9 +139,11 @@ class ContinuousReactivityField:
     ) -> Dict[str, torch.Tensor]:
         internal = self.to_internal_coords(coords)
         siren_dtype = self._siren_dtype()
+        splatter_dtype = self._splatter_dtype()
         siren_input = (internal / self.max_radius.clamp_min(1.0e-8)).to(dtype=siren_dtype)
         hidden_params = self._cast_hidden_params(dtype=siren_dtype, device=siren_input.device)
-        splat_input = internal.to(dtype=self.splatter_state.atom_coords.dtype)
+        splatter_state = self._cast_splatter_state(dtype=splatter_dtype, device=siren_input.device)
+        splat_input = internal.to(dtype=splatter_dtype, device=siren_input.device)
         siren_out = self.engine.siren_field(
             siren_input,
             self.atom_coords.to(dtype=siren_dtype, device=siren_input.device),
@@ -136,7 +158,7 @@ class ContinuousReactivityField:
         else:
             siren = siren_out
             latent = None
-        splat = self.engine.tensor_splatter(splat_input, self.splatter_state)
+        splat = self.engine.tensor_splatter(splat_input, splatter_state)
         out = dict(splat)
         raw_total = siren + splat["total"]
         rho = self.quantum_enforcer.apply_cusp_envelope(
