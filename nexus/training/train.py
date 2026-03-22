@@ -52,7 +52,10 @@ def main() -> None:
         raise ValueError("Provide exactly one of --dataset or --sdf-dataset")
 
     if args.sdf_dataset:
-        dataset = ZaretzkiMetabolicDataset(args.sdf_dataset)
+        dataset = ZaretzkiMetabolicDataset(
+            args.sdf_dataset,
+            max_molecules=max(int(args.max_samples), 0),
+        )
         if args.batch_size != 1:
             raise ValueError(
                 "The current NEXUS causal trainer still expects single-sample batches. "
@@ -81,7 +84,7 @@ def main() -> None:
             pin_memory=True,
         )
 
-    if args.max_samples > 0:
+    if args.max_samples > 0 and not args.sdf_dataset:
         limit = min(int(args.max_samples), len(dataset))
         dataset = Subset(dataset, range(limit))
         collate = geometric_collate_fn if args.sdf_dataset else collate_single

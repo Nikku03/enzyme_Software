@@ -44,11 +44,18 @@ class ZaretzkiMetabolicDataset(Dataset):
         "SITE_OF_METABOLISM",
     )
 
-    def __init__(self, sdf_file_path: str | Path) -> None:
+    def __init__(self, sdf_file_path: str | Path, max_molecules: int = 0) -> None:
         _require_rdkit()
         self.sdf_file_path = str(sdf_file_path)
+        self.max_molecules = int(max_molecules)
         suppl = Chem.SDMolSupplier(self.sdf_file_path, removeHs=False)
-        self.mols = [mol for mol in suppl if mol is not None]
+        self.mols = []
+        for mol in suppl:
+            if mol is None:
+                continue
+            self.mols.append(mol)
+            if self.max_molecules > 0 and len(self.mols) >= self.max_molecules:
+                break
         print(f"Loaded {len(self.mols)} valid molecules from {self.sdf_file_path}")
 
     def __len__(self) -> int:
