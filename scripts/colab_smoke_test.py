@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict
@@ -25,8 +26,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--steps", type=int, default=2, help="Dynamics rollout steps for the smoke test")
     parser.add_argument("--dt", type=float, default=0.001, help="Dynamics step size")
     parser.add_argument("--forward-only", action="store_true", help="Skip optimizer/backward and run validation_step only")
+    parser.add_argument("--allow-compile", action="store_true", help="Enable selective torch.compile; off by default for Colab safety")
     parser.add_argument("--no-compile", action="store_true", help="Disable selective torch.compile")
     parser.add_argument("--no-bf16", action="store_true", help="Disable bf16 hot path")
+    parser.add_argument("--integration-resolution", type=int, default=8, help="Quantum normalization grid resolution; lower is safer for smoke tests")
+    parser.add_argument("--integration-chunk-size", type=int, default=128, help="Quantum normalization chunk size; lower reduces peak memory")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu", choices=("cpu", "cuda"))
     return parser.parse_args()
 
@@ -75,14 +79,23 @@ def main() -> None:
     batch = geometric_collate_fn([item])
     batch = _move_to_device(batch, device)
 
+    # Colab tends to fragment memory under repeated compile/cudagraph allocations.
+    if device.type == "cuda":
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+
     trainer = Metabolic_Causal_Trainer(
         dynamics_steps=args.steps,
         dynamics_dt=args.dt,
         checkpoint_dynamics=False,
-        enable_static_compile=not args.no_compile,
+        enable_static_compile=args.allow_compile and not args.no_compile,
         enable_bf16_hot_path=not args.no_bf16,
         enable_wsd_scheduler=False,
     ).to(device)
+
+    quantum_enforcer = trainer.model.module1.field_engine.quantum_enforcer
+    quantum_enforcer.integration_resolution = max(int(args.integration_resolution), 4)
+    quantum_enforcer.integration_chunk_size = max(int(args.integration_chunk_size), 16)
 
     if device.type == "cuda":
         torch.cuda.empty_cache()
@@ -99,6 +112,12 @@ def main() -> None:
     scalars = _scalarize(metrics)
     print("\nNEXUS Colab Smoke Test")
     print(f"device={device}  sdf={sdf_path.name}  sample_index={args.sample_index}  forward_only={args.forward_only}")
+    print(
+        "static_compile="
+        f"{trainer.enable_static_compile}  bf16_hot_path={trainer.enable_bf16_hot_path}  "
+        f"integration_resolution={quantum_enforcer.integration_resolution}  "
+        f"integration_chunk_size={quantum_enforcer.integration_chunk_size}"
+    )
     for key in sorted(scalars):
         print(f"{key}={scalars[key]}")
 
