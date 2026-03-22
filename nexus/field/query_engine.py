@@ -157,26 +157,17 @@ class SubAtomicQueryEngine(nn.Module):
         return atom_indices, centers_world, grid_world.to(dtype=positions.dtype), shell_radii
 
     def probe_reaction_volume(self, field, grid_points: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, Dict[str, torch.Tensor]]:
-        flat_grid = grid_points.reshape(-1, 3).clone().requires_grad_(True)
+        flat_grid = grid_points.reshape(-1, 3)
         component_chunks: Dict[str, list[torch.Tensor]] = {}
         psi_chunks = []
-        grad_chunks = []
         chunk_size = max(int(self.query_chunk_size), 1)
 
         for start in range(0, flat_grid.size(0), chunk_size):
             stop = min(start + chunk_size, flat_grid.size(0))
-            flat_chunk = flat_grid[start:stop].clone().requires_grad_(True)
+            flat_chunk = flat_grid[start:stop]
             components = field.query_components(flat_chunk)
             psi_chunk = components["total"]
-            grad_chunk = torch.autograd.grad(
-                outputs=psi_chunk.sum(),
-                inputs=flat_chunk,
-                retain_graph=False,
-                create_graph=False,
-                allow_unused=False,
-            )[0]
             psi_chunks.append(psi_chunk)
-            grad_chunks.append(grad_chunk)
             for key, value in components.items():
                 if torch.is_tensor(value) and value.dim() > 0 and value.size(0) == flat_chunk.size(0):
                     component_chunks.setdefault(key, []).append(value)
@@ -184,9 +175,8 @@ class SubAtomicQueryEngine(nn.Module):
                     component_chunks[key] = [value]
 
         psi_flat = torch.cat(psi_chunks, dim=0)
-        grad_flat = torch.cat(grad_chunks, dim=0)
         psi = psi_flat.view(grid_points.size(0), grid_points.size(1))
-        grad = grad_flat.view(grid_points.size(0), grid_points.size(1), 3)
+        grad = torch.zeros_like(grid_points)
         reshaped = {}
         for key, values in component_chunks.items():
             value = values[0] if len(values) == 1 else torch.cat(values, dim=0)

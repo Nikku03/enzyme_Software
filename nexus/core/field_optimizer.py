@@ -5,6 +5,7 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from nexus.field.siren_base import SIREN_OMEGA_0
 
@@ -63,7 +64,9 @@ class Field_Gradient_Optimizer(nn.Module):
         gradients = torch.nan_to_num(gradients, nan=0.0, posinf=0.0, neginf=0.0)
         target = manifold.forces.to(dtype=coords.dtype, device=coords.device)
         target = torch.nan_to_num(target, nan=0.0, posinf=0.0, neginf=0.0)
-        loss = (gradients - target).pow(2).mean()
+        gradients = gradients.clamp(min=-25.0, max=25.0)
+        target = target.clamp(min=-25.0, max=25.0)
+        loss = F.huber_loss(gradients, target, delta=1.0)
         return loss, gradients
 
     def spectral_penalty(self, field, manifold) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -76,6 +79,8 @@ class Field_Gradient_Optimizer(nn.Module):
             create_graph=True,
             allow_unused=False,
         )[0]
+        psi = torch.nan_to_num(psi, nan=0.0, posinf=0.0, neginf=0.0).clamp(min=-50.0, max=50.0)
+        gradients = torch.nan_to_num(gradients, nan=0.0, posinf=0.0, neginf=0.0).clamp(min=-25.0, max=25.0)
         grad_norm = gradients.norm(dim=-1)
         laplacian_terms = []
         for axis in range(3):
@@ -89,7 +94,8 @@ class Field_Gradient_Optimizer(nn.Module):
             )[0][:, axis]
             laplacian_terms.append(second)
         laplacian = torch.stack(laplacian_terms, dim=-1).sum(dim=-1)
-        penalty = (psi.pow(2) + 0.5 * grad_norm.pow(2) + 0.25 * laplacian.pow(2)).mean()
+        laplacian = torch.nan_to_num(laplacian, nan=0.0, posinf=0.0, neginf=0.0).clamp(min=-25.0, max=25.0)
+        penalty = torch.log1p(psi.pow(2) + 0.5 * grad_norm.pow(2) + 0.25 * laplacian.pow(2)).mean()
         return penalty, psi, gradients
 
     def alpha_calibration_loss(self, field) -> torch.Tensor:

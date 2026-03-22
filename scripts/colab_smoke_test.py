@@ -31,9 +31,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-bf16", action="store_true", help="Disable bf16 hot path")
     parser.add_argument("--integration-resolution", type=int, default=8, help="Quantum normalization grid resolution; lower is safer for smoke tests")
     parser.add_argument("--integration-chunk-size", type=int, default=128, help="Quantum normalization chunk size; lower reduces peak memory")
-    parser.add_argument("--scan-n-points", type=int, default=12, help="Reaction-volume shell points for the smoke test")
-    parser.add_argument("--scan-radius", type=float, default=1.25, help="Reaction-volume scan radius for the smoke test")
-    parser.add_argument("--scan-query-chunk-size", type=int, default=8, help="Chunk size for field queries during scan")
+    parser.add_argument("--scan-n-points", type=int, default=8, help="Reaction-volume shell points for the smoke test")
+    parser.add_argument("--scan-radius", type=float, default=1.0, help="Reaction-volume scan radius for the smoke test")
+    parser.add_argument("--scan-query-chunk-size", type=int, default=4, help="Chunk size for field queries during scan")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu", choices=("cpu", "cuda"))
     return parser.parse_args()
 
