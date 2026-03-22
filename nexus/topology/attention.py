@@ -60,7 +60,10 @@ class MSGPreAttention(nn.Module):
         global_density = global_mask.to(dtype=atomic_features.dtype).mean()
         off_diag = distance_matrix[~torch.eye(distance_matrix.size(0), device=distance_matrix.device, dtype=torch.bool)]
         mean_distance = off_diag.mean() if off_diag.numel() > 0 else distance_matrix.new_zeros(())
-        n_groups = atomic_features.new_tensor(float(int(assignments.max().item()) + 1) if assignments.numel() else 0.0)
+        if assignments.numel() > 0:
+            n_groups = (assignments.max() + 1).to(dtype=atomic_features.dtype)
+        else:
+            n_groups = atomic_features.new_tensor(0.0)
         stats = torch.stack(
             [
                 local_density,

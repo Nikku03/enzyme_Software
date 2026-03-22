@@ -136,7 +136,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         for name, root, attr in self._compile_target_specs():
             module = getattr(root, attr)
             try:
-                setattr(root, attr, torch.compile(module, mode=self.compile_mode))
+                setattr(root, attr, torch.compile(module))
                 compiled.append(name)
             except Exception:
                 continue
