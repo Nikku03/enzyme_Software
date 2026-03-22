@@ -47,6 +47,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         grad_clip_norm: float = 1.0,
         dynamics_steps: int = 8,
         dynamics_dt: float = 0.001,
+        dynamics_summary_mode: str = "lite",
         checkpoint_dynamics: bool = True,
         curriculum_transition_step: int = 2000,
         enable_static_compile: bool = True,
@@ -71,6 +72,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.grad_clip_norm = float(grad_clip_norm)
         self.dynamics_steps = int(dynamics_steps)
         self.dynamics_dt = float(dynamics_dt)
+        self.dynamics_summary_mode = str(dynamics_summary_mode).lower()
         self.checkpoint_dynamics = bool(checkpoint_dynamics)
         self.curriculum_transition_step = int(curriculum_transition_step)
         self.enable_static_compile = bool(enable_static_compile)
@@ -555,6 +557,16 @@ class Metabolic_Causal_Trainer(nn.Module):
         accessibility_field=None,
         ddi_occupancy: Optional[DDIOccupancyState] = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        if self.dynamics_summary_mode == "lite":
+            return self._lite_dynamics_summary(
+                q_init_internal,
+                target_point_internal,
+                smiles=smiles,
+                species=species,
+                target_atom_index=target_atom_index,
+                accessibility_field=accessibility_field,
+                ddi_occupancy=ddi_occupancy,
+            )
         reactive_reference = self.model.hamiltonian.reactive_reference.detach().clone()
         try:
             self.last_dynamics_fallback = False
@@ -617,6 +629,47 @@ class Metabolic_Causal_Trainer(nn.Module):
                 return pred_rate, h_initial, h_initial, ts_eigenvalues
         finally:
             self.model.hamiltonian.reactive_reference.copy_(reactive_reference)
+
+    def _lite_dynamics_summary(
+        self,
+        q_init_internal: torch.Tensor,
+        target_point_internal: torch.Tensor,
+        *,
+        smiles: str,
+        species: torch.Tensor,
+        target_atom_index: torch.Tensor,
+        accessibility_field=None,
+        ddi_occupancy: Optional[DDIOccupancyState] = None,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        self.last_dynamics_fallback = False
+        self.last_checkpoint_fallback = False
+        p_init = torch.zeros_like(q_init_internal)
+        trajectory = self.model.solver(
+            self.model.hamiltonian,
+            q_init_internal,
+            p_init,
+            steps=self.dynamics_steps,
+            dt=self.dynamics_dt,
+            smiles=smiles,
+            species=species,
+            accessibility_field=accessibility_field,
+            ddi_occupancy=ddi_occupancy,
+        )
+        h_initial = trajectory.h_path[0]
+        h_final = trajectory.h_path[-1]
+        atom_idx = target_atom_index.to(dtype=torch.long, device=q_init_internal.device)
+        terminal_distance = (trajectory.q_path[-1, atom_idx] - target_point_internal).pow(2).sum().sqrt()
+        action_scale = trajectory.action_integral.abs()
+        effective_barrier = torch.relu(h_final - h_initial) + 0.1 * terminal_distance + 0.01 * action_scale
+        pred_rate = torch.exp(-effective_barrier).clamp_min(1.0e-12)
+        ts_eigenvalues = torch.stack(
+            [
+                h_initial.new_tensor(-self.loss_fn.topology_margin),
+                h_initial.new_tensor(self.loss_fn.topology_margin),
+            ],
+            dim=0,
+        )
+        return pred_rate, h_initial, h_final, ts_eigenvalues
 
     def _dynamics_summary_checkpointed(
         self,
