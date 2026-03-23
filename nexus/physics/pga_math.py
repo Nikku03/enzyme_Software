@@ -303,7 +303,7 @@ def make_rotor(
 ) -> torch.Tensor:
     """Construct a pure rotation motor for G(3,0,1).
 
-    M_rot = cos(θ/2) - sin(θ/2)·(n1·e23 - n2·e13 + n3·e12)
+    M_rot = cos(θ/2) + sin(θ/2)·(n1·e23 - n2·e13 + n3·e12)
 
     The sandwich M_rot × P × M̃_rot rotates point P by angle θ
     counter-clockwise (right-hand rule) around the axis n through the origin.
@@ -320,9 +320,9 @@ def make_rotor(
     s = torch.sin(half)          # (...,)
     motor = torch.zeros(axis.shape[:-1] + (16,), dtype=axis.dtype, device=axis.device)
     motor[..., 0]  = c                    # scalar
-    motor[..., 7]  = -s * axis[..., 0]   # e23 ← -n1  (CCW right-hand rule)
-    motor[..., 6]  =  s * axis[..., 1]   # e13 ← +n2
-    motor[..., 5]  = -s * axis[..., 2]   # e12 ← -n3
+    motor[..., 7]  =  s * axis[..., 0]   # e23 ← +n1
+    motor[..., 6]  = -s * axis[..., 1]   # e13 ← -n2
+    motor[..., 5]  =  s * axis[..., 2]   # e12 ← +n3
     return motor
 
 

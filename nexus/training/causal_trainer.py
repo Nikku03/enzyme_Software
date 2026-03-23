@@ -1002,9 +1002,13 @@ class Metabolic_Causal_Trainer(nn.Module):
         )
         # Normalise DAG causal loss by N² so the acyclicity penalty does not explode
         # on large molecules: for an N-atom molecule the penalty grows O(N²) otherwise.
+        # Also cap the post-normalisation contribution at 4.0 so the untrained DAG's
+        # acyclicity penalty (raw ≈ 8000+) does not overwhelm the SoM / ranking signal
+        # (~2–4) and dominate SIREN learning during early training.
         n_atoms = float(module1_out.manifold.pos.size(0))
         dag_loss_scale = max(n_atoms * n_atoms, 1.0)
-        total_loss = self._sanitize_tensor(self._to_fp32(total_loss), clamp=(0.0, 1.0e5)) + dag_causal_loss / dag_loss_scale
+        dag_contribution = (dag_causal_loss / dag_loss_scale).clamp_max(4.0)
+        total_loss = self._sanitize_tensor(self._to_fp32(total_loss), clamp=(0.0, 1.0e5)) + dag_contribution
 
         metrics = {
             "loss_total": total_loss.detach(),

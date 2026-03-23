@@ -272,6 +272,9 @@ class PGAEnzymePocketEncoder(nn.Module):
         scores = self.geo_product(Q_exp, K_exp)[..., 0]   # (B, N_d, N_p)
         scores = scores / (16.0 ** 0.5)   # scale by sqrt(PGA dim)
 
+        # Clamp the logits to prevent bf16 exponent overflow
+        scores = torch.clamp(scores, min=-50.0, max=50.0)
+
         weights = torch.softmax(scores, dim=-1)           # (B, N_d, N_p)
         weights = self.attn_dropout(weights)
 
