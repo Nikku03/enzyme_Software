@@ -51,6 +51,12 @@ class GraNDAGEdgePredictor(nn.Module):
             nn.Linear(512, self.n_reaction_ops),
             nn.Softplus(),                   # non-negative — required by NOTEARS h(W)
         )
+        # Sparse initialisation: bias the final layer strongly negative so
+        # Softplus(-5) ≈ 0.007 per edge weight at init.  Default bias=0 gives
+        # Softplus(0) ≈ 0.693, producing dag_adjacency_mean ≈ 0.75 which
+        # instantly saturates the NOTEARS penalty at its 10000 cap and zeroes
+        # all DAG gradients for the entire first epoch.
+        nn.init.constant_(self.project[0].bias, -5.0)
 
     @staticmethod
     def _pair_invariants(mi: torch.Tensor, mj: torch.Tensor) -> torch.Tensor:
