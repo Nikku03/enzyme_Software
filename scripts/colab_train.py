@@ -35,18 +35,45 @@ importlib.reload(_ds_mod)
 
 SDF = _REPO_DIR / "data/ATTNSOM/cyp_dataset/3A4.sdf"
 
-# ── TUNABLES ───────────────────────────────────────────────────────────────
-MAX_SAMPLES       = 16    # molecules to train on
-EPOCHS            = 1
-STEPS             = 1     # dynamics rollout steps
-INTEGRATION_RES   = 8     # 8^3 = 512 grid pts  (default 16 = 4096)
-INTEGRATION_CHUNK = 32    # smaller chunk to avoid Clifford einsum memory spikes
-SCAN_N_POINTS     = 8     # query shell points per atom    (default 96)
-SCAN_RADIUS       = 1.0   # reaction volume radius (Å)     (default 2.5)
-SCAN_CHUNK        = 2     # smaller chunk to avoid query-time OOMs
-SCAN_SHELLS       = (0.5, 1.0)   # shell fractions         (default: 5 shells)
-SCAN_REFINE_STEPS = 0     # disable peak-gradient refinement on Colab; batch-9 OOM came from this path
-# ──────────────────────────────────────────────────────────────────────────
+def _detect_gpu_profile() -> str:
+    env = os.environ.get("NEXUS_COLAB_GPU_PROFILE", "auto").strip().lower()
+    if env in {"a100", "h100"}:
+        return env
+    if torch.cuda.is_available():
+        name = torch.cuda.get_device_name(0).upper()
+        if "H100" in name:
+            return "h100"
+    return "a100"
+
+
+GPU_PROFILE = _detect_gpu_profile()
+GPU_PROFILES = {
+    "a100": {
+        "max_samples": 16,
+        "epochs": 1,
+        "steps": 1,
+        "integration_resolution": 8,
+        "integration_chunk": 32,
+        "scan_n_points": 8,
+        "scan_radius": 1.0,
+        "scan_chunk": 2,
+        "scan_shells": (0.5, 1.0),
+        "scan_refine_steps": 0,
+    },
+    "h100": {
+        "max_samples": 16,
+        "epochs": 1,
+        "steps": 1,
+        "integration_resolution": 8,
+        "integration_chunk": 64,
+        "scan_n_points": 8,
+        "scan_radius": 1.0,
+        "scan_chunk": 4,
+        "scan_shells": (0.5, 1.0),
+        "scan_refine_steps": 0,
+    },
+}
+CFG = GPU_PROFILES[GPU_PROFILE]
 
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn
 from nexus.training.causal_trainer import Metabolic_Causal_Trainer
@@ -61,7 +88,7 @@ if device.type == "cuda":
     torch.cuda.reset_peak_memory_stats(device)
 
 # ── dataset ────────────────────────────────────────────────────────────────
-dataset = ZaretzkiMetabolicDataset(SDF, max_molecules=MAX_SAMPLES)
+dataset = ZaretzkiMetabolicDataset(SDF, max_molecules=CFG["max_samples"])
 loader  = DataLoader(
     dataset,
     batch_size=1,
@@ -71,10 +98,11 @@ loader  = DataLoader(
     pin_memory=(device.type == "cuda"),
 )
 print(f"Dataset : {len(dataset)} molecules")
+print(f"Profile : {GPU_PROFILE}")
 
 # ── trainer ────────────────────────────────────────────────────────────────
 trainer = Metabolic_Causal_Trainer(
-    dynamics_steps=STEPS,
+    dynamics_steps=CFG["steps"],
     dynamics_dt=0.001,
     checkpoint_dynamics=False,
     enable_wsd_scheduler=True,
@@ -85,23 +113,29 @@ trainer = Metabolic_Causal_Trainer(
 
 # ── Colab-safe quantum grid ────────────────────────────────────────────────
 qe = trainer.model.module1.field_engine.quantum_enforcer
-qe.integration_resolution = INTEGRATION_RES
-qe.integration_chunk_size = INTEGRATION_CHUNK
-print(f"Quantum grid : {INTEGRATION_RES}^3 = {INTEGRATION_RES**3} pts,  chunk={INTEGRATION_CHUNK}")
+qe.integration_resolution = CFG["integration_resolution"]
+qe.integration_chunk_size = CFG["integration_chunk"]
+print(
+    f"Quantum grid : {CFG['integration_resolution']}^3 = {CFG['integration_resolution']**3} pts,  "
+    f"chunk={CFG['integration_chunk']}"
+)
 
 # ── Colab-safe reaction-volume scanner ────────────────────────────────────
 # DEFAULT: 96 pts × 5 shells × 5 refine steps = ~2400 pts/atom w/ gradients
 # COLAB  :  8 pts × 2 shells × 1 refine step  =   16 pts/atom  (150× less)
 se = trainer.model.module1.field_engine.query_engine
-se.n_points             = SCAN_N_POINTS
-se.radius               = SCAN_RADIUS
-se.query_chunk_size     = SCAN_CHUNK
-se.shell_fractions      = SCAN_SHELLS
-se.refine_steps         = SCAN_REFINE_STEPS
+se.n_points             = CFG["scan_n_points"]
+se.radius               = CFG["scan_radius"]
+se.query_chunk_size     = CFG["scan_chunk"]
+se.shell_fractions      = CFG["scan_shells"]
+se.refine_steps         = CFG["scan_refine_steps"]
 se.create_approach_graph = False   # no second-order grad in approach vectors
-print(f"Query engine : {SCAN_N_POINTS} pts × {len(SCAN_SHELLS)} shells × {SCAN_REFINE_STEPS} refine step(s)")
+print(
+    f"Query engine : {CFG['scan_n_points']} pts × {len(CFG['scan_shells'])} shells × "
+    f"{CFG['scan_refine_steps']} refine step(s)"
+)
 
-trainer.set_total_training_steps(EPOCHS * max(len(loader), 1))
+trainer.set_total_training_steps(CFG["epochs"] * max(len(loader), 1))
 trainer.configure_optimizers()
 if device.type == "cuda":
     torch.cuda.empty_cache()
@@ -119,7 +153,7 @@ def _to(obj, dev):
 
 # ── training loop ──────────────────────────────────────────────────────────
 history = []
-for epoch in range(EPOCHS):
+for epoch in range(CFG["epochs"]):
     reducer: dict = {}
     skipped = 0
     trainer.train(True)

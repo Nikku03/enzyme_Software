@@ -19,22 +19,56 @@ from nexus.training.causal_trainer import Metabolic_Causal_Trainer
 DEFAULT_SDF = "data/ATTNSOM/cyp_dataset/3A4.sdf"
 
 
+def _detect_gpu_profile(requested: str) -> str:
+    value = requested.strip().lower()
+    if value in {"a100", "h100"}:
+        return value
+    if torch.cuda.is_available():
+        name = torch.cuda.get_device_name(0).upper()
+        if "H100" in name:
+            return "h100"
+    return "a100"
+
+
+def _profile_defaults(profile: str) -> Dict[str, float]:
+    profiles: Dict[str, Dict[str, float]] = {
+        "a100": {
+            "max_molecules": 32,
+            "integration_resolution": 8,
+            "integration_chunk_size": 32,
+            "scan_n_points": 8,
+            "scan_radius": 1.0,
+            "scan_query_chunk_size": 2,
+        },
+        "h100": {
+            "max_molecules": 64,
+            "integration_resolution": 8,
+            "integration_chunk_size": 64,
+            "scan_n_points": 8,
+            "scan_radius": 1.0,
+            "scan_query_chunk_size": 4,
+        },
+    }
+    return profiles[profile]
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a Colab-friendly NEXUS smoke test")
     parser.add_argument("--sdf", default=DEFAULT_SDF, help="Path to an isoform SDF file")
+    parser.add_argument("--gpu-profile", default=os.environ.get("NEXUS_COLAB_GPU_PROFILE", "auto"), choices=("auto", "a100", "h100"), help="Auto-detect or force a Colab GPU profile")
     parser.add_argument("--sample-index", type=int, default=-1, help="Dataset sample index; use -1 to auto-pick the smallest molecule")
     parser.add_argument("--steps", type=int, default=2, help="Dynamics rollout steps for the smoke test")
     parser.add_argument("--dt", type=float, default=0.001, help="Dynamics step size")
-    parser.add_argument("--max-molecules", type=int, default=32, help="Cap SDF loading for faster notebook smoke runs")
+    parser.add_argument("--max-molecules", type=int, default=0, help="Cap SDF loading for faster notebook smoke runs; 0 uses the selected GPU profile")
     parser.add_argument("--forward-only", action="store_true", help="Skip optimizer/backward and run validation_step only")
     parser.add_argument("--allow-compile", action="store_true", help="Enable selective torch.compile; off by default for Colab safety")
     parser.add_argument("--no-compile", action="store_true", help="Disable selective torch.compile")
     parser.add_argument("--no-bf16", action="store_true", help="Disable bf16 hot path")
-    parser.add_argument("--integration-resolution", type=int, default=8, help="Quantum normalization grid resolution; lower is safer for smoke tests")
-    parser.add_argument("--integration-chunk-size", type=int, default=128, help="Quantum normalization chunk size; lower reduces peak memory")
-    parser.add_argument("--scan-n-points", type=int, default=8, help="Reaction-volume shell points for the smoke test")
-    parser.add_argument("--scan-radius", type=float, default=1.0, help="Reaction-volume scan radius for the smoke test")
-    parser.add_argument("--scan-query-chunk-size", type=int, default=4, help="Chunk size for field queries during scan")
+    parser.add_argument("--integration-resolution", type=int, default=0, help="Quantum normalization grid resolution; 0 uses the selected GPU profile")
+    parser.add_argument("--integration-chunk-size", type=int, default=0, help="Quantum normalization chunk size; 0 uses the selected GPU profile")
+    parser.add_argument("--scan-n-points", type=int, default=0, help="Reaction-volume shell points for the smoke test; 0 uses the selected GPU profile")
+    parser.add_argument("--scan-radius", type=float, default=0.0, help="Reaction-volume scan radius for the smoke test; 0 uses the selected GPU profile")
+    parser.add_argument("--scan-query-chunk-size", type=int, default=0, help="Chunk size for field queries during scan; 0 uses the selected GPU profile")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu", choices=("cpu", "cuda"))
     return parser.parse_args()
 
@@ -73,6 +107,8 @@ def _scalarize(metrics: Dict[str, Any]) -> Dict[str, float]:
 
 def main() -> None:
     args = parse_args()
+    gpu_profile = _detect_gpu_profile(args.gpu_profile)
+    profile = _profile_defaults(gpu_profile)
     device = torch.device(args.device)
     if device.type == "cuda" and not torch.cuda.is_available():
         raise SystemExit("CUDA requested but not available")
@@ -81,7 +117,8 @@ def main() -> None:
     if not sdf_path.exists():
         raise SystemExit(f"SDF not found: {sdf_path}")
 
-    dataset = ZaretzkiMetabolicDataset(sdf_path, max_molecules=max(int(args.max_molecules), 1))
+    max_molecules = int(args.max_molecules) if int(args.max_molecules) > 0 else int(profile["max_molecules"])
+    dataset = ZaretzkiMetabolicDataset(sdf_path, max_molecules=max(max_molecules, 1))
     item = _select_item(dataset, args.sample_index)
     batch = geometric_collate_fn([item])
     batch = _move_to_device(batch, device)
@@ -103,12 +140,17 @@ def main() -> None:
     ).to(device)
 
     quantum_enforcer = trainer.model.module1.field_engine.quantum_enforcer
-    quantum_enforcer.integration_resolution = max(int(args.integration_resolution), 4)
-    quantum_enforcer.integration_chunk_size = min(max(int(args.integration_chunk_size), 16), 32)
+    integration_resolution = int(args.integration_resolution) if int(args.integration_resolution) > 0 else int(profile["integration_resolution"])
+    integration_chunk_size = int(args.integration_chunk_size) if int(args.integration_chunk_size) > 0 else int(profile["integration_chunk_size"])
+    scan_n_points = int(args.scan_n_points) if int(args.scan_n_points) > 0 else int(profile["scan_n_points"])
+    scan_radius = float(args.scan_radius) if float(args.scan_radius) > 0.0 else float(profile["scan_radius"])
+    scan_query_chunk_size = int(args.scan_query_chunk_size) if int(args.scan_query_chunk_size) > 0 else int(profile["scan_query_chunk_size"])
+    quantum_enforcer.integration_resolution = max(integration_resolution, 4)
+    quantum_enforcer.integration_chunk_size = max(integration_chunk_size, 16)
     query_engine = trainer.model.module1.field_engine.query_engine
-    query_engine.n_points = max(int(args.scan_n_points), 4)
-    query_engine.radius = float(args.scan_radius)
-    query_engine.query_chunk_size = min(max(int(args.scan_query_chunk_size), 1), 2)
+    query_engine.n_points = max(scan_n_points, 4)
+    query_engine.radius = scan_radius
+    query_engine.query_chunk_size = max(scan_query_chunk_size, 1)
     query_engine.shell_fractions = (0.5, 1.0)
     query_engine.refine_steps = 0
 
@@ -125,7 +167,10 @@ def main() -> None:
 
     scalars = _scalarize(metrics)
     print("\nNEXUS Colab Smoke Test")
-    print(f"device={device}  sdf={sdf_path.name}  sample_index={args.sample_index}  forward_only={args.forward_only}")
+    print(
+        f"device={device}  gpu_profile={gpu_profile}  sdf={sdf_path.name}  "
+        f"sample_index={args.sample_index}  forward_only={args.forward_only}"
+    )
     print(
         "static_compile="
         f"{trainer.enable_static_compile}  bf16_hot_path={trainer.enable_bf16_hot_path}  "
