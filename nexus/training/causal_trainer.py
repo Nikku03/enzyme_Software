@@ -515,7 +515,17 @@ class Metabolic_Causal_Trainer(nn.Module):
             return torch.as_tensor(direct, dtype=torch.long, device=device).view(())
         sites = self._lookup(batch, "site_atoms", "metabolism_sites", default=None)
         if sites is None:
-            raise KeyError("Batch must include 'true_som_idx' or site atom annotations")
+            # No SoM label in batch (e.g. unlabelled ATTNSOM SDF).
+            # Fall back to atom 0 so field-reconstruction and DAG losses still train;
+            # the ranking loss will be noisy but won't crash.
+            import warnings
+            warnings.warn(
+                "Batch has no SoM label — falling back to atom 0 for ranking loss. "
+                "Add 'true_som_idx' to your dataset for supervised ranking.",
+                UserWarning,
+                stacklevel=4,
+            )
+            return torch.zeros((), dtype=torch.long, device=device)
         if isinstance(sites, torch.Tensor):
             if sites.numel() == 0:
                 raise ValueError("Batch contains no site atoms")
