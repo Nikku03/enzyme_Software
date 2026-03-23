@@ -62,6 +62,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         wsd_warmup_init_scale: float = 0.1,
         wsd_min_lr_scale: float = 0.05,
         low_memory_train_mode: bool = False,
+        use_galore: bool = True,
     ) -> None:
         super().__init__()
         self.model = model or NEXUS_Dynamics_Engine()
@@ -87,6 +88,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.wsd_warmup_init_scale = float(wsd_warmup_init_scale)
         self.wsd_min_lr_scale = float(wsd_min_lr_scale)
         self.low_memory_train_mode = bool(low_memory_train_mode)
+        self.use_galore = bool(use_galore)
         self.optimizer: Optional[torch.optim.Optimizer] = None
         self.scheduler: Optional[torch.optim.lr_scheduler.LambdaLR] = None
         self.total_training_steps: Optional[int] = None
@@ -345,6 +347,16 @@ class Metabolic_Causal_Trainer(nn.Module):
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         self._maybe_prepare_precision_runtime()
+
+        if not self.use_galore:
+            # Plain AdamW — no SVD, safe on Colab / CPU
+            all_params = [p for p in self.parameters() if p.requires_grad]
+            all_params += [p for p in self.dag_learner.parameters() if p.requires_grad]
+            self.optimizer = torch.optim.AdamW(all_params, lr=1.0e-4, weight_decay=1.0e-5)
+            if self.enable_wsd_scheduler and self.total_training_steps is not None:
+                self.scheduler = self._build_wsd_scheduler(self.optimizer, self.total_training_steps)
+            return self.optimizer
+
         try:
             from galore_torch import GaLoreAdamW
         except ImportError as exc:

@@ -45,6 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--metrics-json", default=None, help="Optional path to save epoch metrics")
     parser.add_argument("--low-memory-train", action="store_true", help="Use low-memory training mode (skips full dynamics rollout)")
     parser.add_argument("--no-compile", action="store_true", help="Disable torch.compile (recommended for Colab/CPU)")
+    parser.add_argument("--no-galore", action="store_true", help="Use plain AdamW instead of GaLore (avoids SVD; recommended for Colab)")
     parser.add_argument("--integration-resolution", type=int, default=16, help="Quantum grid resolution per axis (default 16 → 16^3=4096 pts)")
     parser.add_argument("--integration-chunk-size", type=int, default=1024, help="Chunk size for quantum grid integration")
     return parser.parse_args()
@@ -109,6 +110,7 @@ def main() -> None:
         wsd_decay_style=args.wsd_decay_style,
         low_memory_train_mode=args.low_memory_train,
         enable_static_compile=not args.no_compile,
+        use_galore=not args.no_galore,
     )
 
     # Override quantum enforcer resolution if explicitly requested (important for Colab memory)
