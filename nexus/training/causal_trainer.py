@@ -353,9 +353,10 @@ class Metabolic_Causal_Trainer(nn.Module):
             ) from exc
 
         # Robustify GaLore SVD against ill-conditioned untrained weight matrices.
-        # cusolver can diverge on near-zero SIREN weights; retrying with tiny noise
-        # breaks the degeneracy without meaningfully changing the projection direction.
+        # CUDA's cusolver driver diverges on near-zero SIREN weights (error code 8).
+        # Fall back to CPU LAPACK, which is always stable, then return to original device.
         try:
+            import types as _types
             import galore_torch.galore_projector as _gp
             if not getattr(_gp.GradientProjector, "_svd_patched", False):
                 _orig_get_orth = _gp.GradientProjector.get_orthogonal_matrix
@@ -364,9 +365,14 @@ class Metabolic_Causal_Trainer(nn.Module):
                     try:
                         return _orig_get_orth(self, weights, rank, type)
                     except torch.linalg.LinAlgError:
-                        noisy = weights.clone().detach()
-                        noisy.data.add_(torch.randn_like(noisy.data) * 1e-6)
-                        return _orig_get_orth(self, noisy, rank, type)
+                        # cusolver diverged — run SVD on CPU LAPACK and move result back
+                        data = weights.data if hasattr(weights, "data") else weights
+                        dev = data.device
+                        cpu_proxy = _types.SimpleNamespace(data=data.cpu().float())
+                        result = _orig_get_orth(self, cpu_proxy, rank, type)
+                        if torch.is_tensor(result):
+                            return result.to(dev)
+                        return result
 
                 _gp.GradientProjector.get_orthogonal_matrix = _robust_get_orth
                 _gp.GradientProjector._svd_patched = True
