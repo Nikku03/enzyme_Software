@@ -899,7 +899,11 @@ class Metabolic_Causal_Trainer(nn.Module):
                 dim=0,
             )
             sobolev_report = self._zero_sobolev_report(module1_out.manifold)
-            delta_E_tensor = self._sanitize_tensor(-effective_reactivity, clamp=(-100.0, 100.0)).detach()
+            # No .detach() here: effective_reactivity comes from the field scan (not the
+            # Hamiltonian), so keeping the graph alive gives som_loss gradient to the SIREN
+            # field without triggering expensive Hamiltonian second-order ops.
+            # h_initial and pred_rate are already detached above (lines 885/892).
+            delta_E_tensor = self._sanitize_tensor(-effective_reactivity, clamp=(-100.0, 100.0))
         else:
             pred_rate, h_initial, h_final, ts_eigenvalues = self._dynamics_summary_checkpointed(
                 q_init_internal,
@@ -1008,12 +1012,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         n_atoms = float(module1_out.manifold.pos.size(0))
         dag_loss_scale = max(n_atoms * n_atoms, 1.0)
         dag_contribution = (dag_causal_loss / dag_loss_scale).clamp_max(4.0)
-        # ranking_loss flows through alignment_score → field scan → SIREN parameters and
-        # is the only gradient path to the field in low_memory_train_mode (where
-        # delta_E_tensor is detached).  Add it directly so the SIREN learns even without
-        # full dynamics.  Clamp at 10.0 to match the scale of other loss terms.
-        ranking_contribution = self._sanitize_tensor(self._to_fp32(ranking_loss), clamp=(0.0, 10.0))
-        total_loss = self._sanitize_tensor(self._to_fp32(total_loss), clamp=(0.0, 1.0e5)) + dag_contribution + ranking_contribution
+        total_loss = self._sanitize_tensor(self._to_fp32(total_loss), clamp=(0.0, 1.0e5)) + dag_contribution
 
         metrics = {
             "loss_total": total_loss.detach(),
