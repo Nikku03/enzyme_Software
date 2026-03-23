@@ -52,11 +52,11 @@ def _profile_defaults(profile: str) -> Dict[str, float]:
         },
         "high_vram": {
             "max_molecules": 64,
-            "integration_resolution": 8,
-            "integration_chunk_size": 64,
-            "scan_n_points": 8,
+            "integration_resolution": 10,
+            "integration_chunk_size": 96,
+            "scan_n_points": 12,
             "scan_radius": 1.0,
-            "scan_query_chunk_size": 4,
+            "scan_query_chunk_size": 6,
         },
     }
     return profiles[profile]
