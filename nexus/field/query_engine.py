@@ -439,14 +439,18 @@ class SubAtomicQueryEngine(nn.Module):
         else:
             l2_coeff = l2_template[atom_indices].mean(dim=1)
             l2_matrix = self._l2_coefficients_to_matrix(l2_coeff)
-            eigvals, eigvecs = torch.linalg.eigh(l2_matrix)
-            principal_axis = eigvecs[..., -1]
-            l2_axis_alignment = torch.nn.functional.cosine_similarity(
-                principal_axis,
-                approach_vectors,
-                dim=-1,
-                eps=1.0e-8,
-            ).abs()
+            try:
+                eigvals, eigvecs = torch.linalg.eigh(l2_matrix)
+                principal_axis = eigvecs[..., -1]
+                l2_axis_alignment = torch.nn.functional.cosine_similarity(
+                    principal_axis,
+                    approach_vectors,
+                    dim=-1,
+                    eps=1.0e-8,
+                ).abs()
+            except torch.linalg.LinAlgError:
+                # Degenerate l2 matrix (untrained SIREN near zero) — neutral fallback
+                l2_axis_alignment = torch.zeros_like(l1_alignment)
             query_template = symmetric_traceless_direction_coefficients(approach_vectors)
             l2_overlap = torch.nn.functional.cosine_similarity(
                 l2_coeff,
@@ -488,7 +492,12 @@ class SubAtomicQueryEngine(nn.Module):
         mean_rel = (env_weights.unsqueeze(-1) * rel).sum(dim=1) / weight_sum
         centered_rel = rel - mean_rel.unsqueeze(1)
         cov = torch.einsum("nm,nmi,nmj->nij", env_weights, centered_rel, centered_rel) / weight_sum.unsqueeze(-1)
-        eigvals = torch.linalg.eigvalsh(0.5 * (cov + cov.transpose(-1, -2)))
+        sym_cov = 0.5 * (cov + cov.transpose(-1, -2))
+        try:
+            eigvals = torch.linalg.eigvalsh(sym_cov)
+        except torch.linalg.LinAlgError:
+            # Degenerate covariance (e.g. all neighbours at same position) — isotropic fallback
+            eigvals = torch.ones(sym_cov.shape[0], sym_cov.shape[-1], dtype=sym_cov.dtype, device=sym_cov.device)
         eigvals = eigvals.clamp_min(1.0e-8)
         asphericity = (eigvals[:, -1] - eigvals[:, 0]) / eigvals.sum(dim=-1).clamp_min(1.0e-8)
 

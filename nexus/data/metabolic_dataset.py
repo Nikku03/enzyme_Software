@@ -70,9 +70,13 @@ class ZaretzkiMetabolicDataset(Dataset):
         params = AllChem.ETKDGv3()
         params.randomSeed = 42
         params.useRandomCoords = False
-        status = AllChem.EmbedMolecule(work, params)
-        if int(status) != 0:
-            AllChem.EmbedMolecule(work, randomSeed=42)
+        if int(AllChem.EmbedMolecule(work, params)) != 0:
+            if int(AllChem.EmbedMolecule(work, randomSeed=42)) != 0:
+                # Both deterministic passes failed — use random coordinates as last resort
+                params2 = AllChem.ETKDGv3()
+                params2.randomSeed = 0
+                params2.useRandomCoords = True
+                AllChem.EmbedMolecule(work, params2)
         return work
 
     def _maybe_optimize(self, mol) -> None:
@@ -115,10 +119,15 @@ class ZaretzkiMetabolicDataset(Dataset):
         charges = np.zeros((num_atoms,), dtype=np.float32)
         atomic_numbers = np.zeros((num_atoms,), dtype=np.int64)
 
-        conf = mol.GetConformer()
-        for i in range(num_atoms):
-            pos = conf.GetAtomPosition(i)
-            coords[i] = [pos.x, pos.y, pos.z]
+        if mol.GetNumConformers() == 0:
+            # All embedding attempts failed — use zero coords (model will learn from topology)
+            import warnings
+            warnings.warn(f"Could not embed molecule at index {idx}; using zero coordinates.", UserWarning, stacklevel=2)
+        else:
+            conf = mol.GetConformer()
+            for i in range(num_atoms):
+                pos = conf.GetAtomPosition(i)
+                coords[i] = [pos.x, pos.y, pos.z]
 
             atom = mol.GetAtomWithIdx(i)
             masses[i] = atom.GetMass()
@@ -135,7 +144,10 @@ class ZaretzkiMetabolicDataset(Dataset):
         if som_idx is not None:
             target_dag[som_idx, som_idx] = 1.0
 
-        smiles = Chem.MolToSmiles(Chem.RemoveHs(Chem.Mol(mol)), canonical=True)
+        try:
+            smiles = Chem.MolToSmiles(Chem.RemoveHs(Chem.Mol(mol)), canonical=True)
+        except Exception:
+            smiles = Chem.MolToSmiles(mol, canonical=True)
         item: Dict[str, Any] = {
             "smiles": smiles,
             "coords": torch.tensor(coords, dtype=torch.float32),
