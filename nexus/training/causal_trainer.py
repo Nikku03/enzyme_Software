@@ -899,11 +899,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                 dim=0,
             )
             sobolev_report = self._zero_sobolev_report(module1_out.manifold)
-            # No .detach() here: effective_reactivity comes from the field scan (not the
-            # Hamiltonian), so keeping the graph alive gives som_loss gradient to the SIREN
-            # field without triggering expensive Hamiltonian second-order ops.
-            # h_initial and pred_rate are already detached above (lines 885/892).
-            delta_E_tensor = self._sanitize_tensor(-effective_reactivity, clamp=(-100.0, 100.0))
+            delta_E_tensor = self._sanitize_tensor(-effective_reactivity, clamp=(-100.0, 100.0)).detach()
         else:
             pred_rate, h_initial, h_final, ts_eigenvalues = self._dynamics_summary_checkpointed(
                 q_init_internal,
