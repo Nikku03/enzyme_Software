@@ -372,7 +372,13 @@ class SubAtomicQueryEngine(nn.Module):
 
             hessian = torch.autograd.functional.hessian(scalar_fn, point, create_graph=True)
             hessian = 0.5 * (hessian + hessian.transpose(0, 1))
-            values = torch.linalg.eigvalsh(hessian)
+            try:
+                values = torch.linalg.eigvalsh(hessian)
+            except torch.linalg.LinAlgError:
+                # Ill-conditioned Hessian (flat/degenerate critical point); add small
+                # diagonal regularisation and retry.
+                reg = 1.0e-5 * torch.eye(hessian.shape[0], device=hessian.device, dtype=hessian.dtype)
+                values = torch.linalg.eigvalsh(hessian + reg)
             abs_values = values.abs()
             score = abs_values.max() / abs_values.mean().clamp_min(1.0e-8)
             hessians.append(hessian)
