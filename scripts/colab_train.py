@@ -40,10 +40,10 @@ MAX_SAMPLES       = 16    # molecules to train on
 EPOCHS            = 1
 STEPS             = 1     # dynamics rollout steps
 INTEGRATION_RES   = 8     # 8^3 = 512 grid pts  (default 16 = 4096)
-INTEGRATION_CHUNK = 128   # quantum integrator chunk size  (default 1024)
+INTEGRATION_CHUNK = 32    # smaller chunk to avoid Clifford einsum memory spikes
 SCAN_N_POINTS     = 8     # query shell points per atom    (default 96)
 SCAN_RADIUS       = 1.0   # reaction volume radius (Å)     (default 2.5)
-SCAN_CHUNK        = 4     # query chunk size               (default 16)
+SCAN_CHUNK        = 2     # smaller chunk to avoid query-time OOMs
 SCAN_SHELLS       = (0.5, 1.0)   # shell fractions         (default: 5 shells)
 SCAN_REFINE_STEPS = 1     # gradient refinement steps      (default 5)
 # ──────────────────────────────────────────────────────────────────────────
@@ -132,6 +132,12 @@ for epoch in range(EPOCHS):
             skipped += 1
             print(f"  [batch {i}/{total}] SKIPPED — {type(exc).__name__}: {exc}", flush=True)
             traceback.print_exc()
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
+            continue
+        if m is None:
+            skipped += 1
+            print(f"  [batch {i}/{total}] SKIPPED — non-finite loss after trainer safeguards", flush=True)
             if device.type == "cuda":
                 torch.cuda.empty_cache()
             continue

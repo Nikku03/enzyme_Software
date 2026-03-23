@@ -45,6 +45,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         dag_learner: Optional[MetabolicDAGLearner] = None,
         *,
         grad_clip_norm: float = 1.0,
+        gradient_accumulation_steps: int = 1,
         dynamics_steps: int = 8,
         dynamics_dt: float = 0.001,
         dynamics_summary_mode: str = "lite",
@@ -71,6 +72,9 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.dag_learner = dag_learner or MetabolicDAGLearner()
         self.flux_propagator = NCFAFluxPropagator()
         self.grad_clip_norm = float(grad_clip_norm)
+        self.gradient_accumulation_steps = int(gradient_accumulation_steps)
+        if self.gradient_accumulation_steps < 1:
+            self.gradient_accumulation_steps = 1
         self.dynamics_steps = int(dynamics_steps)
         self.dynamics_dt = float(dynamics_dt)
         self.dynamics_summary_mode = str(dynamics_summary_mode).lower()
@@ -224,6 +228,22 @@ class Metabolic_Causal_Trainer(nn.Module):
         if torch.is_tensor(tensor) and tensor.is_floating_point():
             return tensor.to(dtype=torch.float32)
         return tensor
+
+    @staticmethod
+    def _sanitize_tensor(
+        tensor: torch.Tensor,
+        *,
+        nan: float = 0.0,
+        posinf: float = 1.0e4,
+        neginf: float = -1.0e4,
+        clamp: Optional[tuple[float, float]] = None,
+    ) -> torch.Tensor:
+        if not torch.is_tensor(tensor):
+            return tensor
+        out = torch.nan_to_num(tensor, nan=nan, posinf=posinf, neginf=neginf)
+        if clamp is not None and out.is_floating_point():
+            out = out.clamp(min=clamp[0], max=clamp[1])
+        return out
 
     def _module1_forward_hot_path(self, smiles: str) -> NEXUS_Module1_Output:
         seed = self.model.module1.agency(smiles)
@@ -479,6 +499,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         params = self.get_all_parameters()
         if not params:
             return 0.0
+        # Correct NaN gradients that may arise from AMP + unstable SVD in GaLore.
         for param in params:
             if param.grad is None:
                 continue
@@ -791,23 +812,73 @@ class Metabolic_Causal_Trainer(nn.Module):
             ddi_occupancy = protein_data.get("ddi_occupancy")
 
         field = module1_out.field_state.field
-        target_point_world = module1_out.scan.refined_peak_points[true_row_index]
-        q_init_internal = field.to_internal_coords(module1_out.manifold.pos).to(dtype=self.model.solver_dtype)
-        target_point_internal = field.to_internal_coords(target_point_world.view(1, 3)).view(-1).to(dtype=self.model.solver_dtype)
+        manifold_pos = self._sanitize_tensor(
+            module1_out.manifold.pos,
+            nan=0.0,
+            posinf=25.0,
+            neginf=-25.0,
+            clamp=(-25.0, 25.0),
+        )
+        effective_reactivity = self._sanitize_tensor(
+            self._to_fp32(module1_out.scan.effective_reactivity),
+            nan=0.0,
+            posinf=100.0,
+            neginf=-100.0,
+            clamp=(-100.0, 100.0),
+        )
+        alignment_score = self._sanitize_tensor(
+            self._to_fp32(module1_out.alignment_score),
+            nan=0.0,
+            posinf=100.0,
+            neginf=-100.0,
+            clamp=(-100.0, 100.0),
+        )
+        target_point_world = self._sanitize_tensor(
+            module1_out.scan.refined_peak_points[true_row_index],
+            nan=0.0,
+            posinf=25.0,
+            neginf=-25.0,
+            clamp=(-25.0, 25.0),
+        )
+        q_init_internal = self._sanitize_tensor(
+            field.to_internal_coords(manifold_pos).to(dtype=self.model.solver_dtype),
+            nan=0.0,
+            posinf=25.0,
+            neginf=-25.0,
+            clamp=(-25.0, 25.0),
+        )
+        target_point_internal = self._sanitize_tensor(
+            field.to_internal_coords(target_point_world.view(1, 3)).view(-1).to(dtype=self.model.solver_dtype),
+            nan=0.0,
+            posinf=25.0,
+            neginf=-25.0,
+            clamp=(-25.0, 25.0),
+        )
 
         low_memory_train = self.low_memory_train_mode and self.training
         if low_memory_train:
             self.last_dynamics_fallback = True
             self.last_checkpoint_fallback = True
-            h_initial = self.model.hamiltonian(
+            h_initial = self._sanitize_tensor(self._to_fp32(self.model.hamiltonian(
                 q_init_internal,
                 torch.zeros_like(q_init_internal),
                 smiles=smiles,
                 species=module1_out.manifold.species,
                 accessibility_field=accessibility_field,
                 ddi_occupancy=ddi_occupancy,
+            )),
+                nan=25.0,
+                posinf=100.0,
+                neginf=-100.0,
+                clamp=(-100.0, 100.0),
             ).detach()
-            pred_rate = torch.exp(-torch.relu(h_initial)).clamp_min(1.0e-12).detach()
+            pred_rate = self._sanitize_tensor(
+                torch.exp(-torch.relu(h_initial)),
+                nan=1.0e-12,
+                posinf=1.0,
+                neginf=1.0e-12,
+                clamp=(1.0e-12, 1.0),
+            ).detach()
             h_final = h_initial
             ts_eigenvalues = torch.stack(
                 [
@@ -817,7 +888,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                 dim=0,
             )
             sobolev_report = self._zero_sobolev_report(module1_out.manifold)
-            delta_E_tensor = self._to_fp32(-module1_out.scan.effective_reactivity).detach()
+            delta_E_tensor = self._sanitize_tensor(-effective_reactivity, clamp=(-100.0, 100.0)).detach()
         else:
             pred_rate, h_initial, h_final, ts_eigenvalues = self._dynamics_summary_checkpointed(
                 q_init_internal,
@@ -830,7 +901,20 @@ class Metabolic_Causal_Trainer(nn.Module):
             )
 
             sobolev_report = self.field_optimizer(field, module1_out.manifold)
-            delta_E_tensor = self._to_fp32(-module1_out.scan.effective_reactivity)
+            pred_rate = self._sanitize_tensor(self._to_fp32(pred_rate), nan=1.0e-12, posinf=1.0, neginf=1.0e-12, clamp=(1.0e-12, 1.0))
+            h_initial = self._sanitize_tensor(self._to_fp32(h_initial), nan=25.0, posinf=100.0, neginf=-100.0, clamp=(-100.0, 100.0))
+            h_final = self._sanitize_tensor(self._to_fp32(h_final), nan=25.0, posinf=100.0, neginf=-100.0, clamp=(-100.0, 100.0))
+            ts_eigenvalues = self._sanitize_tensor(self._to_fp32(ts_eigenvalues), nan=0.0, posinf=100.0, neginf=-100.0, clamp=(-100.0, 100.0))
+            delta_E_tensor = self._sanitize_tensor(-effective_reactivity, clamp=(-100.0, 100.0))
+            sobolev_report = FieldGradientOptimizationReport(
+                gradient_loss=self._sanitize_tensor(sobolev_report.gradient_loss, clamp=(0.0, 100.0)),
+                spectral_penalty=self._sanitize_tensor(sobolev_report.spectral_penalty, clamp=(0.0, 100.0)),
+                alpha_calibration_loss=self._sanitize_tensor(sobolev_report.alpha_calibration_loss, clamp=(0.0, 100.0)),
+                total_loss=self._sanitize_tensor(sobolev_report.total_loss, clamp=(0.0, 100.0)),
+                atomic_gradients=self._sanitize_tensor(sobolev_report.atomic_gradients, clamp=(-100.0, 100.0)),
+                vacuum_values=self._sanitize_tensor(sobolev_report.vacuum_values, clamp=(-100.0, 100.0)),
+                vacuum_gradients=self._sanitize_tensor(sobolev_report.vacuum_gradients, clamp=(-100.0, 100.0)),
+            )
 
         # Initialise sub-losses as zeros so they are always defined for the metrics dict,
         # whether or not protein data was provided.
@@ -864,7 +948,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         # alignment_score is sorted by descending effective_reactivity; true_ranked_index
         # (computed above) is the true SoM's position in that sorted order.
         ranking_loss = self.loss_fn.ranking_loss_fn(
-            self._to_fp32(module1_out.alignment_score).unsqueeze(0),
+            alignment_score.unsqueeze(0),
             true_ranked_index,
         )
         if low_memory_train:
@@ -875,8 +959,8 @@ class Metabolic_Causal_Trainer(nn.Module):
         # effective reactivity in the scalar grade (index 0).  This gives the GraNDAG edge
         # predictor a geometry- and thermodynamics-aware representation of each candidate
         # metabolic site without requiring an additional neural forward pass.
-        atom_mv = embed_coordinates(module1_out.manifold.pos.detach().to(dtype=exp_rate.dtype)).clone()
-        atom_mv[..., 0] = self._to_fp32(module1_out.scan.effective_reactivity).detach()
+        atom_mv = embed_coordinates(manifold_pos.detach().to(dtype=exp_rate.dtype)).clone()
+        atom_mv[..., 0] = effective_reactivity.detach()
         atom_mv = atom_mv.unsqueeze(0)   # [1, N_atoms, 8]  — single-compound batch dim
         dag_output = self.dag_learner(
             atom_mv,
@@ -890,6 +974,7 @@ class Metabolic_Causal_Trainer(nn.Module):
             physics_loss=self._to_fp32(sobolev_report.total_loss),
             flux_consistency_loss=flux_consistency_loss,
         )
+        dag_causal_loss = self._sanitize_tensor(self._to_fp32(dag_output.causal_loss), clamp=(0.0, 1.0e4))
 
         total_loss, loss_info = self.loss_fn(
             delta_E_tensor=delta_E_tensor,
@@ -908,7 +993,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         # on large molecules: for an N-atom molecule the penalty grows O(N²) otherwise.
         n_atoms = float(module1_out.manifold.pos.size(0))
         dag_loss_scale = max(n_atoms * n_atoms, 1.0)
-        total_loss = total_loss + dag_output.causal_loss / dag_loss_scale
+        total_loss = self._sanitize_tensor(self._to_fp32(total_loss), clamp=(0.0, 1.0e5)) + dag_causal_loss / dag_loss_scale
 
         metrics = {
             "loss_total": total_loss.detach(),
@@ -929,7 +1014,7 @@ class Metabolic_Causal_Trainer(nn.Module):
             "exp_rate": exp_rate.detach(),
             "true_atom_index": true_atom_index.detach().to(dtype=torch.float32),
             "true_row_index": true_row_index.detach().to(dtype=torch.float32),
-            "target_effective_reactivity": module1_out.scan.effective_reactivity[true_row_index].detach(),
+            "target_effective_reactivity": effective_reactivity[true_row_index].detach(),
             "sobolev_gradient_loss": sobolev_report.gradient_loss.detach(),
             "sobolev_spectral_penalty": sobolev_report.spectral_penalty.detach(),
             "sobolev_alpha_loss": sobolev_report.alpha_calibration_loss.detach(),
@@ -959,11 +1044,18 @@ class Metabolic_Causal_Trainer(nn.Module):
             "loss_recon_coords": pocket_coord_recon_loss.detach(),
             "loss_recon_mask": pocket_mask_loss.detach(),
             "loss_recon_steric": pocket_steric_loss.detach(),
-            "dag_causal_loss": dag_output.causal_loss.detach(),
-            "dag_acyclicity": dag_output.acyclicity.detach(),
-            "dag_sparsity": dag_output.sparsity.detach(),
-            "dag_adjacency_mean": dag_output.raw_adjacency.abs().mean().detach(),
-            "dag_kinetic_penalty": dag_output.kinetic_penalty.detach(),
+            "dag_causal_loss": dag_causal_loss.detach(),
+            "dag_acyclicity": self._sanitize_tensor(dag_output.acyclicity.detach(), clamp=(0.0, 1.0e4)),
+            "dag_sparsity": self._sanitize_tensor(dag_output.sparsity.detach(), clamp=(0.0, 1.0e4)),
+            "dag_adjacency_mean": self._sanitize_tensor(dag_output.raw_adjacency.abs().mean().detach(), clamp=(0.0, 1.0e4)),
+            "dag_kinetic_penalty": self._sanitize_tensor(dag_output.kinetic_penalty.detach(), clamp=(0.0, 1.0e4)),
+            "dag_thermo_penalty": self._sanitize_tensor(dag_output.thermodynamic_penalty.detach(), clamp=(0.0, 1.0e4)),
+            "dag_affinity_penalty": self._sanitize_tensor(dag_output.affinity_penalty.detach(), clamp=(0.0, 1.0e4)),
+            "dag_access_penalty": self._sanitize_tensor(dag_output.accessibility_penalty.detach(), clamp=(0.0, 1.0e4)),
+            "dag_flux_penalty": self._sanitize_tensor(dag_output.flux_penalty.detach(), clamp=(0.0, 1.0e4)),
+            "dag_recon_loss": self._sanitize_tensor(dag_output.reconstruction_loss.detach(), clamp=(0.0, 1.0e4)),
+            "dag_manifold_recon_loss": self._sanitize_tensor(dag_output.manifold_recon_loss.detach(), clamp=(0.0, 1.0e4)),
+            "dag_manifold_density_penalty": self._sanitize_tensor(dag_output.manifold_density_penalty.detach(), clamp=(0.0, 1.0e4)),
         }
         if self.optimizer is not None and self.optimizer.param_groups:
             metrics["lr"] = torch.as_tensor(
@@ -977,34 +1069,30 @@ class Metabolic_Causal_Trainer(nn.Module):
             metrics["wsd_scheduler_active"] = torch.as_tensor(0.0, dtype=total_loss.dtype, device=total_loss.device)
         return TrainingStepResult(loss=total_loss, metrics=metrics)
 
-    def training_step(self, batch: Any) -> Dict[str, torch.Tensor]:
+    def training_step(self, batch: Any) -> Optional[Dict[str, torch.Tensor]]:
+        """Performs a single forward and backward pass for one batch of data."""
         if self.optimizer is None:
             self.configure_optimizers()
         assert self.optimizer is not None
-        self.optimizer.zero_grad(set_to_none=True)
+
         result = self.forward_batch(batch)
+
         if not torch.isfinite(result.loss):
             import warnings
-            warnings.warn(
-                f"Non-finite loss ({result.loss.item()}) — skipping backward/step for this batch.",
-                UserWarning,
-                stacklevel=2,
-            )
-            metrics = dict(result.metrics)
-            metrics["grad_norm"] = torch.zeros((), dtype=result.loss.dtype, device=result.loss.device)
-            return metrics
-        result.loss.backward()
-        grad_norm = self.clip_gradients()
-        self.optimizer.step()
-        if self.scheduler is not None:
-            self.scheduler.step()
-        self.global_step_counter.add_(1)
+            warnings.warn(f"Non-finite loss ({result.loss.item()}) — skipping batch.", UserWarning, stacklevel=2)
+            # Explicitly delete tensor to free memory, as the graph is not cleared by backward()
+            del result
+            if self._module_device().type == "cuda":
+                torch.cuda.empty_cache()
+            return None
+
+        # Normalize loss for accumulation and perform backward pass
+        loss = result.loss / self.gradient_accumulation_steps
+        loss.backward()
+
         metrics = dict(result.metrics)
-        metrics["grad_norm"] = torch.as_tensor(
-            grad_norm,
-            dtype=result.loss.dtype,
-            device=result.loss.device,
-        )
+        # Grad norm is calculated in fit_epoch, so just add a placeholder
+        metrics["grad_norm"] = torch.zeros((), dtype=result.loss.dtype, device=result.loss.device)
         return metrics
 
     def validation_step(self, batch: Any) -> Dict[str, torch.Tensor]:
@@ -1016,13 +1104,52 @@ class Metabolic_Causal_Trainer(nn.Module):
     def fit_epoch(self, dataloader, *, train: bool = True) -> Dict[str, float]:
         reducer: Dict[str, List[float]] = {}
         self.train(mode=train)
-        for batch in dataloader:
-            metrics = self.training_step(batch) if train else self.validation_step(batch)
-            for key, value in metrics.items():
-                if torch.is_tensor(value):
-                    reducer.setdefault(key, []).append(float(value.detach().cpu().item()))
-                else:
-                    reducer.setdefault(key, []).append(float(value))
+        
+        valid_batches_processed = 0
+        if train:
+            if self.optimizer is None: self.configure_optimizers()
+            assert self.optimizer is not None
+            self.optimizer.zero_grad(set_to_none=True)
+
+        for i, batch in enumerate(dataloader):
+            if train:
+                metrics = self.training_step(batch)
+                if metrics is None:
+                    continue  # Skip batch if loss was NaN
+
+                # Log metrics from the successful forward/backward pass
+                for key, value in metrics.items():
+                    if torch.is_tensor(value):
+                        reducer.setdefault(key, []).append(float(value.detach().cpu().item()))
+                
+                valid_batches_processed += 1
+                is_accumulation_step = (valid_batches_processed % self.gradient_accumulation_steps) == 0
+                
+                if is_accumulation_step:
+                    grad_norm = self.clip_gradients()
+                    self.optimizer.step()
+                    if self.scheduler is not None:
+                        self.scheduler.step()
+                    self.optimizer.zero_grad(set_to_none=True)
+                    reducer.setdefault("grad_norm", []).append(grad_norm)
+
+                self.global_step_counter.add_(1)
+            
+            else:  # Validation loop
+                metrics = self.validation_step(batch)
+                for key, value in metrics.items():
+                    if torch.is_tensor(value):
+                        reducer.setdefault(key, []).append(float(value.detach().cpu().item()))
+        
+        # Handle case where the last batches didn't trigger an optimizer step
+        if train and (valid_batches_processed % self.gradient_accumulation_steps) != 0:
+            grad_norm = self.clip_gradients()
+            self.optimizer.step()
+            if self.scheduler is not None:
+                self.scheduler.step()
+            self.optimizer.zero_grad(set_to_none=True)
+            reducer.setdefault("grad_norm", []).append(grad_norm)
+
         return {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
 
 

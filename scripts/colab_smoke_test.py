@@ -25,6 +25,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sample-index", type=int, default=-1, help="Dataset sample index; use -1 to auto-pick the smallest molecule")
     parser.add_argument("--steps", type=int, default=2, help="Dynamics rollout steps for the smoke test")
     parser.add_argument("--dt", type=float, default=0.001, help="Dynamics step size")
+    parser.add_argument("--max-molecules", type=int, default=32, help="Cap SDF loading for faster notebook smoke runs")
     parser.add_argument("--forward-only", action="store_true", help="Skip optimizer/backward and run validation_step only")
     parser.add_argument("--allow-compile", action="store_true", help="Enable selective torch.compile; off by default for Colab safety")
     parser.add_argument("--no-compile", action="store_true", help="Disable selective torch.compile")
@@ -80,7 +81,7 @@ def main() -> None:
     if not sdf_path.exists():
         raise SystemExit(f"SDF not found: {sdf_path}")
 
-    dataset = ZaretzkiMetabolicDataset(sdf_path)
+    dataset = ZaretzkiMetabolicDataset(sdf_path, max_molecules=max(int(args.max_molecules), 1))
     item = _select_item(dataset, args.sample_index)
     batch = geometric_collate_fn([item])
     batch = _move_to_device(batch, device)
@@ -98,6 +99,7 @@ def main() -> None:
         enable_bf16_hot_path=not args.no_bf16,
         enable_wsd_scheduler=False,
         low_memory_train_mode=not args.forward_only,
+        use_galore=False,
     ).to(device)
 
     quantum_enforcer = trainer.model.module1.field_engine.quantum_enforcer
