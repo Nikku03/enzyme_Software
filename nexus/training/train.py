@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
+import torch
 from torch.utils.data import DataLoader, Dataset, Subset
 
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn
@@ -55,6 +56,7 @@ def main() -> None:
     args = parse_args()
     if bool(args.dataset) == bool(args.sdf_dataset):
         raise ValueError("Provide exactly one of --dataset or --sdf-dataset")
+    _pin = torch.cuda.is_available()
 
     if args.sdf_dataset:
         dataset = ZaretzkiMetabolicDataset(
@@ -72,7 +74,7 @@ def main() -> None:
             shuffle=True,
             collate_fn=geometric_collate_fn,
             num_workers=args.num_workers,
-            pin_memory=True,
+            pin_memory=_pin,
         )
     else:
         assert args.dataset is not None
@@ -86,7 +88,7 @@ def main() -> None:
             shuffle=True,
             collate_fn=collate_single,
             num_workers=args.num_workers,
-            pin_memory=True,
+            pin_memory=_pin,
         )
 
     if args.max_samples > 0 and not args.sdf_dataset:
@@ -99,7 +101,7 @@ def main() -> None:
             shuffle=True,
             collate_fn=collate,
             num_workers=args.num_workers,
-            pin_memory=True,
+            pin_memory=_pin,
         )
 
     trainer = Metabolic_Causal_Trainer(

@@ -1010,8 +1010,22 @@ class Metabolic_Causal_Trainer(nn.Module):
         dag_contribution = (dag_causal_loss / dag_loss_scale).clamp_max(4.0)
         total_loss = self._sanitize_tensor(self._to_fp32(total_loss), clamp=(0.0, 1.0e5)) + dag_contribution
 
+        # SoM top-1 / top-2 accuracy — true_ranked_index is the rank of the
+        # ground-truth SoM in the descending-effective_reactivity-sorted list, so
+        # rank 0 = correctly predicted as the most reactive atom (top-1 hit).
+        _rank = int(true_ranked_index.detach().cpu().item())
+        _n    = int(delta_E_tensor.numel())
+        som_top1 = torch.as_tensor(1.0 if _rank == 0 else 0.0, dtype=torch.float32, device=total_loss.device)
+        som_top2 = torch.as_tensor(1.0 if _rank <= 1 else 0.0, dtype=torch.float32, device=total_loss.device)
+        som_top3 = torch.as_tensor(1.0 if _rank <= 2 else 0.0, dtype=torch.float32, device=total_loss.device)
+
         metrics = {
             "loss_total": total_loss.detach(),
+            "som_top1": som_top1,
+            "som_top2": som_top2,
+            "som_top3": som_top3,
+            "som_rank": torch.as_tensor(float(_rank), dtype=torch.float32, device=total_loss.device),
+            "som_n_atoms": torch.as_tensor(float(_n), dtype=torch.float32, device=total_loss.device),
             "loss_raw_som": loss_info["som_loss"],
             "loss_raw_rank": loss_info["ranking_loss"],
             "loss_raw_kinetics": loss_info["kinetic_loss"],
@@ -1156,6 +1170,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                     print(
                         f"batch={i}/{total_batches} "
                         f"loss_total={running.get('loss_total', float('nan')):.6g} "
+                        f"top1={running.get('som_top1', float('nan')):.2%} "
+                        f"top2={running.get('som_top2', float('nan')):.2%} "
                         f"pred_rate={running.get('pred_rate', float('nan')):.6g} "
                         f"dag_loss={running.get('dag_causal_loss', float('nan')):.6g}",
                         flush=True,
@@ -1171,6 +1187,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                     print(
                         f"val_batch={i}/{total_batches} "
                         f"loss_total={running.get('loss_total', float('nan')):.6g} "
+                        f"top1={running.get('som_top1', float('nan')):.2%} "
+                        f"top2={running.get('som_top2', float('nan')):.2%} "
                         f"pred_rate={running.get('pred_rate', float('nan')):.6g} "
                         f"dag_loss={running.get('dag_causal_loss', float('nan')):.6g}",
                         flush=True,
@@ -1186,6 +1204,30 @@ class Metabolic_Causal_Trainer(nn.Module):
             reducer.setdefault("grad_norm", []).append(grad_norm)
 
         return {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
+
+
+    def evaluate_epoch(self, dataloader, *, log_every: int = 0) -> Dict[str, float]:
+        """Run one full eval pass and return accuracy + loss metrics.
+
+        Returns the same dict as fit_epoch(train=False) but also prints a
+        human-readable accuracy summary at the end.
+        """
+        metrics = self.fit_epoch(dataloader, train=False, log_every=log_every)
+        top1  = metrics.get("som_top1",  float("nan"))
+        top2  = metrics.get("som_top2",  float("nan"))
+        top3  = metrics.get("som_top3",  float("nan"))
+        rank  = metrics.get("som_rank",  float("nan"))
+        n_atoms = metrics.get("som_n_atoms", float("nan"))
+        print(
+            f"\n── SoM accuracy ──────────────────────────────\n"
+            f"  top-1 : {top1:.1%}\n"
+            f"  top-2 : {top2:.1%}\n"
+            f"  top-3 : {top3:.1%}\n"
+            f"  mean rank  : {rank:.1f} / {n_atoms:.0f} atoms\n"
+            f"──────────────────────────────────────────────\n",
+            flush=True,
+        )
+        return metrics
 
 
 def load_compound_records(dataset_path: str | Path) -> List[Dict[str, Any]]:
