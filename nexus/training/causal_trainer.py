@@ -352,6 +352,27 @@ class Metabolic_Causal_Trainer(nn.Module):
                 "galore_torch is required. Install with: pip install galore-torch"
             ) from exc
 
+        # Robustify GaLore SVD against ill-conditioned untrained weight matrices.
+        # cusolver can diverge on near-zero SIREN weights; retrying with tiny noise
+        # breaks the degeneracy without meaningfully changing the projection direction.
+        try:
+            import galore_torch.galore_projector as _gp
+            if not getattr(_gp.GradientProjector, "_svd_patched", False):
+                _orig_get_orth = _gp.GradientProjector.get_orthogonal_matrix
+
+                def _robust_get_orth(self, weights, rank, type):  # noqa: A002
+                    try:
+                        return _orig_get_orth(self, weights, rank, type)
+                    except torch.linalg.LinAlgError:
+                        noisy = weights.clone().detach()
+                        noisy.data.add_(torch.randn_like(noisy.data) * 1e-6)
+                        return _orig_get_orth(self, noisy, rank, type)
+
+                _gp.GradientProjector.get_orthogonal_matrix = _robust_get_orth
+                _gp.GradientProjector._svd_patched = True
+        except Exception:
+            pass  # galore_torch layout changed — skip patch
+
         groups = self._split_parameter_groups()
 
         # --- Full-rank groups: physics constants, query engine, God Loss scalars ---
