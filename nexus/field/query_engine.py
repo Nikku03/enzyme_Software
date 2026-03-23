@@ -88,9 +88,13 @@ class SubAtomicQueryEngine(nn.Module):
         self.heme_softness = float(heme_softness)
         self.local_env_sigma = float(local_env_sigma)
         self.depth_softmax_temperature = float(depth_softmax_temperature)
-        # Set False to skip create_graph in compute_approach_vectors (saves memory when
-        # approach vectors are detached before loss, e.g. low_memory_train_mode on Colab).
-        self.create_approach_graph: bool = True
+        # Whether to use create_graph=True when computing approach-vector gradients.
+        # True  → second-order backprop through the SIREN field (expensive; can produce
+        #          NaN in BF16 for larger molecules due to mixed-precision Hessian).
+        # False → approach vectors are detached from the SIREN graph (default; safe on
+        #         GPU and equivalent to True when low_memory_train_mode is active since
+        #         ranking_loss is detached there anyway).
+        self.create_approach_graph: bool = False
         self.hydration_decay_raw = nn.Parameter(torch.log(torch.expm1(torch.tensor(float(hydration_decay)))))
         self.metabolic_nudge_raw = nn.Parameter(torch.log(torch.expm1(torch.tensor(0.15))))
         self.polar_relief_raw = nn.Parameter(torch.log(torch.expm1(torch.tensor(float(polar_relief)))))
