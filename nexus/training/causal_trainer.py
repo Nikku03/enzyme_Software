@@ -382,8 +382,7 @@ class Metabolic_Causal_Trainer(nn.Module):
 
         if not self.use_galore:
             # Plain AdamW — no SVD, safe on Colab / CPU
-            all_params = [p for p in self.parameters() if p.requires_grad]
-            all_params += [p for p in self.dag_learner.parameters() if p.requires_grad]
+            all_params = self._unique([p for p in self.parameters() if p.requires_grad])
             self.optimizer = torch.optim.AdamW(all_params, lr=1.0e-4, weight_decay=1.0e-5)
             if self.enable_wsd_scheduler and self.total_training_steps is not None:
                 self.scheduler = self._build_wsd_scheduler(self.optimizer, self.total_training_steps)
@@ -505,7 +504,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         )
 
     def get_all_parameters(self) -> List[nn.Parameter]:
-        return self._trainable(list(self.model.parameters()) + list(self.loss_fn.parameters()))
+        return self._unique(self._trainable(list(self.parameters())))
 
     def clip_gradients(self) -> float:
         params = self.get_all_parameters()
