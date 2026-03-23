@@ -19,20 +19,30 @@ from nexus.training.causal_trainer import Metabolic_Causal_Trainer
 DEFAULT_SDF = "data/ATTNSOM/cyp_dataset/3A4.sdf"
 
 
+def _normalize_profile_name(value: str) -> str:
+    aliases = {
+        "a100": "standard",
+        "h100": "high_vram",
+        "standard": "standard",
+        "high_vram": "high_vram",
+    }
+    return aliases.get(value.strip().lower(), "auto")
+
+
 def _detect_gpu_profile(requested: str) -> str:
-    value = requested.strip().lower()
-    if value in {"a100", "h100"}:
-        return value
+    normalized = _normalize_profile_name(requested)
+    if normalized in {"standard", "high_vram"}:
+        return normalized
     if torch.cuda.is_available():
-        name = torch.cuda.get_device_name(0).upper()
-        if "H100" in name:
-            return "h100"
-    return "a100"
+        total_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
+        if total_gb >= 70.0:
+            return "high_vram"
+    return "standard"
 
 
 def _profile_defaults(profile: str) -> Dict[str, float]:
     profiles: Dict[str, Dict[str, float]] = {
-        "a100": {
+        "standard": {
             "max_molecules": 32,
             "integration_resolution": 8,
             "integration_chunk_size": 32,
@@ -40,7 +50,7 @@ def _profile_defaults(profile: str) -> Dict[str, float]:
             "scan_radius": 1.0,
             "scan_query_chunk_size": 2,
         },
-        "h100": {
+        "high_vram": {
             "max_molecules": 64,
             "integration_resolution": 8,
             "integration_chunk_size": 64,
@@ -55,7 +65,7 @@ def _profile_defaults(profile: str) -> Dict[str, float]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a Colab-friendly NEXUS smoke test")
     parser.add_argument("--sdf", default=DEFAULT_SDF, help="Path to an isoform SDF file")
-    parser.add_argument("--gpu-profile", default=os.environ.get("NEXUS_COLAB_GPU_PROFILE", "auto"), choices=("auto", "a100", "h100"), help="Auto-detect or force a Colab GPU profile")
+    parser.add_argument("--gpu-profile", default=os.environ.get("NEXUS_COLAB_GPU_PROFILE", "auto"), choices=("auto", "standard", "high_vram", "a100", "h100"), help="Auto-detect or force a Colab memory profile")
     parser.add_argument("--sample-index", type=int, default=-1, help="Dataset sample index; use -1 to auto-pick the smallest molecule")
     parser.add_argument("--steps", type=int, default=2, help="Dynamics rollout steps for the smoke test")
     parser.add_argument("--dt", type=float, default=0.001, help="Dynamics step size")

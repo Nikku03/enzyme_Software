@@ -35,20 +35,31 @@ importlib.reload(_ds_mod)
 
 SDF = _REPO_DIR / "data/ATTNSOM/cyp_dataset/3A4.sdf"
 
+def _normalize_profile_name(value: str) -> str:
+    aliases = {
+        "a100": "standard",
+        "h100": "high_vram",
+        "standard": "standard",
+        "high_vram": "high_vram",
+    }
+    return aliases.get(value.strip().lower(), "auto")
+
+
 def _detect_gpu_profile() -> str:
     env = os.environ.get("NEXUS_COLAB_GPU_PROFILE", "auto").strip().lower()
-    if env in {"a100", "h100"}:
-        return env
+    normalized = _normalize_profile_name(env)
+    if normalized in {"standard", "high_vram"}:
+        return normalized
     if torch.cuda.is_available():
-        name = torch.cuda.get_device_name(0).upper()
-        if "H100" in name:
-            return "h100"
-    return "a100"
+        total_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
+        if total_gb >= 70.0:
+            return "high_vram"
+    return "standard"
 
 
 GPU_PROFILE = _detect_gpu_profile()
 GPU_PROFILES = {
-    "a100": {
+    "standard": {
         "max_samples": 16,
         "epochs": 1,
         "steps": 1,
@@ -60,7 +71,7 @@ GPU_PROFILES = {
         "scan_shells": (0.5, 1.0),
         "scan_refine_steps": 0,
     },
-    "h100": {
+    "high_vram": {
         "max_samples": 16,
         "epochs": 1,
         "steps": 1,
