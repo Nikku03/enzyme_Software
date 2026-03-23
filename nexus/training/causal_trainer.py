@@ -1008,7 +1008,12 @@ class Metabolic_Causal_Trainer(nn.Module):
         n_atoms = float(module1_out.manifold.pos.size(0))
         dag_loss_scale = max(n_atoms * n_atoms, 1.0)
         dag_contribution = (dag_causal_loss / dag_loss_scale).clamp_max(4.0)
-        total_loss = self._sanitize_tensor(self._to_fp32(total_loss), clamp=(0.0, 1.0e5)) + dag_contribution
+        # ranking_loss flows through alignment_score → field scan → SIREN parameters and
+        # is the only gradient path to the field in low_memory_train_mode (where
+        # delta_E_tensor is detached).  Add it directly so the SIREN learns even without
+        # full dynamics.  Clamp at 10.0 to match the scale of other loss terms.
+        ranking_contribution = self._sanitize_tensor(self._to_fp32(ranking_loss), clamp=(0.0, 10.0))
+        total_loss = self._sanitize_tensor(self._to_fp32(total_loss), clamp=(0.0, 1.0e5)) + dag_contribution + ranking_contribution
 
         metrics = {
             "loss_total": total_loss.detach(),
