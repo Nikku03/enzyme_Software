@@ -135,7 +135,7 @@ def main() -> None:
         enable_static_compile=args.allow_compile and not args.no_compile,
         enable_bf16_hot_path=not args.no_bf16,
         enable_wsd_scheduler=False,
-        low_memory_train_mode=not args.forward_only,
+        low_memory_train_mode=True,
         use_galore=False,
     ).to(device)
 
@@ -159,7 +159,9 @@ def main() -> None:
         torch.cuda.reset_peak_memory_stats(device)
 
     if args.forward_only:
-        trainer.eval()
+        # Keep the module in train mode so forward_batch takes the low-memory path,
+        # but call validation_step so no backward/optimizer step occurs.
+        trainer.train()
         metrics = trainer.validation_step(batch)
     else:
         trainer.train()
