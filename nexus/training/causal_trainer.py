@@ -904,7 +904,11 @@ class Metabolic_Causal_Trainer(nn.Module):
             reconstruction_loss=reconstruction_loss,
             ranking_loss=ranking_loss,
         )
-        total_loss = total_loss + dag_output.causal_loss
+        # Normalise DAG causal loss by N² so the acyclicity penalty does not explode
+        # on large molecules: for an N-atom molecule the penalty grows O(N²) otherwise.
+        n_atoms = float(module1_out.manifold.pos.size(0))
+        dag_loss_scale = max(n_atoms * n_atoms, 1.0)
+        total_loss = total_loss + dag_output.causal_loss / dag_loss_scale
 
         metrics = {
             "loss_total": total_loss.detach(),
@@ -979,6 +983,16 @@ class Metabolic_Causal_Trainer(nn.Module):
         assert self.optimizer is not None
         self.optimizer.zero_grad(set_to_none=True)
         result = self.forward_batch(batch)
+        if not torch.isfinite(result.loss):
+            import warnings
+            warnings.warn(
+                f"Non-finite loss ({result.loss.item()}) — skipping backward/step for this batch.",
+                UserWarning,
+                stacklevel=2,
+            )
+            metrics = dict(result.metrics)
+            metrics["grad_norm"] = torch.zeros((), dtype=result.loss.dtype, device=result.loss.device)
+            return metrics
         result.loss.backward()
         grad_norm = self.clip_gradients()
         self.optimizer.step()

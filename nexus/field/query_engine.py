@@ -88,6 +88,9 @@ class SubAtomicQueryEngine(nn.Module):
         self.heme_softness = float(heme_softness)
         self.local_env_sigma = float(local_env_sigma)
         self.depth_softmax_temperature = float(depth_softmax_temperature)
+        # Set False to skip create_graph in compute_approach_vectors (saves memory when
+        # approach vectors are detached before loss, e.g. low_memory_train_mode on Colab).
+        self.create_approach_graph: bool = True
         self.hydration_decay_raw = nn.Parameter(torch.log(torch.expm1(torch.tensor(float(hydration_decay)))))
         self.metabolic_nudge_raw = nn.Parameter(torch.log(torch.expm1(torch.tensor(0.15))))
         self.polar_relief_raw = nn.Parameter(torch.log(torch.expm1(torch.tensor(float(polar_relief)))))
@@ -404,8 +407,8 @@ class SubAtomicQueryEngine(nn.Module):
         grad = torch.autograd.grad(
             outputs=psi.sum(),
             inputs=points,
-            retain_graph=True,
-            create_graph=True,
+            retain_graph=self.create_approach_graph,
+            create_graph=self.create_approach_graph,
             allow_unused=False,
         )[0]
         approach_vectors = -grad / grad.norm(dim=-1, keepdim=True).clamp_min(1.0e-8)
