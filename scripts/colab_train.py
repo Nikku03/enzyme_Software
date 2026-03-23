@@ -12,7 +12,6 @@ import importlib
 import json
 import os
 import sys
-import traceback
 from pathlib import Path
 
 import torch
@@ -153,56 +152,12 @@ if device.type == "cuda":
 print("Optimizer ready.\n")
 
 
-# ── device transfer helper ─────────────────────────────────────────────────
-def _to(obj, dev):
-    if torch.is_tensor(obj):   return obj.to(dev)
-    if isinstance(obj, dict):  return {k: _to(v, dev) for k, v in obj.items()}
-    if isinstance(obj, list):  return [_to(v, dev) for v in obj]
-    if isinstance(obj, tuple): return tuple(_to(v, dev) for v in obj)
-    return obj
-
-
 # ── training loop ──────────────────────────────────────────────────────────
 history = []
 for epoch in range(CFG["epochs"]):
-    reducer: dict = {}
-    skipped = 0
-    trainer.train(True)
-    total = len(loader)
-    for i, batch in enumerate(loader, 1):
-        try:
-            batch = _to(batch, device)
-            m = trainer.training_step(batch)
-        except Exception as exc:
-            skipped += 1
-            print(f"  [batch {i}/{total}] SKIPPED — {type(exc).__name__}: {exc}", flush=True)
-            traceback.print_exc()
-            if device.type == "cuda":
-                torch.cuda.empty_cache()
-            continue
-        if m is None:
-            skipped += 1
-            print(f"  [batch {i}/{total}] SKIPPED — non-finite loss after trainer safeguards", flush=True)
-            if device.type == "cuda":
-                torch.cuda.empty_cache()
-            continue
-        for k, v in m.items():
-            try:
-                val = float(v.detach().cpu().item()) if torch.is_tensor(v) else float(v)
-                reducer.setdefault(k, []).append(val)
-            except Exception:
-                pass
-        running = {k: sum(vs) / len(vs) for k, vs in reducer.items()}
-        print(
-            f"epoch={epoch+1}  batch={i}/{total}"
-            f"  loss={running.get('loss_total', float('nan')):.4g}"
-            f"  pred_rate={running.get('pred_rate', float('nan')):.4g}"
-            f"  dag_loss={running.get('dag_causal_loss', float('nan')):.4g}",
-            flush=True,
-        )
-    metrics = {k: sum(vs) / len(vs) for k, vs in reducer.items()}
+    metrics = trainer.fit_epoch(loader, train=True, log_every=1)
     history.append(metrics)
-    print(f"\n── epoch {epoch+1} done  (skipped={skipped}/{total}): {metrics}\n")
+    print(f"\n── epoch {epoch+1} done: {metrics}\n")
 
 if device.type == "cuda":
     peak_mb = torch.cuda.max_memory_allocated(device) / 1024**2

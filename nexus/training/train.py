@@ -127,26 +127,7 @@ def main() -> None:
 
     history: List[Dict[str, float]] = []
     for epoch in range(args.epochs):
-        reducer: Dict[str, List[float]] = {}
-        trainer.train(True)
-        total_batches = len(loader)
-        for batch_idx, batch in enumerate(loader, start=1):
-            metrics_t = trainer.training_step(batch)
-            for key, value in metrics_t.items():
-                if hasattr(value, "detach"):
-                    reducer.setdefault(key, []).append(float(value.detach().cpu().item()))
-                else:
-                    reducer.setdefault(key, []).append(float(value))
-            if args.log_every > 0 and (batch_idx == 1 or batch_idx % args.log_every == 0 or batch_idx == total_batches):
-                running = {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
-                print(
-                    f"epoch={epoch + 1} batch={batch_idx}/{total_batches} "
-                    f"loss_total={running.get('loss_total', float('nan')):.6g} "
-                    f"pred_rate={running.get('pred_rate', float('nan')):.6g} "
-                    f"dag_loss={running.get('dag_causal_loss', float('nan')):.6g}",
-                    flush=True,
-                )
-        metrics = {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
+        metrics = trainer.fit_epoch(loader, train=True, log_every=args.log_every)
         history.append(metrics)
         print(f"epoch={epoch + 1} metrics={metrics}", flush=True)
 

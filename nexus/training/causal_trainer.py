@@ -229,6 +229,18 @@ class Metabolic_Causal_Trainer(nn.Module):
             return tensor.to(dtype=torch.float32)
         return tensor
 
+    def _move_to_device(self, obj: Any, device: Optional[torch.device] = None) -> Any:
+        target = device or self._module_device()
+        if torch.is_tensor(obj):
+            return obj.to(target)
+        if isinstance(obj, dict):
+            return {key: self._move_to_device(value, target) for key, value in obj.items()}
+        if isinstance(obj, list):
+            return [self._move_to_device(value, target) for value in obj]
+        if isinstance(obj, tuple):
+            return tuple(self._move_to_device(value, target) for value in obj)
+        return obj
+
     @staticmethod
     def _sanitize_tensor(
         tensor: torch.Tensor,
@@ -1074,7 +1086,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         if self.optimizer is None:
             self.configure_optimizers()
         assert self.optimizer is not None
-
+        batch = self._move_to_device(batch)
         result = self.forward_batch(batch)
 
         if not torch.isfinite(result.loss):
@@ -1096,12 +1108,13 @@ class Metabolic_Causal_Trainer(nn.Module):
         return metrics
 
     def validation_step(self, batch: Any) -> Dict[str, torch.Tensor]:
+        batch = self._move_to_device(batch)
         result = self.forward_batch(batch)
         metrics = dict(result.metrics)
         metrics["grad_norm"] = torch.zeros((), dtype=result.loss.dtype, device=result.loss.device)
         return metrics
 
-    def fit_epoch(self, dataloader, *, train: bool = True) -> Dict[str, float]:
+    def fit_epoch(self, dataloader, *, train: bool = True, log_every: int = 0) -> Dict[str, float]:
         reducer: Dict[str, List[float]] = {}
         self.train(mode=train)
         
@@ -1111,7 +1124,8 @@ class Metabolic_Causal_Trainer(nn.Module):
             assert self.optimizer is not None
             self.optimizer.zero_grad(set_to_none=True)
 
-        for i, batch in enumerate(dataloader):
+        total_batches = len(dataloader)
+        for i, batch in enumerate(dataloader, start=1):
             if train:
                 metrics = self.training_step(batch)
                 if metrics is None:
@@ -1134,12 +1148,30 @@ class Metabolic_Causal_Trainer(nn.Module):
                     reducer.setdefault("grad_norm", []).append(grad_norm)
 
                 self.global_step_counter.add_(1)
+                if log_every > 0 and (i == 1 or i % log_every == 0 or i == total_batches):
+                    running = {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
+                    print(
+                        f"batch={i}/{total_batches} "
+                        f"loss_total={running.get('loss_total', float('nan')):.6g} "
+                        f"pred_rate={running.get('pred_rate', float('nan')):.6g} "
+                        f"dag_loss={running.get('dag_causal_loss', float('nan')):.6g}",
+                        flush=True,
+                    )
             
             else:  # Validation loop
                 metrics = self.validation_step(batch)
                 for key, value in metrics.items():
                     if torch.is_tensor(value):
                         reducer.setdefault(key, []).append(float(value.detach().cpu().item()))
+                if log_every > 0 and (i == 1 or i % log_every == 0 or i == total_batches):
+                    running = {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
+                    print(
+                        f"val_batch={i}/{total_batches} "
+                        f"loss_total={running.get('loss_total', float('nan')):.6g} "
+                        f"pred_rate={running.get('pred_rate', float('nan')):.6g} "
+                        f"dag_loss={running.get('dag_causal_loss', float('nan')):.6g}",
+                        flush=True,
+                    )
         
         # Handle case where the last batches didn't trigger an optimizer step
         if train and (valid_batches_processed % self.gradient_accumulation_steps) != 0:
