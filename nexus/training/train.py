@@ -43,6 +43,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-wsd", action="store_true", help="Disable the warmup-stable-decay scheduler")
     parser.add_argument("--wsd-decay-style", choices=("linear", "cosine"), default="linear")
     parser.add_argument("--metrics-json", default=None, help="Optional path to save epoch metrics")
+    parser.add_argument("--low-memory-train", action="store_true", help="Use low-memory training mode (skips full dynamics rollout)")
+    parser.add_argument("--no-compile", action="store_true", help="Disable torch.compile (recommended for Colab/CPU)")
+    parser.add_argument("--integration-resolution", type=int, default=16, help="Quantum grid resolution per axis (default 16 → 16^3=4096 pts)")
+    parser.add_argument("--integration-chunk-size", type=int, default=1024, help="Chunk size for quantum grid integration")
     return parser.parse_args()
 
 
@@ -103,7 +107,19 @@ def main() -> None:
         checkpoint_dynamics=not args.no_checkpoint,
         enable_wsd_scheduler=not args.no_wsd,
         wsd_decay_style=args.wsd_decay_style,
+        low_memory_train_mode=args.low_memory_train,
+        enable_static_compile=not args.no_compile,
     )
+
+    # Override quantum enforcer resolution if explicitly requested (important for Colab memory)
+    if args.integration_resolution != 16 or args.integration_chunk_size != 1024:
+        try:
+            qe = trainer.model.module1.field_engine.quantum_enforcer
+            qe.integration_resolution = max(int(args.integration_resolution), 4)
+            qe.integration_chunk_size = max(int(args.integration_chunk_size), 16)
+        except AttributeError:
+            pass  # model layout differs — skip silently
+
     trainer.set_total_training_steps(args.epochs * max(len(loader), 1))
     trainer.configure_optimizers()
 
