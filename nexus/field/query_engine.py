@@ -370,7 +370,7 @@ class SubAtomicQueryEngine(nn.Module):
             def scalar_fn(x: torch.Tensor) -> torch.Tensor:
                 return self._single_point_objective(field, manifold, center_index, x, nudge_vector=nudge_vector)
 
-            hessian = torch.autograd.functional.hessian(scalar_fn, point, create_graph=True)
+            hessian = torch.autograd.functional.hessian(scalar_fn, point, create_graph=False)
             hessian = 0.5 * (hessian + hessian.transpose(0, 1))
             _eye = torch.eye(hessian.shape[0], device=hessian.device, dtype=hessian.dtype)
             values = None
