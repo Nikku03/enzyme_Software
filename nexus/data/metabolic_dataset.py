@@ -11,11 +11,13 @@ from torch.utils.data import Dataset
 try:
     from rdkit import Chem
     from rdkit.Chem import AllChem
+    from rdkit.Chem.rdmolops import GetMolFrags
 
     _RDKIT_OK = True
 except Exception:  # pragma: no cover - optional dependency
     Chem = None
     AllChem = None
+    GetMolFrags = None
     _RDKIT_OK = False
 
 
@@ -35,11 +37,11 @@ class ZaretzkiMetabolicDataset(Dataset):
     """
 
     _SOM_KEYS = (
+        "PRIMARY_SOM",
         "SOM_IDX",
         "SoM_IDX",
         "SOM",
         "SOM_INDEX",
-        "PRIMARY_SOM",
         "SECONDARY_SOM",
         "SITE_OF_METABOLISM",
     )
@@ -47,26 +49,59 @@ class ZaretzkiMetabolicDataset(Dataset):
     def __init__(self, sdf_file_path: str | Path, max_molecules: int = 0) -> None:
         _require_rdkit()
         self.sdf_file_path = str(sdf_file_path)
-        self.max_molecules = int(max_molecules)
+        
         suppl = Chem.SDMolSupplier(self.sdf_file_path, removeHs=False)
+        
+        print(f"Screening molecules from {self.sdf_file_path}...")
         self.mols = []
+        
+        raw_mols = []
         for mol in suppl:
-            if mol is None:
+            if mol is not None:
+                raw_mols.append(mol)
+
+        for mol in raw_mols:
+            # Trap 4: Keep only the largest fragment
+            frags = GetMolFrags(mol, asMols=True)
+            if len(frags) > 1:
+                mol = max(frags, default=mol, key=lambda m: m.GetNumAtoms())
+
+            # Pre-screen for SoM index
+            som_idx = self._extract_som_idx(mol)
+            if som_idx is None:
                 continue
+
+            # Pre-screen for 3D embeddability
+            mol_3d = Chem.AddHs(mol)
+            mol_3d.RemoveAllConformers()
+            params = AllChem.ETKDGv3()
+            params.randomSeed = 42
+            embed_status = AllChem.EmbedMolecule(mol_3d, params)
+            if embed_status != 0:
+                # Try fallback embedding
+                if AllChem.EmbedMolecule(mol_3d, randomSeed=42) != 0:
+                    continue # Discard if embedding fails
+
             self.mols.append(mol)
-            if self.max_molecules > 0 and len(self.mols) >= self.max_molecules:
+            if max_molecules > 0 and len(self.mols) >= max_molecules:
                 break
-        print(f"Loaded {len(self.mols)} valid molecules from {self.sdf_file_path}")
+        
+        print(f"Loaded {len(self.mols)} valid, filtered molecules from {self.sdf_file_path}")
 
     def __len__(self) -> int:
         return len(self.mols)
 
-    def _embed_if_needed(self, mol):
-        if mol.GetNumConformers() > 0:
-            return mol
+    def _embed_3d(self, mol):
+        """Generate fresh ETKDGv3 3D coordinates.
+
+        Always clears existing conformers and re-embeds so that:
+        - Explicit Hs added by the caller are included in the geometry.
+        - 2D-only conformers from the SDF file are replaced by proper 3D ones.
+        Caller must have already called Chem.AddHs() to avoid collinear/degenerate
+        heavy-atom-only geometries that cause 1/r Coulomb singularities (NaN).
+        """
         work = Chem.Mol(mol)
-        if not any(atom.GetAtomicNum() == 1 for atom in work.GetAtoms()):
-            work = Chem.AddHs(work)
+        work.RemoveAllConformers()
         params = AllChem.ETKDGv3()
         params.randomSeed = 42
         params.useRandomCoords = False
@@ -98,9 +133,11 @@ class ZaretzkiMetabolicDataset(Dataset):
             raw = str(mol.GetProp(key)).strip()
             if not raw:
                 continue
-            token = raw.split(",")[0].split(";")[0].strip()
+            # Handle space-, comma-, and semicolon-separated multi-SoM values (e.g. "8 4", "3,7").
+            # Take the first listed site as the primary label.
+            token = raw.split()[0].split(",")[0].split(";")[0].strip()
             try:
-                idx = int(float(token)) - 1
+                idx = int(float(token)) - 1  # SDF uses 1-based atom indices
             except Exception:
                 continue
             if 0 <= idx < mol.GetNumAtoms():
@@ -109,7 +146,30 @@ class ZaretzkiMetabolicDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         mol = Chem.Mol(self.mols[idx])
-        mol = self._embed_if_needed(mol)
+
+        # Largest fragment is already selected in __init__, but we do it again
+        # to ensure consistency if the object is modified after init.
+        frags = GetMolFrags(mol, asMols=True)
+        if len(frags) > 1:
+            mol = max(frags, default=mol, key=lambda m: m.GetNumAtoms())
+
+        som_idx = self._extract_som_idx(mol)
+        assert som_idx is not None, f"Molecule at index {idx} should have a SoM after pre-screening."
+
+        mol = Chem.AddHs(mol)
+        mol.RemoveAllConformers()
+        params = AllChem.ETKDGv3()
+        params.randomSeed = 42
+        params.useRandomCoords = False
+        if int(AllChem.EmbedMolecule(mol, params)) != 0:
+            if int(AllChem.EmbedMolecule(mol, randomSeed=42)) != 0:
+                params2 = AllChem.ETKDGv3()
+                params2.randomSeed = 0
+                params2.useRandomCoords = True
+                AllChem.EmbedMolecule(mol, params2)
+        
+        assert mol.GetNumConformers() > 0, f"Molecule at index {idx} should have a 3D conformer after pre-screening."
+
         self._maybe_optimize(mol)
         self._compute_charges(mol)
 
@@ -119,15 +179,10 @@ class ZaretzkiMetabolicDataset(Dataset):
         charges = np.zeros((num_atoms,), dtype=np.float32)
         atomic_numbers = np.zeros((num_atoms,), dtype=np.int64)
 
-        if mol.GetNumConformers() == 0:
-            # All embedding attempts failed — use zero coords (model will learn from topology)
-            import warnings
-            warnings.warn(f"Could not embed molecule at index {idx}; using zero coordinates.", UserWarning, stacklevel=2)
-        else:
-            conf = mol.GetConformer()
-            for i in range(num_atoms):
-                pos = conf.GetAtomPosition(i)
-                coords[i] = [pos.x, pos.y, pos.z]
+        conf = mol.GetConformer()
+        for i in range(num_atoms):
+            pos = conf.GetAtomPosition(i)
+            coords[i] = [pos.x, pos.y, pos.z]
 
             atom = mol.GetAtomWithIdx(i)
             masses[i] = atom.GetMass()
@@ -140,14 +195,13 @@ class ZaretzkiMetabolicDataset(Dataset):
                 charges[i] = 0.0
 
         target_dag = torch.zeros((num_atoms, num_atoms), dtype=torch.float32)
-        som_idx = self._extract_som_idx(mol)
-        if som_idx is not None:
-            target_dag[som_idx, som_idx] = 1.0
+        target_dag[som_idx, som_idx] = 1.0
 
         try:
             smiles = Chem.MolToSmiles(Chem.RemoveHs(Chem.Mol(mol)), canonical=True)
         except Exception:
             smiles = Chem.MolToSmiles(mol, canonical=True)
+            
         item: Dict[str, Any] = {
             "smiles": smiles,
             "coords": torch.tensor(coords, dtype=torch.float32),
@@ -156,9 +210,8 @@ class ZaretzkiMetabolicDataset(Dataset):
             "atomic_numbers": torch.tensor(atomic_numbers, dtype=torch.long),
             "target_dag": target_dag,
             "num_atoms": int(num_atoms),
+            "true_som_idx": torch.tensor(som_idx, dtype=torch.long),
         }
-        if som_idx is not None:
-            item["true_som_idx"] = torch.tensor(som_idx, dtype=torch.long)
         return item
 
 
@@ -169,7 +222,20 @@ def geometric_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
     This collator is future-facing for geometry-first training.  The current
     causal trainer still expects effectively single-sample batches for the live
     SMILES-driven dynamics path.
+    (No longer needs to filter Nones as the dataset is pre-cleaned in __init__).
     """
+    if not batch:
+        return {
+            "smiles": [],
+            "coords": torch.empty(0, 0, 3),
+            "masses": torch.empty(0, 0),
+            "charges": torch.empty(0, 0),
+            "atomic_numbers": torch.empty(0, 0),
+            "target_dag": torch.empty(0, 0, 0),
+            "attention_mask": torch.empty(0, 0, dtype=torch.bool),
+            "num_atoms": torch.empty(0, dtype=torch.long),
+        }
+
     coords = pad_sequence([item["coords"] for item in batch], batch_first=True, padding_value=0.0)
     masses = pad_sequence([item["masses"] for item in batch], batch_first=True, padding_value=0.0)
     charges = pad_sequence([item["charges"] for item in batch], batch_first=True, padding_value=0.0)

@@ -45,7 +45,7 @@ SCAN_N_POINTS     = 8     # query shell points per atom    (default 96)
 SCAN_RADIUS       = 1.0   # reaction volume radius (Å)     (default 2.5)
 SCAN_CHUNK        = 2     # smaller chunk to avoid query-time OOMs
 SCAN_SHELLS       = (0.5, 1.0)   # shell fractions         (default: 5 shells)
-SCAN_REFINE_STEPS = 1     # gradient refinement steps      (default 5)
+SCAN_REFINE_STEPS = 0     # disable peak-gradient refinement on Colab; batch-9 OOM came from this path
 # ──────────────────────────────────────────────────────────────────────────
 
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn

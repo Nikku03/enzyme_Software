@@ -104,13 +104,13 @@ def main() -> None:
 
     quantum_enforcer = trainer.model.module1.field_engine.quantum_enforcer
     quantum_enforcer.integration_resolution = max(int(args.integration_resolution), 4)
-    quantum_enforcer.integration_chunk_size = max(int(args.integration_chunk_size), 16)
+    quantum_enforcer.integration_chunk_size = min(max(int(args.integration_chunk_size), 16), 32)
     query_engine = trainer.model.module1.field_engine.query_engine
     query_engine.n_points = max(int(args.scan_n_points), 4)
     query_engine.radius = float(args.scan_radius)
-    query_engine.query_chunk_size = max(int(args.scan_query_chunk_size), 1)
+    query_engine.query_chunk_size = min(max(int(args.scan_query_chunk_size), 1), 2)
     query_engine.shell_fractions = (0.5, 1.0)
-    query_engine.refine_steps = 1
+    query_engine.refine_steps = 0
 
     if device.type == "cuda":
         torch.cuda.empty_cache()
