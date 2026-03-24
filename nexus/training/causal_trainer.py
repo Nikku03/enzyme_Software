@@ -870,14 +870,20 @@ class Metabolic_Causal_Trainer(nn.Module):
         if low_memory_train:
             self.last_dynamics_fallback = True
             self.last_checkpoint_fallback = True
-            h_initial = self._sanitize_tensor(self._to_fp32(self.model.hamiltonian(
-                q_init_internal,
-                torch.zeros_like(q_init_internal),
-                smiles=smiles,
-                species=module1_out.manifold.species,
-                accessibility_field=accessibility_field,
-                ddi_occupancy=ddi_occupancy,
-            )),
+            # Force FP32 for Hamiltonian: SIREN uses sin(ω₀=30·x); BF16 overflows
+            # at large activations and produces NaN reactive energy every batch.
+            _q_fp32 = q_init_internal.float()
+            _dev_type = _q_fp32.device.type
+            with torch.autocast(device_type=_dev_type, enabled=False):
+                _h_raw = self._to_fp32(self.model.hamiltonian(
+                    _q_fp32,
+                    torch.zeros_like(_q_fp32),
+                    smiles=smiles,
+                    species=module1_out.manifold.species,
+                    accessibility_field=accessibility_field,
+                    ddi_occupancy=ddi_occupancy,
+                ))
+            h_initial = self._sanitize_tensor(_h_raw,
                 nan=25.0,
                 posinf=100.0,
                 neginf=-100.0,
