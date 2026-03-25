@@ -351,7 +351,13 @@ class MetabolicDAGLearner(nn.Module):
         # This preserves h(W)=0 at A=0, remains monotone for the positive A
         # used here, and gives a smooth acyclicity penalty without invoking the
         # unstable LinalgMatrixExpBackward0 path.
-        A = (W_sq / float(max(d, 1))).clamp(0.0, 10.0).to(dtype=torch.float64)
+        # Adaptive clamp: max entry of A is 2/d, so the spectral radius of the
+        # all-positive matrix A is ≤ d * (2/d) = 2.  This bounds the Taylor
+        # series: tr(exp(A)) ≤ d·e² ≈ 7.4d and h(W) ≤ 6.4d.
+        # With d=20: h(W) ≤ 128, contribution to total_loss ≤ 128/400 = 0.32.
+        # The fixed clamp of 10.0 allowed entries near 10 → tr(A⁵)/120 ~ O(d⁴·10⁵)
+        # causing the 511 spike at batch 20.
+        A = (W_sq / float(max(d, 1))).clamp(0.0, 2.0 / float(max(d, 1))).to(dtype=torch.float64)
         eye = torch.eye(d, dtype=A.dtype, device=A.device).expand_as(A)
         A2 = A @ A
         A3 = A2 @ A
