@@ -121,12 +121,14 @@ class HyperbolicMemoryBank:
         k = min(2, len(self.historical_mols))
         top_distances, top_indices = torch.topk(distances, k, largest=False)
 
-        best_idx = int(top_indices[0].item())
-        best_distance = float(top_distances[0].item())
-        if best_distance <= self.identity_distance_threshold and k > 1:
+        tau = 10.0  # Aggressive temperature scalar: exp(-d/tau) keeps confidence
+                    # high for typical hyperbolic distances (~2.9 → exp(-0.29)=0.748)
+        if top_distances[0] < 1e-4 and k > 1:
             best_idx = int(top_indices[1].item())
-            best_distance = float(top_distances[1].item())
-        confidence = math.exp(-best_distance)
+            confidence = math.exp(-float(top_distances[1].item()) / tau)
+        else:
+            best_idx = int(top_indices[0].item())
+            confidence = math.exp(-float(top_distances[0].item()) / tau)
 
         retrieved_mol = self.historical_mols[best_idx]
         retrieved_som = self.historical_soms[best_idx]
