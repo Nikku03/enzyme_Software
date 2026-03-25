@@ -46,5 +46,5 @@ class LearnedGaussianSplatKernel(nn.Module):
             weights=weights,
             normalized_weights=normalized_weights,
             weight_sum=weight_sum,
-            distances=dist2.sqrt(),
+            distances=dist2.clamp_min(1.0e-12).sqrt(),
         )
