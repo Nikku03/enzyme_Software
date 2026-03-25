@@ -11,7 +11,8 @@ from nexus.physics.clifford_math import clifford_geometric_product, embed_coordi
 SIREN_OMEGA_0 = 30.0
 
 
-def pairwise_distance(x: torch.Tensor, y: torch.Tensor, eps: float = 1.0e-12) -> torch.Tensor:
+def pairwise_distance(x: torch.Tensor, y: torch.Tensor, eps: float = 1.0e-4) -> torch.Tensor:
+    # eps=1e-4: 2nd derivative at boundary = 1/sqrt(eps)=100, safe for 2nd-order backward.
     diff = x.unsqueeze(-2) - y.unsqueeze(-3)
     return torch.sqrt(diff.square().sum(dim=-1).clamp_min(eps))
 

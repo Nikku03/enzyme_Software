@@ -219,17 +219,22 @@ class SubAtomicQueryEngine(nn.Module):
         direction_norm = direction.norm(dim=-1, keepdim=True)
         if nudge_vectors is not None:
             nudge = nudge_vectors.unsqueeze(1)
-            nudge_norm = nudge.norm(dim=-1, keepdim=True)
+            # eps-under-sqrt: 2nd derivative of norm at 0 is 1/0³=NaN; adding eps=1e-4
+            # bounds it to 100 — safe for Hessian's create_graph=True inner backward.
+            nudge_sq = nudge.pow(2).sum(dim=-1, keepdim=True)
+            nudge_norm = (nudge_sq + 1e-4).sqrt()
             safe_nudge = torch.where(
-                nudge_norm > 1.0e-6,
-                nudge / nudge_norm.clamp_min(1.0e-6),
+                nudge_sq > 1e-12,
+                nudge / nudge_norm,
                 torch.zeros_like(nudge),
             )
             direction = torch.where(direction_norm > 1.0e-6, direction, safe_nudge.expand_as(direction))
             direction_norm = direction.norm(dim=-1, keepdim=True)
         fallback = torch.zeros_like(direction)
         fallback[..., 0] = 1.0
-        unit = torch.where(direction_norm > 1.0e-6, direction / direction_norm.clamp_min(1.0e-6), fallback)
+        direction_sq = direction.pow(2).sum(dim=-1, keepdim=True)
+        direction_norm_safe = (direction_sq + 1e-4).sqrt()
+        unit = torch.where(direction_sq > 1e-12, direction / direction_norm_safe, fallback)
         heme_center = query_points + self.heme_offset * unit
 
         rel = atom_positions.unsqueeze(0).unsqueeze(0) - heme_center.unsqueeze(2)
