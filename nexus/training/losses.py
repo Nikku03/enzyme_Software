@@ -318,9 +318,93 @@ class AnalogicalGodLoss(nn.Module):
         }
         return total_loss, info
 
+class GatedAnalogicalGodLoss(nn.Module):
+    """
+    Homoscedastic arbitration between a first-principles pathway (pred_fp)
+    and an analogical retrieval pathway (pred_ana).
+
+    Uses precision parameters s = exp(log_s) instead of variance parameters
+    to prevent the σ-collapse failure mode where both σ values drift to ∞.
+
+    The hard gate closes completely when:
+      - retrieval_confidence < confidence_threshold  (poor analogue found), OR
+      - transport_succeeded is False                 (SoM on alien appendage)
+
+    Loss form (gate open):
+        L = 0.5 * s_fp  * L_fp  - 0.5 * log(s_fp)
+          + 0.5 * s_ana * L_ana - 0.5 * log(s_ana)
+
+    Loss form (gate closed — physics only):
+        L = 0.5 * s_fp * L_fp - 0.5 * log(s_fp)
+    """
+
+    def __init__(self, confidence_threshold: float = 0.6) -> None:
+        super().__init__()
+        self.threshold = float(confidence_threshold)
+        # log(s) where s = 1/σ².  Init at 0 → s=1 → equal weighting.
+        self.log_s = nn.Parameter(torch.zeros(2))
+
+    def forward(
+        self,
+        pred_fp: torch.Tensor,
+        pred_ana: torch.Tensor,
+        target_idx: torch.Tensor,
+        retrieval_confidence: float,
+        transport_succeeded: bool,
+    ) -> Tuple[torch.Tensor, Dict[str, Any]]:
+        # ── shape guards ──────────────────────────────────────────────
+        if pred_fp.dim() == 1:
+            pred_fp = pred_fp.unsqueeze(0)
+        if target_idx.dim() == 0:
+            target_idx = target_idx.unsqueeze(0)
+
+        loss_fp = F.cross_entropy(pred_fp, target_idx)
+        s_fp = torch.exp(self.log_s[0])
+        s_ana = torch.exp(self.log_s[1])
+
+        # ── hard gate ─────────────────────────────────────────────────
+        gate_open = (
+            retrieval_confidence >= self.threshold and transport_succeeded
+        )
+
+        if not gate_open:
+            total_loss = 0.5 * s_fp * loss_fp - 0.5 * self.log_s[0]
+            return total_loss, {
+                "loss_raw_physics": loss_fp.item(),
+                "loss_raw_analogy": 0.0,
+                "gate_open": 0.0,
+                "weight_physics": s_fp.item(),
+                "weight_analogy": s_ana.item(),
+            }
+
+        # ── analogical loss (gate is open) ────────────────────────────
+        if pred_ana.dim() == 1:
+            pred_ana = pred_ana.unsqueeze(0)
+
+        # Convert one-hot pred_ana to logits in a numerically safe range.
+        # log(p + ε) gives -20.7 for p=0, 0 for p=1 — far too large a spread
+        # when wrong analogies reach CE ~ 20.  Scaling to [-5, +5] keeps the
+        # analogy signal commensurate with the physics logits.
+        pred_ana_logits = 10.0 * (pred_ana - 0.5)   # maps {0,1} → {-5, +5}
+        loss_ana = F.cross_entropy(pred_ana_logits, target_idx)
+
+        loss_term_fp  = 0.5 * s_fp  * loss_fp  - 0.5 * self.log_s[0]
+        loss_term_ana = 0.5 * s_ana * loss_ana - 0.5 * self.log_s[1]
+        total_loss = loss_term_fp + loss_term_ana
+
+        return total_loss, {
+            "loss_raw_physics": loss_fp.item(),
+            "loss_raw_analogy": loss_ana.item(),
+            "gate_open": 1.0,
+            "weight_physics": s_fp.item(),
+            "weight_analogy": s_ana.item(),
+        }
+
+
 __all__ = [
     "AnalogicalGodLoss",
     "AnalogicalLossBreakdown",
+    "GatedAnalogicalGodLoss",
     "GodLossBreakdown",
     "ListMLERankingLoss",
     "NEXUS_God_Loss",
