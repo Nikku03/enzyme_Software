@@ -43,6 +43,12 @@ def get_canonical_coordinates(coords: torch.Tensor, masses: torch.Tensor) -> Tup
     weighted = centered * masses64.unsqueeze(-1)
     inertia_tensor = centered.transpose(0, 1) @ weighted
     _, eigenvectors = torch.linalg.eigh(inertia_tensor)
+    # Detach eigenvectors: the canonical frame is a coordinate-system choice
+    # determined by physics (principal axes of inertia), not a learnable quantity.
+    # eigh backward = 1/(λᵢ−λⱼ) → NaN/inf for degenerate eigenvalues (linear
+    # molecules, symmetric rings).  Gradients still flow through pos directly
+    # via centered_pos = (pos − centroid) @ frame.
+    eigenvectors = eigenvectors.detach()
 
     aligned = centered @ eigenvectors
     skewness = (aligned.pow(3) * masses64.unsqueeze(-1)).sum(dim=0)
