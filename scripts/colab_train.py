@@ -101,6 +101,7 @@ GPU_PROFILES = {
         "max_samples": 64,
         "epochs": 1,
         "steps": 1,
+        "physics_mode": "lite",
         "low_memory": True,
         "checkpoint": False,
         "integration_resolution": 8,
@@ -115,6 +116,7 @@ GPU_PROFILES = {
         "max_samples": 64,
         "epochs": 1,
         "steps": 1,
+        "physics_mode": "lite",
         "low_memory": True,
         "checkpoint": False,
         "integration_resolution": 10,
@@ -135,6 +137,7 @@ GPU_PROFILES = {
         "max_samples": 64,
         "epochs": 5,
         "steps": 3,            # 3 Hamiltonian integration steps (was 1)
+        "physics_mode": "full",
         "low_memory": False,   # full CliffordLie rollout (was skipped)
         "checkpoint": True,    # gradient checkpointing trades ~40% compute for ~50% less activation memory
         "integration_resolution": 14,   # 14³=2744 pts (was 1000)
@@ -234,11 +237,13 @@ loader  = DataLoader(
 )
 print(f"Dataset : {len(dataset)} molecules")
 print(f"Profile : {GPU_PROFILE}  (override: NEXUS_COLAB_GPU_PROFILE=ultra_vram|high_vram|standard)")
+print(f"Physics mode : {CFG['physics_mode']}")
 
 # ── trainer ────────────────────────────────────────────────────────────────
 trainer = Metabolic_Causal_Trainer(
     dynamics_steps=CFG["steps"],
     dynamics_dt=0.001,
+    dynamics_summary_mode=CFG["physics_mode"],
     checkpoint_dynamics=CFG["checkpoint"],
     enable_wsd_scheduler=True,
     low_memory_train_mode=CFG["low_memory"],

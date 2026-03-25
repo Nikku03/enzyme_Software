@@ -23,19 +23,24 @@ def _normalize_profile_name(value: str) -> str:
     aliases = {
         "a100": "standard",
         "h100": "high_vram",
+        "h100_sxm": "ultra_vram",
+        "ultra": "ultra_vram",
         "standard": "standard",
         "high_vram": "high_vram",
+        "ultra_vram": "ultra_vram",
     }
     return aliases.get(value.strip().lower(), "auto")
 
 
 def _detect_gpu_profile(requested: str) -> str:
     normalized = _normalize_profile_name(requested)
-    if normalized in {"standard", "high_vram"}:
+    if normalized in {"standard", "high_vram", "ultra_vram"}:
         return normalized
     if torch.cuda.is_available():
         total_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
         if total_gb >= 70.0:
+            return "ultra_vram"
+        if total_gb >= 35.0:
             return "high_vram"
     return "standard"
 
@@ -58,6 +63,14 @@ def _profile_defaults(profile: str) -> Dict[str, float]:
             "scan_radius": 1.0,
             "scan_query_chunk_size": 6,
         },
+        "ultra_vram": {
+            "max_molecules": 64,
+            "integration_resolution": 12,
+            "integration_chunk_size": 128,
+            "scan_n_points": 16,
+            "scan_radius": 1.25,
+            "scan_query_chunk_size": 8,
+        },
     }
     return profiles[profile]
 
@@ -65,7 +78,7 @@ def _profile_defaults(profile: str) -> Dict[str, float]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a Colab-friendly NEXUS smoke test")
     parser.add_argument("--sdf", default=DEFAULT_SDF, help="Path to an isoform SDF file")
-    parser.add_argument("--gpu-profile", default=os.environ.get("NEXUS_COLAB_GPU_PROFILE", "auto"), choices=("auto", "standard", "high_vram", "a100", "h100"), help="Auto-detect or force a Colab memory profile")
+    parser.add_argument("--gpu-profile", default=os.environ.get("NEXUS_COLAB_GPU_PROFILE", "auto"), choices=("auto", "standard", "high_vram", "ultra_vram", "a100", "h100", "h100_sxm", "ultra"), help="Auto-detect or force a Colab memory profile")
     parser.add_argument("--sample-index", type=int, default=-1, help="Dataset sample index; use -1 to auto-pick the smallest molecule")
     parser.add_argument("--steps", type=int, default=2, help="Dynamics rollout steps for the smoke test")
     parser.add_argument("--dt", type=float, default=0.001, help="Dynamics step size")
@@ -138,15 +151,17 @@ def main() -> None:
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
 
+    full_physics = gpu_profile == "ultra_vram"
     trainer = Metabolic_Causal_Trainer(
         dynamics_steps=args.steps,
         dynamics_dt=args.dt,
-        checkpoint_dynamics=False,
+        dynamics_summary_mode="full" if full_physics else "lite",
+        checkpoint_dynamics=full_physics,
         enable_static_compile=args.allow_compile and not args.no_compile,
         enable_bf16_hot_path=not args.no_bf16,
         enable_wsd_scheduler=False,
-        low_memory_train_mode=True,
-        low_memory_scan_gradients=(gpu_profile == "high_vram"),
+        low_memory_train_mode=not full_physics,
+        low_memory_scan_gradients=(gpu_profile in {"high_vram", "ultra_vram"}),
         use_galore=False,
     ).to(device)
 
@@ -170,9 +185,12 @@ def main() -> None:
         torch.cuda.reset_peak_memory_stats(device)
 
     if args.forward_only:
-        # Keep the module in train mode so forward_batch takes the low-memory path,
-        # but call validation_step so no backward/optimizer step occurs.
-        trainer.train()
+        # Low-memory smoke keeps train mode so forward_batch takes the reduced path.
+        # Full-physics smoke uses eval mode and the real dynamics summary.
+        if full_physics:
+            trainer.eval()
+        else:
+            trainer.train()
         metrics = trainer.validation_step(batch)
     else:
         trainer.train()
@@ -187,6 +205,7 @@ def main() -> None:
     print(
         "static_compile="
         f"{trainer.enable_static_compile}  bf16_hot_path={trainer.enable_bf16_hot_path}  "
+        f"physics_mode={'full' if full_physics else 'lite'}  "
         f"integration_resolution={quantum_enforcer.integration_resolution}  "
         f"integration_chunk_size={quantum_enforcer.integration_chunk_size}  "
         f"scan_n_points={query_engine.n_points}  "
