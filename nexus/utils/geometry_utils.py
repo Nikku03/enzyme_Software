@@ -72,7 +72,13 @@ def smooth_steric_mask(
         raise ValueError("atom_positions must have shape [M, 3]")
 
     rel = query_points.unsqueeze(2) - atom_positions.unsqueeze(0).unsqueeze(0)
-    dist = rel.norm(dim=-1)
+    # clamp_min: when the query point coincides with a non-center atom (possible
+    # when peak grid lands on a bond length), norm(0) has undefined gradient
+    # (1/0) and undefined 2nd derivative (1/0³).  Both blow up inside the
+    # Hessian computation in compute_peak_curvature.  Clamping to 1e-8 blocks
+    # the gradient via clamp_min backward (grad=0 below threshold), giving a
+    # correct flat-Hessian region at the atom centre.
+    dist = rel.norm(dim=-1).clamp_min(1.0e-8)
     atom_mask = 1.0 - torch.nn.functional.one_hot(
         center_indices.to(dtype=torch.long),
         num_classes=atom_positions.size(0),
