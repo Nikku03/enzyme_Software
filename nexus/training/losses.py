@@ -328,7 +328,8 @@ class GatedAnalogicalGodLoss(nn.Module):
 
     The hard gate closes completely when:
       - retrieval_confidence < confidence_threshold  (poor analogue found), OR
-      - transport_succeeded is False                 (SoM on alien appendage)
+      - transport_succeeded is False                 (SoM on alien appendage), OR
+      - the transported analogue is too diffuse      (weak atom mapping)
 
     Loss form (gate open):
         L = 0.5 * s_fp  * L_fp  - 0.5 * log(s_fp)
@@ -338,9 +339,14 @@ class GatedAnalogicalGodLoss(nn.Module):
         L = 0.5 * s_fp * L_fp - 0.5 * log(s_fp)
     """
 
-    def __init__(self, confidence_threshold: float = 0.6) -> None:
+    def __init__(
+        self,
+        confidence_threshold: float = 0.9,
+        peak_threshold: float = 0.2,
+    ) -> None:
         super().__init__()
         self.threshold = float(confidence_threshold)
+        self.peak_threshold = float(max(peak_threshold, 0.0))
         # log(s) where s = 1/σ².  Init at 0 → s=1 → equal weighting.
         self.log_s = nn.Parameter(torch.zeros(2))
 
@@ -362,9 +368,16 @@ class GatedAnalogicalGodLoss(nn.Module):
         s_fp = torch.exp(self.log_s[0])
         s_ana = torch.exp(self.log_s[1])
 
+        if pred_ana.dim() == 1:
+            pred_ana = pred_ana.unsqueeze(0)
+
+        ana_peak = pred_ana.max(dim=-1).values.mean().item() if pred_ana.numel() > 0 else 0.0
+
         # ── hard gate ─────────────────────────────────────────────────
         gate_open = (
-            retrieval_confidence >= self.threshold and transport_succeeded
+            retrieval_confidence >= self.threshold
+            and transport_succeeded
+            and ana_peak >= self.peak_threshold
         )
 
         if not gate_open:
@@ -373,14 +386,14 @@ class GatedAnalogicalGodLoss(nn.Module):
                 "loss_raw_physics": loss_fp.item(),
                 "loss_raw_analogy": 0.0,
                 "gate_open": 0.0,
+                "analogy_peak": ana_peak,
+                "gate_conf_ok": 1.0 if retrieval_confidence >= self.threshold else 0.0,
+                "gate_peak_ok": 1.0 if ana_peak >= self.peak_threshold else 0.0,
                 "weight_physics": s_fp.item(),
                 "weight_analogy": s_ana.item(),
             }
 
         # ── analogical loss (gate is open) ────────────────────────────
-        if pred_ana.dim() == 1:
-            pred_ana = pred_ana.unsqueeze(0)
-
         # Convert one-hot pred_ana to logits in a numerically safe range.
         # log(p + ε) gives -20.7 for p=0, 0 for p=1 — far too large a spread
         # when wrong analogies reach CE ~ 20.  Scaling to [-5, +5] keeps the
@@ -396,6 +409,9 @@ class GatedAnalogicalGodLoss(nn.Module):
             "loss_raw_physics": loss_fp.item(),
             "loss_raw_analogy": loss_ana.item(),
             "gate_open": 1.0,
+            "analogy_peak": ana_peak,
+            "gate_conf_ok": 1.0,
+            "gate_peak_ok": 1.0,
             "weight_physics": s_fp.item(),
             "weight_analogy": s_ana.item(),
         }

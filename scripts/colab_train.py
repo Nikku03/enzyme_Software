@@ -294,6 +294,7 @@ for epoch in range(CFG["epochs"]):
     for _k in ["loss_total", "som_top1", "som_top2", "pred_rate",
                "hamiltonian_initial", "dag_causal_loss",
                "ana_loss_total", "ana_gate_open", "ana_confidence",
+               "ana_peak", "ana_gate_conf_ok", "ana_gate_peak_ok",
                "ana_weight_fp", "ana_weight_ana", "ana_transport_ok"]:
         if _k in metrics:
             print(f"  {_k:<30} {metrics[_k]:.6g}")

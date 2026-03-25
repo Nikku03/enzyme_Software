@@ -104,7 +104,10 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.static_compile_applied = False
         self.compiled_module_names: List[str] = []
         self.register_buffer("global_step_counter", torch.zeros((), dtype=torch.long))
-        self.gated_loss = GatedAnalogicalGodLoss(confidence_threshold=0.6)
+        self.gated_loss = GatedAnalogicalGodLoss(
+            confidence_threshold=0.9,
+            peak_threshold=0.2,
+        )
         # Memory bank is populated externally (trainer.memory_bank.populate_from_mols)
         # before training begins.  Left empty here so training still runs without it.
         self.memory_bank = HyperbolicMemoryBank(device="cpu")
@@ -1221,6 +1224,15 @@ class Metabolic_Causal_Trainer(nn.Module):
                             1.0 if _transport_mapped else 0.0,
                             dtype=torch.float32, device=device,
                         ),
+                        "ana_peak": torch.as_tensor(
+                            _ana_info["analogy_peak"], dtype=torch.float32, device=device
+                        ),
+                        "ana_gate_conf_ok": torch.as_tensor(
+                            _ana_info["gate_conf_ok"], dtype=torch.float32, device=device
+                        ),
+                        "ana_gate_peak_ok": torch.as_tensor(
+                            _ana_info["gate_peak_ok"], dtype=torch.float32, device=device
+                        ),
                     })
             except Exception as _ana_err:
                 # Print once so we can see if the analogical engine is broken,
@@ -1316,6 +1328,9 @@ class Metabolic_Causal_Trainer(nn.Module):
                         f" | ana_loss={running.get('ana_loss_total', float('nan')):.4g}"
                         f" gate={running.get('ana_gate_open', float('nan')):.2f}"
                         f" conf={running.get('ana_confidence', float('nan')):.3f}"
+                        f" peak={running.get('ana_peak', float('nan')):.3f}"
+                        f" conf_ok={running.get('ana_gate_conf_ok', float('nan')):.2f}"
+                        f" peak_ok={running.get('ana_gate_peak_ok', float('nan')):.2f}"
                         f" w_fp={running.get('ana_weight_fp', float('nan')):.3f}"
                         f" w_ana={running.get('ana_weight_ana', float('nan')):.3f}"
                         f" t_ok={running.get('ana_transport_ok', float('nan')):.2f}"
