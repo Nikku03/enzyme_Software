@@ -448,7 +448,12 @@ class SubAtomicQueryEngine(nn.Module):
             l2_matrix = self._l2_coefficients_to_matrix(l2_coeff)
             try:
                 eigvals, eigvecs = torch.linalg.eigh(l2_matrix)
-                principal_axis = eigvecs[..., -1]
+                # Detach eigvecs: eigh backward divides by (λ_i - λ_j), which
+                # is NaN when eigenvalues are degenerate (isotropic l2 tensor or
+                # near-zero untrained SIREN).  The principal axis is a reference
+                # direction only — gradient should flow through approach_vectors,
+                # not back through the degenerate eigensystem.
+                principal_axis = eigvecs[..., -1].detach()
                 l2_axis_alignment = torch.nn.functional.cosine_similarity(
                     principal_axis,
                     approach_vectors,
