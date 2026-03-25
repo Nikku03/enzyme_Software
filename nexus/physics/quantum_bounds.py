@@ -166,6 +166,10 @@ class HohenbergKohn_Field_Enforcer(nn.Module):
             stop = min(start + chunk_size, grid_batched.size(1))
             grid_chunk = grid_batched[:, start:stop]
             raw_chunk = raw_field_fn(grid_chunk)
+            # Guard: SIREN output is NaN when hypernetwork conditioning carries
+            # NaN for this molecule.  Replace with 0 so those grid points
+            # contribute nothing to the integral instead of corrupting it.
+            raw_chunk = torch.nan_to_num(raw_chunk, nan=0.0)
             rho_chunk = self.apply_cusp_envelope(raw_chunk, grid_chunk, coords_batched, z_batched)
             rho_chunks.append(rho_chunk)
         rho_grid = torch.cat(rho_chunks, dim=1)
