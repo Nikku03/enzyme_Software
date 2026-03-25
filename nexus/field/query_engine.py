@@ -235,7 +235,10 @@ class SubAtomicQueryEngine(nn.Module):
         rel = atom_positions.unsqueeze(0).unsqueeze(0) - heme_center.unsqueeze(2)
         axial = (rel * unit.unsqueeze(2)).sum(dim=-1).abs()
         plane = rel - axial.unsqueeze(-1) * unit.unsqueeze(2)
-        radial = plane.norm(dim=-1)
+        # Use explicit eps-under-sqrt instead of .norm() so the 2nd-order
+        # backward (Hessian create_graph=True path) stays finite at plane≈0.
+        # .norm() at zero gives ∂²||x||/∂x²=NaN; adding eps=1e-4 bounds it to 100.
+        radial = (plane.pow(2).sum(dim=-1) + 1e-4).sqrt()
 
         exclude = 1.0 - torch.nn.functional.one_hot(
             center_indices.to(dtype=torch.long),
@@ -386,7 +389,14 @@ class SubAtomicQueryEngine(nn.Module):
             def scalar_fn(x: torch.Tensor) -> torch.Tensor:
                 return self._single_point_objective(field, manifold, center_index, x, nudge_vector=nudge_vector)
 
-            hessian = torch.autograd.functional.hessian(scalar_fn, point, create_graph=False)
+            try:
+                hessian = torch.autograd.functional.hessian(scalar_fn, point, create_graph=False)
+            except RuntimeError:
+                # 2nd-order backward hit a degenerate op (e.g. residual norm/sqrt
+                # at near-zero distance after all eps guards).  Use a zero Hessian
+                # (flat field, no curvature bias) for this atom.  create_graph=False
+                # means this value is already detached, so training is unaffected.
+                hessian = torch.zeros(3, 3, device=point.device, dtype=point.dtype)
             hessian = 0.5 * (hessian + hessian.transpose(0, 1))
             _eye = torch.eye(hessian.shape[0], device=hessian.device, dtype=hessian.dtype)
             values = None

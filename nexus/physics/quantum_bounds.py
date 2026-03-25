@@ -10,7 +10,10 @@ import torch.nn as nn
 SPEED_OF_LIGHT_AU = 137.036
 
 
-def pairwise_distance(x: torch.Tensor, y: torch.Tensor, eps: float = 1.0e-12) -> torch.Tensor:
+def pairwise_distance(x: torch.Tensor, y: torch.Tensor, eps: float = 1.0e-4) -> torch.Tensor:
+    # eps=1e-4 (0.01 Å minimum): 2nd derivative of sqrt at boundary = 1/sqrt(eps)=100,
+    # safe for the Hessian's create_graph=True inner backward.  1e-12 gave 2.5e17,
+    # which chains to overflow via the heme-exclusion and cusp-envelope paths.
     diff = x.unsqueeze(-2) - y.unsqueeze(-3)
     return torch.sqrt(diff.square().sum(dim=-1).clamp_min(eps))
 
