@@ -80,6 +80,11 @@ class HohenbergKohn_Field_Enforcer(nn.Module):
         R_batched = R_batched.to(dtype=r_batched.dtype, device=r_batched.device)
         Z_batched = Z_batched.to(dtype=r_batched.dtype, device=r_batched.device)
         raw_batched = raw_batched.to(dtype=r_batched.dtype, device=r_batched.device)
+        # Guard: NaN SIREN output corrupts the 2nd-order Hessian backward via
+        # MulBackward0 1th output (grad × raw_batched²). nan_to_num here (not
+        # just in _objective_values after field.query) ensures raw_batched² is
+        # always finite inside apply_cusp_envelope's computation graph.
+        raw_batched = torch.nan_to_num(raw_batched, nan=0.0, posinf=20.0, neginf=-20.0)
         dist_matrix = pairwise_distance(r_batched, R_batched)
         scaled_dist = dist_matrix * Z_batched.unsqueeze(1)
         envelope = torch.exp(-torch.sum(scaled_dist, dim=-1, keepdim=True))
