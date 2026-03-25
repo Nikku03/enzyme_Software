@@ -89,11 +89,16 @@ class SineLayer(nn.Module):
             weight = weight * row_scale.unsqueeze(-1)
         if col_scale is not None:
             weight = weight * col_scale.unsqueeze(0)
+        # Guard: hypernetwork scale may be NaN; clamp/scale of NaN stays NaN in forward
+        # and produces NaN grad in backward (SinBackward0 → upstream AddmmBackward0).
+        weight = torch.nan_to_num(weight, nan=0.0)
         bias = self.bias
         if bias is not None and bias_shift is not None:
             bias = bias + bias_shift
         elif bias is None and bias_shift is not None:
             bias = bias_shift
+        if bias is not None:
+            bias = torch.nan_to_num(bias, nan=0.0)
         return torch.sin(self.omega_0 * torch.nn.functional.linear(x, weight, bias))
 
 
@@ -148,7 +153,10 @@ class SpatiallyAdaptiveSirenLayer(nn.Module):
     ) -> torch.Tensor:
         query_batched, squeezed = self._as_batched_coords(query_coords)
         atom_batched = self._match_atom_coords(query_batched, atomic_coords)
-        local_scale = torch.clamp(self.freq_net(query_batched), min=0.0, max=5.0)
+        # nan_to_num after clamp: torch.clamp does NOT sanitize NaN (NaN passes through).
+        local_scale = torch.nan_to_num(
+            torch.clamp(self.freq_net(query_batched), min=0.0, max=5.0), nan=0.0
+        )
         dist_mat = pairwise_distance(query_batched, atom_batched)
         min_dist = torch.min(dist_mat, dim=-1, keepdim=True).values
         omega = self.omega_base * (1.0 + local_scale * torch.exp(-min_dist))
@@ -205,6 +213,9 @@ class CliffordLinear(nn.Module):
             weight = weight * row_scale.view(-1, 1, 1)
         if col_scale is not None:
             weight = weight * col_scale.view(1, -1, 1)
+        # Guard: hypernetwork scale NaN → NaN weight → NaN pre_activation →
+        # sin(NaN) in CliffordSirenLayer → NaN latent → AddmmBackward0 2th output NaN.
+        weight = torch.nan_to_num(weight, nan=0.0)
         products = clifford_geometric_product(
             x.unsqueeze(-3),
             weight.unsqueeze(0),
@@ -271,7 +282,9 @@ class CliffordSirenLayer(nn.Module):
         )
         query_batched, squeezed = self._as_batched_coords(query_coords)
         atom_batched = self._match_atom_coords(query_batched, atomic_coords)
-        local_scale = torch.clamp(self.freq_net(query_batched), min=0.0, max=5.0)
+        local_scale = torch.nan_to_num(
+            torch.clamp(self.freq_net(query_batched), min=0.0, max=5.0), nan=0.0
+        )
         dist_mat = pairwise_distance(query_batched, atom_batched)
         min_dist = torch.min(dist_mat, dim=-1, keepdim=True).values
         omega = self.omega_base * (1.0 + local_scale * torch.exp(-min_dist))
@@ -347,13 +360,13 @@ class DynamicSIREN(nn.Module):
                 bias_shift=params.bias_shift,
             )
         latent = x
-        x_scalar = latent[..., 0]
+        # Guard: CliffordLinear's nan_to_num(weight) stops NaN from corrupted
+        # hypernetwork scale, but if any layer still propagated NaN (e.g. via
+        # clifford_geometric_product with NaN x from a previous layer), block it
+        # here so AddmmBackward0 2th output (grad_out @ W) stays finite.
+        x_scalar = torch.nan_to_num(latent[..., 0], nan=0.0)
         weight = self.output_layer.weight * output_row_scale.unsqueeze(-1) * output_col_scale.unsqueeze(0)
         bias = self.output_layer.bias + output_bias_shift
-        # Guard: hypernetwork may output NaN (e.g. context from corrupted atom
-        # features after a large DAG gradient step).  nan_to_num here (not just
-        # on the SIREN output) ensures grad @ weight is never NaN in backward —
-        # `nan_to_num(output)` guards the forward but 0 @ NaN = NaN in AddmmBackward0.
         weight = torch.nan_to_num(weight, nan=0.0)
         bias = torch.nan_to_num(bias, nan=0.0)
         output = torch.nn.functional.linear(x_scalar, weight, bias).squeeze(-1)
