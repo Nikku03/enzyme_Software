@@ -339,16 +339,30 @@ class MetabolicDAGLearner(nn.Module):
 
     def compute_notears_constraint(self, W_struct: torch.Tensor, n_nodes: Optional[int] = None) -> torch.Tensor:
         d = int(n_nodes if n_nodes is not None else W_struct.size(-1))
-        W_sq = W_struct * W_struct
-        # Scale W_sq by 1/d before matrix_exp.  The NOTEARS zero-set
-        # (h=0 iff DAG) is invariant to any positive scaling of W_sq.
-        # Without scaling, the spectral radius of W_sq can reach d * max_entry;
-        # with Softplus adjacency entries large during early training this causes
-        # e^λ overflow → (e^λᵢ - e^λⱼ)/(λᵢ-λⱼ) = inf/inf = NaN in
-        # LinalgMatrixExpBackward0.  Dividing by d keeps the spectral radius
-        # bounded by max_entry, safe for float32 throughout training.
-        expm = torch.matrix_exp(W_sq / float(d))
-        trace = torch.diagonal(expm, dim1=-2, dim2=-1).sum(dim=-1)
+        W_sq = torch.nan_to_num(W_struct * W_struct, nan=0.0, posinf=25.0, neginf=0.0)
+        # Stable NOTEARS surrogate:
+        #   h(W) = tr(exp(W∘W / d)) - d
+        #
+        # In practice, exact matrix_exp backward is the main source of NaNs on
+        # Colab/H100 runs once adjacency entries momentarily spike.  We replace
+        # it with a truncated trace-exp series in float64:
+        #   tr(I + A + A²/2 + A³/6 + A⁴/24 + A⁵/120) - d
+        #
+        # This preserves h(W)=0 at A=0, remains monotone for the positive A
+        # used here, and gives a smooth acyclicity penalty without invoking the
+        # unstable LinalgMatrixExpBackward0 path.
+        A = (W_sq / float(max(d, 1))).clamp(0.0, 10.0).to(dtype=torch.float64)
+        eye = torch.eye(d, dtype=A.dtype, device=A.device).expand_as(A)
+        A2 = A @ A
+        A3 = A2 @ A
+        A4 = A3 @ A
+        A5 = A4 @ A
+        expm_trace_approx = torch.diagonal(
+            eye + A + 0.5 * A2 + (1.0 / 6.0) * A3 + (1.0 / 24.0) * A4 + (1.0 / 120.0) * A5,
+            dim1=-2,
+            dim2=-1,
+        ).sum(dim=-1)
+        trace = expm_trace_approx.to(dtype=W_struct.dtype)
         h_W = trace - torch.as_tensor(float(d), dtype=W_struct.dtype, device=W_struct.device)
         return h_W.mean()
 
