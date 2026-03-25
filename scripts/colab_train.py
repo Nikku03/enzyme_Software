@@ -98,7 +98,7 @@ def _detect_gpu_profile() -> str:
 GPU_PROFILE = _detect_gpu_profile()
 GPU_PROFILES = {
     "standard": {
-        "max_samples": 64,
+        "max_samples": 20,
         "epochs": 1,
         "steps": 1,
         "low_memory": True,
@@ -112,7 +112,7 @@ GPU_PROFILES = {
         "scan_refine_steps": 0,
     },
     "high_vram": {
-        "max_samples": 64,
+        "max_samples": 20,
         "epochs": 1,
         "steps": 1,
         "low_memory": True,
@@ -132,7 +132,7 @@ GPU_PROFILES = {
     # Measured baseline at high_vram: ~36 GB.  Ultra adds ~20-25 GB headroom
     # usage, landing well under 90 GB.
     "ultra_vram": {
-        "max_samples": 64,
+        "max_samples": 20,
         "epochs": 5,
         "steps": 3,            # 3 Hamiltonian integration steps (was 1)
         "low_memory": False,   # full CliffordLie rollout (was skipped)

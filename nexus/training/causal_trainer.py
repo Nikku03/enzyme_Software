@@ -376,7 +376,10 @@ class Metabolic_Causal_Trainer(nn.Module):
                 else:
                     electronic_params.append(param)
 
-        loss_params = self._unique(self._trainable([self.loss_fn.log_vars]))
+        loss_params = self._unique(
+            self._trainable([self.loss_fn.log_vars])
+            + list(self.gated_loss.parameters())
+        )
         return {
             "electronic": electronic_params,
             "physics": physics_params,
@@ -388,8 +391,15 @@ class Metabolic_Causal_Trainer(nn.Module):
         self._maybe_prepare_precision_runtime()
 
         if not self.use_galore:
-            # Plain AdamW — no SVD, safe on Colab / CPU
-            all_params = self._unique([p for p in self.parameters() if p.requires_grad])
+            # Plain AdamW — no SVD, safe on Colab / CPU.
+            # Enumerate submodules explicitly so gated_loss.log_s and loss_fn.log_vars
+            # are guaranteed to be in the optimizer regardless of PyTorch module-walk order.
+            all_params = self._unique(
+                [p for p in self.model.parameters() if p.requires_grad]
+                + [p for p in self.dag_learner.parameters() if p.requires_grad]
+                + [p for p in self.gated_loss.parameters() if p.requires_grad]
+                + [p for p in self.loss_fn.parameters() if p.requires_grad]
+            )
             self.optimizer = torch.optim.AdamW(all_params, lr=1.0e-4, weight_decay=1.0e-5)
             if self.enable_wsd_scheduler and self.total_training_steps is not None:
                 self.scheduler = self._build_wsd_scheduler(self.optimizer, self.total_training_steps)
@@ -1015,7 +1025,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         # mass to metabolic sites (mass creation).  sigmoid(-delta_E) gives an unnormalised
         # per-site activation; if multiple sites are simultaneously near-certain the row sum
         # exceeds 1.0 and the NCFA propagator fires a relu penalty.
-        site_fluxes = torch.sigmoid(-delta_E_tensor.detach())
+        site_fluxes = torch.sigmoid(-delta_E_tensor)
         W_flux = site_fluxes.view(1, 1, -1)   # [1 batch, 1 source node, N_atoms]
         flux_consistency_loss = self.flux_propagator.compute_flux_consistency_loss(W_flux).to(dtype=torch.float32)
 
@@ -1035,8 +1045,8 @@ class Metabolic_Causal_Trainer(nn.Module):
         # effective reactivity in the scalar grade (index 0).  This gives the GraNDAG edge
         # predictor a geometry- and thermodynamics-aware representation of each candidate
         # metabolic site without requiring an additional neural forward pass.
-        atom_mv = embed_coordinates(manifold_pos.detach().to(dtype=exp_rate.dtype)).clone()
-        atom_mv[..., 0] = effective_reactivity.detach()
+        atom_mv = embed_coordinates(manifold_pos.to(dtype=exp_rate.dtype)).clone()
+        atom_mv[..., 0] = effective_reactivity
         atom_mv = atom_mv.unsqueeze(0)   # [1, N_atoms, 8]  — single-compound batch dim
         dag_output = self.dag_learner(
             atom_mv,
