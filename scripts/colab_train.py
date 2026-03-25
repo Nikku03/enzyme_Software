@@ -28,8 +28,14 @@ if str(_REPO_DIR) not in sys.path:
 import nexus.training.causal_trainer as _ct_mod          # noqa: E402
 import nexus.data.metabolic_dataset as _ds_mod           # noqa: E402
 import nexus.field.query_engine as _qe_mod               # noqa: E402
+import nexus.reasoning.baseline_memory as _mb_mod        # noqa: E402
+import nexus.training.losses as _loss_mod                # noqa: E402
+import nexus.physics.hamiltonian as _ham_mod             # noqa: E402
 importlib.reload(_qe_mod)
-importlib.reload(_ct_mod)
+importlib.reload(_mb_mod)
+importlib.reload(_loss_mod)
+importlib.reload(_ham_mod)   # picks up NaN diagnostics & reactive_reference guard
+importlib.reload(_ct_mod)    # must reload after hamiltonian so causal_trainer gets fresh ref
 importlib.reload(_ds_mod)
 
 SDF = _REPO_DIR / "data/ATTNSOM/cyp_dataset/3A4.sdf"
@@ -59,7 +65,7 @@ def _detect_gpu_profile() -> str:
 GPU_PROFILE = _detect_gpu_profile()
 GPU_PROFILES = {
     "standard": {
-        "max_samples": 16,
+        "max_samples": 64,
         "epochs": 1,
         "steps": 1,
         "integration_resolution": 8,
@@ -71,7 +77,7 @@ GPU_PROFILES = {
         "scan_refine_steps": 0,
     },
     "high_vram": {
-        "max_samples": 16,
+        "max_samples": 64,
         "epochs": 1,
         "steps": 1,
         "integration_resolution": 10,
@@ -117,6 +123,7 @@ trainer = Metabolic_Causal_Trainer(
     checkpoint_dynamics=False,
     enable_wsd_scheduler=True,
     low_memory_train_mode=True,   # skip full CliffordLie rollout
+    low_memory_scan_gradients=(GPU_PROFILE == "high_vram"),
     enable_static_compile=False,  # torch.compile is unsafe on Colab
     use_galore=False,             # plain AdamW — avoids GaLore SVD on Colab
 ).to(device)
@@ -145,6 +152,14 @@ print(
     f"{CFG['scan_refine_steps']} refine step(s)"
 )
 
+print("Populating analogical memory bank from full SDF (not just training subset)...")
+from rdkit import Chem as _Chem
+_bank_suppl = _Chem.SDMolSupplier(str(SDF), removeHs=False)
+_bank_mols  = [m for m in _bank_suppl if m is not None]
+trainer.memory_bank.populate_from_mols(_bank_mols)
+print(f"Memory bank ready: {len(trainer.memory_bank.historical_mols)} molecules.\n")
+del _bank_suppl, _bank_mols
+
 trainer.set_total_training_steps(CFG["epochs"] * max(len(loader), 1))
 trainer.configure_optimizers()
 if device.type == "cuda":
@@ -157,7 +172,14 @@ history = []
 for epoch in range(CFG["epochs"]):
     metrics = trainer.fit_epoch(loader, train=True, log_every=1)
     history.append(metrics)
-    print(f"\n── epoch {epoch+1} done: {metrics}\n")
+    print(f"\n── epoch {epoch+1} summary ──────────────────────────────────────")
+    for _k in ["loss_total", "som_top1", "som_top2", "pred_rate",
+               "hamiltonian_initial", "dag_causal_loss",
+               "ana_loss_total", "ana_gate_open", "ana_confidence",
+               "ana_weight_fp", "ana_weight_ana", "ana_transport_ok"]:
+        if _k in metrics:
+            print(f"  {_k:<30} {metrics[_k]:.6g}")
+    print()
 
 if device.type == "cuda":
     peak_mb = torch.cuda.max_memory_allocated(device) / 1024**2

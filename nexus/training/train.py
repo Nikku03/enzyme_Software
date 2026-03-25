@@ -45,6 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--wsd-decay-style", choices=("linear", "cosine"), default="linear")
     parser.add_argument("--metrics-json", default=None, help="Optional path to save epoch metrics")
     parser.add_argument("--low-memory-train", action="store_true", help="Use low-memory training mode (skips full dynamics rollout)")
+    parser.add_argument("--low-memory-scan-grads", action="store_true", help="Keep scan/ranking gradients alive in low-memory mode")
     parser.add_argument("--no-compile", action="store_true", help="Disable torch.compile (recommended for Colab/CPU)")
     parser.add_argument("--no-galore", action="store_true", help="Use plain AdamW instead of GaLore (avoids SVD; recommended for Colab)")
     parser.add_argument("--integration-resolution", type=int, default=16, help="Quantum grid resolution per axis (default 16 → 16^3=4096 pts)")
@@ -111,6 +112,7 @@ def main() -> None:
         enable_wsd_scheduler=not args.no_wsd,
         wsd_decay_style=args.wsd_decay_style,
         low_memory_train_mode=args.low_memory_train,
+        low_memory_scan_gradients=args.low_memory_scan_grads,
         enable_static_compile=not args.no_compile,
         use_galore=not args.no_galore,
     )

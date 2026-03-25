@@ -146,6 +146,7 @@ def main() -> None:
         enable_bf16_hot_path=not args.no_bf16,
         enable_wsd_scheduler=False,
         low_memory_train_mode=True,
+        low_memory_scan_gradients=(gpu_profile == "high_vram"),
         use_galore=False,
     ).to(device)
 

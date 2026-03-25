@@ -19,7 +19,8 @@ from nexus.core.inference import NEXUS_Module1_Output
 from nexus.layers.dag_learner import MetabolicDAGLearner
 from nexus.physics.clifford_math import embed_coordinates
 from nexus.pocket.ddi import DDIOccupancyState
-from nexus.training.losses import NEXUS_God_Loss
+from nexus.reasoning.baseline_memory import BaselineMemoryBank
+from nexus.training.losses import GatedAnalogicalGodLoss, NEXUS_God_Loss
 
 
 @dataclass
@@ -63,6 +64,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         wsd_warmup_init_scale: float = 0.1,
         wsd_min_lr_scale: float = 0.05,
         low_memory_train_mode: bool = False,
+        low_memory_scan_gradients: bool = False,
         use_galore: bool = True,
     ) -> None:
         super().__init__()
@@ -92,6 +94,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.wsd_warmup_init_scale = float(wsd_warmup_init_scale)
         self.wsd_min_lr_scale = float(wsd_min_lr_scale)
         self.low_memory_train_mode = bool(low_memory_train_mode)
+        self.low_memory_scan_gradients = bool(low_memory_scan_gradients)
         self.use_galore = bool(use_galore)
         self.optimizer: Optional[torch.optim.Optimizer] = None
         self.scheduler: Optional[torch.optim.lr_scheduler.LambdaLR] = None
@@ -101,6 +104,10 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.static_compile_applied = False
         self.compiled_module_names: List[str] = []
         self.register_buffer("global_step_counter", torch.zeros((), dtype=torch.long))
+        self.gated_loss = GatedAnalogicalGodLoss(confidence_threshold=0.6)
+        # Memory bank is populated externally (trainer.memory_bank.populate_from_mols)
+        # before training begins.  Left empty here so training still runs without it.
+        self.memory_bank = BaselineMemoryBank(device="cpu")
         self._maybe_prepare_precision_runtime()
         self._validate_wsd_config()
 
@@ -607,18 +614,25 @@ class Metabolic_Causal_Trainer(nn.Module):
             return torch.as_tensor(sites[0], dtype=torch.long, device=device).view(())
         raise TypeError("Unsupported site atom annotation format")
 
-    def _resolve_exp_rate(self, batch: Any, device: torch.device, dtype: torch.dtype) -> torch.Tensor:
+    def _resolve_exp_rate(
+        self,
+        batch: Any,
+        device: torch.device,
+        dtype: torch.dtype,
+    ) -> tuple[Optional[torch.Tensor], bool]:
         value = self._lookup(
             batch,
             "exp_rate",
             "intrinsic_clearance",
             "kcat",
             "experimental_rate",
-            default=1.0,
+            default=None,
         )
+        if value is None:
+            return None, False
         if isinstance(value, (list, tuple)):
             value = value[0]
-        return torch.as_tensor(value, dtype=dtype, device=device).clamp_min(1.0e-12)
+        return torch.as_tensor(value, dtype=dtype, device=device).clamp_min(1.0e-12), True
 
     def _scan_row_index(self, atom_indices: torch.Tensor, true_atom_index: torch.Tensor) -> torch.Tensor:
         matches = (atom_indices == true_atom_index).nonzero(as_tuple=False)
@@ -689,7 +703,13 @@ class Metabolic_Causal_Trainer(nn.Module):
                 if not bool(torch.isfinite(pred_rate).all().item()) or float(pred_rate.detach().cpu().item()) <= 0.0:
                     pred_rate = kinetics.metabolic_rate.clamp_min(1.0e-12)
                 return pred_rate, h_initial, h_final, ts_eigenvalues
-            except RuntimeError:
+            except Exception as _dyn_err:
+                import traceback as _tb
+                print("\n[!!!] PHYSICS SURROGATE CRASH DETECTED [!!!]")
+                _tb.print_exc()
+                print(f"[!!!] smiles={smiles!r}  q_shape={q_init_internal.shape}  "
+                      f"dtype={q_init_internal.dtype}  device={q_init_internal.device}")
+                print("[!!!] -------------------------------- [!!!]\n", flush=True)
                 self.last_dynamics_fallback = True
                 h_initial = self.model.hamiltonian(
                     q_init_internal,
@@ -808,7 +828,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         # som_coordinates / alignment_score are sorted by descending effective_reactivity;
         # _build_pocket_encoding expects a rank in that sorted order.
         true_ranked_index = self._scan_row_index(module1_out.ranked_atom_indices, true_atom_index)
-        exp_rate = self._resolve_exp_rate(batch, device=device, dtype=torch.float32)
+        exp_rate, has_exp_rate = self._resolve_exp_rate(batch, device=device, dtype=torch.float32)
         protein_data = self._resolve_protein_data(batch)
         pocket_encoding = None
         accessibility_field = None
@@ -870,32 +890,62 @@ class Metabolic_Causal_Trainer(nn.Module):
         if low_memory_train:
             self.last_dynamics_fallback = True
             self.last_checkpoint_fallback = True
-            # Force FP32 for Hamiltonian: SIREN uses sin(ω₀=30·x); BF16 overflows
-            # at large activations and produces NaN reactive energy every batch.
+            keep_scan_grads = bool(self.low_memory_scan_gradients)
             _q_fp32 = q_init_internal.float()
             _dev_type = _q_fp32.device.type
-            with torch.autocast(device_type=_dev_type, enabled=False):
-                _h_raw = self._to_fp32(self.model.hamiltonian(
-                    _q_fp32,
-                    torch.zeros_like(_q_fp32),
-                    smiles=smiles,
-                    species=module1_out.manifold.species,
-                    accessibility_field=accessibility_field,
-                    ddi_occupancy=ddi_occupancy,
-                ))
+            # Save reactive_reference before the call so a NaN psi_atoms cannot
+            # permanently corrupt the exponential moving average across batches.
+            _rr_saved = self.model.hamiltonian.reactive_reference.clone()
+            try:
+                with torch.autocast(device_type=_dev_type, enabled=False):
+                    _h_raw = self._to_fp32(self.model.hamiltonian(
+                        _q_fp32,
+                        torch.zeros_like(_q_fp32),
+                        smiles=smiles,
+                        species=module1_out.manifold.species,
+                        accessibility_field=accessibility_field,
+                        ddi_occupancy=ddi_occupancy,
+                    ))
+            finally:
+                # Only restore if the call produced a non-finite reference
+                # (so valid updates from healthy batches are kept).
+                if not torch.isfinite(self.model.hamiltonian.reactive_reference):
+                    self.model.hamiltonian.reactive_reference.copy_(_rr_saved)
+            # ── Raw hamiltonian diagnostic (fires before sanitize swallows NaN) ──
+            if not torch.isfinite(_h_raw):
+                print(
+                    f"[HAM-RAW] h_raw={_h_raw.item():.6g}  smiles={smiles!r}  "
+                    f"q_range=[{_q_fp32.min().item():.3g}, {_q_fp32.max().item():.3g}]  "
+                    f"reactive_ref={self.model.hamiltonian.reactive_reference.item():.4g}",
+                    flush=True,
+                )
+            # ────────────────────────────────────────────────────────────────────
             h_initial = self._sanitize_tensor(_h_raw,
                 nan=25.0,
                 posinf=100.0,
                 neginf=-100.0,
                 clamp=(-100.0, 100.0),
-            ).detach()
+            )
+            target_distance = self._to_fp32(
+                (q_init_internal[true_atom_index] - target_point_internal).pow(2).sum().sqrt()
+            )
+            scan_logits = 4.0 * self._to_fp32(effective_reactivity) + 2.0 * self._to_fp32(alignment_score)
+            target_scan_prob = torch.softmax(scan_logits, dim=0)[true_row_index]
+            effective_barrier = (
+                0.25 * F.softplus(self._to_fp32(h_initial) / 10.0)
+                + 0.5 * torch.tanh(target_distance)
+                - torch.log(target_scan_prob.clamp_min(1.0e-6))
+            )
             pred_rate = self._sanitize_tensor(
-                torch.exp(-torch.relu(h_initial)),
-                nan=1.0e-12,
+                torch.exp(-effective_barrier),
+                nan=1.0e-6,
                 posinf=1.0,
-                neginf=1.0e-12,
-                clamp=(1.0e-12, 1.0),
-            ).detach()
+                neginf=1.0e-6,
+                clamp=(1.0e-6, 1.0),
+            )
+            if not keep_scan_grads:
+                h_initial = h_initial.detach()
+                pred_rate = pred_rate.detach()
             h_final = h_initial
             ts_eigenvalues = torch.stack(
                 [
@@ -905,7 +955,9 @@ class Metabolic_Causal_Trainer(nn.Module):
                 dim=0,
             )
             sobolev_report = self._zero_sobolev_report(module1_out.manifold)
-            delta_E_tensor = self._sanitize_tensor(-effective_reactivity, clamp=(-100.0, 100.0)).detach()
+            delta_E_tensor = self._sanitize_tensor(-effective_reactivity, clamp=(-100.0, 100.0))
+            if not keep_scan_grads:
+                delta_E_tensor = delta_E_tensor.detach()
         else:
             pred_rate, h_initial, h_final, ts_eigenvalues = self._dynamics_summary_checkpointed(
                 q_init_internal,
@@ -933,9 +985,16 @@ class Metabolic_Causal_Trainer(nn.Module):
                 vacuum_gradients=self._sanitize_tensor(sobolev_report.vacuum_gradients, clamp=(-100.0, 100.0)),
             )
 
+        if exp_rate is None:
+            # ATTNSOM/Zaretzki-style SoM datasets typically supervise the
+            # reactive site, not an experimental kinetic constant. Use the
+            # current prediction as the target so the kinetic branch is
+            # neutral rather than silently forcing a fake exp_rate=1.0.
+            exp_rate = pred_rate.detach()
+
         # Initialise sub-losses as zeros so they are always defined for the metrics dict,
         # whether or not protein data was provided.
-        _z = torch.zeros((), dtype=torch.float32, device=exp_rate.device)
+        _z = torch.zeros((), dtype=torch.float32, device=device)
         pocket_coord_recon_loss = _z.clone()
         pocket_mask_loss = _z.clone()
         pocket_steric_loss = _z.clone()
@@ -968,7 +1027,7 @@ class Metabolic_Causal_Trainer(nn.Module):
             alignment_score.unsqueeze(0),
             true_ranked_index,
         )
-        if low_memory_train:
+        if low_memory_train and not self.low_memory_scan_gradients:
             ranking_loss = ranking_loss.detach()
 
         # T5: Metabolic DAG forward pass.
@@ -1047,6 +1106,11 @@ class Metabolic_Causal_Trainer(nn.Module):
             "weight_reconstruction": loss_info["precision"][5],
             "pred_rate": pred_rate.detach(),
             "exp_rate": exp_rate.detach(),
+            "kinetics_supervised": torch.as_tensor(
+                1.0 if has_exp_rate else 0.0,
+                dtype=total_loss.dtype,
+                device=total_loss.device,
+            ),
             "true_atom_index": true_atom_index.detach().to(dtype=torch.float32),
             "true_row_index": true_row_index.detach().to(dtype=torch.float32),
             "target_effective_reactivity": effective_reactivity[true_row_index].detach(),
@@ -1092,6 +1156,68 @@ class Metabolic_Causal_Trainer(nn.Module):
             "dag_manifold_recon_loss": self._sanitize_tensor(dag_output.manifold_recon_loss.detach(), clamp=(0.0, 1.0e4)),
             "dag_manifold_density_penalty": self._sanitize_tensor(dag_output.manifold_density_penalty.detach(), clamp=(0.0, 1.0e4)),
         }
+
+        # ── Analogical Engine ──────────────────────────────────────────────
+        # Only fires when the memory bank has been populated.  Wrapped in a
+        # broad try/except so a bad retrieval or RDKit failure never crashes
+        # the training loop.
+        if self.memory_bank.memory_embeddings is not None:
+            try:
+                from rdkit import Chem as _Chem
+                _query_mol = _Chem.MolFromSmiles(smiles)
+                if _query_mol is not None:
+                    _result = self.memory_bank.retrieve_and_transport(_query_mol)
+                    # Re-index pred_ana (SMILES atom order) onto the scan's
+                    # descending-reactivity-sorted atom order so target_idx
+                    # (= true_row_index) aligns with pred_fp (= effective_reactivity).
+                    _scan_atom_idx = module1_out.scan.atom_indices.to(
+                        dtype=torch.long, device=device
+                    )
+                    N_scan = _scan_atom_idx.numel()
+                    _pred_ana_scan = torch.zeros(
+                        N_scan, dtype=torch.float32, device=device
+                    )
+                    _transport_mapped = False
+                    if _result.transport_succeeded and _result.analogical_pred.numel() > 0:
+                        _pred_atom = int(_result.analogical_pred.argmax().item())
+                        _hits = (_scan_atom_idx == _pred_atom).nonzero(as_tuple=True)[0]
+                        if len(_hits) > 0:
+                            _pred_ana_scan[int(_hits[0].item())] = 1.0
+                            _transport_mapped = True
+                    _ana_loss, _ana_info = self.gated_loss(
+                        pred_fp=effective_reactivity,
+                        pred_ana=_pred_ana_scan,
+                        target_idx=true_row_index,
+                        retrieval_confidence=_result.confidence,
+                        transport_succeeded=_transport_mapped,
+                    )
+                    _ana_loss = self._sanitize_tensor(
+                        self._to_fp32(_ana_loss), clamp=(0.0, 100.0)
+                    )
+                    total_loss = total_loss + _ana_loss
+                    metrics.update({
+                        "ana_loss_total": _ana_loss.detach(),
+                        "ana_gate_open": torch.as_tensor(
+                            _ana_info["gate_open"], dtype=torch.float32, device=device
+                        ),
+                        "ana_confidence": torch.as_tensor(
+                            _result.confidence, dtype=torch.float32, device=device
+                        ),
+                        "ana_weight_fp": torch.as_tensor(
+                            _ana_info["weight_physics"], dtype=torch.float32, device=device
+                        ),
+                        "ana_weight_ana": torch.as_tensor(
+                            _ana_info["weight_analogy"], dtype=torch.float32, device=device
+                        ),
+                        "ana_transport_ok": torch.as_tensor(
+                            1.0 if _transport_mapped else 0.0,
+                            dtype=torch.float32, device=device,
+                        ),
+                    })
+            except Exception:
+                pass  # never let analogical routing crash the physics training loop
+        # ──────────────────────────────────────────────────────────────────
+
         if self.optimizer is not None and self.optimizer.param_groups:
             metrics["lr"] = torch.as_tensor(
                 self.optimizer.param_groups[0]["lr"],
@@ -1173,13 +1299,23 @@ class Metabolic_Causal_Trainer(nn.Module):
                 self.global_step_counter.add_(1)
                 if log_every > 0 and (i == 1 or i % log_every == 0 or i == total_batches):
                     running = {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
+                    _ana_active = "ana_loss_total" in running
+                    _ana_str = (
+                        f" | ana_loss={running.get('ana_loss_total', float('nan')):.4g}"
+                        f" gate={running.get('ana_gate_open', float('nan')):.2f}"
+                        f" conf={running.get('ana_confidence', float('nan')):.3f}"
+                        f" w_fp={running.get('ana_weight_fp', float('nan')):.3f}"
+                        f" w_ana={running.get('ana_weight_ana', float('nan')):.3f}"
+                        f" t_ok={running.get('ana_transport_ok', float('nan')):.2f}"
+                    ) if _ana_active else ""
                     print(
                         f"batch={i}/{total_batches} "
                         f"loss_total={running.get('loss_total', float('nan')):.6g} "
                         f"top1={running.get('som_top1', float('nan')):.2%} "
                         f"top2={running.get('som_top2', float('nan')):.2%} "
                         f"pred_rate={running.get('pred_rate', float('nan')):.6g} "
-                        f"dag_loss={running.get('dag_causal_loss', float('nan')):.6g}",
+                        f"dag_loss={running.get('dag_causal_loss', float('nan')):.6g}"
+                        f"{_ana_str}",
                         flush=True,
                     )
             
