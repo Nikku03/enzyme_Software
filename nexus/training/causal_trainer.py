@@ -19,7 +19,7 @@ from nexus.core.inference import NEXUS_Module1_Output
 from nexus.layers.dag_learner import MetabolicDAGLearner
 from nexus.physics.clifford_math import embed_coordinates
 from nexus.pocket.ddi import DDIOccupancyState
-from nexus.reasoning.baseline_memory import BaselineMemoryBank
+from nexus.reasoning.hyperbolic_memory import HyperbolicMemoryBank
 from nexus.training.losses import GatedAnalogicalGodLoss, NEXUS_God_Loss
 
 
@@ -107,7 +107,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.gated_loss = GatedAnalogicalGodLoss(confidence_threshold=0.6)
         # Memory bank is populated externally (trainer.memory_bank.populate_from_mols)
         # before training begins.  Left empty here so training still runs without it.
-        self.memory_bank = BaselineMemoryBank(device="cpu")
+        self.memory_bank = HyperbolicMemoryBank(device="cpu")
         self._maybe_prepare_precision_runtime()
         self._validate_wsd_config()
 
