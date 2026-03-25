@@ -131,6 +131,12 @@ class ReactivityHyperNetwork(nn.Module):
         dist_mat = torch.cdist(centered_pos, centered_pos)
         diag_mask = torch.eye(dist_mat.size(0), dtype=torch.bool, device=dist_mat.device)
         dist_mat = dist_mat.masked_fill(diag_mask, float('inf'))
+        # Two-step guard for the 1/r Coulomb sum:
+        # 1. nan_to_num: torch.cdist uses |a|²+|b|²-2<a,b> for N>25 atoms; float32
+        #    rounding can make d²<0, yielding sqrt(negative)=NaN for near-close pairs.
+        # 2. clamp_min: prevents 1/r→+inf for coincident atoms; the masked diagonal
+        #    (inf) is unaffected (inf > 1e-6), so 1/inf=0 still zeros self-terms.
+        dist_mat = torch.nan_to_num(dist_mat, nan=0.0).clamp_min(1.0e-6)
         inv_dist_sum = (1.0 / dist_mat).sum(dim=-1, keepdim=True)
         geom = torch.cat([radial, inv_dist_sum], dim=-1)
 

@@ -84,8 +84,27 @@ class NEXUS_Hamiltonian(nn.Module):
         direction = direction / direction.norm(dim=-1, keepdim=True).clamp_min(1.0e-8)
         query_points = field_manifold.pos + 1.0e-2 * direction
         psi_atoms = field.query(query_points)
+        # ── NaN diagnostic ─────────────────────────────────────────────────
+        if not torch.isfinite(psi_atoms).all():
+            n_nan = int(psi_atoms.isnan().sum().item())
+            n_inf = int(psi_atoms.isinf().sum().item())
+            print(
+                f"[HAM-NaN] psi_atoms: {n_nan} NaN, {n_inf} Inf / {psi_atoms.numel()} "
+                f"(dtype={psi_atoms.dtype}, device={psi_atoms.device})",
+                flush=True,
+            )
+        # ───────────────────────────────────────────────────────────────────
+        # Clamp non-finite psi_atoms before softplus so +inf / NaN field
+        # outputs never send psi_raw to +inf and corrupt _h_raw.
+        # nan_to_num preserves gradients for the finite atoms; the clipped
+        # positions receive gradient 0 in the backward pass (effectively masked).
+        psi_atoms = torch.nan_to_num(psi_atoms, nan=0.0, posinf=20.0, neginf=-20.0)
         psi_raw = torch.nn.functional.softplus(psi_atoms).mean()
         target_ref = psi_raw.detach().abs().clamp_min(1.0)
+        # Guard: if psi_raw is non-finite, clamp_min still returns NaN —
+        # replace with 1.0 so the reference buffer is not corrupted.
+        if not torch.isfinite(target_ref):
+            target_ref = target_ref.new_tensor(1.0)
         self.reactive_reference.mul_(0.95).add_(0.05 * target_ref.to(self.reactive_reference.device))
         return self.reactive_scale.to(device=psi_raw.device, dtype=psi_raw.dtype) * (
             psi_raw / self.reactive_reference.to(device=psi_raw.device, dtype=psi_raw.dtype).clamp_min(1.0)
@@ -268,6 +287,17 @@ class NEXUS_Hamiltonian(nn.Module):
         return_field: bool = False,
     ):
         manifold = self.build_manifold(smiles, q=q, species=species)
+        # ── NaN / +inf diagnostic ───────────────────────────────────────────
+        if not torch.isfinite(manifold.energy):
+            print(f"[HAM-NaN] manifold.energy={manifold.energy.item():.6g}", flush=True)
+        if not torch.isfinite(manifold.forces).all():
+            n_nan = int(manifold.forces.isnan().sum().item())
+            print(
+                f"[HAM-NaN] manifold.forces: {n_nan}/{manifold.forces.numel()} NaN "
+                f"max_abs={manifold.forces.abs().nan_to_num(0).max().item():.6g}",
+                flush=True,
+            )
+        # ───────────────────────────────────────────────────────────────────
         field_manifold = self._field_manifold(manifold)
         field = self.field_engine(field_manifold)
         reactive = self._compute_reactive_from_field(field, field_manifold)
@@ -317,6 +347,15 @@ class NEXUS_Hamiltonian(nn.Module):
             smiles=smiles,
             zora_factor=zora_factor,
         )
+        # Guard: clamp physical and reactive before summing so a non-finite
+        # energy from the refiner or a blown-up SIREN output never makes
+        # _h_raw hit the posinf=100.0 sanitize fill in the trainer.
+        if not torch.isfinite(physical):
+            print(f"[HAM-NaN] physical={physical.item():.6g} → clamped to 0.0", flush=True)
+            physical = physical.new_zeros(())
+        if not torch.isfinite(reactive):
+            print(f"[HAM-NaN] reactive={reactive.item():.6g} → clamped to 0.0", flush=True)
+            reactive = reactive.new_zeros(())
         total = kinetic + physical + self.coupling_lambda * reactive
         if return_terms:
             return HamiltonianTerms(

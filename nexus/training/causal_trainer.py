@@ -1214,8 +1214,12 @@ class Metabolic_Causal_Trainer(nn.Module):
                             dtype=torch.float32, device=device,
                         ),
                     })
-            except Exception:
-                pass  # never let analogical routing crash the physics training loop
+            except Exception as _ana_err:
+                # Print once so we can see if the analogical engine is broken,
+                # but never let it crash the physics training loop.
+                import traceback as _tb
+                print(f"[ANA-ERR] {type(_ana_err).__name__}: {_ana_err}", flush=True)
+                _tb.print_exc()
         # ──────────────────────────────────────────────────────────────────
 
         if self.optimizer is not None and self.optimizer.param_groups:
