@@ -70,8 +70,11 @@ def _normalize_profile_name(value: str) -> str:
     aliases = {
         "a100": "standard",
         "h100": "high_vram",
+        "h100_sxm": "ultra_vram",
+        "ultra": "ultra_vram",
         "standard": "standard",
         "high_vram": "high_vram",
+        "ultra_vram": "ultra_vram",
     }
     return aliases.get(value.strip().lower(), "auto")
 
@@ -79,10 +82,12 @@ def _normalize_profile_name(value: str) -> str:
 def _detect_gpu_profile() -> str:
     env = os.environ.get("NEXUS_COLAB_GPU_PROFILE", "auto").strip().lower()
     normalized = _normalize_profile_name(env)
-    if normalized in {"standard", "high_vram"}:
+    if normalized in {"standard", "high_vram", "ultra_vram"}:
         return normalized
     if torch.cuda.is_available():
         total_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
+        if total_gb >= 85.0:
+            return "ultra_vram"
         if total_gb >= 70.0:
             return "high_vram"
     return "standard"
@@ -94,6 +99,8 @@ GPU_PROFILES = {
         "max_samples": 64,
         "epochs": 1,
         "steps": 1,
+        "low_memory": True,
+        "checkpoint": False,
         "integration_resolution": 8,
         "integration_chunk": 32,
         "scan_n_points": 8,
@@ -106,6 +113,8 @@ GPU_PROFILES = {
         "max_samples": 64,
         "epochs": 1,
         "steps": 1,
+        "low_memory": True,
+        "checkpoint": False,
         "integration_resolution": 10,
         "integration_chunk": 96,
         "scan_n_points": 12,
@@ -113,6 +122,26 @@ GPU_PROFILES = {
         "scan_chunk": 6,
         "scan_shells": (0.5, 1.0),
         "scan_refine_steps": 0,
+    },
+    # ── 85+ GB (H100 SXM5, etc.) ─────────────────────────────────────────────
+    # Full physics quality: CliffordLie dynamics rollout re-enabled (not skipped),
+    # gradient checkpointing to keep activation memory bounded, all 5 scan
+    # shells restored, and a higher-resolution quantum grid.
+    # Measured baseline at high_vram: ~36 GB.  Ultra adds ~20-25 GB headroom
+    # usage, landing well under 90 GB.
+    "ultra_vram": {
+        "max_samples": 64,
+        "epochs": 5,
+        "steps": 3,            # 3 Hamiltonian integration steps (was 1)
+        "low_memory": False,   # full CliffordLie rollout (was skipped)
+        "checkpoint": True,    # gradient checkpointing trades ~40% compute for ~50% less activation memory
+        "integration_resolution": 14,   # 14³=2744 pts (was 1000)
+        "integration_chunk": 256,
+        "scan_n_points": 48,   # 4× more scan pts (was 12)
+        "scan_radius": 2.5,    # full pocket radius (was 1.0)
+        "scan_chunk": 24,
+        "scan_shells": (0.35, 0.55, 0.75, 0.90, 1.00),   # all 5 shells (was 2)
+        "scan_refine_steps": 2,
     },
 }
 CFG = GPU_PROFILES[GPU_PROFILE]
@@ -146,10 +175,10 @@ print(f"Profile : {GPU_PROFILE}")
 trainer = Metabolic_Causal_Trainer(
     dynamics_steps=CFG["steps"],
     dynamics_dt=0.001,
-    checkpoint_dynamics=False,
+    checkpoint_dynamics=CFG["checkpoint"],
     enable_wsd_scheduler=True,
-    low_memory_train_mode=True,   # skip full CliffordLie rollout
-    low_memory_scan_gradients=(GPU_PROFILE == "high_vram"),
+    low_memory_train_mode=CFG["low_memory"],
+    low_memory_scan_gradients=(GPU_PROFILE in {"high_vram", "ultra_vram"}),
     enable_static_compile=False,  # torch.compile is unsafe on Colab
     use_galore=False,             # plain AdamW — avoids GaLore SVD on Colab
 ).to(device)
