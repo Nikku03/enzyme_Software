@@ -338,10 +338,17 @@ class MetabolicDAGLearner(nn.Module):
         return torch.mean(adjacency * (1.0 - accessibility_prior).clamp_min(0.0))
 
     def compute_notears_constraint(self, W_struct: torch.Tensor, n_nodes: Optional[int] = None) -> torch.Tensor:
-        W_sq = W_struct * W_struct
-        expm = torch.matrix_exp(W_sq)
-        trace = torch.diagonal(expm, dim1=-2, dim2=-1).sum(dim=-1)
         d = int(n_nodes if n_nodes is not None else W_struct.size(-1))
+        W_sq = W_struct * W_struct
+        # Scale W_sq by 1/d before matrix_exp.  The NOTEARS zero-set
+        # (h=0 iff DAG) is invariant to any positive scaling of W_sq.
+        # Without scaling, the spectral radius of W_sq can reach d * max_entry;
+        # with Softplus adjacency entries large during early training this causes
+        # e^λ overflow → (e^λᵢ - e^λⱼ)/(λᵢ-λⱼ) = inf/inf = NaN in
+        # LinalgMatrixExpBackward0.  Dividing by d keeps the spectral radius
+        # bounded by max_entry, safe for float32 throughout training.
+        expm = torch.matrix_exp(W_sq / float(d))
+        trace = torch.diagonal(expm, dim1=-2, dim2=-1).sum(dim=-1)
         h_W = trace - torch.as_tensor(float(d), dtype=W_struct.dtype, device=W_struct.device)
         return h_W.mean()
 
