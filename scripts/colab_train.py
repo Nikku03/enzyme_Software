@@ -151,6 +151,68 @@ CFG = GPU_PROFILES[GPU_PROFILE]
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn
 from nexus.training.causal_trainer import Metabolic_Causal_Trainer
 
+
+def _canonical_smiles(mol) -> str | None:
+    try:
+        from rdkit import Chem as _Chem
+        base = _Chem.RemoveHs(_Chem.Mol(mol))
+        return _Chem.MolToSmiles(base, canonical=True, isomericSmiles=True)
+    except Exception:
+        return None
+
+
+def _collect_memory_bank_mols(target_sdf: Path, dataset: ZaretzkiMetabolicDataset) -> list:
+    from rdkit import Chem as _Chem
+
+    target_name = target_sdf.name
+    target_smiles = {
+        smi for smi in (_canonical_smiles(m) for m in dataset.mols) if smi
+    }
+    unique_bank: dict[str, object] = {}
+
+    candidate_paths = []
+    attnsom_dir = target_sdf.parent
+    if attnsom_dir.exists():
+        candidate_paths.extend(sorted(attnsom_dir.glob("*.sdf")))
+    cyp_dbs_dir = _REPO_DIR / "CYP_DBs"
+    if cyp_dbs_dir.exists():
+        candidate_paths.extend(sorted(cyp_dbs_dir.glob("*.sdf")))
+
+    considered = 0
+    skipped_same_file = 0
+    skipped_train_overlap = 0
+    skipped_duplicates = 0
+
+    for path in candidate_paths:
+        if path.name == target_name and path.resolve() == target_sdf.resolve():
+            skipped_same_file += 1
+            continue
+        suppl = _Chem.SDMolSupplier(str(path), removeHs=False)
+        for mol in suppl:
+            if mol is None:
+                continue
+            considered += 1
+            smi = _canonical_smiles(mol)
+            if not smi:
+                continue
+            if smi in target_smiles:
+                skipped_train_overlap += 1
+                continue
+            if smi in unique_bank:
+                skipped_duplicates += 1
+                continue
+            unique_bank[smi] = mol
+
+    print(
+        "Analogical bank sources:"
+        f" considered={considered}"
+        f" unique={len(unique_bank)}"
+        f" skipped_same_file={skipped_same_file}"
+        f" skipped_train_overlap={skipped_train_overlap}"
+        f" skipped_duplicates={skipped_duplicates}"
+    )
+    return list(unique_bank.values())
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Training on: {device}\n")
 
@@ -209,13 +271,12 @@ print(
     f"{CFG['scan_refine_steps']} refine step(s)"
 )
 
-print("Populating analogical memory bank from full SDF (not just training subset)...")
+print("Populating analogical memory bank from other isoform sources (excluding training molecules)...")
 from rdkit import Chem as _Chem
-_bank_suppl = _Chem.SDMolSupplier(str(SDF), removeHs=False)
-_bank_mols  = [m for m in _bank_suppl if m is not None]
+_bank_mols = _collect_memory_bank_mols(SDF, dataset)
 trainer.memory_bank.populate_from_mols(_bank_mols)
 print(f"Memory bank ready: {len(trainer.memory_bank.historical_mols)} molecules.\n")
-del _bank_suppl, _bank_mols
+del _bank_mols
 
 trainer.set_total_training_steps(CFG["epochs"] * max(len(loader), 1))
 trainer.configure_optimizers()
