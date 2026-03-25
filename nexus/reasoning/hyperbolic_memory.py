@@ -43,6 +43,8 @@ class HyperbolicMemoryBank:
         fp_bits: int = 2048,
         identity_distance_threshold: float = 1.0e-4,
         poincare_radius: float = 0.95,
+        tangent_scale: float = 0.35,
+        max_tangent_norm: float = 3.0,
         mcs_timeout: int = 2,
     ) -> None:
         if not _RDKIT_OK:
@@ -53,21 +55,43 @@ class HyperbolicMemoryBank:
         self.fp_bits = int(fp_bits)
         self.identity_distance_threshold = float(max(identity_distance_threshold, 0.0))
         self.poincare_radius = float(min(max(poincare_radius, 1.0e-3), 1.0 - 1.0e-5))
+        self.tangent_scale = float(max(tangent_scale, 1.0e-6))
+        self.max_tangent_norm = float(max(max_tangent_norm, 1.0e-3))
         self.mcs_timeout = int(max(mcs_timeout, 1))
 
         self.historical_mols: List = []
         self.historical_soms: List[int] = []
         self.memory_embeddings: torch.Tensor | None = None
 
-    def _project_to_poincare(self, x: torch.Tensor, eps: float = 1.0e-6) -> torch.Tensor:
-        # Normalise direction first so high-dimensional bit vectors do not all
-        # collapse onto the same near-boundary norm after projection.
-        unit = F.normalize(x, p=2, dim=-1)
-        scale = x.norm(p=2, dim=-1, keepdim=True).tanh() * self.poincare_radius
-        projected = unit * scale
-        norm = projected.norm(p=2, dim=-1, keepdim=True).clamp_min(eps)
-        max_norm = 1.0 - eps
-        return torch.where(norm > max_norm, projected / norm * max_norm, projected)
+    def _ball_radius(self) -> float:
+        return self.poincare_radius / math.sqrt(self.curvature)
+
+    def _prepare_tangent(self, x: torch.Tensor, eps: float = 1.0e-6) -> torch.Tensor:
+        # Encode the binary fingerprint in tangent space near the origin instead
+        # of blasting it directly onto the Poincare boundary. log1p(||x||) keeps
+        # high-bit-count scaffolds from collapsing to nearly identical boundary
+        # points, while preserving directional information.
+        norm = x.norm(p=2, dim=-1, keepdim=True).clamp_min(eps)
+        unit = x / norm
+        tangent_norm = torch.log1p(norm) * self.tangent_scale
+        tangent_norm = tangent_norm.clamp_max(self.max_tangent_norm)
+        return unit * tangent_norm
+
+    def _project_inside_ball(self, x: torch.Tensor, eps: float = 1.0e-6) -> torch.Tensor:
+        radius = x.new_tensor(self._ball_radius())
+        norm = x.norm(p=2, dim=-1, keepdim=True).clamp_min(eps)
+        max_norm = radius * (1.0 - eps)
+        return torch.where(norm > max_norm, x / norm * max_norm, x)
+
+    def _expmap0(self, u: torch.Tensor, eps: float = 1.0e-6) -> torch.Tensor:
+        c = u.new_tensor(self.curvature)
+        sqrt_c = torch.sqrt(c).clamp_min(eps)
+        u_norm = u.norm(p=2, dim=-1, keepdim=True).clamp_min(eps)
+        scale = torch.tanh(sqrt_c * u_norm) / (sqrt_c * u_norm)
+        return self._project_inside_ball(u * scale, eps=eps)
+
+    def _encode_hyperbolic(self, x: torch.Tensor) -> torch.Tensor:
+        return self._expmap0(self._prepare_tangent(x))
 
     def _poincare_distance(self, u: torch.Tensor, v: torch.Tensor, eps: float = 1.0e-6) -> torch.Tensor:
         c = u.new_tensor(self.curvature)
@@ -101,7 +125,7 @@ class HyperbolicMemoryBank:
             raise RuntimeError("No labelled molecules found — hyperbolic memory bank is empty.")
 
         raw = torch.stack(fps).to(self.device)
-        self.memory_embeddings = self._project_to_poincare(raw)
+        self.memory_embeddings = self._encode_hyperbolic(raw)
         print(
             f"Hyperbolic Memory Bank Active: {len(self.historical_mols)} molecules "
             f"({skipped} skipped — no SoM label)."
@@ -115,7 +139,7 @@ class HyperbolicMemoryBank:
         analogical_pred = torch.zeros(n_query, dtype=torch.float32, device=self.device)
 
         q_fp = _morgan_fp_tensor(query_mol, radius=self.fp_radius, n_bits=self.fp_bits)
-        q_embed = self._project_to_poincare(q_fp.unsqueeze(0).to(self.device))
+        q_embed = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
         distances = self._poincare_distance(q_embed, self.memory_embeddings).squeeze(0)
 
         k = min(2, len(self.historical_mols))
