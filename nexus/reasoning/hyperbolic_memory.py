@@ -24,6 +24,7 @@ except Exception:
     _RDKIT_OK = False
 
 from .baseline_memory import MemoryRetrievalResult, _extract_som_idx, _morgan_fp_tensor
+from .pgw_transport import PGWTransporter
 
 
 class HyperbolicMemoryBank:
@@ -45,6 +46,8 @@ class HyperbolicMemoryBank:
         poincare_radius: float = 0.95,
         tangent_scale: float = 0.35,
         max_tangent_norm: float = 3.0,
+        transport_backend: str = "pgw",
+        fallback_to_mcs: bool = True,
         mcs_timeout: int = 2,
     ) -> None:
         if not _RDKIT_OK:
@@ -57,11 +60,19 @@ class HyperbolicMemoryBank:
         self.poincare_radius = float(min(max(poincare_radius, 1.0e-3), 1.0 - 1.0e-5))
         self.tangent_scale = float(max(tangent_scale, 1.0e-6))
         self.max_tangent_norm = float(max(max_tangent_norm, 1.0e-3))
+        self.transport_backend = str(transport_backend).lower()
+        self.fallback_to_mcs = bool(fallback_to_mcs)
         self.mcs_timeout = int(max(mcs_timeout, 1))
 
         self.historical_mols: List = []
         self.historical_soms: List[int] = []
         self.memory_embeddings: torch.Tensor | None = None
+        self.pgw: PGWTransporter | None = None
+        if self.transport_backend == "pgw":
+            try:
+                self.pgw = PGWTransporter(device=device)
+            except ImportError:
+                self.transport_backend = "mcs"
 
     def _ball_radius(self) -> float:
         return self.poincare_radius / math.sqrt(self.curvature)
@@ -131,32 +142,9 @@ class HyperbolicMemoryBank:
             f"({skipped} skipped — no SoM label)."
         )
 
-    def retrieve_and_transport(self, query_mol) -> MemoryRetrievalResult:
-        if self.memory_embeddings is None:
-            raise RuntimeError("Call populate_from_mols() before retrieve_and_transport().")
-
+    def _mcs_transport(self, query_mol, retrieved_mol, retrieved_som: int) -> tuple[torch.Tensor, bool, int]:
         n_query = query_mol.GetNumAtoms()
         analogical_pred = torch.zeros(n_query, dtype=torch.float32, device=self.device)
-
-        q_fp = _morgan_fp_tensor(query_mol, radius=self.fp_radius, n_bits=self.fp_bits)
-        q_embed = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
-        distances = self._poincare_distance(q_embed, self.memory_embeddings).squeeze(0)
-
-        k = min(2, len(self.historical_mols))
-        top_distances, top_indices = torch.topk(distances, k, largest=False)
-
-        tau = 10.0  # Aggressive temperature scalar: exp(-d/tau) keeps confidence
-                    # high for typical hyperbolic distances (~2.9 → exp(-0.29)=0.748)
-        if top_distances[0] < 1e-4 and k > 1:
-            best_idx = int(top_indices[1].item())
-            confidence = math.exp(-float(top_distances[1].item()) / tau)
-        else:
-            best_idx = int(top_indices[0].item())
-            confidence = math.exp(-float(top_distances[0].item()) / tau)
-
-        retrieved_mol = self.historical_mols[best_idx]
-        retrieved_som = self.historical_soms[best_idx]
-
         mcs_size = 0
         transport_ok = False
         res = rdFMCS.FindMCS(
@@ -180,6 +168,43 @@ class HyperbolicMemoryBank:
                     transport_ok = True
                 except ValueError:
                     pass
+        return analogical_pred, transport_ok, mcs_size
+
+    def retrieve_and_transport(self, query_mol) -> MemoryRetrievalResult:
+        if self.memory_embeddings is None:
+            raise RuntimeError("Call populate_from_mols() before retrieve_and_transport().")
+
+        q_fp = _morgan_fp_tensor(query_mol, radius=self.fp_radius, n_bits=self.fp_bits)
+        q_embed = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
+        distances = self._poincare_distance(q_embed, self.memory_embeddings).squeeze(0)
+
+        k = min(2, len(self.historical_mols))
+        top_distances, top_indices = torch.topk(distances, k, largest=False)
+
+        tau = 10.0  # Aggressive temperature scalar: exp(-d/tau) keeps confidence
+                    # high for typical hyperbolic distances (~2.9 → exp(-0.29)=0.748)
+        if top_distances[0] < 1e-4 and k > 1:
+            best_idx = int(top_indices[1].item())
+            confidence = math.exp(-float(top_distances[1].item()) / tau)
+        else:
+            best_idx = int(top_indices[0].item())
+            confidence = math.exp(-float(top_distances[0].item()) / tau)
+
+        retrieved_mol = self.historical_mols[best_idx]
+        retrieved_som = self.historical_soms[best_idx]
+
+        analogical_pred: torch.Tensor
+        transport_ok: bool
+        support_size: int
+        if self.transport_backend == "pgw" and self.pgw is not None:
+            pgw_result = self.pgw.transport_label(query_mol, retrieved_mol, retrieved_som)
+            analogical_pred = pgw_result.analogical_pred
+            transport_ok = pgw_result.transport_succeeded
+            support_size = pgw_result.support_size
+            if (not transport_ok) and self.fallback_to_mcs:
+                analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
+        else:
+            analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
 
         return MemoryRetrievalResult(
             analogical_pred=analogical_pred,
@@ -187,7 +212,7 @@ class HyperbolicMemoryBank:
             retrieved_mol=retrieved_mol,
             retrieved_som_idx=retrieved_som,
             transport_succeeded=transport_ok,
-            mcs_size=mcs_size,
+            mcs_size=support_size,
         )
 
     def batch_stats(self, mols: List, true_soms: List[int]) -> dict:

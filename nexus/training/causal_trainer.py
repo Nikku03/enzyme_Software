@@ -1184,16 +1184,14 @@ class Metabolic_Causal_Trainer(nn.Module):
                         dtype=torch.long, device=device
                     )
                     N_scan = _scan_atom_idx.numel()
-                    _pred_ana_scan = torch.zeros(
-                        N_scan, dtype=torch.float32, device=device
-                    )
+                    _pred_ana_scan = torch.zeros(N_scan, dtype=torch.float32, device=device)
                     _transport_mapped = False
                     if _result.transport_succeeded and _result.analogical_pred.numel() > 0:
-                        _pred_atom = int(_result.analogical_pred.argmax().item())
-                        _hits = (_scan_atom_idx == _pred_atom).nonzero(as_tuple=True)[0]
-                        if len(_hits) > 0:
-                            _pred_ana_scan[int(_hits[0].item())] = 1.0
-                            _transport_mapped = True
+                        _query_pred = _result.analogical_pred.to(dtype=torch.float32, device=device).view(-1)
+                        _valid = (_scan_atom_idx >= 0) & (_scan_atom_idx < _query_pred.numel())
+                        if bool(_valid.any().item()):
+                            _pred_ana_scan[_valid] = _query_pred[_scan_atom_idx[_valid]]
+                            _transport_mapped = bool((_pred_ana_scan > 0).any().item())
                     _ana_loss, _ana_info = self.gated_loss(
                         pred_fp=effective_reactivity,
                         pred_ana=_pred_ana_scan,
