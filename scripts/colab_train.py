@@ -85,10 +85,12 @@ def _detect_gpu_profile() -> str:
     if normalized in {"standard", "high_vram", "ultra_vram"}:
         return normalized
     if torch.cuda.is_available():
-        total_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
-        if total_gb >= 85.0:
+        props = torch.cuda.get_device_properties(0)
+        total_gb = props.total_memory / 1024**3
+        print(f"GPU : {props.name}  |  total memory : {total_gb:.1f} GB")
+        if total_gb >= 70.0:   # A100-80GB, H100-80GB, H100 SXM5-94GB, …
             return "ultra_vram"
-        if total_gb >= 70.0:
+        if total_gb >= 35.0:   # A100-40GB, L40S, …
             return "high_vram"
     return "standard"
 
@@ -169,7 +171,7 @@ loader  = DataLoader(
     pin_memory=(device.type == "cuda"),
 )
 print(f"Dataset : {len(dataset)} molecules")
-print(f"Profile : {GPU_PROFILE}")
+print(f"Profile : {GPU_PROFILE}  (override: NEXUS_COLAB_GPU_PROFILE=ultra_vram|high_vram|standard)")
 
 # ── trainer ────────────────────────────────────────────────────────────────
 trainer = Metabolic_Causal_Trainer(
