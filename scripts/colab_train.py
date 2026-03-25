@@ -24,6 +24,25 @@ _REPO_DIR = Path("/content/enzyme_Software")
 if str(_REPO_DIR) not in sys.path:
     sys.path.insert(0, str(_REPO_DIR))
 
+# ── purge stale in-memory nexus modules so git-pulled API changes land ─────
+_STALE_PREFIXES = (
+    "nexus",
+    "nexus.training",
+    "nexus.training.losses",
+    "nexus.training.causal_trainer",
+    "nexus.reasoning",
+    "nexus.reasoning.baseline_memory",
+    "nexus.data",
+    "nexus.data.metabolic_dataset",
+    "nexus.field",
+    "nexus.field.query_engine",
+    "nexus.physics",
+    "nexus.physics.hamiltonian",
+)
+for _name in list(sys.modules):
+    if _name in _STALE_PREFIXES or any(_name.startswith(_prefix + ".") for _prefix in _STALE_PREFIXES):
+        sys.modules.pop(_name, None)
+
 # ── force-reload trainer so git-pulled changes always take effect ──────────
 import nexus.training.causal_trainer as _ct_mod          # noqa: E402
 import nexus.data.metabolic_dataset as _ds_mod           # noqa: E402
