@@ -349,6 +349,12 @@ class DynamicSIREN(nn.Module):
         x_scalar = latent[..., 0]
         weight = self.output_layer.weight * output_row_scale.unsqueeze(-1) * output_col_scale.unsqueeze(0)
         bias = self.output_layer.bias + output_bias_shift
+        # Guard: hypernetwork may output NaN (e.g. context from corrupted atom
+        # features after a large DAG gradient step).  nan_to_num here (not just
+        # on the SIREN output) ensures grad @ weight is never NaN in backward —
+        # `nan_to_num(output)` guards the forward but 0 @ NaN = NaN in AddmmBackward0.
+        weight = torch.nan_to_num(weight, nan=0.0)
+        bias = torch.nan_to_num(bias, nan=0.0)
         output = torch.nn.functional.linear(x_scalar, weight, bias).squeeze(-1)
         if return_latent:
             return output, latent

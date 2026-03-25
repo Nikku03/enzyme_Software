@@ -427,14 +427,29 @@ class SubAtomicQueryEngine(nn.Module):
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         points = refined_peak_points.clone().requires_grad_(True)
         psi = field.query(points)
-        grad = torch.autograd.grad(
-            outputs=psi.sum(),
-            inputs=points,
-            retain_graph=self.create_approach_graph,
-            create_graph=self.create_approach_graph,
-            allow_unused=False,
-        )[0]
-        approach_vectors = -grad / grad.norm(dim=-1, keepdim=True).clamp_min(1.0e-8)
+        try:
+            grad = torch.autograd.grad(
+                outputs=psi.sum(),
+                inputs=points,
+                retain_graph=self.create_approach_graph,
+                create_graph=self.create_approach_graph,
+                allow_unused=False,
+            )[0]
+            approach_vectors = -grad / grad.norm(dim=-1, keepdim=True).clamp_min(1.0e-8)
+        except RuntimeError:
+            # NaN effective weight in SIREN (hypernetwork context NaN) causes
+            # AddmmBackward0 to return NaN even for 1st-order backward.
+            # Fall back to neutral unit vectors (x-axis) and zero alignment.
+            n = atom_indices.numel()
+            dev, dty = refined_peak_points.device, refined_peak_points.dtype
+            fallback = torch.zeros(n, 3, device=dev, dtype=dty)
+            fallback[:, 0] = 1.0
+            return (
+                fallback,
+                torch.ones(n, device=dev, dtype=dty),
+                torch.zeros(n, device=dev, dtype=dty),
+                torch.zeros(n, 3, device=dev, dtype=dty),
+            )
         path_clearance, overlap = ray_cylinder_clearance(
             refined_peak_points,
             approach_vectors,
