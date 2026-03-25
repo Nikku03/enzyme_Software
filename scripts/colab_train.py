@@ -79,15 +79,33 @@ def _normalize_profile_name(value: str) -> str:
     return aliases.get(value.strip().lower(), "auto")
 
 
+def _strict_profile_override_enabled() -> bool:
+    raw = os.environ.get("NEXUS_COLAB_STRICT_PROFILE", "").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 def _detect_gpu_profile() -> str:
     env = os.environ.get("NEXUS_COLAB_GPU_PROFILE", "auto").strip().lower()
     normalized = _normalize_profile_name(env)
+    if torch.cuda.is_available():
+        props = torch.cuda.get_device_properties(0)
+        total_gb = props.total_memory / 1024**3
+        print(f"GPU : {props.name}  |  total memory : {total_gb:.1f} GB")
+        if (
+            normalized == "high_vram"
+            and total_gb >= 70.0
+            and not _strict_profile_override_enabled()
+        ):
+            print(
+                "Auto-promoting profile: high_vram -> ultra_vram "
+                "(set NEXUS_COLAB_STRICT_PROFILE=1 to force high_vram)."
+            )
+            return "ultra_vram"
     if normalized in {"standard", "high_vram", "ultra_vram"}:
         return normalized
     if torch.cuda.is_available():
         props = torch.cuda.get_device_properties(0)
         total_gb = props.total_memory / 1024**3
-        print(f"GPU : {props.name}  |  total memory : {total_gb:.1f} GB")
         if total_gb >= 70.0:   # A100-80GB, H100-80GB, H100 SXM5-94GB, …
             return "ultra_vram"
         if total_gb >= 35.0:   # A100-40GB, L40S, …
