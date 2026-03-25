@@ -281,6 +281,15 @@ class SubAtomicQueryEngine(nn.Module):
         nudge_vectors: Optional[torch.Tensor] = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         raw = field.query(query_points)
+        # Guard: field.query returns NaN when (a) SIREN conditioning from the
+        # hypernetwork carries NaN for this molecule, or (b) the cusp-envelope
+        # pairwise_distance hits a near-zero singularity at the query point.
+        # Replace non-finite values with 0 before the multiplication so the
+        # Hessian in compute_peak_curvature sees a flat (zero) field response
+        # instead of propagating NaN through the second-order gradient path.
+        # nan_to_num backward is mask-based: NaN positions receive grad=0,
+        # which is correct — those points contribute nothing to curvature.
+        raw = torch.nan_to_num(raw, nan=0.0, posinf=20.0, neginf=-20.0)
         steric, heme, mask = self._point_accessibility_mask(query_points, manifold, center_indices, nudge_vectors=nudge_vectors)
         accessible = raw * mask
         return raw, steric, heme, accessible
