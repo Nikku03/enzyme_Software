@@ -142,9 +142,14 @@ GPU_PROFILES = {
         "scan_shells": (0.5, 1.0),
         "scan_refine_steps": 0,
     },
-    # ── 85+ GB (H100 SXM5, A100-80, etc.) ───────────────────────────────────
-    # Full physics quality: CliffordLie dynamics rollout re-enabled, all 5
-    # scan shells, higher-resolution quantum grid.
+    # ── 85+ GB (H100 SXM5, A100-80, Blackwell 96GB, etc.) ──────────────────
+    # Full physics quality, but trimmed to stay near an 85–90 GB envelope
+    # instead of saturating the whole card.  The dominant VRAM drivers were:
+    #   * 3 solver steps
+    #   * 48 scan points × 5 shells × 2 refinement passes
+    #   * 14^3 quantum grid
+    # This profile keeps full dynamics active while backing those off to a
+    # still-heavy but more survivable setting.
     # checkpoint=False: the prebuilt-field override (746f305 / b238f3f) means
     # dynamics no longer rebuilds the SIREN on every solver step, so activation
     # memory is small enough that checkpointing buys nothing.  Checkpointing
@@ -155,17 +160,17 @@ GPU_PROFILES = {
     "ultra_vram": {
         "max_samples": 64,
         "epochs": 5,
-        "steps": 3,
+        "steps": 2,
         "physics_mode": "full",
         "low_memory": False,
         "checkpoint": False,
-        "integration_resolution": 14,
-        "integration_chunk": 256,
-        "scan_n_points": 48,
-        "scan_radius": 2.5,
-        "scan_chunk": 24,
-        "scan_shells": (0.35, 0.55, 0.75, 0.90, 1.00),
-        "scan_refine_steps": 2,
+        "integration_resolution": 12,
+        "integration_chunk": 192,
+        "scan_n_points": 24,
+        "scan_radius": 1.75,
+        "scan_chunk": 12,
+        "scan_shells": (0.40, 0.65, 0.85, 1.00),
+        "scan_refine_steps": 1,
     },
 }
 CFG = GPU_PROFILES[GPU_PROFILE]
