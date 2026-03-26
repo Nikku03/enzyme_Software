@@ -209,22 +209,26 @@ class Least_Action_Navigator(nn.Module):
                 p_param.clamp_(-self.momentum_clip, self.momentum_clip)
             history.append(candidate.loss.detach())
 
-        # Final evaluation is read-only: we record the result but don't
-        # backpropagate through it, so skip the second-order graph.
-        with torch.no_grad():
-            final_candidate = self._run_candidate(
-                hamiltonian,
-                q_init,
-                p_param.detach().clone(),
-                smiles=smiles,
-                species=species,
-                target_atom_index=target_atom_index,
-                target_point=target_point,
-                steps=steps,
-                dt=dt,
-                accessibility_field=accessibility_field,
-                ddi_occupancy=ddi_occupancy,
-            )
+        # Final evaluation is read-only with respect to optimizer state, but the
+        # solver still needs local coordinate gradients to compute forces via
+        # potential.energy_and_forces() / hamiltonian.compute_force().  Running
+        # this under torch.no_grad() breaks that path with:
+        #   RuntimeError: element 0 of tensors does not require grad
+        # Keep grad enabled here, but detach the optimized momentum so the graph
+        # does not connect back to the Adam-updated parameter history.
+        final_candidate = self._run_candidate(
+            hamiltonian,
+            q_init,
+            p_param.detach().clone(),
+            smiles=smiles,
+            species=species,
+            target_atom_index=target_atom_index,
+            target_point=target_point,
+            steps=steps,
+            dt=dt,
+            accessibility_field=accessibility_field,
+            ddi_occupancy=ddi_occupancy,
+        )
         return final_candidate, torch.stack(history, dim=0)
 
     def sample_candidates(
@@ -241,19 +245,39 @@ class Least_Action_Navigator(nn.Module):
         accessibility_field: Optional[AccessibilityFieldState] = None,
         ddi_occupancy: Optional[DDIOccupancyState] = None,
     ) -> List[NavigatorCandidate]:
-        # Candidate sampling is pure evaluation — we compare losses to pick the
-        # best trajectory but never backpropagate through these candidates.
-        # Running under torch.no_grad() skips the create_graph=True overhead in
-        # the ODE solver, saving ~40% of total Navigator wall-clock time.
+        # Candidate sampling is pure evaluation with respect to model updates, but
+        # the solver still needs local autograd to produce forces.  Detach the
+        # sampled momenta instead of disabling grad globally.
         seed = self._canonical_seed(q_init, target_atom_index, target_point)
         generator = torch.Generator(device="cpu")
         generator.manual_seed(seed)
-        with torch.no_grad():
-            candidates: List[NavigatorCandidate] = [
+        candidates: List[NavigatorCandidate] = [
+            self._run_candidate(
+                hamiltonian,
+                q_init,
+                torch.zeros_like(q_init),
+                smiles=smiles,
+                species=species,
+                target_atom_index=target_atom_index,
+                target_point=target_point,
+                steps=steps,
+                dt=dt,
+                accessibility_field=accessibility_field,
+                ddi_occupancy=ddi_occupancy,
+            )
+        ]
+        for _ in range(self.candidate_batch):
+            p0 = self.momentum_noise * torch.randn(
+                q_init.shape,
+                generator=generator,
+                dtype=q_init.dtype,
+                device="cpu",
+            ).to(q_init.device)
+            candidates.append(
                 self._run_candidate(
                     hamiltonian,
                     q_init,
-                    torch.zeros_like(q_init),
+                    p0,
                     smiles=smiles,
                     species=species,
                     target_atom_index=target_atom_index,
@@ -263,29 +287,7 @@ class Least_Action_Navigator(nn.Module):
                     accessibility_field=accessibility_field,
                     ddi_occupancy=ddi_occupancy,
                 )
-            ]
-            for _ in range(self.candidate_batch):
-                p0 = self.momentum_noise * torch.randn(
-                    q_init.shape,
-                    generator=generator,
-                    dtype=q_init.dtype,
-                    device="cpu",
-                ).to(q_init.device)
-                candidates.append(
-                    self._run_candidate(
-                        hamiltonian,
-                        q_init,
-                        p0,
-                        smiles=smiles,
-                        species=species,
-                        target_atom_index=target_atom_index,
-                        target_point=target_point,
-                        steps=steps,
-                        dt=dt,
-                        accessibility_field=accessibility_field,
-                        ddi_occupancy=ddi_occupancy,
-                    )
-                )
+            )
         return candidates
 
     def forward(
