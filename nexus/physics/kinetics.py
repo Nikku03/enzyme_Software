@@ -232,6 +232,10 @@ class Kinetic_Barrier_Estimator(nn.Module):
         temperature_kelvin: float = 310.15,
         frequency_scale_cm1: float = 1000.0,
         ring_polymer_manager: Optional[RingPolymerManager] = None,
+        max_effective_delta_g_dagger: float = 40.0,
+        max_wigner_kappa: float = 8.0,
+        max_instanton_correction: float = 4.0,
+        max_quantum_rate: float = 1.0e8,
     ) -> None:
         super().__init__()
         self.temperature_kelvin = float(temperature_kelvin)
@@ -239,6 +243,10 @@ class Kinetic_Barrier_Estimator(nn.Module):
         self.ring_polymer_manager = ring_polymer_manager or RingPolymerManager(
             temperature_kelvin=temperature_kelvin
         )
+        self.max_effective_delta_g_dagger = float(max(max_effective_delta_g_dagger, 1.0))
+        self.max_wigner_kappa = float(max(max_wigner_kappa, 1.0))
+        self.max_instanton_correction = float(max(max_instanton_correction, 1.0))
+        self.max_quantum_rate = float(max(max_quantum_rate, 1.0))
 
     def _eigenvalues_to_frequencies_cm1(self, eigenvalues: torch.Tensor) -> torch.Tensor:
         scale = torch.as_tensor(self.frequency_scale_cm1, dtype=eigenvalues.dtype, device=eigenvalues.device)
@@ -346,8 +354,11 @@ class Kinetic_Barrier_Estimator(nn.Module):
             device=effective_delta_g_dagger.device,
         )
         prefactor = torch.as_tensor(EYRING_PREFACTOR, dtype=effective_delta_g_dagger.dtype, device=effective_delta_g_dagger.device)
-        exponent = torch.exp(-effective_delta_g_dagger / (kb * temperature).clamp_min(1.0e-8))
-        return wigner_kappa * prefactor * exponent
+        barrier = effective_delta_g_dagger.clamp(min=0.0, max=self.max_effective_delta_g_dagger)
+        exponent_arg = (-barrier / (kb * temperature).clamp_min(1.0e-8)).clamp(min=-60.0, max=0.0)
+        exponent = torch.exp(exponent_arg)
+        rate = wigner_kappa.clamp(min=1.0, max=self.max_wigner_kappa) * prefactor * exponent
+        return rate.clamp(min=1.0e-12, max=self.max_quantum_rate)
 
     def forward(
         self,
@@ -384,8 +395,9 @@ class Kinetic_Barrier_Estimator(nn.Module):
                 ring_polymer_spring_energy=zeros,
                 ring_polymer_state=None,
             )
+        ts_is_valid = bool(ts_state.is_transition_state)
 
-        classical = self.compute_classical_barrier(
+        classical_raw = self.compute_classical_barrier(
             hamiltonian,
             q_init,
             ts_state,
@@ -394,6 +406,7 @@ class Kinetic_Barrier_Estimator(nn.Module):
             accessibility_field=accessibility_field,
             ddi_occupancy=ddi_occupancy,
         )
+        classical = classical_raw.clamp_min(0.0)
         ts_freq = self._eigenvalues_to_frequencies_cm1(ts_state.eigenvalues)
         init_freq = self._initial_state_frequencies(
             hamiltonian,
@@ -408,15 +421,22 @@ class Kinetic_Barrier_Estimator(nn.Module):
         zpe_initial = self._zero_point_energy(init_freq)
         zpe_ts = self._zero_point_energy(ts_freq[ts_freq > 0])
         zpe_correction = zpe_ts - zpe_initial
-        delta_g = classical + zpe_correction
+        delta_g = (classical + zpe_correction).clamp_min(0.0)
 
-        negative_freqs = ts_freq[ts_freq < 0]
+        negative_freqs = ts_freq[ts_freq < 0] if ts_is_valid else ts_freq.new_zeros((0,))
         imag_freq = negative_freqs.abs().max() if negative_freqs.numel() > 0 else torch.zeros((), dtype=delta_g.dtype, device=delta_g.device)
         temperature = torch.as_tensor(self.temperature_kelvin, dtype=delta_g.dtype, device=delta_g.device)
         kb = torch.as_tensor(K_B_KCAL_PER_MOL_K, dtype=delta_g.dtype, device=delta_g.device)
         hnu = PLANCK_TIMES_C_KCAL_PER_MOL_CM * imag_freq
-        wigner = 1.0 + (1.0 / 24.0) * (hnu / (kb * temperature).clamp_min(1.0e-8)).pow(2)
-        effective_delta_g = delta_g - kb * temperature * torch.log(wigner.clamp_min(1.0))
+        if ts_is_valid:
+            wigner = 1.0 + (1.0 / 24.0) * (hnu / (kb * temperature).clamp_min(1.0e-8)).pow(2)
+            wigner = wigner.clamp(min=1.0, max=self.max_wigner_kappa)
+        else:
+            wigner = torch.ones((), dtype=delta_g.dtype, device=delta_g.device)
+        effective_delta_g = (delta_g - kb * temperature * torch.log(wigner.clamp_min(1.0))).clamp(
+            min=0.0,
+            max=self.max_effective_delta_g_dagger,
+        )
         rate = self.compute_metabolic_rate(effective_delta_g, wigner)
 
         target_atom_index = navigation.best.target_atom_index.to(dtype=torch.long, device=q_init.device)
@@ -430,6 +450,7 @@ class Kinetic_Barrier_Estimator(nn.Module):
             dt=dt,
         )
         instanton_correction = self.ring_polymer_manager.perturbative_correction(navigation.best.trajectory.h_path)
+        instanton_correction = instanton_correction.clamp(min=1.0, max=self.max_instanton_correction)
         transmission, quantum_rate = self.ring_polymer_manager.calculate_quantum_rate(
             ring_polymer.centroid_path,
             classical_rate=rate,
@@ -438,6 +459,7 @@ class Kinetic_Barrier_Estimator(nn.Module):
         )
         spring_energy = ring_polymer.spring_energies.mean()
         quantum_rate = quantum_rate * instanton_correction / (1.0 + 0.01 * spring_energy)
+        quantum_rate = quantum_rate.clamp(min=1.0e-12, max=self.max_quantum_rate)
 
         return KineticBarrierEstimate(
             classical_barrier=classical,

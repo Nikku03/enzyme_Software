@@ -114,6 +114,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.total_training_steps: Optional[int] = None
         self.last_checkpoint_fallback = False
         self.last_dynamics_fallback = False
+        self.last_kinetics_debug: Dict[str, torch.Tensor] = {}
         self.static_compile_applied = False
         self.compiled_module_names: List[str] = []
         self.register_buffer("global_step_counter", torch.zeros((), dtype=torch.long))
@@ -736,6 +737,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         prebuilt_field=None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         if self.dynamics_summary_mode == "lite":
+            self._set_last_kinetics_debug()
             return self._lite_dynamics_summary(
                 q_init_internal,
                 target_point_internal,
@@ -773,6 +775,17 @@ class Metabolic_Causal_Trainer(nn.Module):
                     species=species,
                     accessibility_field=accessibility_field,
                     ddi_occupancy=ddi_occupancy,
+                )
+                self._set_last_kinetics_debug(
+                    classical_barrier=kinetics.classical_barrier,
+                    delta_g_dagger=kinetics.delta_g_dagger,
+                    effective_delta_g_dagger=kinetics.effective_delta_g_dagger,
+                    wigner_kappa=kinetics.wigner_kappa,
+                    transmission_coefficient=kinetics.transmission_coefficient,
+                    instanton_correction=kinetics.instanton_correction,
+                    metabolic_rate=kinetics.metabolic_rate,
+                    quantum_rate_rpmd=kinetics.quantum_rate_rpmd,
+                    ts_valid=1.0 if navigation.best.ts_candidate is not None and navigation.best.ts_candidate.is_transition_state else 0.0,
                 )
                 h_initial = self.model.hamiltonian(
                     q_init_internal,
@@ -818,6 +831,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                       f"dtype={q_init_internal.dtype}  device={q_init_internal.device}")
                 print("[!!!] -------------------------------- [!!!]\n", flush=True)
                 self.last_dynamics_fallback = True
+                self._set_last_kinetics_debug()
                 h_initial = self.model.hamiltonian(
                     q_init_internal,
                     torch.zeros_like(q_init_internal),
@@ -930,6 +944,32 @@ class Metabolic_Causal_Trainer(nn.Module):
             vacuum_gradients=manifold.pos.new_zeros((1, 3)),
         )
 
+    def _set_last_kinetics_debug(
+        self,
+        *,
+        classical_barrier: torch.Tensor | float = 0.0,
+        delta_g_dagger: torch.Tensor | float = 0.0,
+        effective_delta_g_dagger: torch.Tensor | float = 0.0,
+        wigner_kappa: torch.Tensor | float = 1.0,
+        transmission_coefficient: torch.Tensor | float = 1.0,
+        instanton_correction: torch.Tensor | float = 1.0,
+        metabolic_rate: torch.Tensor | float = 1.0e-12,
+        quantum_rate_rpmd: torch.Tensor | float = 1.0e-12,
+        ts_valid: torch.Tensor | float = 0.0,
+    ) -> None:
+        device = self._module_device()
+        self.last_kinetics_debug = {
+            "kinetics_classical_barrier": self._to_fp32(torch.as_tensor(classical_barrier, device=device)).detach(),
+            "kinetics_delta_g_dagger": self._to_fp32(torch.as_tensor(delta_g_dagger, device=device)).detach(),
+            "kinetics_effective_delta_g_dagger": self._to_fp32(torch.as_tensor(effective_delta_g_dagger, device=device)).detach(),
+            "kinetics_wigner_kappa": self._to_fp32(torch.as_tensor(wigner_kappa, device=device)).detach(),
+            "kinetics_transmission": self._to_fp32(torch.as_tensor(transmission_coefficient, device=device)).detach(),
+            "kinetics_instanton_correction": self._to_fp32(torch.as_tensor(instanton_correction, device=device)).detach(),
+            "kinetics_metabolic_rate": self._to_fp32(torch.as_tensor(metabolic_rate, device=device)).detach(),
+            "kinetics_quantum_rate_rpmd": self._to_fp32(torch.as_tensor(quantum_rate_rpmd, device=device)).detach(),
+            "kinetics_ts_valid": self._to_fp32(torch.as_tensor(ts_valid, device=device)).detach(),
+        }
+
     def forward_batch(self, batch: Any) -> TrainingStepResult:
         self._maybe_prepare_precision_runtime()
         smiles = self._resolve_smiles(batch)
@@ -1002,6 +1042,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         if low_memory_train:
             self.last_dynamics_fallback = True
             self.last_checkpoint_fallback = True
+            self._set_last_kinetics_debug()
             keep_scan_grads = bool(self.low_memory_scan_gradients)
             _q_fp32 = q_init_internal.float()
             _dev_type = _q_fp32.device.type
@@ -1294,6 +1335,7 @@ class Metabolic_Causal_Trainer(nn.Module):
             "dag_manifold_recon_loss": self._sanitize_tensor(dag_output.manifold_recon_loss.detach(), clamp=(0.0, 1.0e4)),
             "dag_manifold_density_penalty": self._sanitize_tensor(dag_output.manifold_density_penalty.detach(), clamp=(0.0, 1.0e4)),
         }
+        metrics.update(self.last_kinetics_debug)
 
         # ── Analogical Engine ──────────────────────────────────────────────
         # Only fires when the memory bank has been populated.  Wrapped in a
