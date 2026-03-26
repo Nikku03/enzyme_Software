@@ -392,12 +392,21 @@ print(
     f"(total trajectories/atom ≈ {nav.optimization_steps + 1 + nav.candidate_batch + 1})"
 )
 
-print("Populating analogical memory bank from other isoform sources (excluding training molecules)...")
-from rdkit import Chem as _Chem
-_bank_mols = _collect_memory_bank_mols(SDF, dataset)
+# ── memory bank — ALL labeled molecules from ALL 9 CYP isoforms (uncapped) ──
+# The bank uses only ECFP4 fingerprints, so loading all molecules is cheap.
+# BaselineMemoryBank.identity_threshold=0.999 automatically prevents any
+# training molecule from trivially retrieving itself at query time.
+print("Populating memory bank from all CYP isoform data (full, uncapped)...")
+_bank_mols = []
+for _sdf in _ALL_SDFS:
+    try:
+        _bank_ds = ZaretzkiMetabolicDataset(_sdf, max_molecules=0)  # 0 = all molecules
+        _bank_mols.extend(_bank_ds.mols)
+    except Exception as _e:
+        print(f"  Skipping {_sdf.name} for bank: {_e}")
 trainer.memory_bank.populate_from_mols(_bank_mols)
 print(f"Memory bank ready: {len(trainer.memory_bank.historical_mols)} molecules.\n")
-del _bank_mols
+del _bank_mols, _bank_ds
 
 total_training_steps = sum(max(len(indices), 1) for indices, _ in epoch_indices)
 trainer.set_total_training_steps(total_training_steps)
