@@ -54,7 +54,13 @@ _STALE_PREFIXES = (
     "nexus.physics.hamiltonian",
 )
 for _name in list(sys.modules):
-    if _name in _STALE_PREFIXES or any(_name.startswith(_prefix + ".") for _prefix in _STALE_PREFIXES):
+    _is_stale = _name in _STALE_PREFIXES
+    if not _is_stale:
+        for _prefix in _STALE_PREFIXES:
+            if _name.startswith(_prefix + "."):
+                _is_stale = True
+                break
+    if _is_stale:
         sys.modules.pop(_name, None)
 
 # ── force-reload trainer so git-pulled changes always take effect ──────────
