@@ -107,7 +107,7 @@ class ReactivityHyperNetwork(nn.Module):
         self.proj_1e = nn.Linear(128, self.token_dim)
         self.proj_2e = nn.Linear(64, self.token_dim)
         self.proj_2o = nn.Linear(64, self.token_dim)
-        self.coord_proj = nn.Linear(2, self.token_dim)
+        self.coord_proj = nn.Linear(6, self.token_dim)
         self.species_embedding = nn.Embedding(128, self.token_dim)
         self.pre_attn_norm = nn.LayerNorm(self.token_dim)
         self.context_mha = nn.MultiheadAttention(self.token_dim, num_heads=8, batch_first=True)
@@ -144,7 +144,14 @@ class ReactivityHyperNetwork(nn.Module):
         #    (inf) is unaffected (inf > 1e-6), so 1/inf=0 still zeros self-terms.
         dist_mat = torch.nan_to_num(dist_mat, nan=0.0).clamp_min(1.0e-6)
         inv_dist_sum = (1.0 / dist_mat).sum(dim=-1, keepdim=True)
-        geom = torch.cat([radial, inv_dist_sum], dim=-1)
+        # nn_dist: nearest-neighbour distance (diagonal=inf → excluded automatically)
+        nn_dist   = dist_mat.min(dim=-1).values.clamp(max=20.0).unsqueeze(-1)
+        # n_bonded / n_contact: inf < threshold = False → self-interaction excluded
+        n_bonded  = (dist_mat < 2.0).float().sum(dim=-1, keepdim=True)
+        n_contact = (dist_mat < 5.0).float().sum(dim=-1, keepdim=True).clamp(max=20.0)
+        log_radial = torch.log1p(radial)
+        # 6 E(3)-invariant features: all derived from already-computed dist_mat, O(N²) cost unchanged
+        geom = torch.cat([radial, log_radial, inv_dist_sum, nn_dist, n_bonded, n_contact], dim=-1)
 
         token = (
             self.proj_0e(features["0e"])
