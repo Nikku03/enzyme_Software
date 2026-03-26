@@ -39,12 +39,7 @@ class SymplecticLeapfrog(nn.Module):
 
     def compute_force(self, q: torch.Tensor) -> torch.Tensor:
         q_eval = q.clone().requires_grad_(True)
-        with torch.backends.cuda.sdp_kernel(
-            enable_flash=False,
-            enable_math=True,
-            enable_mem_efficient=False,
-            enable_cudnn=False,
-        ):
+        with torch.nn.attention.sdpa_kernel([torch.nn.attention.SDPBackend.MATH]):
             physical, reactive, _ = self.H.compute_potential_energy(
                 q_eval,
                 smiles=self.smiles,
@@ -157,12 +152,7 @@ class Symplectic_ODE_Solver(nn.Module):
         reactive_hist = []
         lagrangian_terms = []
 
-        with torch.backends.cuda.sdp_kernel(
-            enable_flash=False,
-            enable_math=True,
-            enable_mem_efficient=False,
-            enable_cudnn=False,
-        ):
+        with torch.nn.attention.sdpa_kernel([torch.nn.attention.SDPBackend.MATH]):
             terms0 = self._hamiltonian_terms(
                 hamiltonian,
                 q,
@@ -188,12 +178,7 @@ class Symplectic_ODE_Solver(nn.Module):
             q_next = (q + dt_t * velocity).requires_grad_(True)
             next_force = leapfrog.compute_force(q_next)
             p_next = (p_half + 0.5 * dt_t * next_force).requires_grad_(True)
-            with torch.backends.cuda.sdp_kernel(
-                enable_flash=False,
-                enable_math=True,
-                enable_mem_efficient=False,
-                enable_cudnn=False,
-            ):
+            with torch.nn.attention.sdpa_kernel([torch.nn.attention.SDPBackend.MATH]):
                 terms_pred = self._hamiltonian_terms(
                     hamiltonian,
                     q_next,
@@ -204,12 +189,7 @@ class Symplectic_ODE_Solver(nn.Module):
                     ddi_occupancy=ddi_occupancy,
                 )
             p_next = self._apply_thermostat(p_next, terms_pred.kinetic).requires_grad_(True)
-            with torch.backends.cuda.sdp_kernel(
-                enable_flash=False,
-                enable_math=True,
-                enable_mem_efficient=False,
-                enable_cudnn=False,
-            ):
+            with torch.nn.attention.sdpa_kernel([torch.nn.attention.SDPBackend.MATH]):
                 terms_final = self._hamiltonian_terms(
                     hamiltonian,
                     q_next,
