@@ -85,14 +85,21 @@ class Field_Gradient_Optimizer(nn.Module):
         laplacian_terms = []
         for axis in range(3):
             partial = gradients[:, axis]
+            # create_graph=False: Laplacian is a stop-gradient term — its value enters
+            # the penalty loss but d(laplacian)/d(SIREN_params) is treated as zero.
+            # Using create_graph=True here would build a 3rd-order differentiation graph
+            # through the full Clifford SIREN, requiring ~1 GB+ per molecule. The
+            # psi² and ‖∇ψ‖² terms (computed above with create_graph=True) continue
+            # to carry gradient to SIREN params; only the laplacian² sub-term is frozen.
+            is_last = (axis == 2)
             second = torch.autograd.grad(
                 outputs=partial.sum(),
                 inputs=vacuum,
-                retain_graph=True,
-                create_graph=True,
+                retain_graph=not is_last,
+                create_graph=False,
                 allow_unused=False,
             )[0][:, axis]
-            laplacian_terms.append(second)
+            laplacian_terms.append(second.detach())
         laplacian = torch.stack(laplacian_terms, dim=-1).sum(dim=-1)
         laplacian = torch.nan_to_num(laplacian, nan=0.0, posinf=0.0, neginf=0.0).clamp(min=-25.0, max=25.0)
         penalty = torch.log1p(psi.pow(2) + 0.5 * grad_norm.pow(2) + 0.25 * laplacian.pow(2)).mean()
