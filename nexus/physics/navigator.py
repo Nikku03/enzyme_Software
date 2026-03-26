@@ -196,10 +196,16 @@ class Least_Action_Navigator(nn.Module):
                 create_graph=False,
                 allow_unused=False,
             )[0]
+            # Finite loss does NOT guarantee finite gradient — NaN can propagate through
+            # intermediate tensors and appear only in the gradient.  Sanitize before
+            # assigning so Adam never accumulates NaN into its moment estimates.
+            grad_p = torch.nan_to_num(grad_p, nan=0.0, posinf=0.0, neginf=0.0)
             p_param.grad = grad_p
             torch.nn.utils.clip_grad_norm_([p_param], max_norm=1.0)
             optimizer.step()
             with torch.no_grad():
+                # clamp_ does NOT sanitize NaN; nan_to_num first, then clamp.
+                p_param.data = torch.nan_to_num(p_param.data, nan=0.0, posinf=0.0, neginf=0.0)
                 p_param.clamp_(-self.momentum_clip, self.momentum_clip)
             history.append(candidate.loss.detach())
 
