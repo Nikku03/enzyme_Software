@@ -173,7 +173,7 @@ def main() -> None:
         dynamics_steps=args.steps,
         dynamics_dt=args.dt,
         dynamics_summary_mode="full" if full_physics else "lite",
-        checkpoint_dynamics=full_physics,
+        checkpoint_dynamics=False,
         enable_static_compile=args.allow_compile and not args.no_compile,
         enable_bf16_hot_path=not args.no_bf16,
         enable_wsd_scheduler=False,
