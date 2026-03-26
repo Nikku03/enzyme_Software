@@ -2,6 +2,7 @@ from __future__ import annotations
 
 ATOMIC_MASSES = {
     1: 1.00784,
+    5: 10.81,
     6: 12.011,
     7: 14.007,
     8: 15.999,

@@ -26,9 +26,10 @@ except Exception:  # pragma: no cover - optional dependency
     _MACE_OK = False
 
 
-_SUPPORTED_Z = [1, 6, 7, 8, 9, 15, 16, 17, 35, 53]
+_SUPPORTED_Z = [1, 5, 6, 7, 8, 9, 15, 16, 17, 35, 53]
 _COVALENT_RADII = {
     1: 0.31,
+    5: 0.84,
     6: 0.76,
     7: 0.71,
     8: 0.66,
@@ -41,6 +42,7 @@ _COVALENT_RADII = {
 }
 _VDW_RADII = {
     1: 1.20,
+    5: 1.92,
     6: 1.70,
     7: 1.55,
     8: 1.52,
@@ -53,6 +55,7 @@ _VDW_RADII = {
 }
 _EPSILON = {
     1: 0.020,
+    5: 0.070,
     6: 0.090,
     7: 0.100,
     8: 0.120,

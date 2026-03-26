@@ -21,6 +21,7 @@ from nexus.models.structural_diffusion import Jacobian_Hook, StructuralDiffusion
 
 SUPPORTED_ELEMENTS = {
     "H": 1,
+    "B": 5,
     "C": 6,
     "N": 7,
     "O": 8,
