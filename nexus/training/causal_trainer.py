@@ -783,7 +783,16 @@ class Metabolic_Causal_Trainer(nn.Module):
                     ddi_occupancy=ddi_occupancy,
                 )
                 h_final = navigation.best.trajectory.h_path[-1]
-                ts_eigenvalues = kinetics.ts_eigenvalues
+                # Detach ts_eigenvalues to break the backward path through the
+                # ts_search Hessian (create_graph=True) → SIREN grid chain.
+                # When the outer loss.backward() recomputes through that path,
+                # _prebuilt_field_override is already None (cleared by finally),
+                # so the field rebuilds on a 1728-pt grid producing different
+                # shapes/dtypes — the "saved [N,N,3] float64 vs recomputed
+                # [N,3] float32" checkpoint mismatch.  The eigenvalue VALUES
+                # still flow into the topology loss; only the Hessian-gradient
+                # path is cut, which is noisy and extremely expensive anyway.
+                ts_eigenvalues = kinetics.ts_eigenvalues.detach()
                 if ts_eigenvalues.numel() < 2:
                     ts_eigenvalues = F.pad(ts_eigenvalues, (0, 2 - ts_eigenvalues.numel()))
                 pred_rate = kinetics.quantum_rate_rpmd.clamp_min(1.0e-12)

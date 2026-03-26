@@ -3,10 +3,14 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import warnings
 from pathlib import Path
 from typing import Any, Dict
 
 import torch
+
+# Suppress FutureWarning from external libs using the deprecated sdp_kernel API.
+warnings.filterwarnings("ignore", category=FutureWarning, message=".*sdp_kernel.*")
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:

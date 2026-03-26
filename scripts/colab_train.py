@@ -12,10 +12,20 @@ import importlib
 import json
 import os
 import sys
+import warnings
 from pathlib import Path
 
 import torch
 from torch.utils.data import DataLoader, Subset
+
+# Suppress FutureWarning from external libraries (e.g. xformers, flash-attn)
+# that still call the deprecated torch.backends.cuda.sdp_kernel() API.
+# Our code uses torch.nn.attention.sdpa_kernel() throughout.
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=".*sdp_kernel.*",
+)
 
 # NaN root causes are fully resolved (hypernetwork scale guards, 2nd-order
 # sqrt safety, checkpoint control-flow fix, prebuilt field override).
