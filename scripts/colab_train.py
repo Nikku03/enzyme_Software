@@ -105,6 +105,42 @@ def _strict_profile_override_enabled() -> bool:
     return raw in {"1", "true", "yes", "on"}
 
 
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return int(default)
+    try:
+        return int(raw)
+    except ValueError:
+        return int(default)
+
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return float(default)
+    try:
+        return float(raw)
+    except ValueError:
+        return float(default)
+
+
+def _env_shells(name: str, default: tuple[float, ...]) -> tuple[float, ...]:
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return default
+    parts = []
+    for item in raw.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        try:
+            parts.append(float(item))
+        except ValueError:
+            return default
+    return tuple(parts) if parts else default
+
+
 def _detect_gpu_profile() -> str:
     env = os.environ.get("NEXUS_COLAB_GPU_PROFILE", "auto").strip().lower()
     normalized = _normalize_profile_name(env)
@@ -220,6 +256,19 @@ GPU_PROFILES = {
     },
 }
 CFG = GPU_PROFILES[GPU_PROFILE]
+CFG = dict(CFG)
+CFG["max_samples"] = max(_env_int("NEXUS_COLAB_MAX_SAMPLES", CFG["max_samples"]), 0)
+CFG["epochs"] = max(_env_int("NEXUS_COLAB_EPOCHS", CFG["epochs"]), 1)
+CFG["steps"] = max(_env_int("NEXUS_COLAB_DYNAMICS_STEPS", CFG["steps"]), 1)
+CFG["integration_resolution"] = max(_env_int("NEXUS_COLAB_INTEGRATION_RESOLUTION", CFG["integration_resolution"]), 4)
+CFG["integration_chunk"] = max(_env_int("NEXUS_COLAB_INTEGRATION_CHUNK", CFG["integration_chunk"]), 8)
+CFG["scan_n_points"] = max(_env_int("NEXUS_COLAB_SCAN_N_POINTS", CFG["scan_n_points"]), 4)
+CFG["scan_radius"] = max(_env_float("NEXUS_COLAB_SCAN_RADIUS", CFG["scan_radius"]), 0.1)
+CFG["scan_chunk"] = max(_env_int("NEXUS_COLAB_SCAN_CHUNK", CFG["scan_chunk"]), 1)
+CFG["scan_shells"] = _env_shells("NEXUS_COLAB_SCAN_SHELLS", CFG["scan_shells"])
+CFG["scan_refine_steps"] = max(_env_int("NEXUS_COLAB_SCAN_REFINE_STEPS", CFG["scan_refine_steps"]), 0)
+CFG["nav_opt_steps"] = max(_env_int("NEXUS_COLAB_NAV_OPT_STEPS", CFG.get("nav_opt_steps", 6)), 0)
+CFG["nav_candidates"] = max(_env_int("NEXUS_COLAB_NAV_CANDIDATES", CFG.get("nav_candidates", 8)), 0)
 
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn
 from nexus.training.causal_trainer import Metabolic_Causal_Trainer
@@ -322,6 +371,12 @@ loader = _make_loader(dataset, _all_indices, shuffle=True, device=device)
 print(f"Dataset : {len(dataset)} molecules")
 print(f"Profile : {GPU_PROFILE}  (override: NEXUS_COLAB_GPU_PROFILE=ultra_vram|high_vram|l4|standard)")
 print(f"Physics mode : {CFG['physics_mode']}")
+print(
+    "Runtime knobs : "
+    f"max_samples/isoform={CFG['max_samples']}  "
+    f"epochs={CFG['epochs']}  "
+    f"steps={CFG['steps']}"
+)
 
 # ── trainer ────────────────────────────────────────────────────────────────
 trainer = Metabolic_Causal_Trainer(
