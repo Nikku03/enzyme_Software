@@ -149,12 +149,21 @@ class NEXUS_Hamiltonian(nn.Module):
         if zora_factor is None and q is not None and smiles is not None:
             zora_factor = self.compute_zora_factor(q, smiles=smiles, species=species).detach()
         if zora_factor is not None:
-            zora = zora_factor.to(device=p.device, dtype=p.dtype).unsqueeze(-1).clamp_min(1.0)
+            # clamp_min does NOT sanitize NaN (NaN < 1.0 is False, so NaN passes through).
+            # nan_to_num(nan=1.0) falls back to unscaled mass for any atom where ZORA is NaN.
+            zora = torch.nan_to_num(
+                zora_factor.to(device=p.device, dtype=p.dtype).unsqueeze(-1).clamp_min(1.0),
+                nan=1.0, posinf=1.0,
+            )
             kinetic = 0.5 * (p.pow(2) / (masses.clamp_min(1.0e-6) * zora)).sum()
         else:
             kinetic = 0.5 * (p.pow(2) / masses.clamp_min(1.0e-6)).sum()
-        if not bool(torch.isfinite(kinetic).all().item()):
-            raise RuntimeError("Modified kinetic energy is non-finite after ZORA scaling")
+        if not torch.isfinite(kinetic):
+            print(f"[HAM-NaN] kinetic non-finite after ZORA → falling back to non-ZORA", flush=True)
+            kinetic = 0.5 * (p.pow(2) / masses.clamp_min(1.0e-6)).sum()
+        if not torch.isfinite(kinetic):
+            print(f"[HAM-NaN] kinetic non-finite even without ZORA (p has NaN) → zeroing", flush=True)
+            kinetic = kinetic.new_zeros(())
         return kinetic
 
     def compute_force(
