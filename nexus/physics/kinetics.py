@@ -15,7 +15,7 @@ from .constants import ATOMIC_MASSES
 from .hamiltonian import NEXUS_Hamiltonian
 from .navigator import LeastActionResult
 from .solvers import CayleyPropagator
-from .ts_detector import TransitionStateCandidate
+from .ts_detector import TransitionStateCandidate, compute_micro_hessian
 
 
 K_B_KCAL_PER_MOL_K = 0.00198720425864083
@@ -262,11 +262,8 @@ class Kinetic_Barrier_Estimator(nn.Module):
         ddi_occupancy: Optional[DDIOccupancyState] = None,
     ) -> torch.Tensor:
         q_eval = q_init.clone().requires_grad_(True)
-        subset = q_eval[atom_indices].reshape(-1).clone().requires_grad_(True)
 
-        def potential_fn(x: torch.Tensor) -> torch.Tensor:
-            q_full = q_eval.clone()
-            q_full[atom_indices] = x.view(-1, 3)
+        def potential_fn(q_full: torch.Tensor) -> torch.Tensor:
             physical, reactive, _ = hamiltonian.compute_potential_energy(
                 q_full,
                 smiles=smiles,
@@ -282,7 +279,12 @@ class Kinetic_Barrier_Estimator(nn.Module):
             enable_mem_efficient=False,
             enable_cudnn=False,
         ):
-            hessian = torch.autograd.functional.hessian(potential_fn, subset, create_graph=True)
+            hessian, _ = compute_micro_hessian(
+                q_eval,
+                atom_indices,
+                potential_fn,
+                create_graph=False,
+            )
         hessian = 0.5 * (hessian + hessian.transpose(0, 1))
         hessian64 = hessian.to(dtype=torch.float64)
         eye = torch.eye(hessian64.size(0), dtype=hessian64.dtype, device=hessian64.device)

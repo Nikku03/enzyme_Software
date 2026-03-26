@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Optional
 
 import torch
 import torch.nn as nn
@@ -23,10 +23,53 @@ class TransitionStateCandidate:
     atom_indices: torch.Tensor
 
 
+def compute_micro_hessian(
+    q_full: torch.Tensor,
+    active_indices: torch.Tensor,
+    energy_func: Callable[[torch.Tensor], torch.Tensor],
+    *,
+    create_graph: bool = False,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Compute a Hessian only on an active subset of atoms while freezing the rest.
+
+    Returns a dense [k*3, k*3] Hessian matrix and the sorted active atom indices.
+    """
+    if q_full.ndim != 2 or q_full.size(-1) != 3:
+        raise ValueError(f"Expected q_full to have shape [N, 3], got {tuple(q_full.shape)}")
+
+    active_indices = active_indices.to(dtype=torch.long, device=q_full.device).view(-1)
+    if active_indices.numel() == 0:
+        raise ValueError("active_indices must be non-empty")
+    active_indices = torch.unique(active_indices, sorted=True)
+
+    n_atoms = q_full.size(0)
+    is_active = torch.zeros(n_atoms, dtype=torch.bool, device=q_full.device)
+    is_active[active_indices] = True
+
+    q_background = q_full[~is_active].detach()
+    q_active = q_full[is_active].detach().requires_grad_(True)
+
+    def masked_energy_fn(q_active_in: torch.Tensor) -> torch.Tensor:
+        q_reconstructed = torch.empty_like(q_full)
+        q_reconstructed[~is_active] = q_background
+        q_reconstructed[is_active] = q_active_in
+        return energy_func(q_reconstructed)
+
+    micro_hessian = torch.autograd.functional.hessian(
+        masked_energy_fn,
+        q_active,
+        create_graph=create_graph,
+        strict=False,
+    )
+    matrix_dim = int(q_active.numel())
+    return micro_hessian.reshape(matrix_dim, matrix_dim), active_indices
+
+
 class Transition_State_Detector(nn.Module):
     def __init__(
         self,
-        active_atoms: int = 4,
+        active_atoms: int = 8,
         negative_tolerance: float = -1.0e-5,
         positive_tolerance: float = 1.0e-5,
     ) -> None:
@@ -94,25 +137,22 @@ class Transition_State_Detector(nn.Module):
     ) -> TransitionStateCandidate:
         q_eval = q.clone().requires_grad_(True)
         atom_indices = self._select_active_atoms(q_eval, target_point=target_point)
-        q_subset = q_eval[atom_indices].reshape(-1).clone().requires_grad_(True)
 
-        def potential_fn(x: torch.Tensor) -> torch.Tensor:
+        def potential_fn(q_reconstructed: torch.Tensor) -> torch.Tensor:
             with torch.backends.cuda.sdp_kernel(
                 enable_flash=False,
                 enable_math=True,
                 enable_mem_efficient=False,
                 enable_cudnn=False,
             ):
-                return self._potential_on_subset(
-                    hamiltonian,
-                    x,
-                    q_eval,
-                    atom_indices,
+                physical, reactive, _ = hamiltonian.compute_potential_energy(
+                    q_reconstructed,
                     smiles=smiles,
                     species=species,
                     accessibility_field=accessibility_field,
                     ddi_occupancy=ddi_occupancy,
                 )
+                return physical + hamiltonian.coupling_lambda * reactive
 
         with torch.backends.cuda.sdp_kernel(
             enable_flash=False,
@@ -120,7 +160,12 @@ class Transition_State_Detector(nn.Module):
             enable_mem_efficient=False,
             enable_cudnn=False,
         ):
-            hessian = torch.autograd.functional.hessian(potential_fn, q_subset, create_graph=True)
+            hessian, atom_indices = compute_micro_hessian(
+                q_eval,
+                atom_indices,
+                potential_fn,
+                create_graph=False,
+            )
         hessian = 0.5 * (hessian + hessian.transpose(0, 1))
         eigenvalues = self._stable_eigvalsh(hessian)
         negative_count = int((eigenvalues < self.negative_tolerance).sum().detach().cpu().item())
@@ -132,9 +177,9 @@ class Transition_State_Detector(nn.Module):
             eigenvalues=eigenvalues,
             negative_count=negative_count,
             is_transition_state=bool(is_transition_state),
-            potential_energy=potential_fn(q_subset),
+            potential_energy=potential_fn(q_eval),
             atom_indices=atom_indices,
         )
 
 
-__all__ = ["TransitionStateCandidate", "Transition_State_Detector"]
+__all__ = ["TransitionStateCandidate", "Transition_State_Detector", "compute_micro_hessian"]
