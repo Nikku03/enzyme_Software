@@ -49,6 +49,8 @@ class TrainingStepResult:
 
 
 class Metabolic_Causal_Trainer(nn.Module):
+    _PRED_RATE_MAX = 1.0e12
+
     def __init__(
         self,
         model: Optional[NEXUS_Dynamics_Engine] = None,
@@ -1042,16 +1044,18 @@ class Metabolic_Causal_Trainer(nn.Module):
                 + 0.5 * torch.tanh(target_distance)
                 - torch.log(target_scan_prob.clamp_min(1.0e-6))
             )
+            pred_rate_raw = torch.exp(-effective_barrier)
             pred_rate = self._sanitize_tensor(
-                torch.exp(-effective_barrier),
+                pred_rate_raw,
                 nan=1.0e-6,
-                posinf=1.0,
+                posinf=self._PRED_RATE_MAX,
                 neginf=1.0e-6,
-                clamp=(1.0e-6, 1.0),
+                clamp=(1.0e-6, self._PRED_RATE_MAX),
             )
             if not keep_scan_grads:
                 h_initial = h_initial.detach()
                 pred_rate = pred_rate.detach()
+                pred_rate_raw = pred_rate_raw.detach()
             h_final = h_initial
             ts_eigenvalues = torch.stack(
                 [
@@ -1075,9 +1079,16 @@ class Metabolic_Causal_Trainer(nn.Module):
                 ddi_occupancy=ddi_occupancy,
                 prebuilt_field=field,
             )
+            pred_rate_raw = self._to_fp32(pred_rate)
 
             sobolev_report = self.field_optimizer(field, module1_out.manifold)
-            pred_rate = self._sanitize_tensor(self._to_fp32(pred_rate), nan=1.0e-12, posinf=1.0, neginf=1.0e-12, clamp=(1.0e-12, 1.0))
+            pred_rate = self._sanitize_tensor(
+                self._to_fp32(pred_rate),
+                nan=1.0e-12,
+                posinf=self._PRED_RATE_MAX,
+                neginf=1.0e-12,
+                clamp=(1.0e-12, self._PRED_RATE_MAX),
+            )
             _n_atoms_dyn = max(int(q_init_internal.shape[0]), 1)
             h_initial = self._sanitize_tensor(self._to_fp32(h_initial) / _n_atoms_dyn, nan=2.5, posinf=100.0, neginf=-100.0, clamp=(-100.0, 100.0))
             h_final = self._sanitize_tensor(self._to_fp32(h_final) / _n_atoms_dyn, nan=2.5, posinf=100.0, neginf=-100.0, clamp=(-100.0, 100.0))
@@ -1092,6 +1103,14 @@ class Metabolic_Causal_Trainer(nn.Module):
                 vacuum_values=self._sanitize_tensor(sobolev_report.vacuum_values, clamp=(-100.0, 100.0)),
                 vacuum_gradients=self._sanitize_tensor(sobolev_report.vacuum_gradients, clamp=(-100.0, 100.0)),
             )
+        pred_rate_raw = self._sanitize_tensor(
+            self._to_fp32(pred_rate_raw),
+            nan=1.0e-12,
+            posinf=self._PRED_RATE_MAX,
+            neginf=1.0e-12,
+            clamp=(1.0e-12, self._PRED_RATE_MAX),
+        )
+        pred_rate_log10 = torch.log10(pred_rate_raw.clamp_min(1.0e-12))
 
         if exp_rate is None:
             # ATTNSOM/Zaretzki-style SoM datasets typically supervise the
@@ -1213,6 +1232,8 @@ class Metabolic_Causal_Trainer(nn.Module):
             "weight_flux": loss_info["precision"][4],
             "weight_reconstruction": loss_info["precision"][5],
             "pred_rate": pred_rate.detach(),
+            "pred_rate_raw": pred_rate_raw.detach(),
+            "pred_rate_log10": pred_rate_log10.detach(),
             "exp_rate": exp_rate.detach(),
             "kinetics_supervised": torch.as_tensor(
                 1.0 if has_exp_rate else 0.0,
