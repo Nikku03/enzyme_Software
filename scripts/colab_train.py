@@ -77,12 +77,39 @@ importlib.reload(_ham_mod)   # picks up NaN diagnostics & reactive_reference gua
 importlib.reload(_ct_mod)    # must reload after hamiltonian so causal_trainer gets fresh ref
 importlib.reload(_ds_mod)
 
-# All 9 CYP isoform SDF files — used for both training and the analogical bank.
-_SDF_DIR  = _REPO_DIR / "data/ATTNSOM/cyp_dataset"
-_ALL_SDFS = sorted(_SDF_DIR.glob("*.sdf"))
-# Backward-compat: keep SDF pointing at 3A4 for the memory-bank helper that needs
-# a single "target" to exclude from the bank.
-SDF = _SDF_DIR / "3A4.sdf"
+def _discover_isoform_sdfs(repo_dir: Path) -> tuple[list[Path], Path]:
+    search_dirs = [
+        repo_dir / "data/ATTNSOM/cyp_dataset",
+        repo_dir / "CYP_DBs",
+        repo_dir / "data/ATTNSOM",
+    ]
+    found: dict[str, Path] = {}
+    for directory in search_dirs:
+        if not directory.exists():
+            continue
+        for sdf in sorted(directory.glob("*.sdf")):
+            if sdf.stem.upper() == "HLM":
+                continue
+            found.setdefault(sdf.stem.upper(), sdf)
+    all_sdfs = [found[key] for key in sorted(found)]
+    if not all_sdfs:
+        searched = ", ".join(str(p) for p in search_dirs)
+        raise FileNotFoundError(
+            "No CYP isoform SDF files were found for Colab training. "
+            f"Searched: {searched}. "
+            "This clone does not include the ATTNSOM/CYP_DBs SDF assets."
+        )
+    preferred_source = next(
+        (p.parent for p in all_sdfs if p.parent.name == "cyp_dataset"),
+        all_sdfs[0].parent,
+    )
+    return all_sdfs, preferred_source
+
+
+# All CYP isoform SDF files — used for both training and the analogical bank.
+_ALL_SDFS, _SDF_DIR = _discover_isoform_sdfs(_REPO_DIR)
+# Backward-compat: keep SDF pointing at 3A4 for helpers that need a single target.
+SDF = next((p for p in _ALL_SDFS if p.stem.upper() == "3A4"), _ALL_SDFS[0])
 
 # Checkpoint paths: prefer Google Drive (persists across sessions) → fall back to repo dir.
 _DRIVE_CKPT = Path("/content/drive/MyDrive/nexus_colab_checkpoint.pt")
