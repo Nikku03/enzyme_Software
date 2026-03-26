@@ -101,7 +101,11 @@ def main() -> None:
         print(f"{key}={os.environ[key]}")
     print()
 
-    exec((REPO_DIR / "scripts" / "colab_train.py").read_text())
 
-
+# Set env vars first, then exec colab_train.py at module level so all of its
+# module-level helper functions (e.g. _strict_profile_override_enabled,
+# _env_int, …) share the same global namespace and can reference each other.
+# Calling exec() inside main() puts those definitions in main()'s local scope,
+# which breaks cross-function name lookups (NameError in _detect_gpu_profile).
 main()
+exec((REPO_DIR / "scripts" / "colab_train.py").read_text())
