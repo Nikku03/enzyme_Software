@@ -494,7 +494,8 @@ for _sdf in _ALL_SDFS:
         print(f"  Skipping {_sdf.name} for bank: {_e}")
 trainer.memory_bank.populate_from_mols(_bank_mols)
 print(f"Memory bank ready: {len(trainer.memory_bank.historical_mols)} molecules.\n")
-del _bank_mols, _bank_ds
+del _bank_mols
+_bank_ds = None  # noqa: release last-loop reference
 
 total_training_steps = CFG["epochs"] * max(len(_all_indices), 1)
 trainer.set_total_training_steps(total_training_steps)
