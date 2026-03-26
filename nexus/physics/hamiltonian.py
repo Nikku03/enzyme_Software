@@ -121,7 +121,14 @@ class NEXUS_Hamiltonian(nn.Module):
     ) -> torch.Tensor:
         manifold = manifold or self.build_manifold(smiles, q=q, species=species)
         if field is None:
-            field = self.field_engine(self._field_manifold(manifold))
+            # OOM guard: reuse prebuilt field if available (same as compute_potential_energy).
+            # ZORA is a relativistic scaling factor used only for kinetic energy; it is
+            # always detach()ed by the caller, so using the scan-geometry field is fine.
+            _override = getattr(self, '_prebuilt_field_override', None)
+            if _override is not None:
+                field = _override
+            else:
+                field = self.field_engine(self._field_manifold(manifold))
         zora = field.quantum_enforcer.compute_zora_correction(
             field.atom_coords,
             field.atom_coords,
