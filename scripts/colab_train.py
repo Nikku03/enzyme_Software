@@ -169,7 +169,7 @@ GPU_PROFILES = {
     # molecule that triggers the fallback.
     "ultra_vram": {
         "max_samples": 64,
-        "epochs": 5,
+        "epochs": 8,
         "steps": 2,
         "physics_mode": "full",
         "low_memory": False,
@@ -439,7 +439,37 @@ else:
 for epoch in range(start_epoch, CFG["epochs"]):
     indices, label = epoch_indices[epoch]
     loader = _make_loader(dataset, indices, shuffle=True, device=device)
-    print(f"Epoch {epoch+1}/{CFG['epochs']} curriculum : {label}")
+
+    # ── adaptive physics mode ───────────────────────────────────────────────
+    # Curriculum epochs (small-molecule warm-up) run low-memory / scan-only:
+    # no Navigator, no ODE trajectory → ~5-10 sec/mol instead of ~60 sec/mol.
+    # Full dynamics kick in once curriculum is done so physics signal trains
+    # on the full diverse dataset.
+    _in_curriculum = (epoch < CURRICULUM_EPOCHS) and (CURRICULUM_EPOCHS > 0)
+    _low_mem_this_epoch = _in_curriculum or CFG["low_memory"]
+    if trainer.low_memory_train_mode != _low_mem_this_epoch:
+        trainer.low_memory_train_mode = _low_mem_this_epoch
+    _phys_label = "scan-only (low-memory)" if _low_mem_this_epoch else "full dynamics"
+
+    # Progressive navigator budget: ramp up over the first two dynamics epochs
+    # to avoid spending hours on early dynamics epochs before the field has
+    # converged.  After that, use the full Colab-safe budget.
+    if not _low_mem_this_epoch:
+        _dyn_epoch = epoch - CURRICULUM_EPOCHS   # 0-indexed dynamics epoch
+        if _dyn_epoch == 0:
+            nav.optimization_steps = 1
+            nav.candidate_batch    = 2
+        elif _dyn_epoch == 1:
+            nav.optimization_steps = 2
+            nav.candidate_batch    = 3
+        else:
+            nav.optimization_steps = CFG.get("nav_opt_steps", 3)
+            nav.candidate_batch    = CFG.get("nav_candidates", 4)
+
+    print(f"Epoch {epoch+1}/{CFG['epochs']} | curriculum: {label} | physics: {_phys_label}")
+    if not _low_mem_this_epoch:
+        print(f"  Navigator: opt_steps={nav.optimization_steps}  candidates={nav.candidate_batch}"
+              f"  (trajectories/mol ≈ {nav.optimization_steps + 1 + nav.candidate_batch + 1})")
     metrics = trainer.fit_epoch(loader, train=True, log_every=1)
     history.append(metrics)
     print(f"\n── epoch {epoch+1} summary ──────────────────────────────────────")
