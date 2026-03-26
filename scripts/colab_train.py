@@ -391,6 +391,23 @@ def _epoch_indices(n_items: int, epoch: int, seed: int) -> list[int]:
 def _serialize_state_dict(module) -> dict:
     return {k: v.detach().cpu() for k, v in module.state_dict().items()}
 
+
+def _resolve_target_isoform_path(target_isoform: str, candidates: list[Path]) -> Path:
+    token = target_isoform.strip()
+    if not token:
+        raise ValueError("target_isoform must be non-empty")
+    token = token.removesuffix(".sdf")
+    by_stem = {p.stem.upper(): p for p in candidates}
+    by_name = {p.name.upper(): p for p in candidates}
+    resolved = by_stem.get(token.upper()) or by_name.get(f"{token.upper()}.SDF")
+    if resolved is None:
+        valid = ", ".join(sorted(p.stem for p in candidates))
+        raise FileNotFoundError(
+            f"NEXUS_COLAB_TARGET_ISOFORM={target_isoform!r} did not match any available SDF. "
+            f"Valid isoforms: {valid}"
+        )
+    return resolved
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Training on: {device}\n")
 
@@ -403,12 +420,7 @@ if device.type == "cuda":
 # ── dataset — all 9 CYP isoforms ───────────────────────────────────────────
 _train_sdfs = _ALL_SDFS
 if TARGET_ISOFORM:
-    _target_name = TARGET_ISOFORM.removesuffix(".sdf")
-    _target_path = _SDF_DIR / f"{_target_name}.sdf"
-    if not _target_path.exists():
-        raise FileNotFoundError(
-            f"NEXUS_COLAB_TARGET_ISOFORM={TARGET_ISOFORM!r} did not match {_target_path}"
-        )
+    _target_path = _resolve_target_isoform_path(TARGET_ISOFORM, _ALL_SDFS)
     _train_sdfs = [_target_path]
 
 _sub_datasets = []
