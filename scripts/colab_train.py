@@ -164,33 +164,38 @@ def _env_bool(name: str, default: bool = False) -> bool:
 
 
 def _detect_gpu_profile() -> str:
-    env = os.environ.get("NEXUS_COLAB_GPU_PROFILE", "auto").strip().lower()
-    normalized = _normalize_profile_name(env)
-    if torch.cuda.is_available():
-        props = torch.cuda.get_device_properties(0)
-        total_gb = props.total_memory / 1024**3
-        print(f"GPU : {props.name}  |  total memory : {total_gb:.1f} GB")
-        if (
-            normalized == "high_vram"
-            and total_gb >= 70.0
-            and not _strict_profile_override_enabled()
-        ):
-            print(
-                "Auto-promoting profile: high_vram -> ultra_vram "
-                "(set NEXUS_COLAB_STRICT_PROFILE=1 to force high_vram)."
-            )
-            return "ultra_vram"
-    if normalized in {"standard", "l4", "high_vram", "ultra_vram"}:
-        return normalized
-    if torch.cuda.is_available():
-        props = torch.cuda.get_device_properties(0)
-        total_gb = props.total_memory / 1024**3
-        if total_gb >= 70.0:   # A100-80GB, H100-80GB, H100 SXM5-94GB, …
-            return "ultra_vram"
-        if total_gb >= 35.0:   # A100-40GB, L40S-48GB, …
-            return "high_vram"
-        if total_gb >= 20.0:   # L4-24GB, RTX 3090/4090-24GB, …
-            return "l4"
+    env_raw = os.environ.get("NEXUS_COLAB_GPU_PROFILE", "auto").strip().lower()
+    normalized = _normalize_profile_name(env_raw)
+    valid_profiles = {"standard", "l4", "high_vram", "ultra_vram"}
+    try:
+        if torch.cuda.is_available():
+            props = torch.cuda.get_device_properties(0)
+            total_gb = float(props.total_memory) / 1024**3
+            print(f"GPU : {props.name}  |  total memory : {total_gb:.1f} GB")
+            if (
+                normalized == "high_vram"
+                and total_gb >= 70.0
+                and not _strict_profile_override_enabled()
+            ):
+                print(
+                    "Auto-promoting profile: high_vram -> ultra_vram "
+                    "(set NEXUS_COLAB_STRICT_PROFILE=1 to force high_vram)."
+                )
+                return "ultra_vram"
+            if normalized in valid_profiles:
+                return normalized
+            if total_gb >= 70.0:   # A100-80GB, H100-80GB, H100 SXM5-94GB, …
+                return "ultra_vram"
+            if total_gb >= 35.0:   # A100-40GB, L40S-48GB, …
+                return "high_vram"
+            if total_gb >= 20.0:   # L4-24GB, RTX 3090/4090-24GB, …
+                return "l4"
+        if normalized in valid_profiles:
+            return normalized
+    except Exception as e:
+        fallback = normalized if normalized in valid_profiles else "standard"
+        print(f"GPU profile detection fallback: {type(e).__name__}: {e} -> {fallback}")
+        return fallback
     return "standard"
 
 
