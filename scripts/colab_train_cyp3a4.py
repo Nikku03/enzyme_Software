@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import os
 import runpy
+import subprocess
 import sys
 from pathlib import Path
 
@@ -33,6 +34,26 @@ if str(REPO_DIR) not in sys.path:
 def _setdefault_env(name: str, value: str) -> None:
     if not os.environ.get(name):
         os.environ[name] = value
+
+
+def _ensure_colab_nexus_assets() -> None:
+    target_sdf = REPO_DIR / "data" / "ATTNSOM" / "cyp_dataset" / "3A4.sdf"
+    setup_script = REPO_DIR / "scripts" / "setup_colab_nexus.sh"
+    if target_sdf.exists():
+        return
+    if not setup_script.exists():
+        raise FileNotFoundError(
+            f"Missing setup bootstrap script: {setup_script}"
+        )
+    print("ATTNSOM CYP SDF assets not found; running Colab bootstrap...")
+    subprocess.run(
+        ["bash", str(setup_script), str(REPO_DIR)],
+        check=True,
+    )
+    if not target_sdf.exists():
+        raise FileNotFoundError(
+            f"Dataset bootstrap completed but {target_sdf} is still missing."
+        )
 
 
 PRESETS: dict[str, dict[str, str]] = {
@@ -104,4 +125,5 @@ def main() -> None:
 
 
 main()
+_ensure_colab_nexus_assets()
 runpy.run_path(str(REPO_DIR / "scripts" / "colab_train.py"), run_name="__main__")
