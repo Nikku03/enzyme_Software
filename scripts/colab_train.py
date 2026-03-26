@@ -188,20 +188,9 @@ GPU_PROFILES = {
         "nav_candidates": 3,
     },
     # ── 85+ GB (H100 SXM5, A100-80, Blackwell 96GB, etc.) ──────────────────
-    # Full physics quality, but trimmed to stay near an 85–90 GB envelope
-    # instead of saturating the whole card.  The dominant VRAM drivers were:
-    #   * 3 solver steps
-    #   * 48 scan points × 5 shells × 2 refinement passes
-    #   * 14^3 quantum grid
-    # This profile keeps full dynamics active while backing those off to a
-    # still-heavy but more survivable setting.
-    # checkpoint=False: the prebuilt-field override (746f305 / b238f3f) means
-    # dynamics no longer rebuilds the SIREN on every solver step, so activation
-    # memory is small enough that checkpointing buys nothing.  Checkpointing
-    # _dynamics_summary is also incompatible with the fallback path, which calls
-    # energy_and_forces → autograd.grad inside the checkpointed region, causing
-    # a dtype mismatch (float64 forward vs float32 recomputation) on every
-    # molecule that triggers the fallback.
+    # Full physics — quantum grid 12^3, 4 scan shells, full Navigator budget.
+    # checkpoint=False: the prebuilt-field override means dynamics no longer
+    # rebuilds the SIREN on every solver step, so checkpointing buys nothing.
     "ultra_vram": {
         "max_samples": 64,
         "epochs": 8,
@@ -216,12 +205,11 @@ GPU_PROFILES = {
         "scan_chunk": 12,
         "scan_shells": (0.40, 0.65, 0.85, 1.00),
         "scan_refine_steps": 1,
+        "nav_opt_steps": 6,
+        "nav_candidates": 8,
     },
 }
 CFG = GPU_PROFILES[GPU_PROFILE]
-CURRICULUM_EPOCHS = int(os.environ.get("NEXUS_COLAB_CURRICULUM_EPOCHS", "3"))
-CURRICULUM_SMALL_ATOMS = int(os.environ.get("NEXUS_COLAB_CURRICULUM_SMALL_ATOMS", "20"))
-CURRICULUM_MEDIUM_ATOMS = int(os.environ.get("NEXUS_COLAB_CURRICULUM_MEDIUM_ATOMS", "28"))
 
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn
 from nexus.training.causal_trainer import Metabolic_Causal_Trainer
@@ -291,49 +279,6 @@ def _collect_memory_bank_mols(target_sdf: Path, dataset: ZaretzkiMetabolicDatase
     return list(unique_bank.values())
 
 
-def _dataset_atom_counts(dataset) -> list[int]:
-    """Works for both ZaretzkiMetabolicDataset and ConcatDataset."""
-    if hasattr(dataset, "mols"):
-        return [int(mol.GetNumAtoms()) for mol in dataset.mols]
-    counts = []
-    for ds in dataset.datasets:
-        counts.extend(int(mol.GetNumAtoms()) for mol in ds.mols)
-    return counts
-
-
-def _curriculum_indices(
-    atom_counts: list[int],
-    *,
-    epoch_idx: int,
-    total_epochs: int,
-) -> tuple[list[int], str]:
-    total = len(atom_counts)
-    all_indices = list(range(total))
-    if total == 0 or total_epochs <= 1 or CURRICULUM_EPOCHS <= 0:
-        return all_indices, f"all ({total})"
-
-    sorted_indices = sorted(all_indices, key=lambda idx: (atom_counts[idx], idx))
-    min_subset = min(total, max(16, total // 4))
-
-    def _indices_below(max_atoms: int, fallback_fraction: float) -> list[int]:
-        selected = [idx for idx in all_indices if atom_counts[idx] <= max_atoms]
-        if len(selected) >= min_subset:
-            return selected
-        fallback = max(min_subset, int(round(total * fallback_fraction)))
-        return sorted_indices[: min(total, fallback)]
-
-    small_phase = min(CURRICULUM_EPOCHS, max(total_epochs - 2, 0))
-    medium_phase = min(total_epochs - 1, small_phase + 1) if total_epochs > 1 else 0
-
-    if epoch_idx < small_phase:
-        selected = _indices_below(CURRICULUM_SMALL_ATOMS, 0.50)
-        return selected, f"<= {CURRICULUM_SMALL_ATOMS} atoms ({len(selected)})"
-    if epoch_idx < medium_phase:
-        selected = _indices_below(CURRICULUM_MEDIUM_ATOMS, 0.75)
-        return selected, f"<= {CURRICULUM_MEDIUM_ATOMS} atoms ({len(selected)})"
-    return all_indices, f"all ({total})"
-
-
 def _make_loader(dataset, indices, *, shuffle: bool, device: torch.device) -> DataLoader:
     subset = dataset if len(indices) == len(dataset) else Subset(dataset, indices)
     return DataLoader(
@@ -362,19 +307,11 @@ for _sdf in _ALL_SDFS:
     except Exception as _sdf_err:
         print(f"  Skipping {_sdf.name}: {_sdf_err}")
 dataset = ConcatDataset(_sub_datasets) if len(_sub_datasets) > 1 else _sub_datasets[0]
-atom_counts = _dataset_atom_counts(dataset)
-epoch_indices = [
-    _curriculum_indices(atom_counts, epoch_idx=epoch, total_epochs=CFG["epochs"])
-    for epoch in range(CFG["epochs"])
-]
-loader = _make_loader(dataset, list(range(len(dataset))), shuffle=True, device=device)
+_all_indices = list(range(len(dataset)))
+loader = _make_loader(dataset, _all_indices, shuffle=True, device=device)
 print(f"Dataset : {len(dataset)} molecules")
 print(f"Profile : {GPU_PROFILE}  (override: NEXUS_COLAB_GPU_PROFILE=ultra_vram|high_vram|l4|standard)")
 print(f"Physics mode : {CFG['physics_mode']}")
-if CFG["epochs"] > 1:
-    print("Curriculum : " + " | ".join(
-        f"epoch {epoch+1} {label}" for epoch, (_, label) in enumerate(epoch_indices)
-    ))
 
 # ── trainer ────────────────────────────────────────────────────────────────
 trainer = Metabolic_Causal_Trainer(
@@ -399,9 +336,7 @@ print(
     f"chunk={CFG['integration_chunk']}"
 )
 
-# ── Colab-safe reaction-volume scanner ────────────────────────────────────
-# DEFAULT: 96 pts × 5 shells × 5 refine steps = ~2400 pts/atom w/ gradients
-# COLAB  :  8 pts × 2 shells × 1 refine step  =   16 pts/atom  (150× less)
+# ── Reaction-volume scanner ────────────────────────────────────────────────
 se = trainer.model.module1.field_engine.query_engine
 se.n_points             = CFG["scan_n_points"]
 se.radius               = CFG["scan_radius"]
@@ -414,13 +349,13 @@ print(
     f"{CFG['scan_refine_steps']} refine step(s)"
 )
 
-# ── Colab-safe navigator budget ────────────────────────────────────────────
-# DEFAULT: optimization_steps=6, candidate_batch=8 → (6+1+9)=16 trajectories/atom
-# COLAB  : optimization_steps=3, candidate_batch=4 → (3+1+5)= 9 trajectories/atom
-# Each trajectory runs the full CliffordLieIntegrator (4 force calls per RK4 step).
+# ── Navigator budget ───────────────────────────────────────────────────────
+# Full budget: opt_steps=6 (Adam, create_graph) + 1 zero-momentum + 8 random
+#              = 16 trajectories/atom — each runs CliffordLieIntegrator.
+# Lower values can be set via nav_opt_steps / nav_candidates in the profile.
 nav = trainer.model.navigator
-nav.optimization_steps = CFG.get("nav_opt_steps", 3)
-nav.candidate_batch    = CFG.get("nav_candidates", 4)
+nav.optimization_steps = CFG.get("nav_opt_steps", 6)
+nav.candidate_batch    = CFG.get("nav_candidates", 8)
 print(
     f"Navigator    : opt_steps={nav.optimization_steps}  "
     f"candidates={nav.candidate_batch}  "
@@ -443,7 +378,7 @@ trainer.memory_bank.populate_from_mols(_bank_mols)
 print(f"Memory bank ready: {len(trainer.memory_bank.historical_mols)} molecules.\n")
 del _bank_mols, _bank_ds
 
-total_training_steps = sum(max(len(indices), 1) for indices, _ in epoch_indices)
+total_training_steps = CFG["epochs"] * max(len(_all_indices), 1)
 trainer.set_total_training_steps(total_training_steps)
 trainer.configure_optimizers()
 if device.type == "cuda":
@@ -472,39 +407,8 @@ else:
 
 # ── training loop ──────────────────────────────────────────────────────────
 for epoch in range(start_epoch, CFG["epochs"]):
-    indices, label = epoch_indices[epoch]
-    loader = _make_loader(dataset, indices, shuffle=True, device=device)
-
-    # ── adaptive physics mode ───────────────────────────────────────────────
-    # Curriculum epochs (small-molecule warm-up) run low-memory / scan-only:
-    # no Navigator, no ODE trajectory → ~5-10 sec/mol instead of ~60 sec/mol.
-    # Full dynamics kick in once curriculum is done so physics signal trains
-    # on the full diverse dataset.
-    _in_curriculum = (epoch < CURRICULUM_EPOCHS) and (CURRICULUM_EPOCHS > 0)
-    _low_mem_this_epoch = _in_curriculum or CFG["low_memory"]
-    if trainer.low_memory_train_mode != _low_mem_this_epoch:
-        trainer.low_memory_train_mode = _low_mem_this_epoch
-    _phys_label = "scan-only (low-memory)" if _low_mem_this_epoch else "full dynamics"
-
-    # Progressive navigator budget: ramp up over the first two dynamics epochs
-    # to avoid spending hours on early dynamics epochs before the field has
-    # converged.  After that, use the full Colab-safe budget.
-    if not _low_mem_this_epoch:
-        _dyn_epoch = epoch - CURRICULUM_EPOCHS   # 0-indexed dynamics epoch
-        if _dyn_epoch == 0:
-            nav.optimization_steps = 1
-            nav.candidate_batch    = 2
-        elif _dyn_epoch == 1:
-            nav.optimization_steps = 2
-            nav.candidate_batch    = 3
-        else:
-            nav.optimization_steps = CFG.get("nav_opt_steps", 3)
-            nav.candidate_batch    = CFG.get("nav_candidates", 4)
-
-    print(f"Epoch {epoch+1}/{CFG['epochs']} | curriculum: {label} | physics: {_phys_label}")
-    if not _low_mem_this_epoch:
-        print(f"  Navigator: opt_steps={nav.optimization_steps}  candidates={nav.candidate_batch}"
-              f"  (trajectories/mol ≈ {nav.optimization_steps + 1 + nav.candidate_batch + 1})")
+    loader = _make_loader(dataset, _all_indices, shuffle=True, device=device)
+    print(f"Epoch {epoch+1}/{CFG['epochs']} | {len(_all_indices)} molecules | full dynamics")
     metrics = trainer.fit_epoch(loader, train=True, log_every=1)
     history.append(metrics)
     print(f"\n── epoch {epoch+1} summary ──────────────────────────────────────")
