@@ -300,6 +300,19 @@ print(
     f"{CFG['scan_refine_steps']} refine step(s)"
 )
 
+# ── Colab-safe navigator budget ────────────────────────────────────────────
+# DEFAULT: optimization_steps=6, candidate_batch=8 → (6+1+9)=16 trajectories/atom
+# COLAB  : optimization_steps=3, candidate_batch=4 → (3+1+5)= 9 trajectories/atom
+# Each trajectory runs the full CliffordLieIntegrator (4 force calls per RK4 step).
+nav = trainer.model.navigator
+nav.optimization_steps = CFG.get("nav_opt_steps", 3)
+nav.candidate_batch    = CFG.get("nav_candidates", 4)
+print(
+    f"Navigator    : opt_steps={nav.optimization_steps}  "
+    f"candidates={nav.candidate_batch}  "
+    f"(total trajectories/atom ≈ {nav.optimization_steps + 1 + nav.candidate_batch + 1})"
+)
+
 print("Populating analogical memory bank from other isoform sources (excluding training molecules)...")
 from rdkit import Chem as _Chem
 _bank_mols = _collect_memory_bank_mols(SDF, dataset)

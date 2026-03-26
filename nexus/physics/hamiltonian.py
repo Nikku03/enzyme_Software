@@ -178,8 +178,8 @@ class NEXUS_Hamiltonian(nn.Module):
         return -torch.autograd.grad(
             outputs=potential,
             inputs=q_eval,
-            retain_graph=True,
-            create_graph=True,
+            retain_graph=False,   # graph freed immediately — caller does not need to re-diff potential
+            create_graph=False,   # no second-order graph; gradient flows through Clifford state y, not force
             allow_unused=False,
         )[0]
 
@@ -201,8 +201,8 @@ class NEXUS_Hamiltonian(nn.Module):
         return torch.autograd.grad(
             outputs=kinetic,
             inputs=p_eval,
-            retain_graph=True,
-            create_graph=True,
+            retain_graph=False,   # graph freed immediately — velocity = p/m, no re-use needed
+            create_graph=False,   # no second-order graph; gradient flows through Clifford state y, not velocity
             allow_unused=False,
         )[0]
 
