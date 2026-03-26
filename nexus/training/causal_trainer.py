@@ -997,6 +997,9 @@ class Metabolic_Causal_Trainer(nn.Module):
             # Save reactive_reference before the call so a NaN psi_atoms cannot
             # permanently corrupt the exponential moving average across batches.
             _rr_saved = self.model.hamiltonian.reactive_reference.clone()
+            # Inject the already-computed SIREN field so the Hamiltonian skips
+            # its quantum_enforcer rebuild (1000-point grid → 4 GB OOM on L4).
+            self.model.hamiltonian._prebuilt_field_override = field
             try:
                 with torch.autocast(device_type=_dev_type, enabled=False):
                     _h_raw = self._to_fp32(self.model.hamiltonian(
@@ -1008,6 +1011,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                         ddi_occupancy=ddi_occupancy,
                     ))
             finally:
+                self.model.hamiltonian._prebuilt_field_override = None
                 # Only restore if the call produced a non-finite reference
                 # (so valid updates from healthy batches are kept).
                 if not torch.isfinite(self.model.hamiltonian.reactive_reference):
