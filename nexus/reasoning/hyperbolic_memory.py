@@ -49,6 +49,8 @@ class HyperbolicMemoryBank:
         transport_backend: str = "pgw",
         fallback_to_mcs: bool = True,
         mcs_timeout: int = 2,
+        tanimoto_prefilter_threshold: float = 0.5,
+        tanimoto_shortlist_k: int = 16,
     ) -> None:
         if not _RDKIT_OK:
             raise ImportError("RDKit is required for HyperbolicMemoryBank")
@@ -63,10 +65,14 @@ class HyperbolicMemoryBank:
         self.transport_backend = str(transport_backend).lower()
         self.fallback_to_mcs = bool(fallback_to_mcs)
         self.mcs_timeout = int(max(mcs_timeout, 1))
+        self.tanimoto_prefilter_threshold = float(min(max(tanimoto_prefilter_threshold, 0.0), 1.0))
+        self.tanimoto_shortlist_k = int(max(tanimoto_shortlist_k, 1))
 
         self.historical_mols: List = []
         self.historical_soms: List[int] = []
         self.memory_embeddings: torch.Tensor | None = None
+        self.memory_fingerprints: torch.Tensor | None = None
+        self.memory_bit_counts: torch.Tensor | None = None
         self.pgw: PGWTransporter | None = None
         if self.transport_backend == "pgw":
             try:
@@ -136,11 +142,22 @@ class HyperbolicMemoryBank:
             raise RuntimeError("No labelled molecules found — hyperbolic memory bank is empty.")
 
         raw = torch.stack(fps).to(self.device)
+        self.memory_fingerprints = raw
+        self.memory_bit_counts = raw.sum(dim=-1)
         self.memory_embeddings = self._encode_hyperbolic(raw)
         print(
             f"Hyperbolic Memory Bank Active: {len(self.historical_mols)} molecules "
             f"({skipped} skipped — no SoM label)."
         )
+
+    def _tanimoto_similarity(self, q_fp: torch.Tensor) -> torch.Tensor:
+        if self.memory_fingerprints is None or self.memory_bit_counts is None:
+            raise RuntimeError("Call populate_from_mols() before retrieve_and_transport().")
+        query = q_fp.to(self.device)
+        intersection = torch.matmul(self.memory_fingerprints, query)
+        q_count = query.sum()
+        union = (self.memory_bit_counts + q_count - intersection).clamp_min(1.0e-6)
+        return intersection / union
 
     def _mcs_transport(self, query_mol, retrieved_mol, retrieved_som: int) -> tuple[torch.Tensor, bool, int]:
         n_query = query_mol.GetNumAtoms()
@@ -175,19 +192,37 @@ class HyperbolicMemoryBank:
             raise RuntimeError("Call populate_from_mols() before retrieve_and_transport().")
 
         q_fp = _morgan_fp_tensor(query_mol, radius=self.fp_radius, n_bits=self.fp_bits)
-        q_embed = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
-        distances = self._poincare_distance(q_embed, self.memory_embeddings).squeeze(0)
+        tanimoto_scores = self._tanimoto_similarity(q_fp)
+        shortlist_k = min(self.tanimoto_shortlist_k, len(self.historical_mols))
+        top_tanimoto, shortlist_indices = torch.topk(tanimoto_scores, shortlist_k, largest=True)
+        best_tanimoto = float(top_tanimoto[0].item()) if shortlist_k > 0 else 0.0
+        best_shortlist_idx = int(shortlist_indices[0].item()) if shortlist_k > 0 else 0
 
-        k = min(2, len(self.historical_mols))
+        if best_tanimoto < self.tanimoto_prefilter_threshold:
+            n_query = query_mol.GetNumAtoms()
+            return MemoryRetrievalResult(
+                analogical_pred=torch.zeros(n_query, dtype=torch.float32, device=self.device),
+                confidence=0.0,
+                retrieved_mol=self.historical_mols[best_shortlist_idx],
+                retrieved_som_idx=self.historical_soms[best_shortlist_idx],
+                transport_succeeded=False,
+                mcs_size=0,
+            )
+
+        q_embed = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
+        candidate_embeddings = self.memory_embeddings.index_select(0, shortlist_indices)
+        distances = self._poincare_distance(q_embed, candidate_embeddings).squeeze(0)
+
+        k = min(2, shortlist_k)
         top_distances, top_indices = torch.topk(distances, k, largest=False)
 
         tau = 10.0  # Aggressive temperature scalar: exp(-d/tau) keeps confidence
                     # high for typical hyperbolic distances (~2.9 → exp(-0.29)=0.748)
         if top_distances[0] < 1e-4 and k > 1:
-            best_idx = int(top_indices[1].item())
+            best_idx = int(shortlist_indices[top_indices[1]].item())
             confidence = math.exp(-float(top_distances[1].item()) / tau)
         else:
-            best_idx = int(top_indices[0].item())
+            best_idx = int(shortlist_indices[top_indices[0]].item())
             confidence = math.exp(-float(top_distances[0].item()) / tau)
 
         retrieved_mol = self.historical_mols[best_idx]
