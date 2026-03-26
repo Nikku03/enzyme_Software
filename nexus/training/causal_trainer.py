@@ -675,6 +675,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         target_atom_index: torch.Tensor,
         accessibility_field=None,
         ddi_occupancy: Optional[DDIOccupancyState] = None,
+        prebuilt_field=None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         if self.dynamics_summary_mode == "lite":
             return self._lite_dynamics_summary(
@@ -687,6 +688,10 @@ class Metabolic_Causal_Trainer(nn.Module):
                 ddi_occupancy=ddi_occupancy,
             )
         reactive_reference = self.model.hamiltonian.reactive_reference.detach().clone()
+        # Inject prebuilt field so hamiltonian.compute_potential_energy skips the
+        # expensive field_engine call on every ODE solver step inside navigator.
+        if prebuilt_field is not None:
+            self.model.hamiltonian._prebuilt_field_override = prebuilt_field
         try:
             self.last_dynamics_fallback = False
             try:
@@ -765,6 +770,9 @@ class Metabolic_Causal_Trainer(nn.Module):
                 return pred_rate, h_initial, h_initial, ts_eigenvalues
         finally:
             self.model.hamiltonian.reactive_reference.copy_(reactive_reference)
+            # Always clear the override so later calls don't accidentally reuse a
+            # stale (potentially freed) field tensor.
+            self.model.hamiltonian._prebuilt_field_override = None
 
     def _lite_dynamics_summary(
         self,
@@ -817,6 +825,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         target_atom_index: torch.Tensor,
         accessibility_field=None,
         ddi_occupancy: Optional[DDIOccupancyState] = None,
+        prebuilt_field=None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         def _wrapped(q_input: torch.Tensor, target_input: torch.Tensor) -> tuple[torch.Tensor, ...]:
             return self._dynamics_summary(
@@ -827,6 +836,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                 target_atom_index=target_atom_index,
                 accessibility_field=accessibility_field,
                 ddi_occupancy=ddi_occupancy,
+                prebuilt_field=prebuilt_field,
             )
 
         if self.checkpoint_dynamics:
@@ -1002,6 +1012,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                 target_atom_index=true_atom_index,
                 accessibility_field=accessibility_field,
                 ddi_occupancy=ddi_occupancy,
+                prebuilt_field=field,
             )
 
             sobolev_report = self.field_optimizer(field, module1_out.manifold)

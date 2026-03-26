@@ -299,7 +299,14 @@ class NEXUS_Hamiltonian(nn.Module):
             )
         # ───────────────────────────────────────────────────────────────────
         field_manifold = self._field_manifold(manifold)
-        field = self.field_engine(field_manifold)
+        # OOM guard: if a prebuilt field was injected by the trainer (to avoid
+        # rebuilding the full quantum-normalised Clifford SIREN on every ODE
+        # solver step inside navigator), reuse it; otherwise build fresh.
+        _override = getattr(self, '_prebuilt_field_override', None)
+        if _override is not None:
+            field = _override
+        else:
+            field = self.field_engine(field_manifold)
         reactive = self._compute_reactive_from_field(field, field_manifold)
         reactive = reactive * self.compute_accessibility_gate(
             q,
