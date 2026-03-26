@@ -61,7 +61,17 @@ importlib.reload(_ham_mod)   # picks up NaN diagnostics & reactive_reference gua
 importlib.reload(_ct_mod)    # must reload after hamiltonian so causal_trainer gets fresh ref
 importlib.reload(_ds_mod)
 
-SDF = _REPO_DIR / "data/ATTNSOM/cyp_dataset/3A4.sdf"
+# All 9 CYP isoform SDF files — used for both training and the analogical bank.
+_SDF_DIR  = _REPO_DIR / "data/ATTNSOM/cyp_dataset"
+_ALL_SDFS = sorted(_SDF_DIR.glob("*.sdf"))
+# Backward-compat: keep SDF pointing at 3A4 for the memory-bank helper that needs
+# a single "target" to exclude from the bank.
+SDF = _SDF_DIR / "3A4.sdf"
+
+# Checkpoint paths: prefer Google Drive (persists across sessions) → fall back to repo dir.
+_DRIVE_CKPT = Path("/content/drive/MyDrive/nexus_colab_checkpoint.pt")
+_LOCAL_CKPT = _REPO_DIR / "colab_nexus_checkpoint.pt"
+CKPT_PATH   = _DRIVE_CKPT if _DRIVE_CKPT.parent.exists() else _LOCAL_CKPT
 
 def _normalize_profile_name(value: str) -> str:
     aliases = {
@@ -181,6 +191,7 @@ CURRICULUM_MEDIUM_ATOMS = int(os.environ.get("NEXUS_COLAB_CURRICULUM_MEDIUM_ATOM
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn
 from nexus.training.causal_trainer import Metabolic_Causal_Trainer
 from nexus.training.losses import NEXUS_God_Loss
+from torch.utils.data import ConcatDataset, Subset
 
 
 def _canonical_smiles(mol) -> str | None:
@@ -245,8 +256,14 @@ def _collect_memory_bank_mols(target_sdf: Path, dataset: ZaretzkiMetabolicDatase
     return list(unique_bank.values())
 
 
-def _dataset_atom_counts(dataset: ZaretzkiMetabolicDataset) -> list[int]:
-    return [int(mol.GetNumAtoms()) for mol in dataset.mols]
+def _dataset_atom_counts(dataset) -> list[int]:
+    """Works for both ZaretzkiMetabolicDataset and ConcatDataset."""
+    if hasattr(dataset, "mols"):
+        return [int(mol.GetNumAtoms()) for mol in dataset.mols]
+    counts = []
+    for ds in dataset.datasets:
+        counts.extend(int(mol.GetNumAtoms()) for mol in ds.mols)
+    return counts
 
 
 def _curriculum_indices(
@@ -302,8 +319,14 @@ if device.type == "cuda":
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats(device)
 
-# ── dataset ────────────────────────────────────────────────────────────────
-dataset = ZaretzkiMetabolicDataset(SDF, max_molecules=CFG["max_samples"])
+# ── dataset — all 9 CYP isoforms ───────────────────────────────────────────
+_sub_datasets = []
+for _sdf in _ALL_SDFS:
+    try:
+        _sub_datasets.append(ZaretzkiMetabolicDataset(_sdf, max_molecules=CFG["max_samples"]))
+    except Exception as _sdf_err:
+        print(f"  Skipping {_sdf.name}: {_sdf_err}")
+dataset = ConcatDataset(_sub_datasets) if len(_sub_datasets) > 1 else _sub_datasets[0]
 atom_counts = _dataset_atom_counts(dataset)
 epoch_indices = [
     _curriculum_indices(atom_counts, epoch_idx=epoch, total_epochs=CFG["epochs"])
@@ -383,10 +406,28 @@ if device.type == "cuda":
     torch.cuda.empty_cache()
 print("Optimizer ready.\n")
 
+# ── checkpoint resume ───────────────────────────────────────────────────────
+start_epoch = 0
+history = []
+if CKPT_PATH.exists():
+    print(f"Loading checkpoint from {CKPT_PATH} ...")
+    _ckpt = torch.load(CKPT_PATH, map_location=device, weights_only=False)
+    trainer.load_state_dict(_ckpt["model_state_dict"], strict=False)
+    if "optimizer_state_dict" in _ckpt and trainer.optimizer is not None:
+        try:
+            trainer.optimizer.load_state_dict(_ckpt["optimizer_state_dict"])
+            print("  Optimizer state restored.")
+        except Exception as _oe:
+            print(f"  Optimizer state not restored (shape mismatch after arch change): {_oe}")
+    start_epoch = int(_ckpt.get("epoch", 0))
+    history = list(_ckpt.get("metrics_history", []))
+    print(f"  Resumed from epoch {start_epoch}  ({len(history)} epochs completed)\n")
+else:
+    print(f"No checkpoint at {CKPT_PATH} — starting fresh.\n")
+
 
 # ── training loop ──────────────────────────────────────────────────────────
-history = []
-for epoch in range(CFG["epochs"]):
+for epoch in range(start_epoch, CFG["epochs"]):
     indices, label = epoch_indices[epoch]
     loader = _make_loader(dataset, indices, shuffle=True, device=device)
     print(f"Epoch {epoch+1}/{CFG['epochs']} curriculum : {label}")
@@ -401,6 +442,17 @@ for epoch in range(CFG["epochs"]):
         if _k in metrics:
             print(f"  {_k:<30} {metrics[_k]:.6g}")
     print()
+
+    # ── save checkpoint after every epoch ──────────────────────────────────
+    _ckpt_payload: dict = {
+        "epoch": epoch + 1,
+        "model_state_dict": {k: v.cpu() for k, v in trainer.state_dict().items()},
+        "metrics_history": history,
+    }
+    if trainer.optimizer is not None:
+        _ckpt_payload["optimizer_state_dict"] = trainer.optimizer.state_dict()
+    torch.save(_ckpt_payload, CKPT_PATH)
+    print(f"  Checkpoint saved → {CKPT_PATH}")
 
 if device.type == "cuda":
     peak_mb = torch.cuda.max_memory_allocated(device) / 1024**2
