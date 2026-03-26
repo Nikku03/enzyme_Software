@@ -17,12 +17,9 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 
-# ── NaN forensics: crash the instant any op produces NaN/inf ───────────────
-# PyTorch will print the exact operation and stack trace where the first NaN
-# is born.  REMOVE this line after the root cause is confirmed — it adds
-# ~2–5× overhead and halts the run on the first NaN (no full epoch).
-torch.autograd.set_detect_anomaly(True)
-# ────────────────────────────────────────────────────────────────────────────
+# NaN root causes are fully resolved (hypernetwork scale guards, 2nd-order
+# sqrt safety, checkpoint control-flow fix, prebuilt field override).
+# set_detect_anomaly is NOT enabled — it adds 2-5× overhead.
 
 os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
 
