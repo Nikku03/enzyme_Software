@@ -12,6 +12,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
 
+# _StopRecomputationError is a PyTorch-internal control-flow signal used by
+# non-reentrant checkpointing (use_reentrant=False) to stop forward
+# recomputation at the right boundary.  It MUST propagate back to
+# checkpoint.checkpoint() and must never be caught by user-level except
+# handlers.  Catching it causes fallback code to run inside the recomputation
+# frame, which triggers: AssertionError: target_frame.early_stop is set.
+try:
+    from torch.utils.checkpoint import _StopRecomputationError as _CheckpointStop
+except ImportError:
+    _CheckpointStop = None  # older PyTorch — sentinel that is never matched
+
 from nexus.core.dynamics_engine import NEXUS_Dynamics_Engine
 from nexus.core.field_optimizer import Field_Gradient_Optimizer, FieldGradientOptimizationReport
 from nexus.core.flux_analysis import NCFAFluxPropagator
@@ -717,6 +728,17 @@ class Metabolic_Causal_Trainer(nn.Module):
                     pred_rate = kinetics.metabolic_rate.clamp_min(1.0e-12)
                 return pred_rate, h_initial, h_final, ts_eigenvalues
             except Exception as _dyn_err:
+                # ── checkpoint control-flow guard ──────────────────────────
+                # Re-raise PyTorch-internal signals before ANY fallback work.
+                # If _StopRecomputationError reaches this handler, the broad
+                # except would run self.model.hamiltonian() inside the
+                # recomputation frame → AssertionError: early_stop is set.
+                if _CheckpointStop is not None and isinstance(_dyn_err, _CheckpointStop):
+                    raise
+                # Belt-and-suspenders: secondary failure if stop already leaked
+                if isinstance(_dyn_err, AssertionError) and "early_stop" in str(_dyn_err):
+                    raise
+                # ──────────────────────────────────────────────────────────
                 import traceback as _tb
                 print("\n[!!!] PHYSICS SURROGATE CRASH DETECTED [!!!]")
                 _tb.print_exc()
