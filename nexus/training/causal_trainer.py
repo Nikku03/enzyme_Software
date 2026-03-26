@@ -1454,7 +1454,14 @@ class Metabolic_Causal_Trainer(nn.Module):
         metrics["grad_norm"] = torch.zeros((), dtype=result.loss.dtype, device=result.loss.device)
         return metrics
 
-    def fit_epoch(self, dataloader, *, train: bool = True, log_every: int = 0) -> Dict[str, float]:
+    def fit_epoch(
+        self,
+        dataloader,
+        *,
+        train: bool = True,
+        log_every: int = 0,
+        on_batch_end=None,
+    ) -> Dict[str, float]:
         reducer: Dict[str, List[float]] = {}
         self.train(mode=train)
         
@@ -1488,8 +1495,16 @@ class Metabolic_Causal_Trainer(nn.Module):
                     reducer.setdefault("grad_norm", []).append(grad_norm)
 
                 self.global_step_counter.add_(1)
+                running = {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
+                if on_batch_end is not None:
+                    on_batch_end(
+                        batch_index=i,
+                        total_batches=total_batches,
+                        running_metrics=running,
+                        step_metrics={k: float(v.detach().cpu().item()) if torch.is_tensor(v) else float(v) for k, v in metrics.items()},
+                        train=train,
+                    )
                 if log_every > 0 and (i == 1 or i % log_every == 0 or i == total_batches):
-                    running = {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
                     _ana_active = "ana_loss_total" in running
                     _ana_str = (
                         f" | ana_loss={running.get('ana_loss_total', float('nan')):.4g}"
@@ -1518,8 +1533,16 @@ class Metabolic_Causal_Trainer(nn.Module):
                 for key, value in metrics.items():
                     if torch.is_tensor(value):
                         reducer.setdefault(key, []).append(float(value.detach().cpu().item()))
+                running = {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
+                if on_batch_end is not None:
+                    on_batch_end(
+                        batch_index=i,
+                        total_batches=total_batches,
+                        running_metrics=running,
+                        step_metrics={k: float(v.detach().cpu().item()) if torch.is_tensor(v) else float(v) for k, v in metrics.items()},
+                        train=train,
+                    )
                 if log_every > 0 and (i == 1 or i % log_every == 0 or i == total_batches):
-                    running = {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
                     print(
                         f"val_batch={i}/{total_batches} "
                         f"loss_total={running.get('loss_total', float('nan')):.6g} "

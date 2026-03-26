@@ -82,6 +82,8 @@ SDF = _SDF_DIR / "3A4.sdf"
 _DRIVE_CKPT = Path("/content/drive/MyDrive/nexus_colab_checkpoint.pt")
 _LOCAL_CKPT = _REPO_DIR / "colab_nexus_checkpoint.pt"
 CKPT_PATH   = _DRIVE_CKPT if _DRIVE_CKPT.parent.exists() else _LOCAL_CKPT
+BATCH_CKPT_PATH = CKPT_PATH.with_name(CKPT_PATH.stem + "_batch.pt")
+BATCH_METRICS_PATH = CKPT_PATH.parent / "nexus_colab_batch_metrics.json"
 
 def _normalize_profile_name(value: str) -> str:
     aliases = {
@@ -146,6 +148,13 @@ def _env_str(name: str, default: str = "") -> str:
     if raw is None:
         return default
     return raw.strip()
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return bool(default)
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _detect_gpu_profile() -> str:
@@ -277,6 +286,8 @@ CFG["scan_refine_steps"] = max(_env_int("NEXUS_COLAB_SCAN_REFINE_STEPS", CFG["sc
 CFG["nav_opt_steps"] = max(_env_int("NEXUS_COLAB_NAV_OPT_STEPS", CFG.get("nav_opt_steps", 6)), 0)
 CFG["nav_candidates"] = max(_env_int("NEXUS_COLAB_NAV_CANDIDATES", CFG.get("nav_candidates", 8)), 0)
 TARGET_ISOFORM = _env_str("NEXUS_COLAB_TARGET_ISOFORM", "")
+SAVE_EVERY_BATCH = _env_bool("NEXUS_COLAB_SAVE_EVERY_BATCH", True)
+SHUFFLE_SEED = _env_int("NEXUS_COLAB_SHUFFLE_SEED", 42)
 
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn
 from nexus.training.causal_trainer import Metabolic_Causal_Trainer
@@ -356,6 +367,18 @@ def _make_loader(dataset, indices, *, shuffle: bool, device: torch.device) -> Da
         num_workers=0,
         pin_memory=(device.type == "cuda"),
     )
+
+
+def _epoch_indices(n_items: int, epoch: int, seed: int) -> list[int]:
+    if n_items <= 0:
+        return []
+    g = torch.Generator()
+    g.manual_seed(int(seed) + int(epoch))
+    return torch.randperm(n_items, generator=g).tolist()
+
+
+def _serialize_state_dict(module) -> dict:
+    return {k: v.detach().cpu() for k, v in module.state_dict().items()}
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Training on: {device}\n")
@@ -468,9 +491,57 @@ trainer.configure_optimizers()
 if device.type == "cuda":
     torch.cuda.empty_cache()
 print("Optimizer ready.\n")
+print(f"Batch checkpointing : {'on' if SAVE_EVERY_BATCH else 'off'}")
+if SAVE_EVERY_BATCH:
+    print(f"  rolling batch checkpoint → {BATCH_CKPT_PATH}")
+    print(f"  rolling batch metrics    → {BATCH_METRICS_PATH}")
+print()
+
+
+def _save_training_checkpoint(
+    path: Path,
+    *,
+    epoch: int,
+    batch_in_epoch: int,
+    total_batches: int,
+    metrics_history: list,
+    last_batch_metrics: dict | None = None,
+) -> None:
+    payload: dict = {
+        "epoch": epoch,
+        "batch_in_epoch": batch_in_epoch,
+        "total_batches": total_batches,
+        "model_state_dict": _serialize_state_dict(trainer),
+        "metrics_history": metrics_history,
+        "shuffle_seed": SHUFFLE_SEED,
+    }
+    if last_batch_metrics is not None:
+        payload["last_batch_metrics"] = last_batch_metrics
+    if trainer.optimizer is not None:
+        payload["optimizer_state_dict"] = trainer.optimizer.state_dict()
+    torch.save(payload, path)
+
+
+def _write_batch_metrics(
+    *,
+    epoch: int,
+    batch_index: int,
+    total_batches: int,
+    running_metrics: dict,
+    step_metrics: dict,
+) -> None:
+    payload = {
+        "epoch": epoch + 1,
+        "batch": batch_index,
+        "total_batches": total_batches,
+        "running_metrics": running_metrics,
+        "step_metrics": step_metrics,
+    }
+    BATCH_METRICS_PATH.write_text(json.dumps(payload, indent=2))
 
 # ── checkpoint resume ───────────────────────────────────────────────────────
 start_epoch = 0
+resume_batch_in_epoch = 0
 history = []
 if CKPT_PATH.exists():
     print(f"Loading checkpoint from {CKPT_PATH} ...")
@@ -488,12 +559,64 @@ if CKPT_PATH.exists():
 else:
     print(f"No checkpoint at {CKPT_PATH} — starting fresh.\n")
 
+if SAVE_EVERY_BATCH and BATCH_CKPT_PATH.exists():
+    print(f"Loading rolling batch checkpoint from {BATCH_CKPT_PATH} ...")
+    _bckpt = torch.load(BATCH_CKPT_PATH, map_location=device, weights_only=False)
+    _b_epoch = int(_bckpt.get("epoch", 0))
+    _b_batch = int(_bckpt.get("batch_in_epoch", 0))
+    if _b_epoch < CFG["epochs"] and (_b_epoch > start_epoch or (_b_epoch == start_epoch and _b_batch > 0)):
+        trainer.load_state_dict(_bckpt["model_state_dict"], strict=False)
+        if "optimizer_state_dict" in _bckpt and trainer.optimizer is not None:
+            try:
+                trainer.optimizer.load_state_dict(_bckpt["optimizer_state_dict"])
+                print("  Optimizer state restored from batch checkpoint.")
+            except Exception as _oe:
+                print(f"  Optimizer state not restored from batch checkpoint: {_oe}")
+        start_epoch = _b_epoch
+        resume_batch_in_epoch = _b_batch
+        history = list(_bckpt.get("metrics_history", history))
+        print(
+            f"  Resuming mid-epoch: epoch {start_epoch + 1}, "
+            f"batch {resume_batch_in_epoch}/{int(_bckpt.get('total_batches', 0))}\n"
+        )
+    else:
+        print("  Rolling batch checkpoint is older than epoch checkpoint; ignoring.\n")
+
 
 # ── training loop ──────────────────────────────────────────────────────────
 for epoch in range(start_epoch, CFG["epochs"]):
-    loader = _make_loader(dataset, _all_indices, shuffle=True, device=device)
-    print(f"Epoch {epoch+1}/{CFG['epochs']} | {len(_all_indices)} molecules | full dynamics")
-    metrics = trainer.fit_epoch(loader, train=True, log_every=1)
+    epoch_indices = _epoch_indices(len(_all_indices), epoch, SHUFFLE_SEED)
+    if epoch == start_epoch and resume_batch_in_epoch > 0:
+        epoch_indices = epoch_indices[resume_batch_in_epoch:]
+        print(
+            f"Epoch {epoch+1}/{CFG['epochs']} | {len(_all_indices)} molecules | "
+            f"full dynamics | resuming from batch {resume_batch_in_epoch + 1}"
+        )
+    else:
+        print(f"Epoch {epoch+1}/{CFG['epochs']} | {len(_all_indices)} molecules | full dynamics")
+    loader = _make_loader(dataset, epoch_indices, shuffle=False, device=device)
+
+    def _on_batch_end(*, batch_index, total_batches, running_metrics, step_metrics, train):
+        if not (SAVE_EVERY_BATCH and train):
+            return
+        absolute_batch = resume_batch_in_epoch + batch_index if epoch == start_epoch else batch_index
+        _save_training_checkpoint(
+            BATCH_CKPT_PATH,
+            epoch=epoch,
+            batch_in_epoch=absolute_batch,
+            total_batches=len(_all_indices),
+            metrics_history=history,
+            last_batch_metrics=running_metrics,
+        )
+        _write_batch_metrics(
+            epoch=epoch,
+            batch_index=absolute_batch,
+            total_batches=len(_all_indices),
+            running_metrics=running_metrics,
+            step_metrics=step_metrics,
+        )
+
+    metrics = trainer.fit_epoch(loader, train=True, log_every=1, on_batch_end=_on_batch_end)
     history.append(metrics)
     print(f"\n── epoch {epoch+1} summary ──────────────────────────────────────")
     for _k in ["loss_total", "som_top1", "som_top2", "pred_rate",
@@ -506,15 +629,18 @@ for epoch in range(start_epoch, CFG["epochs"]):
     print()
 
     # ── save checkpoint after every epoch ──────────────────────────────────
-    _ckpt_payload: dict = {
-        "epoch": epoch + 1,
-        "model_state_dict": {k: v.cpu() for k, v in trainer.state_dict().items()},
-        "metrics_history": history,
-    }
-    if trainer.optimizer is not None:
-        _ckpt_payload["optimizer_state_dict"] = trainer.optimizer.state_dict()
-    torch.save(_ckpt_payload, CKPT_PATH)
+    _save_training_checkpoint(
+        CKPT_PATH,
+        epoch=epoch + 1,
+        batch_in_epoch=0,
+        total_batches=len(_all_indices),
+        metrics_history=history,
+        last_batch_metrics=metrics,
+    )
     print(f"  Checkpoint saved → {CKPT_PATH}")
+    if SAVE_EVERY_BATCH and BATCH_CKPT_PATH.exists():
+        BATCH_CKPT_PATH.unlink()
+    resume_batch_in_epoch = 0
 
 if device.type == "cuda":
     peak_mb = torch.cuda.max_memory_allocated(device) / 1024**2
