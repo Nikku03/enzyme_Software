@@ -357,10 +357,45 @@ class Metabolic_Causal_Trainer(nn.Module):
     # equivariant splatter kernel.  Both require full-rank gradients for 3-D stability.
     _PHYSICS_KEYWORDS = frozenset({"coupling_lambda", "reactive_scale", "alpha_raw", "alpha_species_bias", "tensor_splatter"})
     _QUERY_KEYWORDS = frozenset({"query_engine"})
+    _NO_DECAY_MODULE_KEYWORDS = frozenset({
+        "field_engine",
+        "siren_field",
+        "hamiltonian",
+        "navigator",
+        "potential",
+        "quantum_enforcer",
+        "symmetry_engine",
+        "refiner",
+        "solver",
+    })
+    _NO_DECAY_KEYWORDS = frozenset({
+        "bias",
+        "norm",
+        "embedding",
+        "log_vars",
+        "log_s",
+        "log_var",
+        "batchnorm",
+        "layernorm",
+        "instancenorm",
+        "groupnorm",
+    })
     # Heavy 512-dim layers: SIREN MLP, attention heads, DAG learner, hyper-network.
     # These get GaLore rank-128 projection.  Everything else in the electronic group
     # gets rank-32.  Only applies to ndim >= 2 parameters (weight matrices).
     _GALORE_DEEP_KEYWORDS = frozenset({"siren_field", "attention", "dag_learner", "hyper_net"})
+
+    def _should_decay_param(self, full_name: str, param: nn.Parameter) -> bool:
+        name = full_name.lower()
+        if any(kw in name for kw in self._PHYSICS_KEYWORDS):
+            return False
+        if any(kw in name for kw in self._QUERY_KEYWORDS):
+            return False
+        if any(kw in name for kw in self._NO_DECAY_MODULE_KEYWORDS):
+            return False
+        if any(kw in name for kw in self._NO_DECAY_KEYWORDS):
+            return False
+        return param.ndim >= 2
 
     def _split_parameter_groups(self) -> Dict[str, List[nn.Parameter]]:
         physics_params: List[nn.Parameter] = []
@@ -405,16 +440,37 @@ class Metabolic_Causal_Trainer(nn.Module):
         self._maybe_prepare_precision_runtime()
 
         if not self.use_galore:
-            # Plain AdamW — no SVD, safe on Colab / CPU.
-            # Enumerate submodules explicitly so gated_loss.log_s and loss_fn.log_vars
-            # are guaranteed to be in the optimizer regardless of PyTorch module-walk order.
-            all_params = self._unique(
-                [p for p in self.model.parameters() if p.requires_grad]
-                + [p for p in self.dag_learner.parameters() if p.requires_grad]
-                + [p for p in self.gated_loss.parameters() if p.requires_grad]
-                + [p for p in self.loss_fn.parameters() if p.requires_grad]
-            )
-            self.optimizer = torch.optim.AdamW(all_params, lr=1.0e-4, weight_decay=1.0e-5)
+            # Plain AdamW with targeted decay:
+            # decay only dense reasoning weights, never physics controls, query-engine
+            # routing, embeddings, norms, biases, or homoscedastic balance scalars.
+            decay_params: List[nn.Parameter] = []
+            no_decay_params: List[nn.Parameter] = []
+            seen: set[int] = set()
+            for source_prefix, module in [
+                ("model", self.model),
+                ("dag_learner", self.dag_learner),
+                ("gated_loss", self.gated_loss),
+                ("loss_fn", self.loss_fn),
+            ]:
+                for name, param in module.named_parameters():
+                    if not param.requires_grad:
+                        continue
+                    pid = id(param)
+                    if pid in seen:
+                        continue
+                    seen.add(pid)
+                    full_name = f"{source_prefix}.{name}"
+                    if self._should_decay_param(full_name, param):
+                        decay_params.append(param)
+                    else:
+                        no_decay_params.append(param)
+
+            param_groups = []
+            if decay_params:
+                param_groups.append({"params": decay_params, "lr": 1.0e-4, "weight_decay": 1.0e-5})
+            if no_decay_params:
+                param_groups.append({"params": no_decay_params, "lr": 1.0e-4, "weight_decay": 0.0})
+            self.optimizer = torch.optim.AdamW(param_groups, lr=1.0e-4, weight_decay=1.0e-5)
             if self.enable_wsd_scheduler and self.total_training_steps is not None:
                 self.scheduler = self._build_wsd_scheduler(self.optimizer, self.total_training_steps)
             return self.optimizer

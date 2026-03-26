@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 # NaN root causes are fully resolved (hypernetwork scale guards, 2nd-order
 # sqrt safety, checkpoint control-flow fix, prebuilt field override).
@@ -174,9 +174,13 @@ GPU_PROFILES = {
     },
 }
 CFG = GPU_PROFILES[GPU_PROFILE]
+CURRICULUM_EPOCHS = int(os.environ.get("NEXUS_COLAB_CURRICULUM_EPOCHS", "3"))
+CURRICULUM_SMALL_ATOMS = int(os.environ.get("NEXUS_COLAB_CURRICULUM_SMALL_ATOMS", "20"))
+CURRICULUM_MEDIUM_ATOMS = int(os.environ.get("NEXUS_COLAB_CURRICULUM_MEDIUM_ATOMS", "28"))
 
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn
 from nexus.training.causal_trainer import Metabolic_Causal_Trainer
+from nexus.training.losses import NEXUS_God_Loss
 
 
 def _canonical_smiles(mol) -> str | None:
@@ -240,6 +244,55 @@ def _collect_memory_bank_mols(target_sdf: Path, dataset: ZaretzkiMetabolicDatase
     )
     return list(unique_bank.values())
 
+
+def _dataset_atom_counts(dataset: ZaretzkiMetabolicDataset) -> list[int]:
+    return [int(mol.GetNumAtoms()) for mol in dataset.mols]
+
+
+def _curriculum_indices(
+    atom_counts: list[int],
+    *,
+    epoch_idx: int,
+    total_epochs: int,
+) -> tuple[list[int], str]:
+    total = len(atom_counts)
+    all_indices = list(range(total))
+    if total == 0 or total_epochs <= 1 or CURRICULUM_EPOCHS <= 0:
+        return all_indices, f"all ({total})"
+
+    sorted_indices = sorted(all_indices, key=lambda idx: (atom_counts[idx], idx))
+    min_subset = min(total, max(16, total // 4))
+
+    def _indices_below(max_atoms: int, fallback_fraction: float) -> list[int]:
+        selected = [idx for idx in all_indices if atom_counts[idx] <= max_atoms]
+        if len(selected) >= min_subset:
+            return selected
+        fallback = max(min_subset, int(round(total * fallback_fraction)))
+        return sorted_indices[: min(total, fallback)]
+
+    small_phase = min(CURRICULUM_EPOCHS, max(total_epochs - 2, 0))
+    medium_phase = min(total_epochs - 1, small_phase + 1) if total_epochs > 1 else 0
+
+    if epoch_idx < small_phase:
+        selected = _indices_below(CURRICULUM_SMALL_ATOMS, 0.50)
+        return selected, f"<= {CURRICULUM_SMALL_ATOMS} atoms ({len(selected)})"
+    if epoch_idx < medium_phase:
+        selected = _indices_below(CURRICULUM_MEDIUM_ATOMS, 0.75)
+        return selected, f"<= {CURRICULUM_MEDIUM_ATOMS} atoms ({len(selected)})"
+    return all_indices, f"all ({total})"
+
+
+def _make_loader(dataset, indices, *, shuffle: bool, device: torch.device) -> DataLoader:
+    subset = dataset if len(indices) == len(dataset) else Subset(dataset, indices)
+    return DataLoader(
+        subset,
+        batch_size=1,
+        shuffle=shuffle,
+        collate_fn=geometric_collate_fn,
+        num_workers=0,
+        pin_memory=(device.type == "cuda"),
+    )
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Training on: {device}\n")
 
@@ -251,20 +304,23 @@ if device.type == "cuda":
 
 # ── dataset ────────────────────────────────────────────────────────────────
 dataset = ZaretzkiMetabolicDataset(SDF, max_molecules=CFG["max_samples"])
-loader  = DataLoader(
-    dataset,
-    batch_size=1,
-    shuffle=True,
-    collate_fn=geometric_collate_fn,
-    num_workers=0,
-    pin_memory=(device.type == "cuda"),
-)
+atom_counts = _dataset_atom_counts(dataset)
+epoch_indices = [
+    _curriculum_indices(atom_counts, epoch_idx=epoch, total_epochs=CFG["epochs"])
+    for epoch in range(CFG["epochs"])
+]
+loader = _make_loader(dataset, list(range(len(dataset))), shuffle=True, device=device)
 print(f"Dataset : {len(dataset)} molecules")
 print(f"Profile : {GPU_PROFILE}  (override: NEXUS_COLAB_GPU_PROFILE=ultra_vram|high_vram|standard)")
 print(f"Physics mode : {CFG['physics_mode']}")
+if CFG["epochs"] > 1:
+    print("Curriculum : " + " | ".join(
+        f"epoch {epoch+1} {label}" for epoch, (_, label) in enumerate(epoch_indices)
+    ))
 
 # ── trainer ────────────────────────────────────────────────────────────────
 trainer = Metabolic_Causal_Trainer(
+    loss_fn=NEXUS_God_Loss(som_loss_mode="focal", focal_gamma=2.0),
     dynamics_steps=CFG["steps"],
     dynamics_dt=0.001,
     dynamics_summary_mode=CFG["physics_mode"],
@@ -320,7 +376,8 @@ trainer.memory_bank.populate_from_mols(_bank_mols)
 print(f"Memory bank ready: {len(trainer.memory_bank.historical_mols)} molecules.\n")
 del _bank_mols
 
-trainer.set_total_training_steps(CFG["epochs"] * max(len(loader), 1))
+total_training_steps = sum(max(len(indices), 1) for indices, _ in epoch_indices)
+trainer.set_total_training_steps(total_training_steps)
 trainer.configure_optimizers()
 if device.type == "cuda":
     torch.cuda.empty_cache()
@@ -330,6 +387,9 @@ print("Optimizer ready.\n")
 # ── training loop ──────────────────────────────────────────────────────────
 history = []
 for epoch in range(CFG["epochs"]):
+    indices, label = epoch_indices[epoch]
+    loader = _make_loader(dataset, indices, shuffle=True, device=device)
+    print(f"Epoch {epoch+1}/{CFG['epochs']} curriculum : {label}")
     metrics = trainer.fit_epoch(loader, train=True, log_every=1)
     history.append(metrics)
     print(f"\n── epoch {epoch+1} summary ──────────────────────────────────────")

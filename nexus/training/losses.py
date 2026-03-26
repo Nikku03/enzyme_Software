@@ -66,6 +66,40 @@ class ListMLERankingLoss(nn.Module):
         return -log_probs[true_mask].mean()
 
 
+class SoftmaxFocalLoss(nn.Module):
+    def __init__(
+        self,
+        gamma: float = 2.0,
+        alpha: Optional[float] = None,
+        eps: float = 1.0e-12,
+    ) -> None:
+        super().__init__()
+        self.gamma = float(gamma)
+        self.alpha = None if alpha is None else float(alpha)
+        self.eps = float(eps)
+
+    def forward(
+        self,
+        logits: torch.Tensor,
+        target_index: torch.Tensor | int,
+    ) -> torch.Tensor:
+        if logits.ndim != 2:
+            raise ValueError("logits must have shape [B, N]")
+        batch = logits.size(0)
+        target = torch.as_tensor(target_index, device=logits.device, dtype=torch.long).view(-1)
+        if target.numel() == 1 and batch > 1:
+            target = target.expand(batch)
+        if target.numel() != batch:
+            raise ValueError("target_index must provide one target per batch item")
+        log_probs = F.log_softmax(logits, dim=-1)
+        target_log_probs = log_probs.gather(-1, target.unsqueeze(-1)).squeeze(-1)
+        target_probs = target_log_probs.exp().clamp_min(self.eps)
+        focal_factor = (1.0 - target_probs).pow(self.gamma)
+        if self.alpha is not None:
+            focal_factor = focal_factor * self.alpha
+        return -(focal_factor * target_log_probs).mean()
+
+
 class NEXUS_God_Loss(nn.Module):
     def __init__(
         self,
@@ -74,6 +108,8 @@ class NEXUS_God_Loss(nn.Module):
         log_var_min: float = -10.0,
         log_var_max: float = 10.0,
         som_loss_mode: str = "listmle",
+        focal_gamma: float = 2.0,
+        focal_alpha: Optional[float] = None,
     ) -> None:
         super().__init__()
         self.beta = float(beta)
@@ -83,6 +119,7 @@ class NEXUS_God_Loss(nn.Module):
         self.som_loss_mode = str(som_loss_mode).lower()
         self.log_vars = nn.Parameter(torch.zeros(6))
         self.ranking_loss_fn = ListMLERankingLoss()
+        self.focal_loss_fn = SoftmaxFocalLoss(gamma=focal_gamma, alpha=focal_alpha)
 
     def compute_som_loss(
         self,
@@ -95,6 +132,8 @@ class NEXUS_God_Loss(nn.Module):
         logits = -(float(self.beta if beta is None else beta)) * delta_E_tensor
         if self.som_loss_mode == "listmle":
             return self.ranking_loss_fn(logits, true_som_idx)
+        if self.som_loss_mode == "focal":
+            return self.focal_loss_fn(logits.unsqueeze(0), true_som_idx)
         target = torch.as_tensor(true_som_idx, device=delta_E_tensor.device, dtype=torch.long).view(1)
         return F.cross_entropy(logits.unsqueeze(0), target)
 
