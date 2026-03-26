@@ -82,6 +82,10 @@ def _normalize_profile_name(value: str) -> str:
         "standard": "standard",
         "high_vram": "high_vram",
         "ultra_vram": "ultra_vram",
+        "l4": "l4",
+        "l4_24gb": "l4",
+        "rtx3090": "l4",
+        "rtx4090": "l4",
     }
     return aliases.get(value.strip().lower(), "auto")
 
@@ -108,15 +112,17 @@ def _detect_gpu_profile() -> str:
                 "(set NEXUS_COLAB_STRICT_PROFILE=1 to force high_vram)."
             )
             return "ultra_vram"
-    if normalized in {"standard", "high_vram", "ultra_vram"}:
+    if normalized in {"standard", "l4", "high_vram", "ultra_vram"}:
         return normalized
     if torch.cuda.is_available():
         props = torch.cuda.get_device_properties(0)
         total_gb = props.total_memory / 1024**3
         if total_gb >= 70.0:   # A100-80GB, H100-80GB, H100 SXM5-94GB, …
             return "ultra_vram"
-        if total_gb >= 35.0:   # A100-40GB, L40S, …
+        if total_gb >= 35.0:   # A100-40GB, L40S-48GB, …
             return "high_vram"
+        if total_gb >= 20.0:   # L4-24GB, RTX 3090/4090-24GB, …
+            return "l4"
     return "standard"
 
 
@@ -151,6 +157,35 @@ GPU_PROFILES = {
         "scan_chunk": 6,
         "scan_shells": (0.5, 1.0),
         "scan_refine_steps": 0,
+    },
+    # ── 20–34 GB (L4-24GB, RTX 3090/4090-24GB) ─────────────────────────────
+    # Designed for a 6–7 hour training window.  Key constraints vs ultra_vram:
+    #   * dynamics_steps=1  — halves the create_graph ODE graph depth and VRAM
+    #   * integration_resolution=10 (1000 pts) vs 12³=1728 for ultra
+    #   * 3 scan shells vs 4; 16 scan points vs 24
+    #   * nav_opt_steps=2, nav_candidates=3 (full epochs); epoch-adaptive logic
+    #     in the training loop starts even lighter (opt=1, cand=2) for epoch 4
+    #   * low_memory=False so the adaptive logic controls per-epoch mode:
+    #       epochs 1-3 → scan-only (~25-40 min each)
+    #       epoch  4   → dynamics on ≤28-atom molecules only (~2 hrs)
+    #       epochs 5-6 → full dynamics, all molecules (~3-4 hrs each)
+    #     Checkpointing means a second 6-hr session completes the run.
+    "l4": {
+        "max_samples": 64,
+        "epochs": 6,
+        "steps": 1,
+        "physics_mode": "lite",
+        "low_memory": False,
+        "checkpoint": False,
+        "integration_resolution": 10,
+        "integration_chunk": 64,
+        "scan_n_points": 16,
+        "scan_radius": 1.5,
+        "scan_chunk": 8,
+        "scan_shells": (0.40, 0.65, 1.00),
+        "scan_refine_steps": 1,
+        "nav_opt_steps": 2,
+        "nav_candidates": 3,
     },
     # ── 85+ GB (H100 SXM5, A100-80, Blackwell 96GB, etc.) ──────────────────
     # Full physics quality, but trimmed to stay near an 85–90 GB envelope
@@ -334,7 +369,7 @@ epoch_indices = [
 ]
 loader = _make_loader(dataset, list(range(len(dataset))), shuffle=True, device=device)
 print(f"Dataset : {len(dataset)} molecules")
-print(f"Profile : {GPU_PROFILE}  (override: NEXUS_COLAB_GPU_PROFILE=ultra_vram|high_vram|standard)")
+print(f"Profile : {GPU_PROFILE}  (override: NEXUS_COLAB_GPU_PROFILE=ultra_vram|high_vram|l4|standard)")
 print(f"Physics mode : {CFG['physics_mode']}")
 if CFG["epochs"] > 1:
     print("Curriculum : " + " | ".join(
