@@ -27,6 +27,14 @@ from .baseline_memory import MemoryRetrievalResult, _extract_som_idx, _morgan_fp
 from .pgw_transport import PGWTransporter
 
 
+def _canonical_smiles(mol) -> str | None:
+    try:
+        base = Chem.RemoveHs(Chem.Mol(mol))
+        return Chem.MolToSmiles(base, canonical=True, isomericSmiles=True)
+    except Exception:
+        return None
+
+
 class HyperbolicMemoryBank:
     """
     Poincare-ball memory bank with MCS-guided SoM transport.
@@ -70,6 +78,7 @@ class HyperbolicMemoryBank:
 
         self.historical_mols: List = []
         self.historical_soms: List[int] = []
+        self.historical_smiles: List[str | None] = []
         self.memory_embeddings: torch.Tensor | None = None
         self.memory_fingerprints: torch.Tensor | None = None
         self.memory_bit_counts: torch.Tensor | None = None
@@ -137,6 +146,7 @@ class HyperbolicMemoryBank:
             fps.append(fp)
             self.historical_mols.append(mol)
             self.historical_soms.append(som_idx)
+            self.historical_smiles.append(_canonical_smiles(mol))
 
         if not fps:
             raise RuntimeError("No labelled molecules found — hyperbolic memory bank is empty.")
@@ -187,15 +197,24 @@ class HyperbolicMemoryBank:
                     pass
         return analogical_pred, transport_ok, mcs_size
 
-    def retrieve_and_transport(self, query_mol) -> MemoryRetrievalResult:
+    def retrieve_and_transport(self, query_mol, query_smiles: str | None = None) -> MemoryRetrievalResult:
         if self.memory_embeddings is None:
             raise RuntimeError("Call populate_from_mols() before retrieve_and_transport().")
 
         q_fp = _morgan_fp_tensor(query_mol, radius=self.fp_radius, n_bits=self.fp_bits)
         tanimoto_scores = self._tanimoto_similarity(q_fp)
+        query_key = query_smiles or _canonical_smiles(query_mol)
+        if query_key is not None and self.historical_smiles:
+            same_query = torch.tensor(
+                [s == query_key for s in self.historical_smiles],
+                dtype=torch.bool,
+                device=tanimoto_scores.device,
+            )
+            if bool(same_query.any().item()):
+                tanimoto_scores = tanimoto_scores.masked_fill(same_query, -1.0)
         shortlist_k = min(self.tanimoto_shortlist_k, len(self.historical_mols))
         top_tanimoto, shortlist_indices = torch.topk(tanimoto_scores, shortlist_k, largest=True)
-        best_tanimoto = float(top_tanimoto[0].item()) if shortlist_k > 0 else 0.0
+        best_tanimoto = float(top_tanimoto[0].item()) if shortlist_k > 0 else -1.0
         best_shortlist_idx = int(shortlist_indices[0].item()) if shortlist_k > 0 else 0
 
         if best_tanimoto < self.tanimoto_prefilter_threshold:

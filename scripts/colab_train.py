@@ -141,6 +141,13 @@ def _env_shells(name: str, default: tuple[float, ...]) -> tuple[float, ...]:
     return tuple(parts) if parts else default
 
 
+def _env_str(name: str, default: str = "") -> str:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip()
+
+
 def _detect_gpu_profile() -> str:
     env = os.environ.get("NEXUS_COLAB_GPU_PROFILE", "auto").strip().lower()
     normalized = _normalize_profile_name(env)
@@ -269,6 +276,7 @@ CFG["scan_shells"] = _env_shells("NEXUS_COLAB_SCAN_SHELLS", CFG["scan_shells"])
 CFG["scan_refine_steps"] = max(_env_int("NEXUS_COLAB_SCAN_REFINE_STEPS", CFG["scan_refine_steps"]), 0)
 CFG["nav_opt_steps"] = max(_env_int("NEXUS_COLAB_NAV_OPT_STEPS", CFG.get("nav_opt_steps", 6)), 0)
 CFG["nav_candidates"] = max(_env_int("NEXUS_COLAB_NAV_CANDIDATES", CFG.get("nav_candidates", 8)), 0)
+TARGET_ISOFORM = _env_str("NEXUS_COLAB_TARGET_ISOFORM", "")
 
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn
 from nexus.training.causal_trainer import Metabolic_Causal_Trainer
@@ -359,8 +367,18 @@ if device.type == "cuda":
     torch.cuda.reset_peak_memory_stats(device)
 
 # ── dataset — all 9 CYP isoforms ───────────────────────────────────────────
+_train_sdfs = _ALL_SDFS
+if TARGET_ISOFORM:
+    _target_name = TARGET_ISOFORM.removesuffix(".sdf")
+    _target_path = _SDF_DIR / f"{_target_name}.sdf"
+    if not _target_path.exists():
+        raise FileNotFoundError(
+            f"NEXUS_COLAB_TARGET_ISOFORM={TARGET_ISOFORM!r} did not match {_target_path}"
+        )
+    _train_sdfs = [_target_path]
+
 _sub_datasets = []
-for _sdf in _ALL_SDFS:
+for _sdf in _train_sdfs:
     try:
         _sub_datasets.append(ZaretzkiMetabolicDataset(_sdf, max_molecules=CFG["max_samples"]))
     except Exception as _sdf_err:
@@ -371,6 +389,7 @@ loader = _make_loader(dataset, _all_indices, shuffle=True, device=device)
 print(f"Dataset : {len(dataset)} molecules")
 print(f"Profile : {GPU_PROFILE}  (override: NEXUS_COLAB_GPU_PROFILE=ultra_vram|high_vram|l4|standard)")
 print(f"Physics mode : {CFG['physics_mode']}")
+print(f"Training source : {', '.join(_sdf.name for _sdf in _train_sdfs)}")
 print(
     "Runtime knobs : "
     f"max_samples/isoform={CFG['max_samples']}  "

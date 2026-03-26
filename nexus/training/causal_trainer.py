@@ -1346,7 +1346,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                 from rdkit import Chem as _Chem
                 _query_mol = _Chem.MolFromSmiles(smiles)
                 if _query_mol is not None:
-                    _result = self.memory_bank.retrieve_and_transport(_query_mol)
+                    _result = self.memory_bank.retrieve_and_transport(_query_mol, query_smiles=smiles)
                     # Re-index pred_ana (SMILES atom order) onto the scan's
                     # descending-reactivity-sorted atom order so target_idx
                     # (= true_row_index) aligns with pred_fp (= effective_reactivity).
