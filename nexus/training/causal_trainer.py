@@ -116,8 +116,8 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.compiled_module_names: List[str] = []
         self.register_buffer("global_step_counter", torch.zeros((), dtype=torch.long))
         self.gated_loss = GatedAnalogicalGodLoss(
-            confidence_threshold=0.9,
-            peak_threshold=0.2,
+            confidence_threshold=0.85,
+            peak_threshold=0.09,
         )
         # Memory bank is populated externally (trainer.memory_bank.populate_from_mols)
         # before training begins.  Left empty here so training still runs without it.
@@ -1021,8 +1021,9 @@ class Metabolic_Causal_Trainer(nn.Module):
                     flush=True,
                 )
             # ────────────────────────────────────────────────────────────────────
-            h_initial = self._sanitize_tensor(_h_raw,
-                nan=25.0,
+            _n_atoms = max(int(_q_fp32.shape[0]), 1)
+            h_initial = self._sanitize_tensor(_h_raw / _n_atoms,
+                nan=2.5,
                 posinf=100.0,
                 neginf=-100.0,
                 clamp=(-100.0, 100.0),
@@ -1073,8 +1074,9 @@ class Metabolic_Causal_Trainer(nn.Module):
 
             sobolev_report = self.field_optimizer(field, module1_out.manifold)
             pred_rate = self._sanitize_tensor(self._to_fp32(pred_rate), nan=1.0e-12, posinf=1.0, neginf=1.0e-12, clamp=(1.0e-12, 1.0))
-            h_initial = self._sanitize_tensor(self._to_fp32(h_initial), nan=25.0, posinf=100.0, neginf=-100.0, clamp=(-100.0, 100.0))
-            h_final = self._sanitize_tensor(self._to_fp32(h_final), nan=25.0, posinf=100.0, neginf=-100.0, clamp=(-100.0, 100.0))
+            _n_atoms_dyn = max(int(q_init_internal.shape[0]), 1)
+            h_initial = self._sanitize_tensor(self._to_fp32(h_initial) / _n_atoms_dyn, nan=2.5, posinf=100.0, neginf=-100.0, clamp=(-100.0, 100.0))
+            h_final = self._sanitize_tensor(self._to_fp32(h_final) / _n_atoms_dyn, nan=2.5, posinf=100.0, neginf=-100.0, clamp=(-100.0, 100.0))
             ts_eigenvalues = self._sanitize_tensor(self._to_fp32(ts_eigenvalues), nan=0.0, posinf=100.0, neginf=-100.0, clamp=(-100.0, 100.0))
             delta_E_tensor = self._sanitize_tensor(-effective_reactivity, clamp=(-100.0, 100.0))
             sobolev_report = FieldGradientOptimizationReport(
