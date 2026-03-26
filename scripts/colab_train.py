@@ -467,6 +467,11 @@ if device.type == "cuda":
     peak_mb = torch.cuda.max_memory_allocated(device) / 1024**2
     print(f"Peak GPU memory : {peak_mb:.1f} MB")
 
-out = _REPO_DIR / "colab_train_metrics.json"
-out.write_text(json.dumps(history, indent=2))
-print(f"Metrics saved -> {out}")
+# ── save metrics log alongside the checkpoint (persistent if Drive is mounted) ──
+# history already contains all epochs from previous sessions (loaded from checkpoint),
+# so this file always reflects the complete training history across all sessions.
+_log_path = CKPT_PATH.parent / "nexus_colab_metrics.json"
+_log_path.write_text(json.dumps(history, indent=2))
+print(f"Metrics log saved → {_log_path}")
+# Also keep a local copy for easy inspection inside the repo dir.
+(_REPO_DIR / "colab_train_metrics.json").write_text(json.dumps(history, indent=2))
