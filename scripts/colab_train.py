@@ -142,25 +142,29 @@ GPU_PROFILES = {
         "scan_shells": (0.5, 1.0),
         "scan_refine_steps": 0,
     },
-    # ── 85+ GB (H100 SXM5, etc.) ─────────────────────────────────────────────
-    # Full physics quality: CliffordLie dynamics rollout re-enabled (not skipped),
-    # gradient checkpointing to keep activation memory bounded, all 5 scan
-    # shells restored, and a higher-resolution quantum grid.
-    # Measured baseline at high_vram: ~36 GB.  Ultra adds ~20-25 GB headroom
-    # usage, landing well under 90 GB.
+    # ── 85+ GB (H100 SXM5, A100-80, etc.) ───────────────────────────────────
+    # Full physics quality: CliffordLie dynamics rollout re-enabled, all 5
+    # scan shells, higher-resolution quantum grid.
+    # checkpoint=False: the prebuilt-field override (746f305 / b238f3f) means
+    # dynamics no longer rebuilds the SIREN on every solver step, so activation
+    # memory is small enough that checkpointing buys nothing.  Checkpointing
+    # _dynamics_summary is also incompatible with the fallback path, which calls
+    # energy_and_forces → autograd.grad inside the checkpointed region, causing
+    # a dtype mismatch (float64 forward vs float32 recomputation) on every
+    # molecule that triggers the fallback.
     "ultra_vram": {
         "max_samples": 64,
         "epochs": 5,
-        "steps": 3,            # 3 Hamiltonian integration steps (was 1)
+        "steps": 3,
         "physics_mode": "full",
-        "low_memory": False,   # full CliffordLie rollout (was skipped)
-        "checkpoint": True,    # gradient checkpointing trades ~40% compute for ~50% less activation memory
-        "integration_resolution": 14,   # 14³=2744 pts (was 1000)
+        "low_memory": False,
+        "checkpoint": False,
+        "integration_resolution": 14,
         "integration_chunk": 256,
-        "scan_n_points": 48,   # 4× more scan pts (was 12)
-        "scan_radius": 2.5,    # full pocket radius (was 1.0)
+        "scan_n_points": 48,
+        "scan_radius": 2.5,
         "scan_chunk": 24,
-        "scan_shells": (0.35, 0.55, 0.75, 0.90, 1.00),   # all 5 shells (was 2)
+        "scan_shells": (0.35, 0.55, 0.75, 0.90, 1.00),
         "scan_refine_steps": 2,
     },
 }
