@@ -1175,17 +1175,11 @@ class Metabolic_Causal_Trainer(nn.Module):
                 ts_eigenvalues = F.pad(ts_eigenvalues.view(-1), (0, 2 - ts_eigenvalues.numel()))
             else:
                 ts_eigenvalues = ts_eigenvalues.view(-1)
-            sobolev_report = self.field_optimizer(field, module1_out.manifold)
+            # Cached-physics mode already provides the expensive dynamics targets.
+            # Skip the live Sobolev field optimizer here; it rebuilds a large
+            # higher-order graph and largely defeats the cache's memory savings.
+            sobolev_report = self._zero_sobolev_report(module1_out.manifold)
             delta_E_tensor = self._sanitize_tensor(-effective_reactivity, clamp=(-100.0, 100.0))
-            sobolev_report = FieldGradientOptimizationReport(
-                gradient_loss=self._sanitize_tensor(sobolev_report.gradient_loss, clamp=(0.0, 100.0)),
-                spectral_penalty=self._sanitize_tensor(sobolev_report.spectral_penalty, clamp=(0.0, 100.0)),
-                alpha_calibration_loss=self._sanitize_tensor(sobolev_report.alpha_calibration_loss, clamp=(0.0, 100.0)),
-                total_loss=self._sanitize_tensor(sobolev_report.total_loss, clamp=(0.0, 100.0)),
-                atomic_gradients=self._sanitize_tensor(sobolev_report.atomic_gradients, clamp=(-100.0, 100.0)),
-                vacuum_values=self._sanitize_tensor(sobolev_report.vacuum_values, clamp=(-100.0, 100.0)),
-                vacuum_gradients=self._sanitize_tensor(sobolev_report.vacuum_gradients, clamp=(-100.0, 100.0)),
-            )
         elif low_memory_train:
             self.last_dynamics_fallback = True
             self.last_checkpoint_fallback = True
