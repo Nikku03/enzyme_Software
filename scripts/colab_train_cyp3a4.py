@@ -135,6 +135,42 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_DAG_LOSS_WEIGHT": "0.10",
         "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
         "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
+        "NEXUS_COLAB_ALLOW_COMPILE": "1",
+        "NEXUS_COLAB_NUM_WORKERS": "2",
+    },
+    # 20 epochs on a single RTX 6000 Ada (95 GB) targeting ~2 hours.
+    # Key levers vs full_3a4_a100:
+    #   1. torch.compile on SIREN field (the hot loop) → 2-4× SIREN speedup
+    #   2. TF32 matmuls enabled at startup → 20-30% free
+    #   3. Physics curriculum (NEXUS_COLAB_CURRICULUM=1):
+    #        epochs 1-7   (lite)   : res=4, scan_pts=6, 1 outer shell
+    #        epochs 8-14  (medium) : res=6, scan_pts=8, both shells
+    #        epochs 15-20 (full)   : res=8, scan_pts=10, both shells
+    #   4. num_workers=2: background data loading overlaps GPU compute
+    #   5. integration_chunk=256: processes all 512 pts in 2 large GPU passes
+    #      (vs many small chunks) — better GPU occupancy
+    #   6. dynamics_steps=1 (vs 2 in full_3a4_a100) — halves dynamics cost
+    "rtx6k_2h": {
+        "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
+        "NEXUS_COLAB_TARGET_ISOFORM": "3A4",
+        "NEXUS_COLAB_MAX_SAMPLES": "0",
+        "NEXUS_COLAB_EPOCHS": "20",
+        "NEXUS_COLAB_DYNAMICS_STEPS": "1",
+        "NEXUS_COLAB_INTEGRATION_RESOLUTION": "8",
+        "NEXUS_COLAB_INTEGRATION_CHUNK": "256",
+        "NEXUS_COLAB_SCAN_N_POINTS": "10",
+        "NEXUS_COLAB_SCAN_RADIUS": "1.5",
+        "NEXUS_COLAB_SCAN_CHUNK": "10",
+        "NEXUS_COLAB_SCAN_SHELLS": "0.45,1.00",
+        "NEXUS_COLAB_SCAN_REFINE_STEPS": "0",
+        "NEXUS_COLAB_NAV_OPT_STEPS": "1",
+        "NEXUS_COLAB_NAV_CANDIDATES": "2",
+        "NEXUS_COLAB_DAG_LOSS_WEIGHT": "0.10",
+        "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
+        "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
+        "NEXUS_COLAB_ALLOW_COMPILE": "1",
+        "NEXUS_COLAB_NUM_WORKERS": "2",
+        "NEXUS_COLAB_CURRICULUM": "1",
     },
 }
 

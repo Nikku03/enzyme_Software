@@ -32,6 +32,11 @@ warnings.filterwarnings(
 # set_detect_anomaly is NOT enabled — it adds 2-5× overhead.
 
 os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
+# TF32: ~20-30% free speedup on A100/RTX Ada for float32 and BF16 matmuls
+# with minimal accuracy loss (19-bit mantissa vs 23-bit). Safe for SoM training.
+if torch.cuda.is_available():
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
 
 # ── ensure repo root is on sys.path ────────────────────────────────────────
 _REPO_DIR = Path("/content/enzyme_Software")
@@ -329,6 +334,9 @@ SHUFFLE_SEED = _env_int("NEXUS_COLAB_SHUFFLE_SEED", 42)
 DAG_LOSS_WEIGHT = _env_float("NEXUS_COLAB_DAG_LOSS_WEIGHT", 1.0)
 DAG_LOSS_CAP = _env_float("NEXUS_COLAB_DAG_LOSS_CAP", 4.0)
 ANA_LOSS_WEIGHT = _env_float("NEXUS_COLAB_ANA_LOSS_WEIGHT", 1.0)
+ALLOW_COMPILE = _env_bool("NEXUS_COLAB_ALLOW_COMPILE", False)
+DATA_NUM_WORKERS = _env_int("NEXUS_COLAB_NUM_WORKERS", 0)
+CURRICULUM_PHYSICS = _env_bool("NEXUS_COLAB_CURRICULUM", False)
 
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn
 from nexus.training.causal_trainer import Metabolic_Causal_Trainer
@@ -405,7 +413,8 @@ def _make_loader(dataset, indices, *, shuffle: bool, device: torch.device) -> Da
         batch_size=1,
         shuffle=shuffle,
         collate_fn=geometric_collate_fn,
-        num_workers=0,
+        num_workers=DATA_NUM_WORKERS,
+        persistent_workers=(DATA_NUM_WORKERS > 0),
         pin_memory=(device.type == "cuda"),
     )
 
@@ -488,7 +497,7 @@ trainer = Metabolic_Causal_Trainer(
     enable_wsd_scheduler=True,
     low_memory_train_mode=CFG["low_memory"],
     low_memory_scan_gradients=(GPU_PROFILE in {"high_vram", "ultra_vram"}),
-    enable_static_compile=False,  # torch.compile is unsafe on Colab
+    enable_static_compile=ALLOW_COMPILE,  # safe on dedicated GPUs; set NEXUS_COLAB_ALLOW_COMPILE=1
     use_galore=False,             # plain AdamW — avoids GaLore SVD on Colab
     dag_loss_weight=DAG_LOSS_WEIGHT,
     dag_loss_cap=DAG_LOSS_CAP,
@@ -529,6 +538,43 @@ print(
     f"candidates={nav.candidate_batch}  "
     f"(total trajectories/atom ≈ {nav.optimization_steps + 1 + nav.candidate_batch + 1})"
 )
+
+# ── physics curriculum ─────────────────────────────────────────────────────
+# Progressively increases quantum/scan resolution over training epochs.
+# Phase 1 (first 35%): coarse fields — 60% of configured resolution.
+#   The model is far from any solution; coarse gradients are just as useful.
+# Phase 2 (35-70%): 80% resolution + all scan shells — model has direction.
+# Phase 3 (70-100%): full configured physics — fine-grain polish.
+# Enable by setting NEXUS_COLAB_CURRICULUM=1. Safe to combine with ALLOW_COMPILE.
+def _apply_physics_curriculum(epoch: int, total_epochs: int) -> None:
+    if not CURRICULUM_PHYSICS:
+        return
+    phase = epoch / max(total_epochs, 1)
+    if phase < 0.35:
+        _res  = max(4, int(CFG["integration_resolution"] * 0.60))
+        _pts  = max(4, int(CFG["scan_n_points"] * 0.60))
+        _shls = CFG["scan_shells"][-1:]  # outer shell only
+        _ref  = 0
+    elif phase < 0.70:
+        _res  = max(6, int(CFG["integration_resolution"] * 0.80))
+        _pts  = max(6, int(CFG["scan_n_points"] * 0.80))
+        _shls = CFG["scan_shells"]
+        _ref  = 0
+    else:
+        _res  = CFG["integration_resolution"]
+        _pts  = CFG["scan_n_points"]
+        _shls = CFG["scan_shells"]
+        _ref  = CFG["scan_refine_steps"]
+    qe.integration_resolution = _res
+    se.n_points   = _pts
+    se.shell_fractions = _shls
+    se.refine_steps    = _ref
+    _tag = "lite" if phase < 0.35 else "medium" if phase < 0.70 else "full"
+    print(
+        f"  [curriculum={_tag}]  integration_res={_res}  "
+        f"scan_pts={_pts}  shells={len(_shls)}  refine={_ref}"
+    )
+
 
 # ── memory bank — ALL labeled molecules from ALL 9 CYP isoforms (uncapped) ──
 # The bank uses only ECFP4 fingerprints, so loading all molecules is cheap.
@@ -661,6 +707,7 @@ if SAVE_EVERY_BATCH and BATCH_CKPT_PATH.exists():
 
 # ── training loop ──────────────────────────────────────────────────────────
 for epoch in range(start_epoch, CFG["epochs"]):
+    _apply_physics_curriculum(epoch, CFG["epochs"])
     epoch_indices = _epoch_indices(len(_all_indices), epoch, SHUFFLE_SEED)
     if epoch == start_epoch and resume_batch_in_epoch > 0:
         epoch_indices = epoch_indices[resume_batch_in_epoch:]
