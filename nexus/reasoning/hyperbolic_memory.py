@@ -377,6 +377,13 @@ class HyperbolicMemoryBank:
                     transport_succeeded=False,
                     mcs_size=0,
                     embedding_space="hyperbolic" if projected_ready else "euclidean",
+                    transport_backend="prefilter_reject",
+                    transport_support_size=0,
+                    transported_mass=0.0,
+                    retrieved_same_query=(
+                        query_key is not None
+                        and self.historical_smiles[best_shortlist_idx] == query_key
+                    ),
                 )
 
             # ── mechanism-aware re-ranking (optional) ─────────────────────
@@ -466,10 +473,16 @@ class HyperbolicMemoryBank:
             analogical_pred = pgw_result.analogical_pred
             transport_ok = pgw_result.transport_succeeded
             support_size = pgw_result.support_size
+            transport_backend = pgw_result.transport_backend
+            transported_mass = pgw_result.transported_mass
             if (not transport_ok) and self.fallback_to_mcs:
                 analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
+                transport_backend = "mcs_fallback"
+                transported_mass = 0.0
         else:
             analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
+            transport_backend = "mcs"
+            transported_mass = 0.0
 
         return MemoryRetrievalResult(
             analogical_pred=analogical_pred,
@@ -481,6 +494,10 @@ class HyperbolicMemoryBank:
             query_embed=query_embed,
             retrieved_embed_detached=retrieved_embed_detached,
             embedding_space="hyperbolic" if projected_ready else "euclidean",
+            transport_backend=transport_backend,
+            transport_support_size=support_size,
+            transported_mass=transported_mass,
+            retrieved_same_query=(query_key is not None and self.historical_smiles[best_idx] == query_key),
         )
 
     def batch_stats(self, mols: List, true_soms: List[int]) -> dict:

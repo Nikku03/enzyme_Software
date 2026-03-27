@@ -82,6 +82,10 @@ class MemoryRetrievalResult:
     query_embed: Optional[torch.Tensor] = None          # [embed_dim] MechanismEncoder output for query
     retrieved_embed_detached: Optional[torch.Tensor] = None  # [embed_dim] detached encoder output for retrieved mol
     embedding_space: str = "euclidean"
+    transport_backend: str = "mcs"
+    transport_support_size: int = 0
+    transported_mass: float = 0.0
+    retrieved_same_query: bool = False
 
 
 class BaselineMemoryBank:
