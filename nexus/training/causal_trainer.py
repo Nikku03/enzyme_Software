@@ -82,6 +82,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         dag_loss_weight: float = 1.0,
         dag_loss_cap: float = 4.0,
         analogical_loss_weight: float = 1.0,
+        physics_cache_mode: str = "off",
     ) -> None:
         super().__init__()
         self.model = model or NEXUS_Dynamics_Engine()
@@ -115,6 +116,10 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.dag_loss_weight = float(max(dag_loss_weight, 0.0))
         self.dag_loss_cap = float(max(dag_loss_cap, 0.0))
         self.analogical_loss_weight = float(max(analogical_loss_weight, 0.0))
+        self.physics_cache_mode = str(physics_cache_mode).strip().lower() or "off"
+        if self.physics_cache_mode not in {"off", "cached", "hybrid"}:
+            self.physics_cache_mode = "off"
+        self.physics_cache: Dict[str, Dict[str, Any]] = {}
         self.optimizer: Optional[torch.optim.Optimizer] = None
         self.scheduler: Optional[torch.optim.lr_scheduler.LambdaLR] = None
         self.total_training_steps: Optional[int] = None
@@ -146,6 +151,56 @@ class Metabolic_Causal_Trainer(nn.Module):
         if not self._autocast_enabled():
             return nullcontext()
         return torch.autocast(device_type="cuda", dtype=torch.bfloat16)
+
+    @staticmethod
+    def physics_cache_key(smiles: str, true_atom_index: int) -> str:
+        return f"{smiles}::atom={int(true_atom_index)}"
+
+    def set_physics_cache(self, entries: Mapping[str, Any], *, mode: Optional[str] = None) -> int:
+        if mode is not None:
+            resolved_mode = str(mode).strip().lower() or "off"
+            self.physics_cache_mode = resolved_mode if resolved_mode in {"off", "cached", "hybrid"} else "off"
+        normalized: Dict[str, Dict[str, Any]] = {}
+        for key, value in dict(entries).items():
+            if not isinstance(key, str):
+                continue
+            if isinstance(value, Mapping):
+                normalized[key] = dict(value)
+        self.physics_cache = normalized
+        return len(self.physics_cache)
+
+    def load_physics_cache(self, path: str | Path, *, mode: Optional[str] = None) -> int:
+        payload = torch.load(Path(path), map_location="cpu")
+        entries = payload.get("entries", payload) if isinstance(payload, Mapping) else {}
+        if not isinstance(entries, Mapping):
+            raise TypeError("Physics cache must be a mapping or contain an 'entries' mapping")
+        return self.set_physics_cache(entries, mode=mode)
+
+    def _lookup_physics_cache(
+        self,
+        smiles: str,
+        true_atom_index: torch.Tensor | int,
+        *,
+        device: torch.device,
+    ) -> Optional[Dict[str, torch.Tensor]]:
+        if self.physics_cache_mode == "off" or not self.physics_cache:
+            return None
+        key = self.physics_cache_key(smiles, int(torch.as_tensor(true_atom_index).detach().cpu().item()))
+        entry = self.physics_cache.get(key)
+        if entry is None:
+            if self.physics_cache_mode == "cached":
+                raise KeyError(f"Missing physics cache entry for {key}")
+            return None
+        out: Dict[str, torch.Tensor] = {}
+        for name, value in entry.items():
+            if torch.is_tensor(value):
+                tensor = value.detach().to(device=device)
+            else:
+                tensor = torch.as_tensor(value, device=device)
+            if tensor.is_floating_point():
+                tensor = tensor.to(dtype=torch.float32)
+            out[name] = tensor
+        return out
 
     def _compile_target_specs(self) -> List[tuple[str, nn.Module, str]]:
         targets: List[tuple[str, nn.Module, str]] = []
@@ -983,6 +1038,11 @@ class Metabolic_Causal_Trainer(nn.Module):
         device = module1_out.manifold.pos.device
         true_atom_index = self._resolve_true_atom_index(batch, device=device)
         true_row_index = self._scan_row_index(module1_out.scan.atom_indices, true_atom_index)
+        physics_cache_entry = self._lookup_physics_cache(
+            smiles,
+            true_atom_index,
+            device=device,
+        )
         # som_coordinates / alignment_score are sorted by descending effective_reactivity;
         # _build_pocket_encoding expects a rank in that sorted order.
         true_ranked_index = self._scan_row_index(module1_out.ranked_atom_indices, true_atom_index)
@@ -1045,7 +1105,83 @@ class Metabolic_Causal_Trainer(nn.Module):
         )
 
         low_memory_train = self.low_memory_train_mode and self.training
-        if low_memory_train:
+        if physics_cache_entry is not None:
+            self.last_dynamics_fallback = bool(
+                physics_cache_entry.get(
+                    "dynamics_fallback",
+                    torch.zeros((), dtype=torch.float32, device=device),
+                ).detach().cpu().item()
+                >= 0.5
+            )
+            self.last_checkpoint_fallback = bool(
+                physics_cache_entry.get(
+                    "checkpoint_fallback",
+                    torch.ones((), dtype=torch.float32, device=device),
+                ).detach().cpu().item()
+                >= 0.5
+            )
+            self._set_last_kinetics_debug(
+                classical_barrier=physics_cache_entry.get("kinetics_classical_barrier", 0.0),
+                delta_g_dagger=physics_cache_entry.get("kinetics_delta_g_dagger", 0.0),
+                effective_delta_g_dagger=physics_cache_entry.get("kinetics_effective_delta_g_dagger", 0.0),
+                wigner_kappa=physics_cache_entry.get("kinetics_wigner_kappa", 1.0),
+                transmission_coefficient=physics_cache_entry.get("kinetics_transmission", 1.0),
+                instanton_correction=physics_cache_entry.get("kinetics_instanton_correction", 1.0),
+                metabolic_rate=physics_cache_entry.get("kinetics_metabolic_rate", 1.0e-12),
+                quantum_rate_rpmd=physics_cache_entry.get("kinetics_quantum_rate_rpmd", 1.0e-12),
+                ts_valid=physics_cache_entry.get("kinetics_ts_valid", 0.0),
+            )
+            pred_rate = self._sanitize_tensor(
+                self._to_fp32(physics_cache_entry.get("pred_rate", 1.0e-12)),
+                nan=1.0e-12,
+                posinf=self._PRED_RATE_MAX,
+                neginf=1.0e-12,
+                clamp=(1.0e-12, self._PRED_RATE_MAX),
+            )
+            pred_rate_raw = self._sanitize_tensor(
+                self._to_fp32(physics_cache_entry.get("pred_rate_raw", pred_rate)),
+                nan=1.0e-12,
+                posinf=self._PRED_RATE_MAX,
+                neginf=1.0e-12,
+                clamp=(1.0e-12, self._PRED_RATE_MAX),
+            )
+            h_initial = self._sanitize_tensor(
+                self._to_fp32(physics_cache_entry.get("hamiltonian_initial", 0.0)),
+                nan=2.5,
+                posinf=100.0,
+                neginf=-100.0,
+                clamp=(-100.0, 100.0),
+            )
+            h_final = self._sanitize_tensor(
+                self._to_fp32(physics_cache_entry.get("hamiltonian_final", h_initial)),
+                nan=2.5,
+                posinf=100.0,
+                neginf=-100.0,
+                clamp=(-100.0, 100.0),
+            )
+            ts_eigenvalues = self._sanitize_tensor(
+                self._to_fp32(physics_cache_entry.get("ts_eigenvalues", torch.zeros(2, device=device))),
+                nan=0.0,
+                posinf=100.0,
+                neginf=-100.0,
+                clamp=(-100.0, 100.0),
+            )
+            if ts_eigenvalues.numel() < 2:
+                ts_eigenvalues = F.pad(ts_eigenvalues.view(-1), (0, 2 - ts_eigenvalues.numel()))
+            else:
+                ts_eigenvalues = ts_eigenvalues.view(-1)
+            sobolev_report = self.field_optimizer(field, module1_out.manifold)
+            delta_E_tensor = self._sanitize_tensor(-effective_reactivity, clamp=(-100.0, 100.0))
+            sobolev_report = FieldGradientOptimizationReport(
+                gradient_loss=self._sanitize_tensor(sobolev_report.gradient_loss, clamp=(0.0, 100.0)),
+                spectral_penalty=self._sanitize_tensor(sobolev_report.spectral_penalty, clamp=(0.0, 100.0)),
+                alpha_calibration_loss=self._sanitize_tensor(sobolev_report.alpha_calibration_loss, clamp=(0.0, 100.0)),
+                total_loss=self._sanitize_tensor(sobolev_report.total_loss, clamp=(0.0, 100.0)),
+                atomic_gradients=self._sanitize_tensor(sobolev_report.atomic_gradients, clamp=(-100.0, 100.0)),
+                vacuum_values=self._sanitize_tensor(sobolev_report.vacuum_values, clamp=(-100.0, 100.0)),
+                vacuum_gradients=self._sanitize_tensor(sobolev_report.vacuum_gradients, clamp=(-100.0, 100.0)),
+            )
+        elif low_memory_train:
             self.last_dynamics_fallback = True
             self.last_checkpoint_fallback = True
             self._set_last_kinetics_debug()
@@ -1291,6 +1427,11 @@ class Metabolic_Causal_Trainer(nn.Module):
             "pred_rate": pred_rate.detach(),
             "pred_rate_raw": pred_rate_raw.detach(),
             "pred_rate_log10": pred_rate_log10.detach(),
+            "physics_cache_hit": torch.as_tensor(
+                1.0 if physics_cache_entry is not None else 0.0,
+                dtype=total_loss.dtype,
+                device=total_loss.device,
+            ),
             "exp_rate": exp_rate.detach(),
             "kinetics_supervised": torch.as_tensor(
                 1.0 if has_exp_rate else 0.0,

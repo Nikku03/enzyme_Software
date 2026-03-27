@@ -56,6 +56,17 @@ def _ensure_colab_nexus_assets() -> None:
         )
 
 
+def _maybe_enable_physics_cache() -> None:
+    raw = os.environ.get("NEXUS_COLAB_USE_PHYSICS_CACHE", "").strip().lower()
+    if raw not in {"1", "true", "yes", "on"}:
+        return
+    _setdefault_env("NEXUS_COLAB_PHYSICS_CACHE_MODE", "hybrid")
+    _setdefault_env(
+        "NEXUS_COLAB_PHYSICS_CACHE_PATH",
+        "/content/drive/MyDrive/nexus_cyp3a4_physics_cache.pt",
+    )
+
+
 PRESETS: dict[str, dict[str, str]] = {
     "fast": {
         "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
@@ -193,4 +204,5 @@ def main() -> None:
 
 main()
 _ensure_colab_nexus_assets()
+_maybe_enable_physics_cache()
 runpy.run_path(str(REPO_DIR / "scripts" / "colab_train.py"), run_name="__main__")

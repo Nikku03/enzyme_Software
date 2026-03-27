@@ -122,6 +122,7 @@ _LOCAL_CKPT = _REPO_DIR / "colab_nexus_checkpoint.pt"
 CKPT_PATH   = _DRIVE_CKPT if _DRIVE_CKPT.parent.exists() else _LOCAL_CKPT
 BATCH_CKPT_PATH = CKPT_PATH.with_name(CKPT_PATH.stem + "_batch.pt")
 BATCH_METRICS_PATH = CKPT_PATH.parent / "nexus_colab_batch_metrics.json"
+DEFAULT_PHYSICS_CACHE_PATH = CKPT_PATH.parent / "nexus_cyp3a4_physics_cache.pt"
 
 def _normalize_profile_name(value: str) -> str:
     aliases = {
@@ -334,6 +335,10 @@ SHUFFLE_SEED = _env_int("NEXUS_COLAB_SHUFFLE_SEED", 42)
 DAG_LOSS_WEIGHT = _env_float("NEXUS_COLAB_DAG_LOSS_WEIGHT", 1.0)
 DAG_LOSS_CAP = _env_float("NEXUS_COLAB_DAG_LOSS_CAP", 4.0)
 ANA_LOSS_WEIGHT = _env_float("NEXUS_COLAB_ANA_LOSS_WEIGHT", 1.0)
+PHYSICS_CACHE_MODE = _env_str("NEXUS_COLAB_PHYSICS_CACHE_MODE", "off").lower() or "off"
+if PHYSICS_CACHE_MODE not in {"off", "cached", "hybrid"}:
+    PHYSICS_CACHE_MODE = "off"
+PHYSICS_CACHE_PATH = Path(_env_str("NEXUS_COLAB_PHYSICS_CACHE_PATH", str(DEFAULT_PHYSICS_CACHE_PATH)))
 ALLOW_COMPILE = _env_bool("NEXUS_COLAB_ALLOW_COMPILE", False)
 DATA_NUM_WORKERS = _env_int("NEXUS_COLAB_NUM_WORKERS", 0)
 CURRICULUM_PHYSICS = _env_bool("NEXUS_COLAB_CURRICULUM", False)
@@ -486,6 +491,7 @@ print(
     f"dag_cap={DAG_LOSS_CAP:g}  "
     f"ana_weight={ANA_LOSS_WEIGHT:g}"
 )
+print(f"Physics cache : mode={PHYSICS_CACHE_MODE}  path={PHYSICS_CACHE_PATH}")
 
 # ── trainer ────────────────────────────────────────────────────────────────
 trainer = Metabolic_Causal_Trainer(
@@ -502,7 +508,18 @@ trainer = Metabolic_Causal_Trainer(
     dag_loss_weight=DAG_LOSS_WEIGHT,
     dag_loss_cap=DAG_LOSS_CAP,
     analogical_loss_weight=ANA_LOSS_WEIGHT,
+    physics_cache_mode=PHYSICS_CACHE_MODE,
 ).to(device)
+if PHYSICS_CACHE_MODE != "off":
+    if PHYSICS_CACHE_PATH.exists():
+        _cache_count = trainer.load_physics_cache(PHYSICS_CACHE_PATH, mode=PHYSICS_CACHE_MODE)
+        print(f"  loaded { _cache_count } cached physics entries")
+    elif PHYSICS_CACHE_MODE == "cached":
+        raise FileNotFoundError(
+            f"Physics cache mode is 'cached' but no cache file exists at {PHYSICS_CACHE_PATH}"
+        )
+    else:
+        print("  cache file missing; hybrid mode will fall back to live dynamics")
 
 # ── Colab-safe quantum grid ────────────────────────────────────────────────
 qe = trainer.model.module1.field_engine.quantum_enforcer
@@ -742,7 +759,7 @@ for epoch in range(start_epoch, CFG["epochs"]):
     metrics = trainer.fit_epoch(loader, train=True, log_every=1, on_batch_end=_on_batch_end)
     history.append(metrics)
     print(f"\n── epoch {epoch+1} summary ──────────────────────────────────────")
-    for _k in ["loss_total", "som_top1", "som_top2", "pred_rate",
+    for _k in ["loss_total", "som_top1", "som_top2", "pred_rate", "physics_cache_hit",
                "hamiltonian_initial", "dag_causal_loss", "dag_loss_contribution",
                "ana_loss_total", "ana_gate_open", "ana_confidence",
                "ana_peak", "ana_gate_conf_ok", "ana_gate_peak_ok",
