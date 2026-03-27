@@ -438,8 +438,9 @@ class GatedAnalogicalGodLoss(nn.Module):
         # Mechanism-aware embedding encoder (MechanismEncoder lives here so its
         # params are automatically included when the trainer calls
         # list(self.gated_loss.parameters()))
-        from nexus.reasoning.metric_learner import MechanismEncoder
+        from nexus.reasoning.metric_learner import HGNNProjection, MechanismEncoder
         self.mechanism_encoder = MechanismEncoder()
+        self.hyperbolic_projector = HGNNProjection(hidden_dim=256, poincare_dim=128, c=1.0)
 
     def forward(
         self,

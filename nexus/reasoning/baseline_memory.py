@@ -81,6 +81,7 @@ class MemoryRetrievalResult:
     mcs_size: int                               # number of atoms in the MCS (0 if MCS failed)
     query_embed: Optional[torch.Tensor] = None          # [embed_dim] MechanismEncoder output for query
     retrieved_embed_detached: Optional[torch.Tensor] = None  # [embed_dim] detached encoder output for retrieved mol
+    embedding_space: str = "euclidean"
 
 
 class BaselineMemoryBank:

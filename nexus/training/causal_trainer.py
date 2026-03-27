@@ -404,6 +404,35 @@ class Metabolic_Causal_Trainer(nn.Module):
                 t=protein_data.get("t"),
             )
 
+    def _module1_node_multivectors(self, module1_out: NEXUS_Module1_Output) -> torch.Tensor:
+        with self._autocast_context():
+            _, latent = module1_out.field_state.field.raw_query(
+                module1_out.manifold.pos,
+                return_latent=True,
+            )
+        if latent.ndim == 3:
+            return latent.mean(dim=-2)
+        return latent
+
+    def _project_module1_hyperbolic(self, module1_out: NEXUS_Module1_Output) -> torch.Tensor:
+        node_multivectors = self._module1_node_multivectors(module1_out)
+        return self.gated_loss.hyperbolic_projector(node_multivectors)
+
+    def encode_smiles_for_memory_bank(self, smiles: str) -> torch.Tensor:
+        with torch.no_grad():
+            seed = self.model.module1.agency(smiles)
+            manifold = self.model.module1.refiner(seed)
+            _ = self.model.module1.symmetry_engine(manifold)
+            with self._autocast_context():
+                field_state = self.model.module1.field_engine.build_state(manifold)
+                _, latent = field_state.field.raw_query(manifold.pos, return_latent=True)
+            if latent.ndim == 3:
+                node_multivectors = latent.mean(dim=-2)
+            else:
+                node_multivectors = latent
+            embedding = self.gated_loss.hyperbolic_projector(node_multivectors)
+        return embedding.detach().float().cpu()
+
     def _trainable(self, params: Iterable[nn.Parameter]) -> List[nn.Parameter]:
         return [p for p in params if p is not None and p.requires_grad]
 
@@ -1499,10 +1528,12 @@ class Metabolic_Causal_Trainer(nn.Module):
                 from rdkit import Chem as _Chem
                 _query_mol = _Chem.MolFromSmiles(smiles)
                 if _query_mol is not None:
+                    _query_hyper_embed = self._project_module1_hyperbolic(module1_out)
                     _result = self.memory_bank.retrieve_and_transport(
                         _query_mol,
                         query_smiles=smiles,
                         mechanism_encoder=self.gated_loss.mechanism_encoder,
+                        query_embedding=_query_hyper_embed,
                     )
                     # Re-index pred_ana (SMILES atom order) onto the scan's
                     # descending-reactivity-sorted atom order so target_idx
@@ -1555,18 +1586,25 @@ class Metabolic_Causal_Trainer(nn.Module):
                         and _result.retrieved_embed_detached is not None
                     ):
                         from nexus.reasoning.metric_learner import (
-                            MechanismEncoder as _ME,
                             encoder_supervision_loss as _enc_sup_loss,
+                            hyperbolic_supervision_loss as _hyp_sup_loss,
                             _som_class as _som_cls,
                         )
                         _q_som_class = _som_cls(int(true_atom_index.item()), _query_mol)
                         _r_som_class = _som_cls(_result.retrieved_som_idx, _result.retrieved_mol)
                         _same_class = (_q_som_class == _r_som_class) and (_q_som_class >= 0)
-                        _enc_loss = _enc_sup_loss(
-                            _result.query_embed,
-                            _result.retrieved_embed_detached,
-                            _same_class,
-                        )
+                        if _result.embedding_space == "hyperbolic":
+                            _enc_loss = _hyp_sup_loss(
+                                _result.query_embed,
+                                _result.retrieved_embed_detached,
+                                _same_class,
+                            )
+                        else:
+                            _enc_loss = _enc_sup_loss(
+                                _result.query_embed,
+                                _result.retrieved_embed_detached,
+                                _same_class,
+                            )
                         _enc_loss = self._sanitize_tensor(
                             self._to_fp32(_enc_loss), clamp=(0.0, 10.0)
                         )

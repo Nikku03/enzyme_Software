@@ -71,6 +71,7 @@ PRESETS: dict[str, dict[str, str]] = {
     "fast": {
         "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
         "NEXUS_COLAB_TARGET_ISOFORM": "3A4",
+        "NEXUS_COLAB_ANALOGICAL_BANK_MODE": "continuous",
         "NEXUS_COLAB_MAX_SAMPLES": "32",
         "NEXUS_COLAB_EPOCHS": "3",
         "NEXUS_COLAB_DYNAMICS_STEPS": "1",
@@ -90,6 +91,7 @@ PRESETS: dict[str, dict[str, str]] = {
     "balanced": {
         "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
         "NEXUS_COLAB_TARGET_ISOFORM": "3A4",
+        "NEXUS_COLAB_ANALOGICAL_BANK_MODE": "continuous",
         "NEXUS_COLAB_MAX_SAMPLES": "64",
         "NEXUS_COLAB_EPOCHS": "4",
         "NEXUS_COLAB_DYNAMICS_STEPS": "1",
@@ -109,6 +111,7 @@ PRESETS: dict[str, dict[str, str]] = {
     "full_3a4": {
         "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
         "NEXUS_COLAB_TARGET_ISOFORM": "3A4",
+        "NEXUS_COLAB_ANALOGICAL_BANK_MODE": "continuous",
         "NEXUS_COLAB_MAX_SAMPLES": "0",
         "NEXUS_COLAB_EPOCHS": "5",
         "NEXUS_COLAB_DYNAMICS_STEPS": "1",
@@ -131,6 +134,7 @@ PRESETS: dict[str, dict[str, str]] = {
     "full_3a4_a100": {
         "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
         "NEXUS_COLAB_TARGET_ISOFORM": "3A4",
+        "NEXUS_COLAB_ANALOGICAL_BANK_MODE": "continuous",
         "NEXUS_COLAB_MAX_SAMPLES": "0",
         "NEXUS_COLAB_EPOCHS": "25",
         "NEXUS_COLAB_DYNAMICS_STEPS": "2",
@@ -164,6 +168,7 @@ PRESETS: dict[str, dict[str, str]] = {
     "rtx6k_2h": {
         "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
         "NEXUS_COLAB_TARGET_ISOFORM": "3A4",
+        "NEXUS_COLAB_ANALOGICAL_BANK_MODE": "continuous",
         "NEXUS_COLAB_MAX_SAMPLES": "0",
         "NEXUS_COLAB_EPOCHS": "20",
         "NEXUS_COLAB_DYNAMICS_STEPS": "1",

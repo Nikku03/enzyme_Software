@@ -335,6 +335,9 @@ SHUFFLE_SEED = _env_int("NEXUS_COLAB_SHUFFLE_SEED", 42)
 DAG_LOSS_WEIGHT = _env_float("NEXUS_COLAB_DAG_LOSS_WEIGHT", 1.0)
 DAG_LOSS_CAP = _env_float("NEXUS_COLAB_DAG_LOSS_CAP", 4.0)
 ANA_LOSS_WEIGHT = _env_float("NEXUS_COLAB_ANA_LOSS_WEIGHT", 1.0)
+ANALOGICAL_BANK_MODE = _env_str("NEXUS_COLAB_ANALOGICAL_BANK_MODE", "fingerprint").strip().lower() or "fingerprint"
+if ANALOGICAL_BANK_MODE not in {"fingerprint", "continuous"}:
+    ANALOGICAL_BANK_MODE = "fingerprint"
 PHYSICS_CACHE_MODE = _env_str("NEXUS_COLAB_PHYSICS_CACHE_MODE", "off").lower() or "off"
 if PHYSICS_CACHE_MODE not in {"off", "cached", "hybrid"}:
     PHYSICS_CACHE_MODE = "off"
@@ -491,6 +494,7 @@ print(
     f"dag_cap={DAG_LOSS_CAP:g}  "
     f"ana_weight={ANA_LOSS_WEIGHT:g}"
 )
+print(f"Analogical bank : mode={ANALOGICAL_BANK_MODE}")
 print(f"Physics cache : mode={PHYSICS_CACHE_MODE}  path={PHYSICS_CACHE_PATH}")
 
 # ── trainer ────────────────────────────────────────────────────────────────
@@ -594,9 +598,9 @@ def _apply_physics_curriculum(epoch: int, total_epochs: int) -> None:
 
 
 # ── memory bank — ALL labeled molecules from ALL 9 CYP isoforms (uncapped) ──
-# The bank uses only ECFP4 fingerprints, so loading all molecules is cheap.
-# BaselineMemoryBank.identity_threshold=0.999 automatically prevents any
-# training molecule from trivially retrieving itself at query time.
+# In fingerprint mode this is cheap. In continuous mode each bank molecule is
+# projected through module-1 into the Poincare bank once at startup.
+# Exact canonical-SMILES masking still prevents trivial self-retrieval.
 print("Populating memory bank from all CYP isoform data (full, uncapped)...")
 _bank_mols = []
 for _sdf in _ALL_SDFS:
@@ -605,7 +609,12 @@ for _sdf in _ALL_SDFS:
         _bank_mols.extend(_bank_ds.mols)
     except Exception as _e:
         print(f"  Skipping {_sdf.name} for bank: {_e}")
-trainer.memory_bank.populate_from_mols(_bank_mols)
+trainer.memory_bank.device = str(device)
+_continuous_bank_encoder = trainer.encode_smiles_for_memory_bank if ANALOGICAL_BANK_MODE == "continuous" else None
+trainer.memory_bank.populate_from_mols(
+    _bank_mols,
+    continuous_encoder=_continuous_bank_encoder,
+)
 print(f"Memory bank ready: {len(trainer.memory_bank.historical_mols)} molecules.\n")
 del _bank_mols
 _bank_ds = None  # noqa: release last-loop reference

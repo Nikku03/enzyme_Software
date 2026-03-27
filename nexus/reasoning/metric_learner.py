@@ -1,26 +1,22 @@
 """
 nexus/reasoning/metric_learner.py
 
-Mechanism-aware embedding for analogical retrieval.
+Mechanism-aware embedding utilities for analogical retrieval.
 
-MechanismEncoder maps ECFP4 fingerprints (2048-bit) to a 128-dim L2-normalised
-embedding space that is trained to pull molecules with the same SoM atom class
-together and push mechanistically-different ones apart.
+Two encoder families live here:
 
-This addresses the "magic methyl" failure mode: two molecules can share a scaffold
-(high Tanimoto) but differ in their metabolic site because one has a methyl group
-blocking the reactive carbon.  ECFP4 Tanimoto cannot see this; the learned
-MechanismEncoder can, because it is supervised by SoM class co-occurrence.
+1. MechanismEncoder
+   Legacy Euclidean encoder over Morgan fingerprints.  It is kept as a
+   reversible fallback while the projected hyperbolic bank is rolled out.
 
-Usage
------
-    enc = MechanismEncoder().to(device)
-    q_embed = enc(q_fp)           # [128] L2-normalised
-    r_embed = enc(r_fp)           # [128] L2-normalised
-    loss = encoder_supervision_loss(q_embed, r_embed, same_som_class=True)
+2. HGNNProjection
+   Learned projection from continuous multivector features into the Poincare
+   ball.  This is the intended bridge between the module-1 continuous field and
+   the analogical memory bank.
 """
 from __future__ import annotations
 
+import math
 from typing import Optional
 
 import torch
@@ -58,6 +54,110 @@ class MechanismEncoder(nn.Module):
             L2-normalised embedding [..., embed_dim]
         """
         return F.normalize(self.net(fp.float()), p=2, dim=-1)
+
+
+class PoincareMath:
+    """Numerically safe Poincare-ball operations used by HGNNProjection."""
+
+    def __init__(self, c: float = 1.0, eps: float = 1.0e-15) -> None:
+        self.c = float(max(c, 1.0e-8))
+        self.eps = float(max(eps, 1.0e-15))
+
+    def _sqrt_c(self, ref: torch.Tensor) -> torch.Tensor:
+        return ref.new_tensor(math.sqrt(self.c))
+
+    def _project(self, x: torch.Tensor) -> torch.Tensor:
+        max_norm = (1.0 - 1.0e-5) / math.sqrt(self.c)
+        norm = x.norm(p=2, dim=-1, keepdim=True).clamp_min(self.eps)
+        safe = torch.where(norm > max_norm, x * (max_norm / norm), x)
+        return torch.nan_to_num(safe, nan=0.0, posinf=max_norm, neginf=-max_norm)
+
+    def exp_map_0(self, v: torch.Tensor) -> torch.Tensor:
+        v = v.float()
+        v_norm = v.norm(p=2, dim=-1, keepdim=True).clamp_min(self.eps)
+        sqrt_c = self._sqrt_c(v)
+        scale = torch.tanh(sqrt_c * v_norm) / (sqrt_c * v_norm)
+        return self._project(scale * v)
+
+    def log_map_0(self, y: torch.Tensor) -> torch.Tensor:
+        y = self._project(y.float())
+        y_norm = y.norm(p=2, dim=-1, keepdim=True).clamp_min(self.eps)
+        sqrt_c = self._sqrt_c(y)
+        clipped = (sqrt_c * y_norm).clamp_max(1.0 - 1.0e-6)
+        scale = torch.atanh(clipped) / (sqrt_c * y_norm)
+        return scale * y
+
+    def mobius_add(self, u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+        u = self._project(u.float())
+        v = self._project(v.float())
+        u2 = torch.sum(u * u, dim=-1, keepdim=True)
+        v2 = torch.sum(v * v, dim=-1, keepdim=True)
+        uv = torch.sum(u * v, dim=-1, keepdim=True)
+        c = u.new_tensor(self.c)
+        num = (1 + 2 * c * uv + c * v2) * u + (1 - c * u2) * v
+        denom = 1 + 2 * c * uv + (c * c) * u2 * v2
+        return self._project(num / denom.clamp_min(self.eps))
+
+    def distance(self, u: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+        u = self._project(u.float())
+        v = self._project(v.float())
+        sqdist = (u - v).pow(2).sum(dim=-1, keepdim=True)
+        squnorm = u.pow(2).sum(dim=-1, keepdim=True)
+        sqvnorm = v.pow(2).sum(dim=-1, keepdim=True)
+        c = u.new_tensor(self.c)
+        arg = 1.0 + 2.0 * c * sqdist / (
+            (1.0 - c * squnorm).clamp_min(self.eps) * (1.0 - c * sqvnorm).clamp_min(self.eps)
+        )
+        return torch.acosh(arg.clamp_min(1.0 + self.eps)).squeeze(-1)
+
+
+class HGNNProjection(nn.Module):
+    """
+    Project continuous multivector features into a graph-level Poincare embedding.
+
+    Input shape:
+      - [N, F]     single molecule with N nodes
+      - [B, N, F]  batch of molecules
+
+    Output shape:
+      - [D] or [B, D] graph embedding strictly inside the Poincare ball
+    """
+
+    def __init__(
+        self,
+        in_channels_16d: int | None = None,
+        hidden_dim: int = 256,
+        poincare_dim: int = 128,
+        c: float = 1.0,
+        dropout: float = 0.0,
+    ) -> None:
+        super().__init__()
+        self.hidden_dim = int(hidden_dim)
+        self.poincare_dim = int(poincare_dim)
+        self.math = PoincareMath(c=c)
+        first = nn.Linear(int(in_channels_16d), self.hidden_dim) if in_channels_16d is not None else nn.LazyLinear(self.hidden_dim)
+        self.tangent_mlp = nn.Sequential(
+            first,
+            nn.GELU(),
+            nn.Dropout(p=float(max(dropout, 0.0))),
+            nn.Linear(self.hidden_dim, self.poincare_dim),
+        )
+
+    def tangent_encode(self, multivectors: torch.Tensor) -> torch.Tensor:
+        x = multivectors.float()
+        if x.ndim == 1:
+            x = x.unsqueeze(0)
+        return self.tangent_mlp(x)
+
+    def forward(self, q_fp_multivectors: torch.Tensor) -> torch.Tensor:
+        tangent = self.tangent_encode(q_fp_multivectors)
+        if tangent.ndim == 2:
+            pooled = tangent.mean(dim=0)
+        elif tangent.ndim >= 3:
+            pooled = tangent.mean(dim=-2)
+        else:
+            pooled = tangent
+        return self.math.exp_map_0(pooled)
 
 
 def _som_class(som_idx: int, mol) -> int:
@@ -108,3 +208,26 @@ def encoder_supervision_loss(
         return (1.0 - cos_sim).clamp_min(0.0)
     else:
         return F.relu(cos_sim - margin_neg)
+
+
+def hyperbolic_supervision_loss(
+    query_embed: torch.Tensor,
+    retrieved_embed: torch.Tensor,
+    same_som_class: bool,
+    *,
+    margin_neg: float = 1.0,
+    curvature: float = 1.0,
+) -> torch.Tensor:
+    """
+    Pairwise supervision directly in hyperbolic space.
+
+    Same-class pairs are pulled together by minimizing geodesic distance.
+    Different-class pairs are pushed apart beyond a margin.
+    """
+    math = PoincareMath(c=curvature)
+    q = query_embed.float()
+    r = retrieved_embed.detach().float()
+    dist = math.distance(q, r)
+    if same_som_class:
+        return dist.mean()
+    return F.relu(margin_neg - dist).mean()

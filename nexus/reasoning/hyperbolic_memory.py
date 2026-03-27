@@ -82,12 +82,22 @@ class HyperbolicMemoryBank:
         self.memory_embeddings: torch.Tensor | None = None
         self.memory_fingerprints: torch.Tensor | None = None
         self.memory_bit_counts: torch.Tensor | None = None
+        self.memory_projected_mask: torch.Tensor | None = None
         self.pgw: PGWTransporter | None = None
         if self.transport_backend == "pgw":
             try:
                 self.pgw = PGWTransporter(device=device)
             except ImportError:
                 self.transport_backend = "mcs"
+
+    def _reset(self) -> None:
+        self.historical_mols = []
+        self.historical_soms = []
+        self.historical_smiles = []
+        self.memory_embeddings = None
+        self.memory_fingerprints = None
+        self.memory_bit_counts = None
+        self.memory_projected_mask = None
 
     def _ball_radius(self) -> float:
         return self.poincare_radius / math.sqrt(self.curvature)
@@ -132,9 +142,11 @@ class HyperbolicMemoryBank:
         arg = arg.clamp_min(1.0 + eps)
         return torch.acosh(arg) / sqrt_c.clamp_min(eps)
 
-    def populate_from_mols(self, mols: List) -> None:
+    def populate_from_mols(self, mols: List, *, continuous_encoder=None) -> None:
         print(f"Populating Hyperbolic Memory Bank from {len(mols)} input molecules...")
+        self._reset()
         fps: List[torch.Tensor] = []
+        projected_embeddings: List[torch.Tensor | None] = []
         skipped = 0
 
         for mol in mols:
@@ -146,7 +158,19 @@ class HyperbolicMemoryBank:
             fps.append(fp)
             self.historical_mols.append(mol)
             self.historical_soms.append(som_idx)
-            self.historical_smiles.append(_canonical_smiles(mol))
+            canonical = _canonical_smiles(mol)
+            self.historical_smiles.append(canonical)
+            projected: torch.Tensor | None = None
+            if continuous_encoder is not None and canonical:
+                try:
+                    projected = continuous_encoder(canonical)
+                    if projected is not None:
+                        projected = torch.as_tensor(projected, dtype=torch.float32, device=self.device).view(-1)
+                        if projected.numel() == 0 or not bool(torch.isfinite(projected).all().item()):
+                            projected = None
+                except Exception:
+                    projected = None
+            projected_embeddings.append(projected)
 
         if not fps:
             raise RuntimeError("No labelled molecules found — hyperbolic memory bank is empty.")
@@ -154,10 +178,35 @@ class HyperbolicMemoryBank:
         raw = torch.stack(fps).to(self.device)
         self.memory_fingerprints = raw
         self.memory_bit_counts = raw.sum(dim=-1)
-        self.memory_embeddings = self._encode_hyperbolic(raw)
+        fallback_embeddings = self._encode_hyperbolic(raw)
+        projected_mask = torch.zeros(len(projected_embeddings), dtype=torch.bool, device=self.device)
+        if any(embed is not None for embed in projected_embeddings):
+            final_embeddings: List[torch.Tensor] = []
+            fallback_dim = int(fallback_embeddings.size(-1))
+            projected_dim = next((int(embed.numel()) for embed in projected_embeddings if embed is not None), fallback_dim)
+            if fallback_dim != projected_dim:
+                fallback_embeddings = F.pad(fallback_embeddings, (0, max(projected_dim - fallback_dim, 0)))
+                if fallback_embeddings.size(-1) > projected_dim:
+                    fallback_embeddings = fallback_embeddings[..., :projected_dim]
+            for idx, embed in enumerate(projected_embeddings):
+                if embed is None:
+                    final_embeddings.append(fallback_embeddings[idx])
+                    continue
+                current = embed
+                if current.numel() < projected_dim:
+                    current = F.pad(current, (0, projected_dim - current.numel()))
+                elif current.numel() > projected_dim:
+                    current = current[:projected_dim]
+                final_embeddings.append(self._project_inside_ball(current))
+                projected_mask[idx] = True
+            self.memory_embeddings = torch.stack(final_embeddings, dim=0)
+        else:
+            self.memory_embeddings = fallback_embeddings
+        self.memory_projected_mask = projected_mask
+        projected_count = int(projected_mask.sum().item())
         print(
             f"Hyperbolic Memory Bank Active: {len(self.historical_mols)} molecules "
-            f"({skipped} skipped — no SoM label)."
+            f"({skipped} skipped — no SoM label, {projected_count} projected in continuous space)."
         )
 
     def _tanimoto_similarity(self, q_fp: torch.Tensor) -> torch.Tensor:
@@ -202,6 +251,7 @@ class HyperbolicMemoryBank:
         query_mol,
         query_smiles: str | None = None,
         mechanism_encoder=None,
+        query_embedding: torch.Tensor | None = None,
     ) -> MemoryRetrievalResult:
         """
         Args:
@@ -216,92 +266,139 @@ class HyperbolicMemoryBank:
         if self.memory_embeddings is None:
             raise RuntimeError("Call populate_from_mols() before retrieve_and_transport().")
 
-        q_fp = _morgan_fp_tensor(query_mol, radius=self.fp_radius, n_bits=self.fp_bits)
-        tanimoto_scores = self._tanimoto_similarity(q_fp)
         query_key = query_smiles or _canonical_smiles(query_mol)
+        same_query = None
         if query_key is not None and self.historical_smiles:
             same_query = torch.tensor(
                 [s == query_key for s in self.historical_smiles],
                 dtype=torch.bool,
-                device=tanimoto_scores.device,
-            )
-            if bool(same_query.any().item()):
-                tanimoto_scores = tanimoto_scores.masked_fill(same_query, -1.0)
-        shortlist_k = min(self.tanimoto_shortlist_k, len(self.historical_mols))
-        top_tanimoto, shortlist_indices = torch.topk(tanimoto_scores, shortlist_k, largest=True)
-        best_tanimoto = float(top_tanimoto[0].item()) if shortlist_k > 0 else -1.0
-        best_shortlist_idx = int(shortlist_indices[0].item()) if shortlist_k > 0 else 0
-
-        if best_tanimoto < self.tanimoto_prefilter_threshold:
-            n_query = query_mol.GetNumAtoms()
-            return MemoryRetrievalResult(
-                analogical_pred=torch.zeros(n_query, dtype=torch.float32, device=self.device),
-                confidence=0.0,
-                retrieved_mol=self.historical_mols[best_shortlist_idx],
-                retrieved_som_idx=self.historical_soms[best_shortlist_idx],
-                transport_succeeded=False,
-                mcs_size=0,
+                device=self.device,
             )
 
-        # ── mechanism-aware re-ranking (optional) ─────────────────────
-        # If a MechanismEncoder is provided, we encode the query and all
-        # shortlist candidates, then pick the closest in mechanism space
-        # rather than purely in hyperbolic ECFP4 space.  This prevents
-        # retrieval of a scaffold-similar but mechanistically-different
-        # molecule (e.g. methyl-blocked analogue).
+        projected_ready = (
+            query_embedding is not None
+            and self.memory_projected_mask is not None
+            and bool(self.memory_projected_mask.any().item())
+        )
+
         query_embed: torch.Tensor | None = None
         retrieved_embed_detached: torch.Tensor | None = None
 
-        if mechanism_encoder is not None:
-            try:
-                q_fp_dev = q_fp.to(self.device)
-                query_embed = mechanism_encoder(q_fp_dev.unsqueeze(0)).squeeze(0)  # [embed_dim]
-
-                # Encode all shortlist fingerprints in one pass.
-                shortlist_fps = self.memory_fingerprints.index_select(0, shortlist_indices)  # [k, fp_bits]
-                shortlist_embeds = mechanism_encoder(shortlist_fps)  # [k, embed_dim]
-
-                # Cosine similarity between query embed and shortlist embeds.
-                mech_scores = (query_embed.detach().unsqueeze(0) * shortlist_embeds.detach()).sum(dim=-1)  # [k]
-
-                # Combine Poincaré distance ranking with mechanism score:
-                #   final_score = mech_scores (higher = better)
-                # Use mechanism score to override the Poincaré selection.
-                best_mech_rank = int(mech_scores.argmax().item())
-                best_idx = int(shortlist_indices[best_mech_rank].item())
-
-                retrieved_embed_detached = shortlist_embeds[best_mech_rank].detach()
-
-                # Compute confidence from hyperbolic distance for the selected candidate.
-                q_h_embed = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
-                r_h_embed = self.memory_embeddings[best_idx].unsqueeze(0)
-                dist = float(self._poincare_distance(q_h_embed, r_h_embed).item())
+        if projected_ready:
+            candidate_mask = self.memory_projected_mask.clone()
+            if same_query is not None:
+                candidate_mask = candidate_mask & (~same_query)
+            candidate_indices = torch.nonzero(candidate_mask, as_tuple=False).view(-1)
+            if candidate_indices.numel() > 0:
+                target_dim = int(self.memory_embeddings.size(-1))
+                prepared_query = torch.as_tensor(query_embedding, dtype=torch.float32, device=self.device).view(-1)
+                if prepared_query.numel() < target_dim:
+                    prepared_query = F.pad(prepared_query, (0, target_dim - prepared_query.numel()))
+                elif prepared_query.numel() > target_dim:
+                    prepared_query = prepared_query[:target_dim]
+                q_embed_h = self._project_inside_ball(
+                    prepared_query.view(1, -1)
+                )
+                candidate_embeddings = self.memory_embeddings.index_select(0, candidate_indices)
+                distances = self._poincare_distance(q_embed_h, candidate_embeddings).view(-1)
+                shortlist_k = min(self.tanimoto_shortlist_k, int(candidate_indices.numel()))
+                top_distances, top_local = torch.topk(distances, shortlist_k, largest=False)
+                best_idx = int(candidate_indices[int(top_local[0].item())].item())
                 tau = 10.0
-                confidence = math.exp(-dist / tau)
-
-            except Exception:
-                # Encoder failed (e.g. fp_bits mismatch during warm-up) — fall back
-                query_embed = None
-                retrieved_embed_detached = None
-                mechanism_encoder = None  # disable for the rest of this call
-
-        if mechanism_encoder is None:
-            # Standard hyperbolic retrieval path.
-            q_embed_h = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
-            candidate_embeddings = self.memory_embeddings.index_select(0, shortlist_indices)
-            distances = self._poincare_distance(q_embed_h, candidate_embeddings).squeeze(0)
-
-            k = min(2, shortlist_k)
-            top_distances, top_indices = torch.topk(distances, k, largest=False)
-
-            tau = 10.0  # Aggressive temperature scalar: exp(-d/tau) keeps confidence
-                        # high for typical hyperbolic distances (~2.9 → exp(-0.29)=0.748)
-            if top_distances[0] < 1e-4 and k > 1:
-                best_idx = int(shortlist_indices[top_indices[1]].item())
-                confidence = math.exp(-float(top_distances[1].item()) / tau)
-            else:
-                best_idx = int(shortlist_indices[top_indices[0]].item())
                 confidence = math.exp(-float(top_distances[0].item()) / tau)
+                query_embed = q_embed_h.squeeze(0)
+                retrieved_embed_detached = self.memory_embeddings[best_idx].detach()
+            else:
+                projected_ready = False
+
+        if not projected_ready:
+            q_fp = _morgan_fp_tensor(query_mol, radius=self.fp_radius, n_bits=self.fp_bits)
+            tanimoto_scores = self._tanimoto_similarity(q_fp)
+            if same_query is not None and bool(same_query.any().item()):
+                tanimoto_scores = tanimoto_scores.masked_fill(same_query, -1.0)
+            shortlist_k = min(self.tanimoto_shortlist_k, len(self.historical_mols))
+            top_tanimoto, shortlist_indices = torch.topk(tanimoto_scores, shortlist_k, largest=True)
+            best_tanimoto = float(top_tanimoto[0].item()) if shortlist_k > 0 else -1.0
+            best_shortlist_idx = int(shortlist_indices[0].item()) if shortlist_k > 0 else 0
+
+            if best_tanimoto < self.tanimoto_prefilter_threshold:
+                n_query = query_mol.GetNumAtoms()
+                return MemoryRetrievalResult(
+                    analogical_pred=torch.zeros(n_query, dtype=torch.float32, device=self.device),
+                    confidence=0.0,
+                    retrieved_mol=self.historical_mols[best_shortlist_idx],
+                    retrieved_som_idx=self.historical_soms[best_shortlist_idx],
+                    transport_succeeded=False,
+                    mcs_size=0,
+                    embedding_space="hyperbolic" if projected_ready else "euclidean",
+                )
+
+            # ── mechanism-aware re-ranking (optional) ─────────────────────
+            # If a MechanismEncoder is provided, we encode the query and all
+            # shortlist candidates, then pick the closest in mechanism space
+            # rather than purely in hyperbolic ECFP4 space.  This prevents
+            # retrieval of a scaffold-similar but mechanistically-different
+            # molecule (e.g. methyl-blocked analogue).
+            target_dim = int(self.memory_embeddings.size(-1))
+
+            if mechanism_encoder is not None:
+                try:
+                    q_fp_dev = q_fp.to(self.device)
+                    query_embed = mechanism_encoder(q_fp_dev.unsqueeze(0)).squeeze(0)  # [embed_dim]
+
+                    # Encode all shortlist fingerprints in one pass.
+                    shortlist_fps = self.memory_fingerprints.index_select(0, shortlist_indices)  # [k, fp_bits]
+                    shortlist_embeds = mechanism_encoder(shortlist_fps)  # [k, embed_dim]
+
+                    # Cosine similarity between query embed and shortlist embeds.
+                    mech_scores = (query_embed.detach().unsqueeze(0) * shortlist_embeds.detach()).sum(dim=-1)  # [k]
+
+                    # Combine Poincaré distance ranking with mechanism score:
+                    #   final_score = mech_scores (higher = better)
+                    # Use mechanism score to override the Poincaré selection.
+                    best_mech_rank = int(mech_scores.argmax().item())
+                    best_idx = int(shortlist_indices[best_mech_rank].item())
+
+                    retrieved_embed_detached = shortlist_embeds[best_mech_rank].detach()
+
+                    # Compute confidence from hyperbolic distance for the selected candidate.
+                    q_h_embed = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
+                    if q_h_embed.size(-1) < target_dim:
+                        q_h_embed = F.pad(q_h_embed, (0, target_dim - q_h_embed.size(-1)))
+                    elif q_h_embed.size(-1) > target_dim:
+                        q_h_embed = q_h_embed[..., :target_dim]
+                    r_h_embed = self.memory_embeddings[best_idx].unsqueeze(0)
+                    dist = float(self._poincare_distance(q_h_embed, r_h_embed).item())
+                    tau = 10.0
+                    confidence = math.exp(-dist / tau)
+
+                except Exception:
+                    # Encoder failed (e.g. fp_bits mismatch during warm-up) — fall back
+                    query_embed = None
+                    retrieved_embed_detached = None
+                    mechanism_encoder = None  # disable for the rest of this call
+
+            if mechanism_encoder is None:
+                # Standard hyperbolic retrieval path.
+                q_embed_h = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
+                if q_embed_h.size(-1) < target_dim:
+                    q_embed_h = F.pad(q_embed_h, (0, target_dim - q_embed_h.size(-1)))
+                elif q_embed_h.size(-1) > target_dim:
+                    q_embed_h = q_embed_h[..., :target_dim]
+                candidate_embeddings = self.memory_embeddings.index_select(0, shortlist_indices)
+                distances = self._poincare_distance(q_embed_h, candidate_embeddings).squeeze(0)
+
+                k = min(2, shortlist_k)
+                top_distances, top_indices = torch.topk(distances, k, largest=False)
+
+                tau = 10.0  # Aggressive temperature scalar: exp(-d/tau) keeps confidence
+                            # high for typical hyperbolic distances (~2.9 → exp(-0.29)=0.748)
+                if top_distances[0] < 1e-4 and k > 1:
+                    best_idx = int(shortlist_indices[top_indices[1]].item())
+                    confidence = math.exp(-float(top_distances[1].item()) / tau)
+                else:
+                    best_idx = int(shortlist_indices[top_indices[0]].item())
+                    confidence = math.exp(-float(top_distances[0].item()) / tau)
 
         retrieved_mol = self.historical_mols[best_idx]
         retrieved_som = self.historical_soms[best_idx]
@@ -328,6 +425,7 @@ class HyperbolicMemoryBank:
             mcs_size=support_size,
             query_embed=query_embed,
             retrieved_embed_detached=retrieved_embed_detached,
+            embedding_space="hyperbolic" if projected_ready else "euclidean",
         )
 
     def batch_stats(self, mols: List, true_soms: List[int]) -> dict:
