@@ -1500,7 +1500,11 @@ class Metabolic_Causal_Trainer(nn.Module):
                 from rdkit import Chem as _Chem
                 _query_mol = _Chem.MolFromSmiles(smiles)
                 if _query_mol is not None:
-                    _result = self.memory_bank.retrieve_and_transport(_query_mol, query_smiles=smiles)
+                    _result = self.memory_bank.retrieve_and_transport(
+                        _query_mol,
+                        query_smiles=smiles,
+                        mechanism_encoder=self.gated_loss.mechanism_encoder,
+                    )
                     # Re-index pred_ana (SMILES atom order) onto the scan's
                     # descending-reactivity-sorted atom order so target_idx
                     # (= true_row_index) aligns with pred_fp (= effective_reactivity).
@@ -1516,18 +1520,61 @@ class Metabolic_Causal_Trainer(nn.Module):
                         if bool(_valid.any().item()):
                             _pred_ana_scan[_valid] = _query_pred[_scan_atom_idx[_valid]]
                             _transport_mapped = bool((_pred_ana_scan > 0).any().item())
+
+                    # physics_analogy_agreement: cosine similarity between the physics
+                    # field's reactivity ranking and the analogy-transported label.
+                    # This is the key signal for the Watson gate — high agreement means
+                    # both pathways agree on which atom is the SoM.
+                    _eff_react_norm = effective_reactivity.detach().float()
+                    _ana_scan_norm = _pred_ana_scan.detach().float()
+                    _eff_r2 = (_eff_react_norm * _eff_react_norm).sum().clamp_min(1e-8)
+                    _ana_r2 = (_ana_scan_norm * _ana_scan_norm).sum().clamp_min(1e-8)
+                    _physics_analogy_agreement = float(
+                        (_eff_react_norm * _ana_scan_norm).sum()
+                        / (_eff_r2.sqrt() * _ana_r2.sqrt())
+                    ) if _transport_mapped else 0.0
+
                     _ana_loss, _ana_info = self.gated_loss(
                         pred_fp=effective_reactivity,
                         pred_ana=_pred_ana_scan,
                         target_idx=true_row_index,
                         retrieval_confidence=_result.confidence,
                         transport_succeeded=_transport_mapped,
+                        physics_analogy_agreement=_physics_analogy_agreement,
                     )
                     _ana_loss = self._sanitize_tensor(
                         self._to_fp32(_ana_loss), clamp=(0.0, 100.0)
                     )
                     _ana_loss_weighted = _ana_loss * self.analogical_loss_weight
                     total_loss = total_loss + _ana_loss_weighted
+
+                    # Encoder supervision loss: teach MechanismEncoder to embed
+                    # same-SoM-class molecules close together and different classes apart.
+                    _enc_loss_val = 0.0
+                    if (
+                        _result.query_embed is not None
+                        and _result.retrieved_embed_detached is not None
+                    ):
+                        from nexus.reasoning.metric_learner import (
+                            MechanismEncoder as _ME,
+                            encoder_supervision_loss as _enc_sup_loss,
+                            _som_class as _som_cls,
+                        )
+                        _q_som_class = _som_cls(int(true_atom_index.item()), _query_mol)
+                        _r_som_class = _som_cls(_result.retrieved_som_idx, _result.retrieved_mol)
+                        _same_class = (_q_som_class == _r_som_class) and (_q_som_class >= 0)
+                        _enc_loss = _enc_sup_loss(
+                            _result.query_embed,
+                            _result.retrieved_embed_detached,
+                            _same_class,
+                        )
+                        _enc_loss = self._sanitize_tensor(
+                            self._to_fp32(_enc_loss), clamp=(0.0, 10.0)
+                        )
+                        # Weight encoder loss at 0.05 — gentle signal, not dominating physics.
+                        total_loss = total_loss + 0.05 * _enc_loss
+                        _enc_loss_val = float(_enc_loss.detach().item())
+
                     metrics.update({
                         "ana_loss_total": _ana_loss_weighted.detach(),
                         "ana_loss_raw": _ana_loss.detach(),
@@ -1560,6 +1607,12 @@ class Metabolic_Causal_Trainer(nn.Module):
                         ),
                         "ana_gate_peak_ok": torch.as_tensor(
                             _ana_info["gate_peak_ok"], dtype=torch.float32, device=device
+                        ),
+                        "ana_watson_agreement": torch.as_tensor(
+                            _physics_analogy_agreement, dtype=torch.float32, device=device
+                        ),
+                        "ana_encoder_loss": torch.as_tensor(
+                            _enc_loss_val, dtype=torch.float32, device=device
                         ),
                     })
             except Exception as _ana_err:

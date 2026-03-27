@@ -763,7 +763,8 @@ for epoch in range(start_epoch, CFG["epochs"]):
                "hamiltonian_initial", "dag_causal_loss", "dag_loss_contribution",
                "ana_loss_total", "ana_gate_open", "ana_confidence",
                "ana_peak", "ana_gate_conf_ok", "ana_gate_peak_ok",
-               "ana_weight_fp", "ana_weight_ana", "ana_transport_ok"]:
+               "ana_weight_fp", "ana_weight_ana", "ana_transport_ok",
+               "ana_watson_agreement", "ana_encoder_loss"]:
         if _k in metrics:
             print(f"  {_k:<30} {metrics[_k]:.6g}")
     print()

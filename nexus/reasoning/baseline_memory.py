@@ -73,12 +73,14 @@ def _morgan_fp_tensor(mol, radius: int = 2, n_bits: int = 2048) -> torch.Tensor:
 @dataclass
 class MemoryRetrievalResult:
     """All outputs produced by a single retrieve-and-transport call."""
-    analogical_pred: torch.Tensor   # [N_query] one-hot float, 0 if transport failed
-    confidence: float               # cosine similarity to retrieved neighbour
-    retrieved_mol: object           # RDKit Mol
-    retrieved_som_idx: int          # 0-based SoM on the retrieved molecule
-    transport_succeeded: bool       # False when MCS mapping missed the SoM atom
-    mcs_size: int                   # number of atoms in the MCS (0 if MCS failed)
+    analogical_pred: torch.Tensor               # [N_query] one-hot float, 0 if transport failed
+    confidence: float                           # cosine similarity to retrieved neighbour
+    retrieved_mol: object                       # RDKit Mol
+    retrieved_som_idx: int                      # 0-based SoM on the retrieved molecule
+    transport_succeeded: bool                   # False when MCS mapping missed the SoM atom
+    mcs_size: int                               # number of atoms in the MCS (0 if MCS failed)
+    query_embed: Optional[torch.Tensor] = None          # [embed_dim] MechanismEncoder output for query
+    retrieved_embed_detached: Optional[torch.Tensor] = None  # [embed_dim] detached encoder output for retrieved mol
 
 
 class BaselineMemoryBank:

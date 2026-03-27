@@ -197,7 +197,22 @@ class HyperbolicMemoryBank:
                     pass
         return analogical_pred, transport_ok, mcs_size
 
-    def retrieve_and_transport(self, query_mol, query_smiles: str | None = None) -> MemoryRetrievalResult:
+    def retrieve_and_transport(
+        self,
+        query_mol,
+        query_smiles: str | None = None,
+        mechanism_encoder=None,
+    ) -> MemoryRetrievalResult:
+        """
+        Args:
+            query_mol:           RDKit Mol to retrieve for.
+            query_smiles:        Optional canonical SMILES for exact-query masking.
+            mechanism_encoder:   Optional MechanismEncoder instance.  When provided,
+                                 it re-ranks the Tanimoto shortlist using mechanism-
+                                 aware cosine similarity and attaches query_embed /
+                                 retrieved_embed_detached to the result for
+                                 encoder_supervision_loss in the trainer.
+        """
         if self.memory_embeddings is None:
             raise RuntimeError("Call populate_from_mols() before retrieve_and_transport().")
 
@@ -228,21 +243,65 @@ class HyperbolicMemoryBank:
                 mcs_size=0,
             )
 
-        q_embed = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
-        candidate_embeddings = self.memory_embeddings.index_select(0, shortlist_indices)
-        distances = self._poincare_distance(q_embed, candidate_embeddings).squeeze(0)
+        # ── mechanism-aware re-ranking (optional) ─────────────────────
+        # If a MechanismEncoder is provided, we encode the query and all
+        # shortlist candidates, then pick the closest in mechanism space
+        # rather than purely in hyperbolic ECFP4 space.  This prevents
+        # retrieval of a scaffold-similar but mechanistically-different
+        # molecule (e.g. methyl-blocked analogue).
+        query_embed: torch.Tensor | None = None
+        retrieved_embed_detached: torch.Tensor | None = None
 
-        k = min(2, shortlist_k)
-        top_distances, top_indices = torch.topk(distances, k, largest=False)
+        if mechanism_encoder is not None:
+            try:
+                q_fp_dev = q_fp.to(self.device)
+                query_embed = mechanism_encoder(q_fp_dev.unsqueeze(0)).squeeze(0)  # [embed_dim]
 
-        tau = 10.0  # Aggressive temperature scalar: exp(-d/tau) keeps confidence
-                    # high for typical hyperbolic distances (~2.9 → exp(-0.29)=0.748)
-        if top_distances[0] < 1e-4 and k > 1:
-            best_idx = int(shortlist_indices[top_indices[1]].item())
-            confidence = math.exp(-float(top_distances[1].item()) / tau)
-        else:
-            best_idx = int(shortlist_indices[top_indices[0]].item())
-            confidence = math.exp(-float(top_distances[0].item()) / tau)
+                # Encode all shortlist fingerprints in one pass.
+                shortlist_fps = self.memory_fingerprints.index_select(0, shortlist_indices)  # [k, fp_bits]
+                shortlist_embeds = mechanism_encoder(shortlist_fps)  # [k, embed_dim]
+
+                # Cosine similarity between query embed and shortlist embeds.
+                mech_scores = (query_embed.detach().unsqueeze(0) * shortlist_embeds.detach()).sum(dim=-1)  # [k]
+
+                # Combine Poincaré distance ranking with mechanism score:
+                #   final_score = mech_scores (higher = better)
+                # Use mechanism score to override the Poincaré selection.
+                best_mech_rank = int(mech_scores.argmax().item())
+                best_idx = int(shortlist_indices[best_mech_rank].item())
+
+                retrieved_embed_detached = shortlist_embeds[best_mech_rank].detach()
+
+                # Compute confidence from hyperbolic distance for the selected candidate.
+                q_h_embed = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
+                r_h_embed = self.memory_embeddings[best_idx].unsqueeze(0)
+                dist = float(self._poincare_distance(q_h_embed, r_h_embed).item())
+                tau = 10.0
+                confidence = math.exp(-dist / tau)
+
+            except Exception:
+                # Encoder failed (e.g. fp_bits mismatch during warm-up) — fall back
+                query_embed = None
+                retrieved_embed_detached = None
+                mechanism_encoder = None  # disable for the rest of this call
+
+        if mechanism_encoder is None:
+            # Standard hyperbolic retrieval path.
+            q_embed_h = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
+            candidate_embeddings = self.memory_embeddings.index_select(0, shortlist_indices)
+            distances = self._poincare_distance(q_embed_h, candidate_embeddings).squeeze(0)
+
+            k = min(2, shortlist_k)
+            top_distances, top_indices = torch.topk(distances, k, largest=False)
+
+            tau = 10.0  # Aggressive temperature scalar: exp(-d/tau) keeps confidence
+                        # high for typical hyperbolic distances (~2.9 → exp(-0.29)=0.748)
+            if top_distances[0] < 1e-4 and k > 1:
+                best_idx = int(shortlist_indices[top_indices[1]].item())
+                confidence = math.exp(-float(top_distances[1].item()) / tau)
+            else:
+                best_idx = int(shortlist_indices[top_indices[0]].item())
+                confidence = math.exp(-float(top_distances[0].item()) / tau)
 
         retrieved_mol = self.historical_mols[best_idx]
         retrieved_som = self.historical_soms[best_idx]
@@ -267,6 +326,8 @@ class HyperbolicMemoryBank:
             retrieved_som_idx=retrieved_som,
             transport_succeeded=transport_ok,
             mcs_size=support_size,
+            query_embed=query_embed,
+            retrieved_embed_detached=retrieved_embed_detached,
         )
 
     def batch_stats(self, mols: List, true_soms: List[int]) -> dict:

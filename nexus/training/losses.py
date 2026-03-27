@@ -357,6 +357,47 @@ class AnalogicalGodLoss(nn.Module):
         }
         return total_loss, info
 
+class WatsonGate(nn.Module):
+    """
+    Soft learned gate that replaces the hard 3-condition boolean in
+    GatedAnalogicalGodLoss.
+
+    Input features (3-dim):
+        [retrieval_confidence, ana_peak, physics_analogy_agreement]
+
+    where physics_analogy_agreement = cosine_sim(effective_reactivity.detach(),
+    pred_ana_scan) — how much the physics field agrees with the analogy.
+
+    Architecture: Linear(3→16) → SiLU → Linear(16→1) → sigmoid
+    Init: fc2 bias = -2.0  →  sigmoid(-2) ≈ 0.12 (conservative start; gate
+    stays mostly closed initially and learns to open when evidence accumulates).
+
+    Returns a scalar in (0, 1) used as gate_weight to scale the analogy branch:
+        total_loss = loss_term_fp + gate_weight * loss_term_ana
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.fc1 = nn.Linear(3, 16)
+        self.fc2 = nn.Linear(16, 1)
+        nn.init.constant_(self.fc2.bias, -2.0)
+
+    def forward(
+        self,
+        confidence: float,
+        ana_peak: float,
+        agreement: float,
+    ) -> torch.Tensor:
+        device = self.fc1.weight.device
+        x = torch.tensor(
+            [[confidence, ana_peak, agreement]],
+            dtype=torch.float32,
+            device=device,
+        )
+        h = F.silu(self.fc1(x))
+        return torch.sigmoid(self.fc2(h)).squeeze()
+
+
 class GatedAnalogicalGodLoss(nn.Module):
     """
     Homoscedastic arbitration between a first-principles pathway (pred_fp)
@@ -365,29 +406,40 @@ class GatedAnalogicalGodLoss(nn.Module):
     Uses precision parameters s = exp(log_s) instead of variance parameters
     to prevent the σ-collapse failure mode where both σ values drift to ∞.
 
-    The hard gate closes completely when:
-      - retrieval_confidence < confidence_threshold  (poor analogue found), OR
-      - transport_succeeded is False                 (SoM on alien appendage), OR
-      - the transported analogue is too diffuse      (weak atom mapping)
+    Gate: WatsonGate — a learned soft gate (replaces the old hard boolean).
+    The gate takes three signals:
+        1. retrieval_confidence  — quality of the retrieved analogue
+        2. ana_peak              — sharpness of the transported SoM prediction
+        3. physics_analogy_agreement — cosine agreement between physics and analogy
 
-    Loss form (gate open):
+    The MechanismEncoder lives here so its parameters flow through the trainer's
+    main optimizer without any extra registration.
+
+    Loss form:
         L = 0.5 * s_fp  * L_fp  - 0.5 * log(s_fp)
-          + 0.5 * s_ana * L_ana - 0.5 * log(s_ana)
+          + gate_weight * (0.5 * s_ana * L_ana - 0.5 * log(s_ana))
 
-    Loss form (gate closed — physics only):
-        L = 0.5 * s_fp * L_fp - 0.5 * log(s_fp)
+    When gate_weight ≈ 0 the loss degenerates to physics-only.
     """
 
     def __init__(
         self,
-        confidence_threshold: float = 0.9,
-        peak_threshold: float = 0.2,
+        confidence_threshold: float = 0.9,  # kept for backward compat, no longer used as hard cutoff
+        peak_threshold: float = 0.2,         # kept for backward compat
     ) -> None:
         super().__init__()
+        # Legacy thresholds kept for logging / external callers that read them.
         self.threshold = float(confidence_threshold)
         self.peak_threshold = float(max(peak_threshold, 0.0))
         # log(s) where s = 1/σ².  Init at 0 → s=1 → equal weighting.
         self.log_s = nn.Parameter(torch.zeros(2))
+        # Watson soft gate
+        self.watson = WatsonGate()
+        # Mechanism-aware embedding encoder (MechanismEncoder lives here so its
+        # params are automatically included when the trainer calls
+        # list(self.gated_loss.parameters()))
+        from nexus.reasoning.metric_learner import MechanismEncoder
+        self.mechanism_encoder = MechanismEncoder()
 
     def forward(
         self,
@@ -396,6 +448,7 @@ class GatedAnalogicalGodLoss(nn.Module):
         target_idx: torch.Tensor,
         retrieval_confidence: float,
         transport_succeeded: bool,
+        physics_analogy_agreement: float = 0.0,
     ) -> Tuple[torch.Tensor, Dict[str, Any]]:
         # ── shape guards ──────────────────────────────────────────────
         if pred_fp.dim() == 1:
@@ -412,47 +465,38 @@ class GatedAnalogicalGodLoss(nn.Module):
 
         ana_peak = pred_ana.max(dim=-1).values.mean().item() if pred_ana.numel() > 0 else 0.0
 
-        # ── hard gate ─────────────────────────────────────────────────
-        gate_open = (
-            retrieval_confidence >= self.threshold
-            and transport_succeeded
-            and ana_peak >= self.peak_threshold
-        )
+        # ── soft Watson gate ──────────────────────────────────────────
+        # Gate weight is ~0.12 at init; rises as all three signals converge.
+        # Skip analogy branch entirely if transport failed (no sensible label).
+        if not transport_succeeded:
+            gate_weight = pred_fp.new_zeros(())   # exactly 0, no grad through ana
+        else:
+            gate_weight = self.watson(retrieval_confidence, ana_peak, physics_analogy_agreement)
 
-        if not gate_open:
-            total_loss = 0.5 * s_fp * loss_fp - 0.5 * self.log_s[0]
-            return total_loss, {
-                "loss_raw_physics": loss_fp.item(),
-                "loss_raw_analogy": 0.0,
-                "gate_open": 0.0,
-                "analogy_peak": ana_peak,
-                "gate_conf_ok": 1.0 if retrieval_confidence >= self.threshold else 0.0,
-                "gate_peak_ok": 1.0 if ana_peak >= self.peak_threshold else 0.0,
-                "weight_physics": s_fp.item(),
-                "weight_analogy": s_ana.item(),
-            }
+        loss_term_fp = 0.5 * s_fp * loss_fp - 0.5 * self.log_s[0]
 
-        # ── analogical loss (gate is open) ────────────────────────────
+        # ── analogical loss ───────────────────────────────────────────
         # Convert one-hot pred_ana to logits in a numerically safe range.
-        # log(p + ε) gives -20.7 for p=0, 0 for p=1 — far too large a spread
-        # when wrong analogies reach CE ~ 20.  Scaling to [-5, +5] keeps the
-        # analogy signal commensurate with the physics logits.
+        # Scaling to [-5, +5] keeps the analogy signal commensurate with the
+        # physics logits.
         pred_ana_logits = 10.0 * (pred_ana - 0.5)   # maps {0,1} → {-5, +5}
         loss_ana = F.cross_entropy(pred_ana_logits, target_idx)
-
-        loss_term_fp  = 0.5 * s_fp  * loss_fp  - 0.5 * self.log_s[0]
         loss_term_ana = 0.5 * s_ana * loss_ana - 0.5 * self.log_s[1]
-        total_loss = loss_term_fp + loss_term_ana
+
+        total_loss = loss_term_fp + gate_weight * loss_term_ana
+
+        gate_w_scalar = float(gate_weight.detach().item()) if torch.is_tensor(gate_weight) else 0.0
 
         return total_loss, {
             "loss_raw_physics": loss_fp.item(),
             "loss_raw_analogy": loss_ana.item(),
-            "gate_open": 1.0,
+            "gate_open": gate_w_scalar,
             "analogy_peak": ana_peak,
-            "gate_conf_ok": 1.0,
-            "gate_peak_ok": 1.0,
+            "gate_conf_ok": 1.0 if retrieval_confidence >= self.threshold else 0.0,
+            "gate_peak_ok": 1.0 if ana_peak >= self.peak_threshold else 0.0,
             "weight_physics": s_fp.item(),
             "weight_analogy": s_ana.item(),
+            "watson_agreement": float(physics_analogy_agreement),
         }
 
 
