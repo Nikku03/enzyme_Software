@@ -198,10 +198,10 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_MAX_SAMPLES": "0",
         "NEXUS_COLAB_DYNAMICS_STEPS": "1",
         "NEXUS_COLAB_INTEGRATION_RESOLUTION": "10",
-        "NEXUS_COLAB_INTEGRATION_CHUNK": "128",
+        "NEXUS_COLAB_INTEGRATION_CHUNK": "160",
         "NEXUS_COLAB_SCAN_N_POINTS": "12",
         "NEXUS_COLAB_SCAN_RADIUS": "1.20",
-        "NEXUS_COLAB_SCAN_CHUNK": "6",
+        "NEXUS_COLAB_SCAN_CHUNK": "8",
         "NEXUS_COLAB_SCAN_SHELLS": "0.40,0.70,1.00",
         "NEXUS_COLAB_SCAN_REFINE_STEPS": "0",
         "NEXUS_COLAB_NAV_OPT_STEPS": "1",
@@ -311,6 +311,7 @@ def main() -> None:
     cache_path = Path(_env_str("NEXUS_COLAB_PHYSICS_CACHE_PATH", str(default_cache)))
     save_every = max(_env_int("NEXUS_COLAB_CACHE_SAVE_EVERY", 8), 1)
     skip_oom = _env_str("NEXUS_COLAB_CACHE_SKIP_OOM", "1").lower() in {"1", "true", "yes", "on"}
+    cleanup_every = max(_env_int("NEXUS_COLAB_CACHE_CUDA_CLEANUP_EVERY", 4), 1)
 
     payload = {
         "version": 1,
@@ -492,8 +493,9 @@ def main() -> None:
             del batch, module1_out, pocket_encoding, field
             del manifold_pos, target_point_world, q_init_internal, target_point_internal
             del pred_rate, h_initial, h_final, ts_eigenvalues, entry
-            gc.collect()
-            if device.type == "cuda":
+            if batch_index % cleanup_every == 0:
+                gc.collect()
+            if device.type == "cuda" and (batch_index % cleanup_every == 0):
                 torch.cuda.empty_cache()
 
         if batch_index == 1 or batch_index % save_every == 0 or batch_index == len(loader):
