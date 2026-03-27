@@ -581,6 +581,8 @@ def _save_training_checkpoint(
         payload["last_batch_metrics"] = last_batch_metrics
     if trainer.optimizer is not None:
         payload["optimizer_state_dict"] = trainer.optimizer.state_dict()
+    if trainer.scheduler is not None:
+        payload["scheduler_state_dict"] = trainer.scheduler.state_dict()
     torch.save(payload, path)
 
 
@@ -615,6 +617,12 @@ if CKPT_PATH.exists():
             print("  Optimizer state restored.")
         except Exception as _oe:
             print(f"  Optimizer state not restored (shape mismatch after arch change): {_oe}")
+    if "scheduler_state_dict" in _ckpt and trainer.scheduler is not None:
+        try:
+            trainer.scheduler.load_state_dict(_ckpt["scheduler_state_dict"])
+            print("  Scheduler state restored.")
+        except Exception as _se:
+            print(f"  Scheduler state not restored: {_se}")
     start_epoch = int(_ckpt.get("epoch", 0))
     history = list(_ckpt.get("metrics_history", []))
     print(f"  Resumed from epoch {start_epoch}  ({len(history)} epochs completed)\n")
@@ -634,6 +642,12 @@ if SAVE_EVERY_BATCH and BATCH_CKPT_PATH.exists():
                 print("  Optimizer state restored from batch checkpoint.")
             except Exception as _oe:
                 print(f"  Optimizer state not restored from batch checkpoint: {_oe}")
+        if "scheduler_state_dict" in _bckpt and trainer.scheduler is not None:
+            try:
+                trainer.scheduler.load_state_dict(_bckpt["scheduler_state_dict"])
+                print("  Scheduler state restored from batch checkpoint.")
+            except Exception as _se:
+                print(f"  Scheduler state not restored from batch checkpoint: {_se}")
         start_epoch = _b_epoch
         resume_batch_in_epoch = _b_batch
         history = list(_bckpt.get("metrics_history", history))
@@ -682,7 +696,7 @@ for epoch in range(start_epoch, CFG["epochs"]):
     history.append(metrics)
     print(f"\n── epoch {epoch+1} summary ──────────────────────────────────────")
     for _k in ["loss_total", "som_top1", "som_top2", "pred_rate",
-               "hamiltonian_initial", "dag_causal_loss",
+               "hamiltonian_initial", "dag_causal_loss", "dag_loss_contribution",
                "ana_loss_total", "ana_gate_open", "ana_confidence",
                "ana_peak", "ana_gate_conf_ok", "ana_gate_peak_ok",
                "ana_weight_fp", "ana_weight_ana", "ana_transport_ok"]:

@@ -114,6 +114,28 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
         "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
     },
+    # 20-30 epoch cloud run on single A100 80GB or H100 80GB.
+    # Full physics: dynamics_steps=2, integration_resolution=12, scan_n_points=24.
+    # NOTE: current code is single-GPU only — if you have 8×A100, point to one node.
+    "full_3a4_a100": {
+        "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
+        "NEXUS_COLAB_TARGET_ISOFORM": "3A4",
+        "NEXUS_COLAB_MAX_SAMPLES": "0",
+        "NEXUS_COLAB_EPOCHS": "25",
+        "NEXUS_COLAB_DYNAMICS_STEPS": "2",
+        "NEXUS_COLAB_INTEGRATION_RESOLUTION": "12",
+        "NEXUS_COLAB_INTEGRATION_CHUNK": "128",
+        "NEXUS_COLAB_SCAN_N_POINTS": "24",
+        "NEXUS_COLAB_SCAN_RADIUS": "1.75",
+        "NEXUS_COLAB_SCAN_CHUNK": "8",
+        "NEXUS_COLAB_SCAN_SHELLS": "0.40,0.65,0.85,1.00",
+        "NEXUS_COLAB_SCAN_REFINE_STEPS": "1",
+        "NEXUS_COLAB_NAV_OPT_STEPS": "6",
+        "NEXUS_COLAB_NAV_CANDIDATES": "8",
+        "NEXUS_COLAB_DAG_LOSS_WEIGHT": "0.10",
+        "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
+        "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
+    },
 }
 
 
