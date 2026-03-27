@@ -610,7 +610,7 @@ for _sdf in _ALL_SDFS:
     except Exception as _e:
         print(f"  Skipping {_sdf.name} for bank: {_e}")
 trainer.memory_bank.device = str(device)
-_continuous_bank_encoder = trainer.encode_smiles_for_memory_bank if ANALOGICAL_BANK_MODE == "continuous" else None
+_continuous_bank_encoder = trainer.encode_mol_for_memory_bank if ANALOGICAL_BANK_MODE == "continuous" else None
 trainer.memory_bank.populate_from_mols(
     _bank_mols,
     continuous_encoder=_continuous_bank_encoder,

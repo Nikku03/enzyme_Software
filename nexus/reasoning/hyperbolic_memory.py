@@ -164,9 +164,9 @@ class HyperbolicMemoryBank:
             self.historical_smiles.append(canonical)
             projected: torch.Tensor | None = None
             node_multivectors: torch.Tensor | None = None
-            if continuous_encoder is not None and canonical:
+            if continuous_encoder is not None:
                 try:
-                    encoded = continuous_encoder(canonical)
+                    encoded = continuous_encoder(mol)
                     if isinstance(encoded, Mapping):
                         projected = encoded.get("graph_embedding")
                         node_multivectors = encoded.get("node_multivectors")

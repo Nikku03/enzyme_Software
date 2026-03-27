@@ -436,6 +436,103 @@ class Metabolic_Causal_Trainer(nn.Module):
             "node_multivectors": node_multivectors.detach().float().cpu(),
         }
 
+    def encode_mol_for_memory_bank(self, mol) -> Dict[str, torch.Tensor]:
+        """Fast bank encoding that reads 3D positions from an existing SDF conformer.
+
+        Skips both SMILES→3D generation (MolLlama + StructuralDiffusion) and
+        MACE-OFF geometry optimisation — the two dominant costs in
+        encode_smiles_for_memory_bank.  For a 457-molecule CYP3A4 bank this
+        reduces bank population from ~30-90 minutes to ~30-90 seconds.
+
+        Falls back to encode_smiles_for_memory_bank for molecules that have no
+        embedded 3D conformer.
+        """
+        from rdkit import Chem as _Chem
+        from nexus.core.generative_agency import NEXUS_Seed
+        from nexus.core.manifold_refiner import Refined_NEXUS_Manifold
+        from nexus.models.mol_llama_wrapper import LatentBlueprint
+
+        if mol.GetNumConformers() == 0:
+            return self.encode_smiles_for_memory_bank(_Chem.MolToSmiles(mol))
+
+        conf = mol.GetConformer()
+        n_atoms = mol.GetNumAtoms()
+
+        # 3D positions straight from the SDF conformer.
+        coords = [
+            [conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z]
+            for i in range(n_atoms)
+        ]
+        pos = torch.tensor(coords, dtype=torch.float32, device=self.device)
+
+        species = torch.tensor(
+            [a.GetAtomicNum() for a in mol.GetAtoms()],
+            dtype=torch.long,
+            device=self.device,
+        )
+        atom_symbols = [a.GetSymbol() for a in mol.GetAtoms()]
+
+        # Chirality codes — same logic as NEXT_Mol_Generative_Agency.
+        chirality_codes = torch.zeros(n_atoms, dtype=torch.long, device=self.device)
+        for atom in mol.GetAtoms():
+            tag = str(atom.GetChiralTag())
+            if tag == "CHI_TETRAHEDRAL_CCW":
+                chirality_codes[atom.GetIdx()] = 1
+            elif tag == "CHI_TETRAHEDRAL_CW":
+                chirality_codes[atom.GetIdx()] = -1
+
+        formal_charge = sum(a.GetFormalCharge() for a in mol.GetAtoms())
+        mol_smiles = _Chem.MolToSmiles(mol)
+
+        # Dummy LatentBlueprint.  The field engine only reads
+        # manifold.seed.metadata["formal_charge"] — the blueprint tensors are
+        # never accessed after the positions have been generated.
+        latent_dim = self.model.module1.agency.latent_dim
+        dummy_blueprint = LatentBlueprint(
+            sequence=torch.zeros(1, 1, latent_dim),
+            pooled=torch.zeros(1, latent_dim),
+            token_ids=torch.zeros(1, 1, dtype=torch.long),
+            attention_mask=torch.ones(1, 1, dtype=torch.long),
+            smiles=mol_smiles,
+            source="sdf_fast_path",
+            chirality_signature=torch.zeros(8),
+        )
+
+        seed = NEXUS_Seed(
+            pos=pos,
+            z=species,
+            latent_blueprint=dummy_blueprint,
+            smiles=mol_smiles,
+            atom_symbols=atom_symbols,
+            chirality_codes=chirality_codes,
+            metadata={"formal_charge": formal_charge, "fast_path": True},
+        )
+
+        # Zero energy + forces — MACE-OFF is skipped; the topology kernel
+        # uses forces only for RBF feature computation, not for gradient flow.
+        manifold = Refined_NEXUS_Manifold(
+            pos=pos,
+            energy=torch.zeros((), dtype=pos.dtype, device=self.device),
+            forces=torch.zeros_like(pos),
+            species=species,
+            seed=seed,
+        )
+
+        with torch.no_grad():
+            with self._autocast_context():
+                field_state = self.model.module1.field_engine.build_state(manifold)
+                _, latent = field_state.field.raw_query(pos, return_latent=True)
+            if latent.ndim == 3:
+                node_multivectors = latent.mean(dim=-2)
+            else:
+                node_multivectors = latent
+            embedding = self.gated_loss.hyperbolic_projector(node_multivectors)
+
+        return {
+            "graph_embedding": embedding.detach().float().cpu(),
+            "node_multivectors": node_multivectors.detach().float().cpu(),
+        }
+
     def _trainable(self, params: Iterable[nn.Parameter]) -> List[nn.Parameter]:
         return [p for p in params if p is not None and p.requires_grad]
 
