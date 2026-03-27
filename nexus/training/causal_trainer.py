@@ -193,10 +193,15 @@ class Metabolic_Causal_Trainer(nn.Module):
             return None
         out: Dict[str, torch.Tensor] = {}
         for name, value in entry.items():
+            if isinstance(value, (str, bytes)) or value is None:
+                continue
             if torch.is_tensor(value):
                 tensor = value.detach().to(device=device)
             else:
-                tensor = torch.as_tensor(value, device=device)
+                try:
+                    tensor = torch.as_tensor(value, device=device)
+                except (TypeError, ValueError):
+                    continue
             if tensor.is_floating_point():
                 tensor = tensor.to(dtype=torch.float32)
             out[name] = tensor
