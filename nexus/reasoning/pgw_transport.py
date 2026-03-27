@@ -54,6 +54,9 @@ class PGWTransporter:
         tol: float = 1.0e-7,
         min_transport_mass: float = 1.0e-3,
         support_threshold: float = 5.0e-2,
+        dustbin_epsilon: float = 0.2,
+        anchor_count: int = 5,
+        linearize_above_atoms: int = 24,
     ) -> None:
         if not _RDKIT_OK:
             raise ImportError("RDKit is required for PGWTransporter")
@@ -67,6 +70,9 @@ class PGWTransporter:
         self.tol = float(max(tol, 1.0e-10))
         self.min_transport_mass = float(max(min_transport_mass, 1.0e-8))
         self.support_threshold = float(max(support_threshold, 1.0e-8))
+        self.dustbin_epsilon = float(min(max(dustbin_epsilon, 0.0), 0.95))
+        self.anchor_count = int(max(anchor_count, 1))
+        self.linearize_above_atoms = int(max(linearize_above_atoms, 4))
 
     @staticmethod
     def _distance_matrix(mol) -> torch.Tensor:
@@ -101,12 +107,144 @@ class PGWTransporter:
         # bounded [0, 2] Euclidean cost in feature space
         return torch.cdist(q_feat, r_feat, p=2).to(dtype=torch.float64)
 
-    def transport_label(self, query_mol, retrieved_mol, retrieved_som_idx: int) -> PGWTransportResult:
+    @staticmethod
+    def _prepare_multivectors(multivectors: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
+        if multivectors is None:
+            return None
+        mv = torch.as_tensor(multivectors, dtype=torch.float64)
+        if mv.ndim == 1:
+            mv = mv.unsqueeze(0)
+        elif mv.ndim > 2:
+            mv = mv.reshape(mv.size(0), -1)
+        if mv.numel() == 0 or not bool(torch.isfinite(mv).all().item()):
+            return None
+        return mv
+
+    @staticmethod
+    def compute_z_kernel_matrix(multivectors: torch.Tensor) -> torch.Tensor:
+        v_norm = F.normalize(multivectors, p=2, dim=-1)
+        sim_matrix = torch.matmul(v_norm, v_norm.transpose(0, 1))
+        z_dist = 1.0 - sim_matrix
+        return z_dist / z_dist.max().clamp_min(1.0)
+
+    def _anchor_indices(self, mol) -> torch.Tensor:
+        ranked = sorted(
+            (
+                (-atom.GetAtomicNum(), -atom.GetDegree(), atom.GetIdx())
+                for atom in mol.GetAtoms()
+            )
+        )
+        chosen = [idx for _, _, idx in ranked[: min(self.anchor_count, mol.GetNumAtoms())]]
+        return torch.tensor(chosen, dtype=torch.long)
+
+    def _linearized_anchor_cost(
+        self,
+        query_mol,
+        retrieved_mol,
+        query_multivectors: torch.Tensor,
+        retrieved_multivectors: torch.Tensor,
+    ) -> torch.Tensor:
+        q_z = self.compute_z_kernel_matrix(query_multivectors)
+        r_z = self.compute_z_kernel_matrix(retrieved_multivectors)
+        q_anchor = self._anchor_indices(query_mol)
+        r_anchor = self._anchor_indices(retrieved_mol)
+        k = min(int(q_anchor.numel()), int(r_anchor.numel()))
+        q_sig = q_z.index_select(1, q_anchor[:k])  # [N, K]
+        r_sig = r_z.index_select(1, r_anchor[:k])  # [M, K]
+        return torch.cdist(q_sig, r_sig, p=2).to(dtype=torch.float64)
+
+    def _partial_sinkhorn(self, cost: torch.Tensor, *, transported_mass: float) -> torch.Tensor:
+        n, m = cost.shape
+        mu = torch.full((n,), 1.0 / max(n, 1), dtype=torch.float64, device=cost.device)
+        nu = torch.full((m,), 1.0 / max(m, 1), dtype=torch.float64, device=cost.device)
+        K = torch.exp(-cost / self.reg).clamp_min(1.0e-12)
+        pi = K
+        for _ in range(self.num_itermax):
+            row_sum = pi.sum(dim=1).clamp_min(1.0e-12)
+            pi = pi * torch.minimum(mu / row_sum, torch.ones_like(row_sum)).unsqueeze(1)
+            col_sum = pi.sum(dim=0).clamp_min(1.0e-12)
+            pi = pi * torch.minimum(nu / col_sum, torch.ones_like(col_sum)).unsqueeze(0)
+            current_mass = pi.sum().clamp_min(1.0e-12)
+            pi = pi * (transported_mass / current_mass)
+        return pi
+
+    def _partial_z_gw(
+        self,
+        z_dist_query: torch.Tensor,
+        z_dist_retrieved: torch.Tensor,
+        *,
+        cross_cost: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        n = z_dist_query.size(0)
+        m = z_dist_retrieved.size(0)
+        mu = torch.full((n,), 1.0 / max(n, 1), dtype=torch.float64, device=z_dist_query.device)
+        nu = torch.full((m,), 1.0 / max(m, 1), dtype=torch.float64, device=z_dist_query.device)
+        transported_mass = 1.0 - self.dustbin_epsilon
+        pi = torch.full((n, m), transported_mass / max(n * m, 1), dtype=torch.float64, device=z_dist_query.device)
+        additive_cost = cross_cost if cross_cost is not None else 0.0
+        for _ in range(self.num_itermax):
+            cost_gradient = -4.0 * torch.matmul(z_dist_query, torch.matmul(pi, z_dist_retrieved))
+            score = -(cost_gradient + additive_cost) / self.reg
+            score = score - score.max()
+            K = torch.exp(score).clamp_min(1.0e-12)
+            row_sum = K.sum(dim=1).clamp_min(1.0e-12)
+            col_sum = K.sum(dim=0).clamp_min(1.0e-12)
+            pi_next = K * (mu / row_sum).unsqueeze(1) * (nu / col_sum).unsqueeze(0)
+            pi_next = pi_next * (transported_mass / pi_next.sum().clamp_min(1.0e-12))
+            if torch.max(torch.abs(pi_next - pi)).item() < self.tol:
+                pi = pi_next
+                break
+            pi = pi_next
+        return pi
+
+    def transport_label(
+        self,
+        query_mol,
+        retrieved_mol,
+        retrieved_som_idx: int,
+        *,
+        query_multivectors: Optional[torch.Tensor] = None,
+        retrieved_multivectors: Optional[torch.Tensor] = None,
+    ) -> PGWTransportResult:
         n_query = query_mol.GetNumAtoms()
         zero_pred = torch.zeros(n_query, dtype=torch.float32, device=self.device)
 
         if not (0 <= int(retrieved_som_idx) < retrieved_mol.GetNumAtoms()):
             return PGWTransportResult(zero_pred, False, 0, 0.0)
+
+        q_mv = self._prepare_multivectors(query_multivectors)
+        r_mv = self._prepare_multivectors(retrieved_multivectors)
+
+        if (
+            q_mv is not None
+            and r_mv is not None
+            and q_mv.size(0) == query_mol.GetNumAtoms()
+            and r_mv.size(0) == retrieved_mol.GetNumAtoms()
+        ):
+            try:
+                transported_mass = 1.0 - self.dustbin_epsilon
+                if max(q_mv.size(0), r_mv.size(0)) > self.linearize_above_atoms:
+                    anchor_cost = self._linearized_anchor_cost(query_mol, retrieved_mol, q_mv, r_mv)
+                    coupling_t = self._partial_sinkhorn(anchor_cost, transported_mass=transported_mass)
+                else:
+                    c_query = self.compute_z_kernel_matrix(q_mv)
+                    c_retrieved = self.compute_z_kernel_matrix(r_mv)
+                    m_cross = self._cross_feature_cost(query_mol, retrieved_mol)
+                    coupling_t = self._partial_z_gw(c_query, c_retrieved, cross_cost=m_cross)
+                coupling_t = coupling_t.to(dtype=torch.float32, device=self.device)
+                source_column = coupling_t[:, int(retrieved_som_idx)]
+                moved_mass = float(source_column.sum().item())
+                if moved_mass >= self.min_transport_mass and bool(torch.isfinite(source_column).all().item()):
+                    analogical_pred = source_column / source_column.sum().clamp_min(self.min_transport_mass)
+                    support_size = int((analogical_pred >= self.support_threshold).sum().item())
+                    return PGWTransportResult(
+                        analogical_pred=analogical_pred,
+                        transport_succeeded=True,
+                        support_size=support_size,
+                        transported_mass=moved_mass,
+                    )
+            except Exception:
+                pass
 
         c_query = self._distance_matrix(query_mol)
         c_retrieved = self._distance_matrix(retrieved_mol)

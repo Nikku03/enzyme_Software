@@ -418,7 +418,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         node_multivectors = self._module1_node_multivectors(module1_out)
         return self.gated_loss.hyperbolic_projector(node_multivectors)
 
-    def encode_smiles_for_memory_bank(self, smiles: str) -> torch.Tensor:
+    def encode_smiles_for_memory_bank(self, smiles: str) -> Dict[str, torch.Tensor]:
         with torch.no_grad():
             seed = self.model.module1.agency(smiles)
             manifold = self.model.module1.refiner(seed)
@@ -431,7 +431,10 @@ class Metabolic_Causal_Trainer(nn.Module):
             else:
                 node_multivectors = latent
             embedding = self.gated_loss.hyperbolic_projector(node_multivectors)
-        return embedding.detach().float().cpu()
+        return {
+            "graph_embedding": embedding.detach().float().cpu(),
+            "node_multivectors": node_multivectors.detach().float().cpu(),
+        }
 
     def _trainable(self, params: Iterable[nn.Parameter]) -> List[nn.Parameter]:
         return [p for p in params if p is not None and p.requires_grad]
@@ -1528,12 +1531,14 @@ class Metabolic_Causal_Trainer(nn.Module):
                 from rdkit import Chem as _Chem
                 _query_mol = _Chem.MolFromSmiles(smiles)
                 if _query_mol is not None:
+                    _query_node_multivectors = self._module1_node_multivectors(module1_out).detach()
                     _query_hyper_embed = self._project_module1_hyperbolic(module1_out)
                     _result = self.memory_bank.retrieve_and_transport(
                         _query_mol,
                         query_smiles=smiles,
                         mechanism_encoder=self.gated_loss.mechanism_encoder,
                         query_embedding=_query_hyper_embed,
+                        query_multivectors=_query_node_multivectors,
                     )
                     # Re-index pred_ana (SMILES atom order) onto the scan's
                     # descending-reactivity-sorted atom order so target_idx

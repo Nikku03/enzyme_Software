@@ -11,7 +11,7 @@ via RDKit MCS, matching the existing baseline memory-bank contract.
 from __future__ import annotations
 
 import math
-from typing import List
+from typing import List, Mapping
 
 import torch
 import torch.nn.functional as F
@@ -79,6 +79,7 @@ class HyperbolicMemoryBank:
         self.historical_mols: List = []
         self.historical_soms: List[int] = []
         self.historical_smiles: List[str | None] = []
+        self.historical_node_multivectors: List[torch.Tensor | None] = []
         self.memory_embeddings: torch.Tensor | None = None
         self.memory_fingerprints: torch.Tensor | None = None
         self.memory_bit_counts: torch.Tensor | None = None
@@ -94,6 +95,7 @@ class HyperbolicMemoryBank:
         self.historical_mols = []
         self.historical_soms = []
         self.historical_smiles = []
+        self.historical_node_multivectors = []
         self.memory_embeddings = None
         self.memory_fingerprints = None
         self.memory_bit_counts = None
@@ -161,16 +163,32 @@ class HyperbolicMemoryBank:
             canonical = _canonical_smiles(mol)
             self.historical_smiles.append(canonical)
             projected: torch.Tensor | None = None
+            node_multivectors: torch.Tensor | None = None
             if continuous_encoder is not None and canonical:
                 try:
-                    projected = continuous_encoder(canonical)
+                    encoded = continuous_encoder(canonical)
+                    if isinstance(encoded, Mapping):
+                        projected = encoded.get("graph_embedding")
+                        node_multivectors = encoded.get("node_multivectors")
+                    else:
+                        projected = encoded
                     if projected is not None:
                         projected = torch.as_tensor(projected, dtype=torch.float32, device=self.device).view(-1)
                         if projected.numel() == 0 or not bool(torch.isfinite(projected).all().item()):
                             projected = None
+                    if node_multivectors is not None:
+                        node_multivectors = torch.as_tensor(
+                            node_multivectors,
+                            dtype=torch.float32,
+                            device=self.device,
+                        )
+                        if node_multivectors.numel() == 0 or not bool(torch.isfinite(node_multivectors).all().item()):
+                            node_multivectors = None
                 except Exception:
                     projected = None
+                    node_multivectors = None
             projected_embeddings.append(projected)
+            self.historical_node_multivectors.append(node_multivectors)
 
         if not fps:
             raise RuntimeError("No labelled molecules found — hyperbolic memory bank is empty.")
@@ -252,6 +270,7 @@ class HyperbolicMemoryBank:
         query_smiles: str | None = None,
         mechanism_encoder=None,
         query_embedding: torch.Tensor | None = None,
+        query_multivectors: torch.Tensor | None = None,
     ) -> MemoryRetrievalResult:
         """
         Args:
@@ -407,7 +426,16 @@ class HyperbolicMemoryBank:
         transport_ok: bool
         support_size: int
         if self.transport_backend == "pgw" and self.pgw is not None:
-            pgw_result = self.pgw.transport_label(query_mol, retrieved_mol, retrieved_som)
+            retrieved_multivectors = None
+            if 0 <= best_idx < len(self.historical_node_multivectors):
+                retrieved_multivectors = self.historical_node_multivectors[best_idx]
+            pgw_result = self.pgw.transport_label(
+                query_mol,
+                retrieved_mol,
+                retrieved_som,
+                query_multivectors=query_multivectors,
+                retrieved_multivectors=retrieved_multivectors,
+            )
             analogical_pred = pgw_result.analogical_pred
             transport_ok = pgw_result.transport_succeeded
             support_size = pgw_result.support_size
