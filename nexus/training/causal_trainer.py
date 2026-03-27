@@ -1531,8 +1531,25 @@ class Metabolic_Causal_Trainer(nn.Module):
                 from rdkit import Chem as _Chem
                 _query_mol = _Chem.MolFromSmiles(smiles)
                 if _query_mol is not None:
-                    _query_node_multivectors = self._module1_node_multivectors(module1_out).detach()
-                    _query_hyper_embed = self._project_module1_hyperbolic(module1_out)
+                    # Use the atom multivectors already assembled for the DAG learner
+                    # (atom_mv: [1, N, 8]) instead of re-querying the SIREN field.
+                    # Re-querying SIREN duplicates the most expensive op in the pipeline
+                    # and the atom_mv already encodes position + reactivity in G(3,0,0).
+                    _query_node_multivectors = atom_mv.squeeze(0).detach()  # [N, 8]
+
+                    # Only project to hyperbolic space when the bank actually contains
+                    # continuous (HGNN) embeddings — otherwise the projection is wasted.
+                    _bank_has_continuous = (
+                        self.memory_bank.memory_projected_mask is not None
+                        and bool(self.memory_bank.memory_projected_mask.any().item())
+                    )
+                    if _bank_has_continuous:
+                        _query_hyper_embed = self.gated_loss.hyperbolic_projector(
+                            atom_mv.squeeze(0)
+                        )
+                    else:
+                        _query_hyper_embed = None
+
                     _result = self.memory_bank.retrieve_and_transport(
                         _query_mol,
                         query_smiles=smiles,

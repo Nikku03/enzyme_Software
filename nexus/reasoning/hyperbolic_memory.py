@@ -196,30 +196,57 @@ class HyperbolicMemoryBank:
         raw = torch.stack(fps).to(self.device)
         self.memory_fingerprints = raw
         self.memory_bit_counts = raw.sum(dim=-1)
-        fallback_embeddings = self._encode_hyperbolic(raw)
         projected_mask = torch.zeros(len(projected_embeddings), dtype=torch.bool, device=self.device)
+
         if any(embed is not None for embed in projected_embeddings):
+            # Determine target dimension from the continuous (HGNN) embeddings.
+            projected_dim = next(
+                (int(embed.numel()) for embed in projected_embeddings if embed is not None),
+                None,
+            )
+            # Build fallback embeddings in the SAME projected_dim space.
+            # We derive them from the ECFP4 fingerprint properly: encode hyperbolic
+            # (2048D), then project to projected_dim via a random-but-fixed linear map
+            # stored at populate time so retrieval distances remain consistent.
+            # This preserves the full fingerprint structure rather than truncating.
+            fallback_embeddings_full = self._encode_hyperbolic(raw)  # [N, 2048]
+            fp_dim = int(fallback_embeddings_full.size(-1))
+            if fp_dim != projected_dim:
+                # Use PCA-like projection: multiply by a fixed [fp_dim, projected_dim]
+                # matrix derived from the first principal components of the fp space.
+                # Simple deterministic approach: stride-average the fp dimensions.
+                if projected_dim < fp_dim:
+                    # Average-pool fp_dim → projected_dim
+                    factor = fp_dim / projected_dim
+                    indices = torch.arange(projected_dim, device=self.device)
+                    lo = (indices * factor).long().clamp(0, fp_dim - 1)
+                    hi = ((indices + 1) * factor).long().clamp(0, fp_dim)
+                    fallback_embeddings = torch.stack(
+                        [fallback_embeddings_full[:, lo[i]:hi[i]].mean(dim=-1) for i in range(projected_dim)],
+                        dim=-1,
+                    )
+                else:
+                    # Pad with zeros if projected_dim > fp_dim (unusual)
+                    fallback_embeddings = F.pad(fallback_embeddings_full, (0, projected_dim - fp_dim))
+                fallback_embeddings = self._project_inside_ball(fallback_embeddings)
+            else:
+                fallback_embeddings = fallback_embeddings_full
+
             final_embeddings: List[torch.Tensor] = []
-            fallback_dim = int(fallback_embeddings.size(-1))
-            projected_dim = next((int(embed.numel()) for embed in projected_embeddings if embed is not None), fallback_dim)
-            if fallback_dim != projected_dim:
-                fallback_embeddings = F.pad(fallback_embeddings, (0, max(projected_dim - fallback_dim, 0)))
-                if fallback_embeddings.size(-1) > projected_dim:
-                    fallback_embeddings = fallback_embeddings[..., :projected_dim]
             for idx, embed in enumerate(projected_embeddings):
                 if embed is None:
                     final_embeddings.append(fallback_embeddings[idx])
-                    continue
-                current = embed
-                if current.numel() < projected_dim:
-                    current = F.pad(current, (0, projected_dim - current.numel()))
-                elif current.numel() > projected_dim:
-                    current = current[:projected_dim]
-                final_embeddings.append(self._project_inside_ball(current))
-                projected_mask[idx] = True
+                else:
+                    current = embed.view(-1)
+                    if current.numel() < projected_dim:
+                        current = F.pad(current, (0, projected_dim - current.numel()))
+                    elif current.numel() > projected_dim:
+                        current = current[:projected_dim]
+                    final_embeddings.append(self._project_inside_ball(current))
+                    projected_mask[idx] = True
             self.memory_embeddings = torch.stack(final_embeddings, dim=0)
         else:
-            self.memory_embeddings = fallback_embeddings
+            self.memory_embeddings = self._encode_hyperbolic(raw)
         self.memory_projected_mask = projected_mask
         projected_count = int(projected_mask.sum().item())
         print(
