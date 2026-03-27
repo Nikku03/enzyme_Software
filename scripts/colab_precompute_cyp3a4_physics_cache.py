@@ -12,6 +12,7 @@ cache, and lets training reuse those targets later via
 from __future__ import annotations
 
 import importlib
+import gc
 import os
 import subprocess
 import sys
@@ -197,14 +198,14 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_MAX_SAMPLES": "0",
         "NEXUS_COLAB_DYNAMICS_STEPS": "1",
         "NEXUS_COLAB_INTEGRATION_RESOLUTION": "10",
-        "NEXUS_COLAB_INTEGRATION_CHUNK": "160",
-        "NEXUS_COLAB_SCAN_N_POINTS": "16",
-        "NEXUS_COLAB_SCAN_RADIUS": "1.35",
-        "NEXUS_COLAB_SCAN_CHUNK": "8",
-        "NEXUS_COLAB_SCAN_SHELLS": "0.40,0.65,0.85,1.00",
-        "NEXUS_COLAB_SCAN_REFINE_STEPS": "1",
-        "NEXUS_COLAB_NAV_OPT_STEPS": "2",
-        "NEXUS_COLAB_NAV_CANDIDATES": "3",
+        "NEXUS_COLAB_INTEGRATION_CHUNK": "128",
+        "NEXUS_COLAB_SCAN_N_POINTS": "12",
+        "NEXUS_COLAB_SCAN_RADIUS": "1.20",
+        "NEXUS_COLAB_SCAN_CHUNK": "6",
+        "NEXUS_COLAB_SCAN_SHELLS": "0.40,0.70,1.00",
+        "NEXUS_COLAB_SCAN_REFINE_STEPS": "0",
+        "NEXUS_COLAB_NAV_OPT_STEPS": "1",
+        "NEXUS_COLAB_NAV_CANDIDATES": "2",
     },
 }
 
@@ -309,6 +310,7 @@ def main() -> None:
         default_cache = REPO_DIR / "nexus_cyp3a4_physics_cache.pt"
     cache_path = Path(_env_str("NEXUS_COLAB_PHYSICS_CACHE_PATH", str(default_cache)))
     save_every = max(_env_int("NEXUS_COLAB_CACHE_SAVE_EVERY", 8), 1)
+    skip_oom = _env_str("NEXUS_COLAB_CACHE_SKIP_OOM", "1").lower() in {"1", "true", "yes", "on"}
 
     payload = {
         "version": 1,
@@ -328,6 +330,7 @@ def main() -> None:
             "nav_candidates": nav.candidate_batch,
         },
         "entries": {},
+        "failed": {},
     }
 
     if cache_path.exists():
@@ -335,6 +338,8 @@ def main() -> None:
         if isinstance(existing, dict) and isinstance(existing.get("entries"), dict):
             payload["entries"].update(existing["entries"])
             print(f"Resuming cache build: {len(payload['entries'])} existing entries from {cache_path}")
+        if isinstance(existing, dict) and isinstance(existing.get("failed"), dict):
+            payload["failed"].update(existing["failed"])
 
     for batch_index, batch in enumerate(loader, start=1):
         batch = trainer._move_to_device(batch, device=device)
@@ -343,122 +348,160 @@ def main() -> None:
         cache_key = trainer.physics_cache_key(smiles, int(true_atom_index.detach().cpu().item()))
         if cache_key in payload["entries"]:
             continue
+        module1_out = None
+        pocket_encoding = None
+        field = None
+        manifold_pos = None
+        target_point_world = None
+        q_init_internal = None
+        target_point_internal = None
+        pred_rate = None
+        h_initial = None
+        h_final = None
+        ts_eigenvalues = None
+        entry = None
+        try:
+            module1_out = trainer._module1_forward_hot_path(smiles)
+            true_row_index = trainer._scan_row_index(module1_out.scan.atom_indices, true_atom_index)
+            protein_data = trainer._resolve_protein_data(batch)
+            accessibility_field = None
+            ddi_occupancy = None
+            if protein_data is not None:
+                true_ranked_index = trainer._scan_row_index(module1_out.ranked_atom_indices, true_atom_index)
+                pocket_encoding = trainer._build_pocket_encoding_hot_path(
+                    module1_out,
+                    int(true_ranked_index.detach().cpu().item()),
+                    protein_data,
+                )
+                accessibility_field = pocket_encoding.accessibility_state
+                ddi_occupancy = protein_data.get("ddi_occupancy")
 
-        module1_out = trainer._module1_forward_hot_path(smiles)
-        true_row_index = trainer._scan_row_index(module1_out.scan.atom_indices, true_atom_index)
-        protein_data = trainer._resolve_protein_data(batch)
-        accessibility_field = None
-        ddi_occupancy = None
-        if protein_data is not None:
-            true_ranked_index = trainer._scan_row_index(module1_out.ranked_atom_indices, true_atom_index)
-            pocket_encoding = trainer._build_pocket_encoding_hot_path(
-                module1_out,
-                int(true_ranked_index.detach().cpu().item()),
-                protein_data,
+            field = module1_out.field_state.field
+            manifold_pos = trainer._sanitize_tensor(
+                module1_out.manifold.pos,
+                nan=0.0,
+                posinf=25.0,
+                neginf=-25.0,
+                clamp=(-25.0, 25.0),
             )
-            accessibility_field = pocket_encoding.accessibility_state
-            ddi_occupancy = protein_data.get("ddi_occupancy")
+            target_point_world = trainer._sanitize_tensor(
+                module1_out.scan.refined_peak_points[true_row_index],
+                nan=0.0,
+                posinf=25.0,
+                neginf=-25.0,
+                clamp=(-25.0, 25.0),
+            )
+            q_init_internal = trainer._sanitize_tensor(
+                field.to_internal_coords(manifold_pos).to(dtype=trainer.model.solver_dtype),
+                nan=0.0,
+                posinf=25.0,
+                neginf=-25.0,
+                clamp=(-25.0, 25.0),
+            )
+            target_point_internal = trainer._sanitize_tensor(
+                field.to_internal_coords(target_point_world.view(1, 3)).view(-1).to(dtype=trainer.model.solver_dtype),
+                nan=0.0,
+                posinf=25.0,
+                neginf=-25.0,
+                clamp=(-25.0, 25.0),
+            )
 
-        field = module1_out.field_state.field
-        manifold_pos = trainer._sanitize_tensor(
-            module1_out.manifold.pos,
-            nan=0.0,
-            posinf=25.0,
-            neginf=-25.0,
-            clamp=(-25.0, 25.0),
-        )
-        target_point_world = trainer._sanitize_tensor(
-            module1_out.scan.refined_peak_points[true_row_index],
-            nan=0.0,
-            posinf=25.0,
-            neginf=-25.0,
-            clamp=(-25.0, 25.0),
-        )
-        q_init_internal = trainer._sanitize_tensor(
-            field.to_internal_coords(manifold_pos).to(dtype=trainer.model.solver_dtype),
-            nan=0.0,
-            posinf=25.0,
-            neginf=-25.0,
-            clamp=(-25.0, 25.0),
-        )
-        target_point_internal = trainer._sanitize_tensor(
-            field.to_internal_coords(target_point_world.view(1, 3)).view(-1).to(dtype=trainer.model.solver_dtype),
-            nan=0.0,
-            posinf=25.0,
-            neginf=-25.0,
-            clamp=(-25.0, 25.0),
-        )
+            pred_rate, h_initial, h_final, ts_eigenvalues = trainer._dynamics_summary_checkpointed(
+                q_init_internal,
+                target_point_internal,
+                smiles=smiles,
+                species=module1_out.manifold.species,
+                target_atom_index=true_atom_index,
+                accessibility_field=accessibility_field,
+                ddi_occupancy=ddi_occupancy,
+                prebuilt_field=field,
+            )
+            pred_rate = trainer._sanitize_tensor(
+                trainer._to_fp32(pred_rate),
+                nan=1.0e-12,
+                posinf=trainer._PRED_RATE_MAX,
+                neginf=1.0e-12,
+                clamp=(1.0e-12, trainer._PRED_RATE_MAX),
+            )
+            pred_rate_raw = pred_rate.detach()
+            n_atoms = max(int(q_init_internal.shape[0]), 1)
+            h_initial = trainer._sanitize_tensor(
+                trainer._to_fp32(h_initial) / n_atoms,
+                nan=2.5,
+                posinf=100.0,
+                neginf=-100.0,
+                clamp=(-100.0, 100.0),
+            )
+            h_final = trainer._sanitize_tensor(
+                trainer._to_fp32(h_final) / n_atoms,
+                nan=2.5,
+                posinf=100.0,
+                neginf=-100.0,
+                clamp=(-100.0, 100.0),
+            )
+            ts_eigenvalues = trainer._sanitize_tensor(
+                trainer._to_fp32(ts_eigenvalues),
+                nan=0.0,
+                posinf=100.0,
+                neginf=-100.0,
+                clamp=(-100.0, 100.0),
+            ).view(-1)
+            if ts_eigenvalues.numel() < 2:
+                ts_eigenvalues = F.pad(ts_eigenvalues, (0, 2 - ts_eigenvalues.numel()))
 
-        pred_rate, h_initial, h_final, ts_eigenvalues = trainer._dynamics_summary_checkpointed(
-            q_init_internal,
-            target_point_internal,
-            smiles=smiles,
-            species=module1_out.manifold.species,
-            target_atom_index=true_atom_index,
-            accessibility_field=accessibility_field,
-            ddi_occupancy=ddi_occupancy,
-            prebuilt_field=field,
-        )
-        pred_rate = trainer._sanitize_tensor(
-            trainer._to_fp32(pred_rate),
-            nan=1.0e-12,
-            posinf=trainer._PRED_RATE_MAX,
-            neginf=1.0e-12,
-            clamp=(1.0e-12, trainer._PRED_RATE_MAX),
-        )
-        pred_rate_raw = pred_rate.detach()
-        n_atoms = max(int(q_init_internal.shape[0]), 1)
-        h_initial = trainer._sanitize_tensor(
-            trainer._to_fp32(h_initial) / n_atoms,
-            nan=2.5,
-            posinf=100.0,
-            neginf=-100.0,
-            clamp=(-100.0, 100.0),
-        )
-        h_final = trainer._sanitize_tensor(
-            trainer._to_fp32(h_final) / n_atoms,
-            nan=2.5,
-            posinf=100.0,
-            neginf=-100.0,
-            clamp=(-100.0, 100.0),
-        )
-        ts_eigenvalues = trainer._sanitize_tensor(
-            trainer._to_fp32(ts_eigenvalues),
-            nan=0.0,
-            posinf=100.0,
-            neginf=-100.0,
-            clamp=(-100.0, 100.0),
-        ).view(-1)
-        if ts_eigenvalues.numel() < 2:
-            ts_eigenvalues = F.pad(ts_eigenvalues, (0, 2 - ts_eigenvalues.numel()))
-
-        entry = {
-            "smiles": smiles,
-            "true_atom_index": int(true_atom_index.detach().cpu().item()),
-            "pred_rate": pred_rate.detach().cpu(),
-            "pred_rate_raw": pred_rate_raw.cpu(),
-            "hamiltonian_initial": h_initial.detach().cpu(),
-            "hamiltonian_final": h_final.detach().cpu(),
-            "ts_eigenvalues": ts_eigenvalues.detach().cpu(),
-            "dynamics_fallback": torch.as_tensor(
-                1.0 if trainer.last_dynamics_fallback else 0.0,
-                dtype=torch.float32,
-            ),
-            "checkpoint_fallback": torch.as_tensor(
-                1.0 if trainer.last_checkpoint_fallback else 0.0,
-                dtype=torch.float32,
-            ),
-        }
-        for name, value in trainer.last_kinetics_debug.items():
-            entry[name] = value.detach().cpu()
-        payload["entries"][cache_key] = entry
+            entry = {
+                "smiles": smiles,
+                "true_atom_index": int(true_atom_index.detach().cpu().item()),
+                "pred_rate": pred_rate.detach().cpu(),
+                "pred_rate_raw": pred_rate_raw.cpu(),
+                "hamiltonian_initial": h_initial.detach().cpu(),
+                "hamiltonian_final": h_final.detach().cpu(),
+                "ts_eigenvalues": ts_eigenvalues.detach().cpu(),
+                "dynamics_fallback": torch.as_tensor(
+                    1.0 if trainer.last_dynamics_fallback else 0.0,
+                    dtype=torch.float32,
+                ),
+                "checkpoint_fallback": torch.as_tensor(
+                    1.0 if trainer.last_checkpoint_fallback else 0.0,
+                    dtype=torch.float32,
+                ),
+            }
+            for name, value in trainer.last_kinetics_debug.items():
+                entry[name] = value.detach().cpu()
+            payload["entries"][cache_key] = entry
+        except torch.OutOfMemoryError as oom_err:
+            _save_cache(cache_path, payload)
+            payload["failed"][cache_key] = {
+                "smiles": smiles,
+                "true_atom_index": int(true_atom_index.detach().cpu().item()),
+                "error": f"OOM: {oom_err}",
+                "batch_index": int(batch_index),
+            }
+            print(
+                f"[CACHE-OOM] batch={batch_index}/{len(loader)} smiles={smiles!r} "
+                f"saved_progress={len(payload['entries'])} path={cache_path}",
+                flush=True,
+            )
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
+            gc.collect()
+            if not skip_oom:
+                raise
+            continue
+        finally:
+            del batch, module1_out, pocket_encoding, field
+            del manifold_pos, target_point_world, q_init_internal, target_point_internal
+            del pred_rate, h_initial, h_final, ts_eigenvalues, entry
+            gc.collect()
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
 
         if batch_index == 1 or batch_index % save_every == 0 or batch_index == len(loader):
             _save_cache(cache_path, payload)
             print(
                 f"cached={len(payload['entries'])}/{len(dataset)}  "
                 f"batch={batch_index}/{len(loader)}  "
-                f"fallback={float(entry['dynamics_fallback'].item()):.0f}  "
+                f"fallback={float(payload['entries'][cache_key]['dynamics_fallback'].item()):.0f}  "
                 f"path={cache_path}",
                 flush=True,
             )
