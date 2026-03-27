@@ -72,6 +72,9 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_SCAN_REFINE_STEPS": "0",
         "NEXUS_COLAB_NAV_OPT_STEPS": "1",
         "NEXUS_COLAB_NAV_CANDIDATES": "2",
+        "NEXUS_COLAB_DAG_LOSS_WEIGHT": "0.10",
+        "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
+        "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
     },
     "balanced": {
         "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
@@ -88,6 +91,9 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_SCAN_REFINE_STEPS": "0",
         "NEXUS_COLAB_NAV_OPT_STEPS": "1",
         "NEXUS_COLAB_NAV_CANDIDATES": "2",
+        "NEXUS_COLAB_DAG_LOSS_WEIGHT": "0.10",
+        "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
+        "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
     },
     "full_3a4": {
         "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
@@ -104,6 +110,9 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_SCAN_REFINE_STEPS": "1",
         "NEXUS_COLAB_NAV_OPT_STEPS": "2",
         "NEXUS_COLAB_NAV_CANDIDATES": "3",
+        "NEXUS_COLAB_DAG_LOSS_WEIGHT": "0.10",
+        "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
+        "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
     },
 }
 

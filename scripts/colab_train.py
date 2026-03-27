@@ -326,6 +326,9 @@ CFG["nav_candidates"] = max(_env_int("NEXUS_COLAB_NAV_CANDIDATES", CFG.get("nav_
 TARGET_ISOFORM = _env_str("NEXUS_COLAB_TARGET_ISOFORM", "")
 SAVE_EVERY_BATCH = _env_bool("NEXUS_COLAB_SAVE_EVERY_BATCH", True)
 SHUFFLE_SEED = _env_int("NEXUS_COLAB_SHUFFLE_SEED", 42)
+DAG_LOSS_WEIGHT = _env_float("NEXUS_COLAB_DAG_LOSS_WEIGHT", 1.0)
+DAG_LOSS_CAP = _env_float("NEXUS_COLAB_DAG_LOSS_CAP", 4.0)
+ANA_LOSS_WEIGHT = _env_float("NEXUS_COLAB_ANA_LOSS_WEIGHT", 1.0)
 
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn
 from nexus.training.causal_trainer import Metabolic_Causal_Trainer
@@ -469,6 +472,11 @@ print(
     f"epochs={CFG['epochs']}  "
     f"steps={CFG['steps']}"
 )
+print(
+    f"Loss routing : dag_weight={DAG_LOSS_WEIGHT:g}  "
+    f"dag_cap={DAG_LOSS_CAP:g}  "
+    f"ana_weight={ANA_LOSS_WEIGHT:g}"
+)
 
 # ── trainer ────────────────────────────────────────────────────────────────
 trainer = Metabolic_Causal_Trainer(
@@ -482,6 +490,9 @@ trainer = Metabolic_Causal_Trainer(
     low_memory_scan_gradients=(GPU_PROFILE in {"high_vram", "ultra_vram"}),
     enable_static_compile=False,  # torch.compile is unsafe on Colab
     use_galore=False,             # plain AdamW — avoids GaLore SVD on Colab
+    dag_loss_weight=DAG_LOSS_WEIGHT,
+    dag_loss_cap=DAG_LOSS_CAP,
+    analogical_loss_weight=ANA_LOSS_WEIGHT,
 ).to(device)
 
 # ── Colab-safe quantum grid ────────────────────────────────────────────────

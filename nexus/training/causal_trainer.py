@@ -79,6 +79,9 @@ class Metabolic_Causal_Trainer(nn.Module):
         low_memory_train_mode: bool = False,
         low_memory_scan_gradients: bool = False,
         use_galore: bool = True,
+        dag_loss_weight: float = 1.0,
+        dag_loss_cap: float = 4.0,
+        analogical_loss_weight: float = 1.0,
     ) -> None:
         super().__init__()
         self.model = model or NEXUS_Dynamics_Engine()
@@ -109,6 +112,9 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.low_memory_train_mode = bool(low_memory_train_mode)
         self.low_memory_scan_gradients = bool(low_memory_scan_gradients)
         self.use_galore = bool(use_galore)
+        self.dag_loss_weight = float(max(dag_loss_weight, 0.0))
+        self.dag_loss_cap = float(max(dag_loss_cap, 0.0))
+        self.analogical_loss_weight = float(max(analogical_loss_weight, 0.0))
         self.optimizer: Optional[torch.optim.Optimizer] = None
         self.scheduler: Optional[torch.optim.lr_scheduler.LambdaLR] = None
         self.total_training_steps: Optional[int] = None
@@ -1249,7 +1255,8 @@ class Metabolic_Causal_Trainer(nn.Module):
         # (~2–4) and dominate SIREN learning during early training.
         n_atoms = float(module1_out.manifold.pos.size(0))
         dag_loss_scale = max(n_atoms * n_atoms, 1.0)
-        dag_contribution = (dag_causal_loss / dag_loss_scale).clamp_max(4.0)
+        dag_contribution = (dag_causal_loss / dag_loss_scale).clamp_max(self.dag_loss_cap)
+        dag_contribution = dag_contribution * self.dag_loss_weight
         total_loss = self._sanitize_tensor(self._to_fp32(total_loss), clamp=(0.0, 1.0e5)) + dag_contribution
 
         # SoM top-1 / top-2 accuracy — true_ranked_index is the rank of the
@@ -1323,6 +1330,12 @@ class Metabolic_Causal_Trainer(nn.Module):
             "loss_recon_mask": pocket_mask_loss.detach(),
             "loss_recon_steric": pocket_steric_loss.detach(),
             "dag_causal_loss": dag_causal_loss.detach(),
+            "dag_loss_contribution": dag_contribution.detach(),
+            "dag_loss_weight": torch.as_tensor(
+                self.dag_loss_weight,
+                dtype=total_loss.dtype,
+                device=total_loss.device,
+            ),
             "dag_acyclicity": self._sanitize_tensor(dag_output.acyclicity.detach(), clamp=(0.0, 1.0e4)),
             "dag_sparsity": self._sanitize_tensor(dag_output.sparsity.detach(), clamp=(0.0, 1.0e4)),
             "dag_adjacency_mean": self._sanitize_tensor(dag_output.raw_adjacency.abs().mean().detach(), clamp=(0.0, 1.0e4)),
@@ -1372,9 +1385,16 @@ class Metabolic_Causal_Trainer(nn.Module):
                     _ana_loss = self._sanitize_tensor(
                         self._to_fp32(_ana_loss), clamp=(0.0, 100.0)
                     )
-                    total_loss = total_loss + _ana_loss
+                    _ana_loss_weighted = _ana_loss * self.analogical_loss_weight
+                    total_loss = total_loss + _ana_loss_weighted
                     metrics.update({
-                        "ana_loss_total": _ana_loss.detach(),
+                        "ana_loss_total": _ana_loss_weighted.detach(),
+                        "ana_loss_raw": _ana_loss.detach(),
+                        "ana_loss_weight": torch.as_tensor(
+                            self.analogical_loss_weight,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
                         "ana_gate_open": torch.as_tensor(
                             _ana_info["gate_open"], dtype=torch.float32, device=device
                         ),
