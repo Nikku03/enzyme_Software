@@ -2319,17 +2319,29 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "ana_direct_lift_top1": (
                             metrics["som_top1"] - metrics["som_top1_fp"]
                         ).detach(),
+                        "ana_direct_lift_top3": (
+                            metrics["som_top3"] - metrics["som_top3_fp"]
+                        ).detach(),
                         "ana_direct_lift_rank": (
                             metrics["som_rank_fp"] - metrics["som_rank"]
                         ).detach(),
                         "ana_direct_lift_top1_hard": (
                             (metrics["som_top1"] - metrics["som_top1_fp"]) * torch.as_tensor(_hard_case, dtype=torch.float32, device=device)
                         ).detach(),
+                        "ana_direct_lift_top3_hard": (
+                            (metrics["som_top3"] - metrics["som_top3_fp"]) * torch.as_tensor(_hard_case, dtype=torch.float32, device=device)
+                        ).detach(),
                         "ana_fused_top1_hard": (
                             metrics["som_top1"] * torch.as_tensor(_hard_case, dtype=torch.float32, device=device)
                         ).detach(),
+                        "ana_fused_top3_hard": (
+                            metrics["som_top3"] * torch.as_tensor(_hard_case, dtype=torch.float32, device=device)
+                        ).detach(),
                         "ana_fp_top1_hard": (
                             metrics["som_top1_fp"] * torch.as_tensor(_hard_case, dtype=torch.float32, device=device)
+                        ).detach(),
+                        "ana_fp_top3_hard": (
+                            metrics["som_top3_fp"] * torch.as_tensor(_hard_case, dtype=torch.float32, device=device)
                         ).detach(),
                     })
             except Exception as _ana_err:
@@ -2357,9 +2369,11 @@ class Metabolic_Causal_Trainer(nn.Module):
                     "loss_total": metrics.get("loss_total"),
                     "som_top1": metrics.get("som_top1"),
                     "som_top2": metrics.get("som_top2"),
+                    "som_top3": metrics.get("som_top3"),
                     "som_rank": metrics.get("som_rank"),
                     "som_top1_fp": metrics.get("som_top1_fp"),
                     "som_top2_fp": metrics.get("som_top2_fp"),
+                    "som_top3_fp": metrics.get("som_top3_fp"),
                     "som_rank_fp": metrics.get("som_rank_fp"),
                     "pred_rate": metrics.get("pred_rate"),
                     "dag_causal_loss": metrics.get("dag_causal_loss"),
@@ -2496,6 +2510,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                         f" hard={running.get('ana_hard_case', float('nan')):.2f}"
                         f" abstain={running.get('ana_abstain', float('nan')):.2f}"
                         f" lift={running.get('ana_direct_lift_top1', float('nan')):.2%}"
+                        f" lift3={running.get('ana_direct_lift_top3', float('nan')):.2%}"
                         f" mf1_fp={running.get('morphism_f1_macro_fp', float('nan')):.3f}"
                         f" mf1_ana={running.get('morphism_f1_macro_ana', float('nan')):.3f}"
                         f" epox_fp={running.get('morphism_f1_epox_fp', float('nan')):.3f}"
