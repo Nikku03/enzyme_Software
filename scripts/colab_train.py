@@ -120,9 +120,20 @@ SDF = next((p for p in _ALL_SDFS if p.stem.upper() == "3A4"), _ALL_SDFS[0])
 # Checkpoint paths: prefer Google Drive (persists across sessions) → fall back to repo dir.
 _DRIVE_CKPT = Path("/content/drive/MyDrive/nexus_colab_checkpoint.pt")
 _LOCAL_CKPT = _REPO_DIR / "colab_nexus_checkpoint.pt"
-CKPT_PATH   = _DRIVE_CKPT if _DRIVE_CKPT.parent.exists() else _LOCAL_CKPT
-BATCH_CKPT_PATH = CKPT_PATH.with_name(CKPT_PATH.stem + "_batch.pt")
-BATCH_METRICS_PATH = CKPT_PATH.parent / "nexus_colab_batch_metrics.json"
+_DEFAULT_CKPT_PATH = _DRIVE_CKPT if _DRIVE_CKPT.parent.exists() else _LOCAL_CKPT
+CKPT_PATH = Path(os.environ.get("NEXUS_COLAB_CHECKPOINT_PATH", str(_DEFAULT_CKPT_PATH))).expanduser()
+BATCH_CKPT_PATH = Path(
+    os.environ.get(
+        "NEXUS_COLAB_BATCH_CHECKPOINT_PATH",
+        str(CKPT_PATH.with_name(CKPT_PATH.stem + "_batch.pt")),
+    )
+).expanduser()
+BATCH_METRICS_PATH = Path(
+    os.environ.get(
+        "NEXUS_COLAB_BATCH_METRICS_PATH",
+        str(CKPT_PATH.parent / "nexus_colab_batch_metrics.json"),
+    )
+).expanduser()
 ANALOGICAL_TRACE_PATH_DEFAULT = CKPT_PATH.parent / "nexus_colab_analogical_trace.jsonl"
 DEFAULT_PHYSICS_CACHE_PATH = CKPT_PATH.parent / "nexus_cyp3a4_physics_cache.pt"
 DEFAULT_ANALOGICAL_BANK_CACHE_PATH = CKPT_PATH.parent / "nexus_continuous_analogical_bank.pt"
