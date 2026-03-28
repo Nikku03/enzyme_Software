@@ -161,15 +161,22 @@ class HyperbolicMemoryBank:
             loaded_multivectors.append(tensor)
 
         # Fusion requires node-level multivectors for projected entries.
-        # Older or partial caches may contain projected embeddings but missing
-        # multivectors, which would silently disable fusion at runtime.
-        for is_projected, mv in zip(projected_mask.tolist(), loaded_multivectors):
-            if is_projected and mv is None:
-                print(
-                    "  Continuous bank cache mismatch: projected entries are missing "
-                    "node multivectors; rebuilding cache."
-                )
-                return False
+        # Older or partial caches may contain valid projected embeddings but
+        # missing multivectors for a small minority of entries. Downgrade those
+        # entries in place instead of forcing a full bank rebuild.
+        invalid_projected = [
+            idx
+            for idx, (is_projected, mv) in enumerate(zip(projected_mask.tolist(), loaded_multivectors))
+            if is_projected and mv is None
+        ]
+        if invalid_projected:
+            projected_mask = projected_mask.clone()
+            projected_mask[torch.tensor(invalid_projected, dtype=torch.long, device=self.device)] = False
+            print(
+                "  Continuous bank cache warning: "
+                f"{len(invalid_projected)} projected entries are missing node "
+                "multivectors; downgrading them to fingerprint-only retrieval."
+            )
 
         self.memory_embeddings = memory_embeddings
         self.memory_projected_mask = projected_mask
@@ -184,17 +191,28 @@ class HyperbolicMemoryBank:
         if self.memory_embeddings is None or self.memory_projected_mask is None:
             return
         cache_path.parent.mkdir(parents=True, exist_ok=True)
+        projected_mask_cpu = self.memory_projected_mask.detach().cpu().clone().view(-1)
+        invalid_projected = 0
+        for idx, (is_projected, mv) in enumerate(zip(projected_mask_cpu.tolist(), self.historical_node_multivectors)):
+            if is_projected and mv is None:
+                projected_mask_cpu[idx] = False
+                invalid_projected += 1
         payload: dict[str, Any] = {
             "version": 1,
             "signatures": self._bank_signatures(),
             "memory_embeddings": self.memory_embeddings.detach().cpu(),
-            "memory_projected_mask": self.memory_projected_mask.detach().cpu(),
+            "memory_projected_mask": projected_mask_cpu,
             "historical_node_multivectors": [
                 None if mv is None else mv.detach().cpu()
                 for mv in self.historical_node_multivectors
             ],
         }
         torch.save(payload, cache_path)
+        if invalid_projected > 0:
+            print(
+                "  Saved continuous bank cache with "
+                f"{invalid_projected} downgraded projected entries (missing node multivectors)."
+            )
         print(f"  Saved continuous bank cache → {cache_path}")
 
     def _ball_radius(self) -> float:
