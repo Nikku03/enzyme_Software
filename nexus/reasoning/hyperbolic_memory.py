@@ -101,6 +101,7 @@ class HyperbolicMemoryBank:
         self.historical_heavy_atoms: List[int] = []
         self.historical_ring_counts: List[int] = []
         self.historical_shortlist_keys: List[str] = []
+        self.historical_key_frequencies: List[float] = []
         self.historical_node_multivectors: List[torch.Tensor | None] = []
         self.memory_embeddings: torch.Tensor | None = None
         self.memory_fingerprints: torch.Tensor | None = None
@@ -121,6 +122,7 @@ class HyperbolicMemoryBank:
         self.historical_heavy_atoms = []
         self.historical_ring_counts = []
         self.historical_shortlist_keys = []
+        self.historical_key_frequencies = []
         self.historical_node_multivectors = []
         self.memory_embeddings = None
         self.memory_fingerprints = None
@@ -328,6 +330,12 @@ class HyperbolicMemoryBank:
             raise RuntimeError("No labelled molecules found — hyperbolic memory bank is empty.")
 
         raw = torch.stack(fps).to(self.device)
+        key_counts = Counter(self.historical_shortlist_keys)
+        total_keys = float(max(len(self.historical_shortlist_keys), 1))
+        self.historical_key_frequencies = [
+            float(key_counts.get(key, 0)) / total_keys
+            for key in self.historical_shortlist_keys
+        ]
         self.memory_fingerprints = raw
         self.memory_bit_counts = raw.sum(dim=-1)
         cache_path = Path(continuous_cache_path) if continuous_cache_path is not None else None
@@ -532,7 +540,17 @@ class HyperbolicMemoryBank:
         elif query_rings == 0 and candidate_rings > 0 and candidate_heavy >= 8:
             bonus -= 0.15
 
-        return float(bonus)
+        return float(0.45 * bonus)
+
+    def _candidate_global_hub_penalty(self, candidate_idx: int) -> float:
+        frequency = (
+            self.historical_key_frequencies[candidate_idx]
+            if candidate_idx < len(self.historical_key_frequencies)
+            else 0.0
+        )
+        # Strongly penalize globally common scaffold/structure keys before
+        # shortlist formation so broad aromatic hubs do not dominate the pool.
+        return float(0.85 * min(frequency * 20.0, 1.0))
 
     def _select_diverse_candidates(
         self,
@@ -562,9 +580,9 @@ class HyperbolicMemoryBank:
             structural_bonus = self._candidate_structural_bonus(query_mol, candidate_idx)
             structural_bonuses.append(structural_bonus)
             local_fraction = float(key_counts[candidate_keys[local_idx]]) / float(max(len(candidate_indices), 1))
-            hub_penalty = 0.45 * max(local_fraction - (1.0 / max(len(candidate_indices), 1)), 0.0)
+            hub_penalty = 1.20 * max(local_fraction - (1.0 / max(len(candidate_indices), 1)), 0.0)
             hub_penalties.append(hub_penalty)
-            scores[local_idx] = scores[local_idx] + 0.45 * overlap + structural_bonus - hub_penalty
+            scores[local_idx] = scores[local_idx] + 0.70 * overlap + structural_bonus - hub_penalty
         chosen_locals: List[int] = []
         used_keys: set[str] = set()
         k = min(int(top_k), len(candidate_indices))
@@ -593,12 +611,30 @@ class HyperbolicMemoryBank:
         if chosen_locals:
             best_local = chosen_locals[0]
             debug = {
-                "best_mechanism_bonus": float(0.45 * mechanism_overlaps[best_local]),
+                "best_mechanism_bonus": float(0.70 * mechanism_overlaps[best_local]),
                 "best_structural_bonus": float(structural_bonuses[best_local]),
                 "best_hub_penalty": float(hub_penalties[best_local]),
                 "shortlist_top_fraction": float(max(key_counts.values()) / max(len(candidate_indices), 1)),
             }
         return selected_indices, selected_scores, diversity_score, debug
+
+    def _shortlist_scores_from_tanimoto(
+        self,
+        query_mol,
+        candidate_indices: torch.Tensor,
+        candidate_tanimoto: torch.Tensor,
+        *,
+        query_morphism_prior: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        scores = candidate_tanimoto.to(dtype=torch.float32).clone()
+        for local_idx, candidate_idx_t in enumerate(candidate_indices.tolist()):
+            candidate_idx = int(candidate_idx_t)
+            overlap = self._candidate_mechanism_overlap(query_morphism_prior, candidate_idx)
+            hub_penalty = self._candidate_global_hub_penalty(candidate_idx)
+            # Keep shortlist-stage structure weak; shortlist should be broad and
+            # mechanism-aware, not dominated by generic scaffold similarity.
+            scores[local_idx] = scores[local_idx] + 0.35 * overlap - hub_penalty
+        return scores
 
     def _projected_retrieval_weight(
         self,
@@ -796,13 +832,20 @@ class HyperbolicMemoryBank:
                     prepared_query.view(1, -1)
                 )
                 candidate_tanimoto = tanimoto_scores.index_select(0, candidate_indices)
-                shortlist_k = min(self.tanimoto_shortlist_k, int(candidate_indices.numel()))
-                top_tanimoto, top_local = torch.topk(candidate_tanimoto, shortlist_k, largest=True)
+                shortlist_k = min(max(self.tanimoto_shortlist_k * 3, 48), int(candidate_indices.numel()))
+                shortlist_seed_scores = self._shortlist_scores_from_tanimoto(
+                    query_mol,
+                    candidate_indices,
+                    candidate_tanimoto,
+                    query_morphism_prior=query_morphism_prior,
+                )
+                top_shortlist_scores, top_local = torch.topk(shortlist_seed_scores, shortlist_k, largest=True)
                 shortlist_candidate_indices = [
                     int(candidate_indices[int(top_local[i].item())].item())
                     for i in range(shortlist_k)
                 ]
                 shortlist_indices = candidate_indices.index_select(0, top_local)
+                top_tanimoto = candidate_tanimoto.index_select(0, top_local)
                 shortlist_embeddings = self.memory_embeddings.index_select(0, shortlist_indices)
                 distances = self._poincare_distance(q_embed_h, shortlist_embeddings).view(-1)
                 projected_similarity = torch.exp(-distances / 5.0).to(dtype=torch.float32)
@@ -855,9 +898,16 @@ class HyperbolicMemoryBank:
             if candidate_indices.numel() == 0:
                 candidate_indices = torch.arange(len(self.historical_mols), device=self.device, dtype=torch.long)
             candidate_scores = tanimoto_scores.index_select(0, candidate_indices)
-            shortlist_k = min(self.tanimoto_shortlist_k, int(candidate_indices.numel()))
+            shortlist_k = min(max(self.tanimoto_shortlist_k * 3, 48), int(candidate_indices.numel()))
             retrieval_candidate_count = int(candidate_indices.numel())
-            top_tanimoto, top_local = torch.topk(candidate_scores, shortlist_k, largest=True)
+            shortlist_seed_scores = self._shortlist_scores_from_tanimoto(
+                query_mol,
+                candidate_indices,
+                candidate_scores,
+                query_morphism_prior=query_morphism_prior,
+            )
+            _top_shortlist_scores, top_local = torch.topk(shortlist_seed_scores, shortlist_k, largest=True)
+            top_tanimoto = candidate_scores.index_select(0, top_local)
             shortlist_indices = candidate_indices.index_select(0, top_local)
             best_tanimoto = float(top_tanimoto[0].item()) if shortlist_k > 0 else -1.0
             best_shortlist_idx = int(shortlist_indices[0].item()) if shortlist_k > 0 else 0
