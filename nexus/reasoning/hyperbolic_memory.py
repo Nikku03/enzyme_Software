@@ -91,6 +91,8 @@ class HyperbolicMemoryBank:
         self.historical_soms: List[int] = []
         self.historical_smiles: List[str | None] = []
         self.historical_scaffolds: List[str] = []
+        self.historical_heavy_atoms: List[int] = []
+        self.historical_ring_counts: List[int] = []
         self.historical_node_multivectors: List[torch.Tensor | None] = []
         self.memory_embeddings: torch.Tensor | None = None
         self.memory_fingerprints: torch.Tensor | None = None
@@ -108,6 +110,8 @@ class HyperbolicMemoryBank:
         self.historical_soms = []
         self.historical_smiles = []
         self.historical_scaffolds = []
+        self.historical_heavy_atoms = []
+        self.historical_ring_counts = []
         self.historical_node_multivectors = []
         self.memory_embeddings = None
         self.memory_fingerprints = None
@@ -303,6 +307,11 @@ class HyperbolicMemoryBank:
             canonical = _canonical_smiles(mol)
             self.historical_smiles.append(canonical)
             self.historical_scaffolds.append(scaffold_key(mol))
+            self.historical_heavy_atoms.append(int(max(mol.GetNumHeavyAtoms(), 1)))
+            try:
+                self.historical_ring_counts.append(int(mol.GetRingInfo().NumRings()))
+            except Exception:
+                self.historical_ring_counts.append(0)
 
         if not fps:
             raise RuntimeError("No labelled molecules found — hyperbolic memory bank is empty.")
@@ -464,8 +473,59 @@ class HyperbolicMemoryBank:
         query_vec = query_vec / query_vec.sum().clamp_min(1.0e-8)
         return float((query_vec * cand_vec).sum().item())
 
+    def _candidate_structural_bonus(
+        self,
+        query_mol,
+        candidate_idx: int,
+    ) -> float:
+        query_heavy = int(max(query_mol.GetNumHeavyAtoms(), 1))
+        candidate_heavy = (
+            self.historical_heavy_atoms[candidate_idx]
+            if candidate_idx < len(self.historical_heavy_atoms)
+            else int(max(self.historical_mols[candidate_idx].GetNumHeavyAtoms(), 1))
+        )
+        try:
+            query_rings = int(query_mol.GetRingInfo().NumRings())
+        except Exception:
+            query_rings = 0
+        candidate_rings = (
+            self.historical_ring_counts[candidate_idx]
+            if candidate_idx < len(self.historical_ring_counts)
+            else 0
+        )
+        scaffold = self.historical_scaffolds[candidate_idx] if candidate_idx < len(self.historical_scaffolds) else ""
+
+        size_ratio = min(query_heavy, candidate_heavy) / max(query_heavy, candidate_heavy)
+        bonus = 1.15 * size_ratio - 0.25
+
+        if candidate_heavy <= 4:
+            bonus -= 1.25
+        elif candidate_heavy <= 6:
+            bonus -= 0.55
+
+        if query_heavy >= 10 and candidate_heavy <= 6:
+            bonus -= 1.10
+        elif query_heavy >= 16 and candidate_heavy <= 8:
+            bonus -= 0.75
+
+        if abs(query_heavy - candidate_heavy) <= max(2, int(0.15 * query_heavy)):
+            bonus += 0.25
+
+        if scaffold:
+            bonus += 0.20
+        else:
+            bonus -= 0.55 if candidate_heavy <= 8 else 0.20
+
+        if query_rings > 0 and candidate_rings == 0 and query_heavy >= 8:
+            bonus -= 0.45
+        elif query_rings == 0 and candidate_rings > 0 and candidate_heavy >= 8:
+            bonus -= 0.15
+
+        return float(bonus)
+
     def _select_diverse_candidates(
         self,
+        query_mol,
         candidate_indices: List[int],
         base_scores: torch.Tensor,
         *,
@@ -479,9 +539,10 @@ class HyperbolicMemoryBank:
         for local_idx, candidate_idx in enumerate(candidate_indices):
             overlap = self._candidate_mechanism_overlap(query_morphism_prior, candidate_idx)
             mechanism_overlaps.append(overlap)
-            scores[local_idx] = scores[local_idx] + 0.5 * overlap
+            structural_bonus = self._candidate_structural_bonus(query_mol, candidate_idx)
+            scores[local_idx] = scores[local_idx] + 0.45 * overlap + structural_bonus
         chosen_locals: List[int] = []
-        used_scaffolds: set[str] = set()
+        used_keys: set[str] = set()
         k = min(int(top_k), len(candidate_indices))
         while len(chosen_locals) < k:
             best_local = None
@@ -490,8 +551,10 @@ class HyperbolicMemoryBank:
                 if local_idx in chosen_locals:
                     continue
                 scaffold = self.historical_scaffolds[candidate_idx] if candidate_idx < len(self.historical_scaffolds) else ""
+                smiles = self.historical_smiles[candidate_idx] if candidate_idx < len(self.historical_smiles) else None
+                diversity_key = scaffold or smiles or f"idx:{candidate_idx}"
                 score = float(scores[local_idx].item())
-                if scaffold and scaffold in used_scaffolds:
+                if diversity_key in used_keys:
                     score -= 0.35
                 if best_local is None or score > best_score:
                     best_local = local_idx
@@ -501,11 +564,12 @@ class HyperbolicMemoryBank:
             chosen_locals.append(best_local)
             candidate_idx = candidate_indices[best_local]
             scaffold = self.historical_scaffolds[candidate_idx] if candidate_idx < len(self.historical_scaffolds) else ""
-            if scaffold:
-                used_scaffolds.add(scaffold)
+            smiles = self.historical_smiles[candidate_idx] if candidate_idx < len(self.historical_smiles) else None
+            diversity_key = scaffold or smiles or f"idx:{candidate_idx}"
+            used_keys.add(diversity_key)
         selected_scores = scores.index_select(0, torch.tensor(chosen_locals, dtype=torch.long, device=self.device))
         selected_indices = [candidate_indices[i] for i in chosen_locals]
-        diversity_score = float(len(used_scaffolds) / max(len(selected_indices), 1))
+        diversity_score = float(len(used_keys) / max(len(selected_indices), 1))
         return selected_indices, selected_scores, diversity_score
 
     def _mcs_transport(self, query_mol, retrieved_mol, retrieved_som: int) -> tuple[torch.Tensor, bool, int]:
@@ -680,6 +744,7 @@ class HyperbolicMemoryBank:
                 shortlist_scores = -top_distances[:shortlist_k].to(dtype=torch.float32) / self.retrieval_mix_temperature
                 mix_k = min(max(self.retrieval_mix_top_k, 3), shortlist_k)
                 mix_candidate_indices, mix_logits, retrieval_diversity_score = self._select_diverse_candidates(
+                    query_mol,
                     shortlist_candidate_indices,
                     shortlist_scores,
                     top_k=mix_k,
@@ -780,6 +845,7 @@ class HyperbolicMemoryBank:
                     shortlist_candidate_indices = [int(v) for v in shortlist_indices.tolist()]
                     mix_k = min(max(self.retrieval_mix_top_k, 3), shortlist_k)
                     mix_candidate_indices, mix_logits, retrieval_diversity_score = self._select_diverse_candidates(
+                        query_mol,
                         shortlist_candidate_indices,
                         mech_scores.to(dtype=torch.float32) / self.retrieval_mix_temperature,
                         top_k=mix_k,
@@ -829,6 +895,7 @@ class HyperbolicMemoryBank:
                 shortlist_scores = -distances.to(dtype=torch.float32) / self.retrieval_mix_temperature
                 mix_k = min(max(self.retrieval_mix_top_k, 3), shortlist_k)
                 mix_candidate_indices, mix_logits, retrieval_diversity_score = self._select_diverse_candidates(
+                    query_mol,
                     shortlist_candidate_indices,
                     shortlist_scores,
                     top_k=mix_k,
