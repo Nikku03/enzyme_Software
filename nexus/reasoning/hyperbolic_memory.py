@@ -688,11 +688,17 @@ class HyperbolicMemoryBank:
         if not projected_ready:
             q_fp = _morgan_fp_tensor(query_mol, radius=self.fp_radius, n_bits=self.fp_bits)
             tanimoto_scores = self._tanimoto_similarity(q_fp)
+            candidate_mask = torch.ones_like(tanimoto_scores, dtype=torch.bool)
             if same_query is not None and bool(same_query.any().item()):
-                tanimoto_scores = tanimoto_scores.masked_fill(same_query, -1.0)
-            shortlist_k = min(self.tanimoto_shortlist_k, len(self.historical_mols))
-            retrieval_candidate_count = shortlist_k
-            top_tanimoto, shortlist_indices = torch.topk(tanimoto_scores, shortlist_k, largest=True)
+                candidate_mask = candidate_mask & (~same_query)
+            candidate_indices = torch.nonzero(candidate_mask, as_tuple=False).view(-1)
+            if candidate_indices.numel() == 0:
+                candidate_indices = torch.arange(len(self.historical_mols), device=self.device, dtype=torch.long)
+            candidate_scores = tanimoto_scores.index_select(0, candidate_indices)
+            shortlist_k = min(self.tanimoto_shortlist_k, int(candidate_indices.numel()))
+            retrieval_candidate_count = int(candidate_indices.numel())
+            top_tanimoto, top_local = torch.topk(candidate_scores, shortlist_k, largest=True)
+            shortlist_indices = candidate_indices.index_select(0, top_local)
             best_tanimoto = float(top_tanimoto[0].item()) if shortlist_k > 0 else -1.0
             best_shortlist_idx = int(shortlist_indices[0].item()) if shortlist_k > 0 else 0
 
@@ -727,6 +733,11 @@ class HyperbolicMemoryBank:
                     retrieved_morphism_loss_mask=_pref_morph_mask,
                     retrieved_has_morphism_label=_pref_has_morph,
                     retrieved_label_confidence=_pref_morph_conf,
+                    retrieved_scaffold=self.historical_scaffolds[best_shortlist_idx] if best_shortlist_idx < len(self.historical_scaffolds) else "",
+                    retrieval_candidate_count=shortlist_k,
+                    retrieval_mechanism_overlap=self._candidate_mechanism_overlap(query_morphism_prior, best_shortlist_idx),
+                    retrieval_diversity_score=0.0,
+                    neuralgw_route_reason="prefilter_reject",
                 )
 
             # ── mechanism-aware re-ranking (optional) ─────────────────────
@@ -746,16 +757,28 @@ class HyperbolicMemoryBank:
                     shortlist_fps = self.memory_fingerprints.index_select(0, shortlist_indices)  # [k, fp_bits]
                     shortlist_embeds = mechanism_encoder(shortlist_fps)  # [k, embed_dim]
 
-                    # Cosine similarity between query embed and shortlist embeds.
                     mech_scores = (query_embed.detach().unsqueeze(0) * shortlist_embeds.detach()).sum(dim=-1)  # [k]
-
-                    # Combine Poincaré distance ranking with mechanism score:
-                    #   final_score = mech_scores (higher = better)
-                    # Use mechanism score to override the Poincaré selection.
-                    best_mech_rank = int(mech_scores.argmax().item())
-                    best_idx = int(shortlist_indices[best_mech_rank].item())
-
+                    shortlist_candidate_indices = [int(v) for v in shortlist_indices.tolist()]
+                    mix_k = min(max(self.retrieval_mix_top_k, 3), shortlist_k)
+                    mix_candidate_indices, mix_logits, retrieval_diversity_score = self._select_diverse_candidates(
+                        shortlist_candidate_indices,
+                        mech_scores.to(dtype=torch.float32) / self.retrieval_mix_temperature,
+                        top_k=mix_k,
+                        query_morphism_prior=query_morphism_prior,
+                    )
+                    if not mix_candidate_indices:
+                        mix_candidate_indices = shortlist_candidate_indices[:mix_k]
+                        mix_logits = mech_scores[:mix_k].to(dtype=torch.float32) / self.retrieval_mix_temperature
+                    mix_prob = torch.softmax(mix_logits, dim=0)
+                    mix_weights = [float(v.item()) for v in mix_prob]
+                    retrieval_mix_count = len(mix_candidate_indices)
+                    retrieval_mix_entropy = float(
+                        (-(mix_prob * torch.log(mix_prob.clamp_min(1.0e-9))).sum()).item()
+                    )
+                    best_idx = int(mix_candidate_indices[0])
+                    best_mech_rank = shortlist_candidate_indices.index(best_idx)
                     retrieved_embed_detached = shortlist_embeds[best_mech_rank].detach()
+                    retrieval_mechanism_overlap = self._candidate_mechanism_overlap(query_morphism_prior, best_idx)
 
                     # Compute confidence from hyperbolic distance for the selected candidate.
                     q_h_embed = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
@@ -783,7 +806,7 @@ class HyperbolicMemoryBank:
                     q_embed_h = q_embed_h[..., :target_dim]
                 candidate_embeddings = self.memory_embeddings.index_select(0, shortlist_indices)
                 distances = self._poincare_distance(q_embed_h, candidate_embeddings).squeeze(0)
-                shortlist_candidate_indices = [int(v.item()) for v in shortlist_indices.tolist()]
+                shortlist_candidate_indices = [int(v) for v in shortlist_indices.tolist()]
                 shortlist_scores = -distances.to(dtype=torch.float32) / self.retrieval_mix_temperature
                 mix_k = min(max(self.retrieval_mix_top_k, 3), shortlist_k)
                 mix_candidate_indices, mix_logits, retrieval_diversity_score = self._select_diverse_candidates(
@@ -886,6 +909,7 @@ class HyperbolicMemoryBank:
                             retrieved_som,
                             device=self.device,
                         )
+                        retrieval_mechanism_overlap = self._candidate_mechanism_overlap(query_morphism_prior, anchor_idx)
             if total_weight > 0.0:
                 analogical_pred = mixture / mixture.sum().clamp_min(1.0e-8)
                 support_size = int((analogical_pred >= self.pgw.support_threshold).sum().item()) if self.pgw is not None else support_size
