@@ -26,6 +26,7 @@ try:
     from rdkit import Chem
     from rdkit.Chem import AllChem
     from rdkit.Chem import rdFMCS
+    from rdkit.Chem.Scaffolds import MurckoScaffold
     _RDKIT_OK = True
 except Exception:
     _RDKIT_OK = False
@@ -86,6 +87,14 @@ def _morgan_fp_tensor(mol, radius: int = 2, n_bits: int = 2048) -> torch.Tensor:
     except ImportError:
         fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=radius, nBits=n_bits)
     return torch.tensor(list(fp), dtype=torch.float32)
+
+
+def scaffold_key(mol) -> str:
+    try:
+        scaffold = MurckoScaffold.MurckoScaffoldSmiles(mol=mol)
+        return str(scaffold or "")
+    except Exception:
+        return ""
 
 
 def _tokenize_prop(raw: str) -> List[str]:
@@ -220,6 +229,11 @@ class MemoryRetrievalResult:
     retrieved_morphism_loss_mask: Optional[torch.Tensor] = None
     retrieved_has_morphism_label: bool = False
     retrieved_label_confidence: float = 0.0
+    retrieved_scaffold: str = ""
+    retrieval_candidate_count: int = 1
+    retrieval_mechanism_overlap: float = 0.0
+    retrieval_diversity_score: float = 0.0
+    neuralgw_route_reason: str = "unavailable"
 
 
 class BaselineMemoryBank:

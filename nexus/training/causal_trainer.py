@@ -78,6 +78,48 @@ def compute_masked_morphism_f1(
     return macro_f1, f1_per_class
 
 
+def compute_analogical_ood_metrics(
+    *,
+    retrieval_confidence: float,
+    retrieval_mix_entropy: float,
+    retrieval_mix_count: int,
+    retrieval_diversity_score: float,
+    transport_backend: str,
+    transport_succeeded: bool,
+    transported_mass: float,
+    physics_analogy_agreement: float,
+    fusion_available: bool,
+    neuralgw_confidence: float,
+) -> tuple[float, float, float]:
+    max_entropy = math.log(max(int(retrieval_mix_count), 1)) if int(retrieval_mix_count) > 1 else 0.0
+    entropy_norm = float(retrieval_mix_entropy / max(max_entropy, 1.0e-8)) if max_entropy > 0.0 else 0.0
+    low_conf = 1.0 - max(0.0, min(float(retrieval_confidence), 1.0))
+    low_diversity = 1.0 - max(0.0, min(float(retrieval_diversity_score), 1.0))
+    disagreement = 1.0 - max(0.0, min(float(physics_analogy_agreement), 1.0))
+    support_quality = max(0.0, min(float(transported_mass) / 0.25, 1.0))
+    low_transport = 1.0 - support_quality
+    backend_penalty = 1.0 if (
+        (not transport_succeeded)
+        or ("fallback" in str(transport_backend))
+        or str(transport_backend) in {"prefilter_reject", "pgw_error", "pgw_low_mass", "mcs"}
+    ) else 0.0
+    fusion_penalty = 0.0 if fusion_available else 1.0
+    ngw_penalty = 1.0 - max(0.0, min(float(neuralgw_confidence), 1.0))
+    ood_score = (
+        low_conf
+        + entropy_norm
+        + low_diversity
+        + disagreement
+        + low_transport
+        + backend_penalty
+        + fusion_penalty
+        + ngw_penalty
+    ) / 8.0
+    hard_case = 1.0 if ood_score >= 0.55 else 0.0
+    abstain = 1.0 if (ood_score >= 0.75 or retrieval_confidence < 0.35 or (not fusion_available and not transport_succeeded)) else 0.0
+    return float(ood_score), float(hard_case), float(abstain)
+
+
 class Metabolic_Causal_Trainer(nn.Module):
     _PRED_RATE_MAX = 1.0e12
 
@@ -1739,6 +1781,18 @@ class Metabolic_Causal_Trainer(nn.Module):
                         )
                     else:
                         _query_hyper_embed = None
+                    _query_morphism_prior = None
+                    _batch_morph_prior = batch.get("morphism_target")
+                    if torch.is_tensor(_batch_morph_prior) and _batch_morph_prior.numel() > 0:
+                        _morph_prior_src = _batch_morph_prior[0] if _batch_morph_prior.ndim >= 3 else _batch_morph_prior
+                        if (
+                            _morph_prior_src.ndim == 2
+                            and 0 <= int(true_atom_index.item()) < _morph_prior_src.size(0)
+                        ):
+                            _query_morphism_prior = _morph_prior_src[int(true_atom_index.item())].to(
+                                dtype=torch.float32,
+                                device=device,
+                            )
 
                     _result = self.memory_bank.retrieve_and_transport(
                         _query_mol,
@@ -1746,6 +1800,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                         mechanism_encoder=self.gated_loss.mechanism_encoder,
                         query_embedding=_query_hyper_embed,
                         query_multivectors=_query_node_multivectors,
+                        query_morphism_prior=_query_morphism_prior,
                     )
                     # Re-index pred_ana (SMILES atom order) onto the scan's
                     # descending-reactivity-sorted atom order so target_idx
@@ -1809,6 +1864,9 @@ class Metabolic_Causal_Trainer(nn.Module):
                     _morph_f1_epox_ana = torch.zeros((), dtype=torch.float32, device=device)
                     _morph_f1_available = torch.zeros((), dtype=torch.float32, device=device)
                     _fusion_error_message: str | None = None
+                    _ood_score = 0.0
+                    _hard_case = 0.0
+                    _abstain = 0.0
                     if (
                         _result.transport_plan is not None
                         and _result.retrieved_node_multivectors is not None
@@ -2035,6 +2093,19 @@ class Metabolic_Causal_Trainer(nn.Module):
                             _fusion_error_message = f"{type(_fusion_err).__name__}: {_fusion_err}"
                             _fusion_available = False
 
+                    _ood_score, _hard_case, _abstain = compute_analogical_ood_metrics(
+                        retrieval_confidence=float(_result.confidence),
+                        retrieval_mix_entropy=float(_result.retrieval_mix_entropy),
+                        retrieval_mix_count=int(_result.retrieval_mix_count),
+                        retrieval_diversity_score=float(_result.retrieval_diversity_score),
+                        transport_backend=str(_result.transport_backend),
+                        transport_succeeded=bool(_transport_mapped),
+                        transported_mass=float(_result.transported_mass),
+                        physics_analogy_agreement=float(_physics_analogy_agreement),
+                        fusion_available=bool(_fusion_available),
+                        neuralgw_confidence=float(_result.neuralgw_confidence),
+                    )
+
                     analogical_trace = {
                         "smiles": smiles,
                         "phase": self._active_phase,
@@ -2048,15 +2119,20 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "retrieval_confidence": float(_result.confidence),
                         "retrieval_mix_count": int(_result.retrieval_mix_count),
                         "retrieval_mix_entropy": float(_result.retrieval_mix_entropy),
+                        "retrieval_candidate_count": int(_result.retrieval_candidate_count),
+                        "retrieval_mechanism_overlap": float(_result.retrieval_mechanism_overlap),
+                        "retrieval_diversity_score": float(_result.retrieval_diversity_score),
                         "retrieved_same_query": bool(_result.retrieved_same_query),
                         "retrieved_smiles": (
                             _Chem.MolToSmiles(_result.retrieved_mol)
                             if _result.retrieved_mol is not None
                             else None
                         ),
+                        "retrieved_scaffold": _result.retrieved_scaffold,
                         "retrieved_som_idx": int(_result.retrieved_som_idx),
                         "transport_backend": _result.transport_backend,
                         "transport_error_message": _result.transport_error_message,
+                        "neuralgw_route_reason": _result.neuralgw_route_reason,
                         "transport_plan_shape": (
                             list(_result.transport_plan.shape)
                             if _result.transport_plan is not None
@@ -2081,6 +2157,9 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "fusion_available": bool(_fusion_available),
                         "fusion_weight_ana": float(_fusion_weight_ana),
                         "fusion_error_message": _fusion_error_message,
+                        "ood_score": float(_ood_score),
+                        "hard_case": bool(_hard_case),
+                        "abstain": bool(_abstain),
                     }
 
                     # Encoder supervision loss: teach MechanismEncoder to embed
@@ -2171,6 +2250,21 @@ class Metabolic_Causal_Trainer(nn.Module):
                             dtype=torch.float32,
                             device=device,
                         ),
+                        "ana_retrieval_candidate_count": torch.as_tensor(
+                            _result.retrieval_candidate_count,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
+                        "ana_retrieval_mechanism_overlap": torch.as_tensor(
+                            _result.retrieval_mechanism_overlap,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
+                        "ana_retrieval_diversity": torch.as_tensor(
+                            _result.retrieval_diversity_score,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
                         "neuralgw_used_exact": torch.as_tensor(
                             1.0 if _result.neuralgw_used_exact else 0.0,
                             dtype=torch.float32,
@@ -2187,6 +2281,21 @@ class Metabolic_Causal_Trainer(nn.Module):
                             device=device,
                         ),
                         "neuralgw_distill_loss_total": _neuralgw_distill_weighted.detach(),
+                        "ana_ood_score": torch.as_tensor(
+                            _ood_score,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
+                        "ana_hard_case": torch.as_tensor(
+                            _hard_case,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
+                        "ana_abstain": torch.as_tensor(
+                            _abstain,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
                         "ana_fusion_available": torch.as_tensor(
                             1.0 if _fusion_available else 0.0,
                             dtype=torch.float32,
@@ -2200,6 +2309,21 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "ana_fusion_loss_total": _fusion_loss_weighted.detach(),
                         "ana_sigma_fp": _fusion_sigma_fp.detach(),
                         "ana_sigma_ana": _fusion_sigma_ana.detach(),
+                        "ana_direct_lift_top1": (
+                            metrics["som_top1"] - metrics["som_top1_fp"]
+                        ).detach(),
+                        "ana_direct_lift_rank": (
+                            metrics["som_rank_fp"] - metrics["som_rank"]
+                        ).detach(),
+                        "ana_direct_lift_top1_hard": (
+                            (metrics["som_top1"] - metrics["som_top1_fp"]) * torch.as_tensor(_hard_case, dtype=torch.float32, device=device)
+                        ).detach(),
+                        "ana_fused_top1_hard": (
+                            metrics["som_top1"] * torch.as_tensor(_hard_case, dtype=torch.float32, device=device)
+                        ).detach(),
+                        "ana_fp_top1_hard": (
+                            metrics["som_top1_fp"] * torch.as_tensor(_hard_case, dtype=torch.float32, device=device)
+                        ).detach(),
                     })
             except Exception as _ana_err:
                 # Print once so we can see if the analogical engine is broken,
@@ -2358,6 +2482,13 @@ class Metabolic_Causal_Trainer(nn.Module):
                         f" burn={running.get('ana_burn_in_active', float('nan')):.2f}"
                         f" ngw_exact={running.get('neuralgw_used_exact', float('nan')):.2f}"
                         f" ngw_conf={running.get('neuralgw_confidence', float('nan')):.3f}"
+                        f" cand={running.get('ana_retrieval_candidate_count', float('nan')):.1f}"
+                        f" mech_ov={running.get('ana_retrieval_mechanism_overlap', float('nan')):.2f}"
+                        f" div={running.get('ana_retrieval_diversity', float('nan')):.2f}"
+                        f" ood={running.get('ana_ood_score', float('nan')):.2f}"
+                        f" hard={running.get('ana_hard_case', float('nan')):.2f}"
+                        f" abstain={running.get('ana_abstain', float('nan')):.2f}"
+                        f" lift={running.get('ana_direct_lift_top1', float('nan')):.2%}"
                         f" mf1_fp={running.get('morphism_f1_macro_fp', float('nan')):.3f}"
                         f" mf1_ana={running.get('morphism_f1_macro_ana', float('nan')):.3f}"
                         f" epox_fp={running.get('morphism_f1_epox_fp', float('nan')):.3f}"

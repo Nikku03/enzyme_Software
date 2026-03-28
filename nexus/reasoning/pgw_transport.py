@@ -51,6 +51,7 @@ class PGWTransportResult:
     neuralgw_distill_loss: float = 0.0
     coupling_matrix: Optional[torch.Tensor] = None
     transport_error_message: Optional[str] = None
+    neuralgw_route_reason: str = "unavailable"
 
 
 class NeuralGWApproximator(nn.Module):
@@ -296,7 +297,7 @@ class PGWTransporter:
         retrieved_mol,
         q_mv: torch.Tensor,
         r_mv: torch.Tensor,
-    ) -> tuple[torch.Tensor, str, Optional[torch.Tensor], bool, float, float]:
+    ) -> tuple[torch.Tensor, str, Optional[torch.Tensor], bool, float, float, str]:
         target_mass = 1.0 - self.dustbin_epsilon
         pi_approx, _ = self.neural_approximator(q_mv, r_mv)
         pi_approx = self._normalize_coupling(pi_approx, target_mass)
@@ -305,6 +306,13 @@ class PGWTransporter:
 
         burn_in_complete = int(self.current_epoch) > self.neuralgw_burn_in_epochs
         use_exact = (not self.neuralgw_enabled) or (not burn_in_complete) or (confidence <= self.neuralgw_ambiguity_threshold)
+        route_reason = "fast_path"
+        if not self.neuralgw_enabled:
+            route_reason = "disabled"
+        elif not burn_in_complete:
+            route_reason = "burn_in"
+        elif confidence <= self.neuralgw_ambiguity_threshold:
+            route_reason = "low_confidence"
 
         distill_loss: Optional[torch.Tensor] = None
         if use_exact:
@@ -320,9 +328,9 @@ class PGWTransporter:
                 distill_value = float(distill_loss.detach().item())
             else:
                 distill_value = 0.0
-            return pi_final, backend, distill_loss, True, confidence, distill_value
+            return pi_final, backend, distill_loss, True, confidence, distill_value, route_reason
 
-        return pi_approx.to(dtype=torch.float64), "neuralgw_fast", None, False, confidence, 0.0
+        return pi_approx.to(dtype=torch.float64), "neuralgw_fast", None, False, confidence, 0.0, route_reason
 
     def transport_label(
         self,
@@ -357,7 +365,7 @@ class PGWTransporter:
             and r_mv.size(0) == retrieved_mol.GetNumAtoms()
         ):
             try:
-                coupling_t, backend, distill_loss, used_exact, neuralgw_confidence, neuralgw_distill_loss = self._dynamic_multivector_router(
+                coupling_t, backend, distill_loss, used_exact, neuralgw_confidence, neuralgw_distill_loss, route_reason = self._dynamic_multivector_router(
                     query_mol,
                     retrieved_mol,
                     q_mv,
@@ -380,6 +388,7 @@ class PGWTransporter:
                         neuralgw_confidence=neuralgw_confidence,
                         neuralgw_distill_loss=neuralgw_distill_loss,
                         coupling_matrix=coupling_t,
+                        neuralgw_route_reason=route_reason,
                     )
             except Exception as exc:
                 multivector_error = f"{type(exc).__name__}: {exc}"
@@ -416,6 +425,7 @@ class PGWTransporter:
                 0.0,
                 "pgw_error",
                 transport_error_message=multivector_error,
+                neuralgw_route_reason="multivector_error",
             )
 
         coupling_t = torch.as_tensor(coupling, dtype=torch.float32, device=self.device)
@@ -430,6 +440,7 @@ class PGWTransporter:
                 "pgw_low_mass",
                 coupling_matrix=coupling_t,
                 transport_error_message=multivector_error,
+                neuralgw_route_reason="pgw_low_mass",
             )
 
         analogical_pred = source_column / source_column.sum().clamp_min(self.min_transport_mass)
@@ -442,4 +453,5 @@ class PGWTransporter:
             transport_backend="pgw_exact",
             coupling_matrix=coupling_t,
             transport_error_message=multivector_error,
+            neuralgw_route_reason="pgw_fallback" if multivector_error is not None else "pgw_exact",
         )

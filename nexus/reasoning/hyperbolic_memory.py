@@ -29,6 +29,7 @@ from .baseline_memory import (
     _extract_som_idx,
     _morgan_fp_tensor,
     build_morphism_supervision,
+    scaffold_key,
 )
 from .pgw_transport import PGWTransporter
 
@@ -89,6 +90,7 @@ class HyperbolicMemoryBank:
         self.historical_mols: List = []
         self.historical_soms: List[int] = []
         self.historical_smiles: List[str | None] = []
+        self.historical_scaffolds: List[str] = []
         self.historical_node_multivectors: List[torch.Tensor | None] = []
         self.memory_embeddings: torch.Tensor | None = None
         self.memory_fingerprints: torch.Tensor | None = None
@@ -105,6 +107,7 @@ class HyperbolicMemoryBank:
         self.historical_mols = []
         self.historical_soms = []
         self.historical_smiles = []
+        self.historical_scaffolds = []
         self.historical_node_multivectors = []
         self.memory_embeddings = None
         self.memory_fingerprints = None
@@ -280,6 +283,7 @@ class HyperbolicMemoryBank:
             self.historical_soms.append(som_idx)
             canonical = _canonical_smiles(mol)
             self.historical_smiles.append(canonical)
+            self.historical_scaffolds.append(scaffold_key(mol))
 
         if not fps:
             raise RuntimeError("No labelled molecules found — hyperbolic memory bank is empty.")
@@ -409,6 +413,82 @@ class HyperbolicMemoryBank:
         union = (self.memory_bit_counts + q_count - intersection).clamp_min(1.0e-6)
         return intersection / union
 
+    @staticmethod
+    def _morphism_vector(morph_target: torch.Tensor, morph_mask: torch.Tensor) -> torch.Tensor:
+        weighted = (morph_target * morph_mask).sum(dim=0)
+        if weighted.ndim != 1:
+            weighted = weighted.view(-1)
+        if weighted.sum().item() <= 0.0:
+            return torch.zeros_like(weighted)
+        return weighted / weighted.sum().clamp_min(1.0e-8)
+
+    def _candidate_mechanism_overlap(
+        self,
+        query_morphism_prior: torch.Tensor | None,
+        candidate_idx: int,
+    ) -> float:
+        if query_morphism_prior is None:
+            return 0.0
+        cand_target, cand_mask, cand_has, _cand_conf = build_morphism_supervision(
+            self.historical_mols[candidate_idx],
+            self.historical_soms[candidate_idx],
+            device=self.device,
+        )
+        if not cand_has:
+            return 0.0
+        cand_vec = self._morphism_vector(cand_target, cand_mask)
+        query_vec = torch.as_tensor(query_morphism_prior, dtype=torch.float32, device=self.device).view(-1)
+        if query_vec.numel() != cand_vec.numel():
+            return 0.0
+        if query_vec.sum().item() <= 0.0:
+            return 0.0
+        query_vec = query_vec / query_vec.sum().clamp_min(1.0e-8)
+        return float((query_vec * cand_vec).sum().item())
+
+    def _select_diverse_candidates(
+        self,
+        candidate_indices: List[int],
+        base_scores: torch.Tensor,
+        *,
+        top_k: int,
+        query_morphism_prior: torch.Tensor | None = None,
+    ) -> tuple[List[int], torch.Tensor, float]:
+        if not candidate_indices:
+            return [], torch.empty(0, dtype=torch.float32, device=self.device), 0.0
+        scores = torch.as_tensor(base_scores, dtype=torch.float32, device=self.device).view(-1).clone()
+        mechanism_overlaps: List[float] = []
+        for local_idx, candidate_idx in enumerate(candidate_indices):
+            overlap = self._candidate_mechanism_overlap(query_morphism_prior, candidate_idx)
+            mechanism_overlaps.append(overlap)
+            scores[local_idx] = scores[local_idx] + 0.5 * overlap
+        chosen_locals: List[int] = []
+        used_scaffolds: set[str] = set()
+        k = min(int(top_k), len(candidate_indices))
+        while len(chosen_locals) < k:
+            best_local = None
+            best_score = None
+            for local_idx, candidate_idx in enumerate(candidate_indices):
+                if local_idx in chosen_locals:
+                    continue
+                scaffold = self.historical_scaffolds[candidate_idx] if candidate_idx < len(self.historical_scaffolds) else ""
+                score = float(scores[local_idx].item())
+                if scaffold and scaffold in used_scaffolds:
+                    score -= 0.35
+                if best_local is None or score > best_score:
+                    best_local = local_idx
+                    best_score = score
+            if best_local is None:
+                break
+            chosen_locals.append(best_local)
+            candidate_idx = candidate_indices[best_local]
+            scaffold = self.historical_scaffolds[candidate_idx] if candidate_idx < len(self.historical_scaffolds) else ""
+            if scaffold:
+                used_scaffolds.add(scaffold)
+        selected_scores = scores.index_select(0, torch.tensor(chosen_locals, dtype=torch.long, device=self.device))
+        selected_indices = [candidate_indices[i] for i in chosen_locals]
+        diversity_score = float(len(used_scaffolds) / max(len(selected_indices), 1))
+        return selected_indices, selected_scores, diversity_score
+
     def _mcs_transport(self, query_mol, retrieved_mol, retrieved_som: int) -> tuple[torch.Tensor, bool, int]:
         n_query = query_mol.GetNumAtoms()
         analogical_pred = torch.zeros(n_query, dtype=torch.float32, device=self.device)
@@ -445,7 +525,7 @@ class HyperbolicMemoryBank:
         *,
         query_multivectors: torch.Tensor | None = None,
         retrieved_multivectors: torch.Tensor | None = None,
-    ) -> tuple[torch.Tensor, bool, int, str, float, torch.Tensor | None, bool, float, float, torch.Tensor | None, str | None]:
+    ) -> tuple[torch.Tensor, bool, int, str, float, torch.Tensor | None, bool, float, float, torch.Tensor | None, str | None, str]:
         if self.transport_backend == "pgw" and self.pgw is not None:
             pgw_result = self.pgw.transport_label(
                 query_mol,
@@ -465,6 +545,7 @@ class HyperbolicMemoryBank:
             neuralgw_distill_loss = pgw_result.neuralgw_distill_loss
             transport_plan = pgw_result.coupling_matrix
             transport_error_message = pgw_result.transport_error_message
+            neuralgw_route_reason = pgw_result.neuralgw_route_reason
             if (not transport_ok) and self.fallback_to_mcs:
                 analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
                 transport_backend = "mcs_fallback"
@@ -474,6 +555,7 @@ class HyperbolicMemoryBank:
                 neuralgw_confidence = 0.0
                 neuralgw_distill_loss = 0.0
                 transport_plan = None
+                neuralgw_route_reason = "mcs_fallback"
             return (
                 analogical_pred,
                 transport_ok,
@@ -486,6 +568,7 @@ class HyperbolicMemoryBank:
                 neuralgw_distill_loss,
                 transport_plan,
                 transport_error_message,
+                neuralgw_route_reason,
             )
 
         analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
@@ -501,6 +584,7 @@ class HyperbolicMemoryBank:
             0.0,
             None,
             None,
+            "mcs_only",
         )
 
     def retrieve_and_transport(
@@ -510,6 +594,7 @@ class HyperbolicMemoryBank:
         mechanism_encoder=None,
         query_embedding: torch.Tensor | None = None,
         query_multivectors: torch.Tensor | None = None,
+        query_morphism_prior: torch.Tensor | None = None,
     ) -> MemoryRetrievalResult:
         """
         Args:
@@ -545,6 +630,9 @@ class HyperbolicMemoryBank:
         mix_weights: List[float] = []
         retrieval_mix_count = 1
         retrieval_mix_entropy = 0.0
+        retrieval_mechanism_overlap = 0.0
+        retrieval_diversity_score = 0.0
+        retrieval_candidate_count = 0
 
         if projected_ready:
             candidate_mask = self.memory_projected_mask.clone()
@@ -552,6 +640,7 @@ class HyperbolicMemoryBank:
                 candidate_mask = candidate_mask & (~same_query)
             candidate_indices = torch.nonzero(candidate_mask, as_tuple=False).view(-1)
             if candidate_indices.numel() > 0:
+                retrieval_candidate_count = int(candidate_indices.numel())
                 target_dim = int(self.memory_embeddings.size(-1))
                 prepared_query = torch.as_tensor(query_embedding, dtype=torch.float32, device=self.device).view(-1)
                 if prepared_query.numel() < target_dim:
@@ -565,21 +654,32 @@ class HyperbolicMemoryBank:
                 distances = self._poincare_distance(q_embed_h, candidate_embeddings).view(-1)
                 shortlist_k = min(self.tanimoto_shortlist_k, int(candidate_indices.numel()))
                 top_distances, top_local = torch.topk(distances, shortlist_k, largest=False)
-                best_idx = int(candidate_indices[int(top_local[0].item())].item())
-                tau = 10.0
-                confidence = math.exp(-float(top_distances[0].item()) / tau)
-                mix_k = min(self.retrieval_mix_top_k, shortlist_k)
-                mix_candidate_indices = [
+                shortlist_candidate_indices = [
                     int(candidate_indices[int(top_local[i].item())].item())
-                    for i in range(mix_k)
+                    for i in range(shortlist_k)
                 ]
-                mix_logits = -top_distances[:mix_k].to(dtype=torch.float32) / self.retrieval_mix_temperature
+                shortlist_scores = -top_distances[:shortlist_k].to(dtype=torch.float32) / self.retrieval_mix_temperature
+                mix_k = min(max(self.retrieval_mix_top_k, 3), shortlist_k)
+                mix_candidate_indices, mix_logits, retrieval_diversity_score = self._select_diverse_candidates(
+                    shortlist_candidate_indices,
+                    shortlist_scores,
+                    top_k=mix_k,
+                    query_morphism_prior=query_morphism_prior,
+                )
+                if not mix_candidate_indices:
+                    mix_candidate_indices = shortlist_candidate_indices[:mix_k]
+                    mix_logits = shortlist_scores[:mix_k]
                 mix_prob = torch.softmax(mix_logits, dim=0)
                 mix_weights = [float(v.item()) for v in mix_prob]
                 retrieval_mix_count = len(mix_candidate_indices)
                 retrieval_mix_entropy = float(
                     (-(mix_prob * torch.log(mix_prob.clamp_min(1.0e-9))).sum()).item()
                 )
+                best_idx = int(mix_candidate_indices[0])
+                tau = 10.0
+                best_rank_local = shortlist_candidate_indices.index(best_idx)
+                confidence = math.exp(-float(top_distances[best_rank_local].item()) / tau)
+                retrieval_mechanism_overlap = self._candidate_mechanism_overlap(query_morphism_prior, best_idx)
                 query_embed = q_embed_h.squeeze(0)
                 retrieved_embed_detached = self.memory_embeddings[best_idx].detach()
             else:
@@ -591,6 +691,7 @@ class HyperbolicMemoryBank:
             if same_query is not None and bool(same_query.any().item()):
                 tanimoto_scores = tanimoto_scores.masked_fill(same_query, -1.0)
             shortlist_k = min(self.tanimoto_shortlist_k, len(self.historical_mols))
+            retrieval_candidate_count = shortlist_k
             top_tanimoto, shortlist_indices = torch.topk(tanimoto_scores, shortlist_k, largest=True)
             best_tanimoto = float(top_tanimoto[0].item()) if shortlist_k > 0 else -1.0
             best_shortlist_idx = int(shortlist_indices[0].item()) if shortlist_k > 0 else 0
@@ -682,18 +783,29 @@ class HyperbolicMemoryBank:
                     q_embed_h = q_embed_h[..., :target_dim]
                 candidate_embeddings = self.memory_embeddings.index_select(0, shortlist_indices)
                 distances = self._poincare_distance(q_embed_h, candidate_embeddings).squeeze(0)
-
-                k = min(2, shortlist_k)
-                top_distances, top_indices = torch.topk(distances, k, largest=False)
-
-                tau = 10.0  # Aggressive temperature scalar: exp(-d/tau) keeps confidence
-                            # high for typical hyperbolic distances (~2.9 → exp(-0.29)=0.748)
-                if top_distances[0] < 1e-4 and k > 1:
-                    best_idx = int(shortlist_indices[top_indices[1]].item())
-                    confidence = math.exp(-float(top_distances[1].item()) / tau)
-                else:
-                    best_idx = int(shortlist_indices[top_indices[0]].item())
-                    confidence = math.exp(-float(top_distances[0].item()) / tau)
+                shortlist_candidate_indices = [int(v.item()) for v in shortlist_indices.tolist()]
+                shortlist_scores = -distances.to(dtype=torch.float32) / self.retrieval_mix_temperature
+                mix_k = min(max(self.retrieval_mix_top_k, 3), shortlist_k)
+                mix_candidate_indices, mix_logits, retrieval_diversity_score = self._select_diverse_candidates(
+                    shortlist_candidate_indices,
+                    shortlist_scores,
+                    top_k=mix_k,
+                    query_morphism_prior=query_morphism_prior,
+                )
+                if not mix_candidate_indices:
+                    mix_candidate_indices = shortlist_candidate_indices[:mix_k]
+                    mix_logits = shortlist_scores[:mix_k]
+                mix_prob = torch.softmax(mix_logits, dim=0)
+                mix_weights = [float(v.item()) for v in mix_prob]
+                retrieval_mix_count = len(mix_candidate_indices)
+                retrieval_mix_entropy = float(
+                    (-(mix_prob * torch.log(mix_prob.clamp_min(1.0e-9))).sum()).item()
+                )
+                best_idx = int(mix_candidate_indices[0])
+                tau = 10.0
+                best_rank_local = shortlist_candidate_indices.index(best_idx)
+                confidence = math.exp(-float(distances[best_rank_local].item()) / tau)
+                retrieval_mechanism_overlap = self._candidate_mechanism_overlap(query_morphism_prior, best_idx)
 
         retrieved_mol = self.historical_mols[best_idx]
         retrieved_som = self.historical_soms[best_idx]
@@ -717,6 +829,7 @@ class HyperbolicMemoryBank:
             neuralgw_distill_loss,
             transport_plan,
             transport_error_message,
+            neuralgw_route_reason,
         ) = self._transport_candidate(
             query_mol,
             retrieved_mol,
@@ -724,20 +837,22 @@ class HyperbolicMemoryBank:
             query_multivectors=query_multivectors,
             retrieved_multivectors=retrieved_multivectors,
         )
+        anchor_idx = best_idx
 
         # Multi-memory mixture for the continuous path: blend a small number of
         # transported analogical priors while still using the best analogue as
         # the anchor for fusion / detailed diagnostics.
-        if projected_ready and mix_candidate_indices and len(mix_candidate_indices) > 1:
+        if mix_candidate_indices and len(mix_candidate_indices) > 1:
             mixture = torch.zeros_like(analogical_pred)
             total_weight = 0.0
+            best_anchor_score = float(mix_weights[0]) * (transported_mass + 0.05 * max(support_size, 1))
             for candidate_idx, mix_weight in zip(mix_candidate_indices, mix_weights):
                 cand_mol = self.historical_mols[candidate_idx]
                 cand_som = self.historical_soms[candidate_idx]
                 cand_mv = None
                 if 0 <= candidate_idx < len(self.historical_node_multivectors):
                     cand_mv = self.historical_node_multivectors[candidate_idx]
-                cand_pred, cand_ok, _cand_support, _cand_backend, _cand_mass, _cand_distill, _cand_exact, _cand_conf, _cand_distill_value, _cand_plan, _cand_err = self._transport_candidate(
+                cand_pred, cand_ok, _cand_support, _cand_backend, _cand_mass, _cand_distill, _cand_exact, _cand_conf, _cand_distill_value, _cand_plan, _cand_err, _cand_route_reason = self._transport_candidate(
                     query_mol,
                     cand_mol,
                     cand_som,
@@ -747,6 +862,30 @@ class HyperbolicMemoryBank:
                 if cand_ok:
                     mixture = mixture + float(mix_weight) * cand_pred
                     total_weight += float(mix_weight)
+                    cand_score = float(mix_weight) * (float(_cand_mass) + 0.05 * max(int(_cand_support), 1))
+                    if cand_score > best_anchor_score and _cand_plan is not None:
+                        best_anchor_score = cand_score
+                        anchor_idx = candidate_idx
+                        analogical_pred = cand_pred
+                        transport_ok = cand_ok
+                        support_size = int(_cand_support)
+                        transport_backend = _cand_backend
+                        transported_mass = float(_cand_mass)
+                        transport_distill_loss = _cand_distill
+                        neuralgw_used_exact = _cand_exact
+                        neuralgw_confidence = _cand_conf
+                        neuralgw_distill_loss = _cand_distill_value
+                        transport_plan = _cand_plan
+                        transport_error_message = _cand_err
+                        neuralgw_route_reason = _cand_route_reason
+                        retrieved_mol = cand_mol
+                        retrieved_som = cand_som
+                        retrieved_multivectors = cand_mv
+                        retrieved_morph_target, retrieved_morph_mask, retrieved_has_morph, retrieved_morph_conf = build_morphism_supervision(
+                            retrieved_mol,
+                            retrieved_som,
+                            device=self.device,
+                        )
             if total_weight > 0.0:
                 analogical_pred = mixture / mixture.sum().clamp_min(1.0e-8)
                 support_size = int((analogical_pred >= self.pgw.support_threshold).sum().item()) if self.pgw is not None else support_size
@@ -765,7 +904,7 @@ class HyperbolicMemoryBank:
             transport_backend=transport_backend,
             transport_support_size=support_size,
             transported_mass=transported_mass,
-            retrieved_same_query=(query_key is not None and self.historical_smiles[best_idx] == query_key),
+            retrieved_same_query=(query_key is not None and self.historical_smiles[anchor_idx] == query_key),
             transport_distill_loss=transport_distill_loss,
             neuralgw_used_exact=neuralgw_used_exact,
             neuralgw_confidence=neuralgw_confidence,
@@ -779,6 +918,11 @@ class HyperbolicMemoryBank:
             retrieved_morphism_loss_mask=retrieved_morph_mask,
             retrieved_has_morphism_label=retrieved_has_morph,
             retrieved_label_confidence=retrieved_morph_conf,
+            retrieved_scaffold=self.historical_scaffolds[anchor_idx] if anchor_idx < len(self.historical_scaffolds) else "",
+            retrieval_candidate_count=retrieval_candidate_count,
+            retrieval_mechanism_overlap=retrieval_mechanism_overlap,
+            retrieval_diversity_score=retrieval_diversity_score,
+            neuralgw_route_reason=neuralgw_route_reason,
         )
 
     def batch_stats(self, mols: List, true_soms: List[int]) -> dict:
