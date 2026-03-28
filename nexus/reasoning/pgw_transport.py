@@ -106,6 +106,8 @@ class PGWTransporter:
         dustbin_epsilon: float = 0.2,
         anchor_count: int = 5,
         linearize_above_atoms: int = 24,
+        som_neighborhood_hops: int = 2,
+        som_neighborhood_decay: float = 1.0,
         neuralgw_enabled: bool = True,
         neuralgw_hidden_dim: int = 64,
         neuralgw_temperature: float = 0.1,
@@ -127,6 +129,8 @@ class PGWTransporter:
         self.dustbin_epsilon = float(min(max(dustbin_epsilon, 0.0), 0.95))
         self.anchor_count = int(max(anchor_count, 1))
         self.linearize_above_atoms = int(max(linearize_above_atoms, 4))
+        self.som_neighborhood_hops = int(max(som_neighborhood_hops, 0))
+        self.som_neighborhood_decay = float(max(som_neighborhood_decay, 1.0e-6))
         self.neuralgw_enabled = bool(neuralgw_enabled)
         self.neuralgw_burn_in_epochs = int(max(neuralgw_burn_in_epochs, 0))
         self.neuralgw_ambiguity_threshold = float(min(max(neuralgw_ambiguity_threshold, 0.0), 1.0))
@@ -212,6 +216,54 @@ class PGWTransporter:
         q_sig = q_z.index_select(1, q_anchor[:k])  # [N, K]
         r_sig = r_z.index_select(1, r_anchor[:k])  # [M, K]
         return torch.cdist(q_sig, r_sig, p=2).to(dtype=torch.float64)
+
+    def _som_neighborhood_weights(self, mol, som_idx: int) -> torch.Tensor:
+        n_atoms = mol.GetNumAtoms()
+        weights = torch.zeros(n_atoms, dtype=torch.float32, device=self.device)
+        if not (0 <= int(som_idx) < n_atoms):
+            return weights
+        try:
+            distances = Chem.GetDistanceMatrix(mol)
+            dist_t = torch.as_tensor(distances, dtype=torch.float32, device=self.device)[int(som_idx)]
+        except Exception:
+            weights[int(som_idx)] = 1.0
+            return weights
+        valid = dist_t <= float(self.som_neighborhood_hops)
+        if not bool(valid.any().item()):
+            weights[int(som_idx)] = 1.0
+            return weights
+        local = torch.exp(-self.som_neighborhood_decay * dist_t.clamp_min(0.0)) * valid.to(dtype=torch.float32)
+        if local.sum().item() <= 0.0:
+            weights[int(som_idx)] = 1.0
+            return weights
+        return local / local.sum().clamp_min(1.0e-8)
+
+    def _extract_transport_signal(
+        self,
+        coupling_t: torch.Tensor,
+        retrieved_mol,
+        retrieved_som_idx: int,
+    ) -> tuple[torch.Tensor, float, int, bool]:
+        source_column = coupling_t[:, int(retrieved_som_idx)]
+        moved_mass = float(source_column.sum().item())
+        if moved_mass >= self.min_transport_mass and bool(torch.isfinite(source_column).all().item()):
+            analogical_pred = source_column / source_column.sum().clamp_min(self.min_transport_mass)
+            support_size = int((analogical_pred >= self.support_threshold).sum().item())
+            return analogical_pred, moved_mass, support_size, False
+
+        if self.som_neighborhood_hops <= 0:
+            return source_column, moved_mass, 0, False
+
+        neighborhood_weights = self._som_neighborhood_weights(retrieved_mol, retrieved_som_idx)
+        if neighborhood_weights.sum().item() <= 0.0:
+            return source_column, moved_mass, 0, False
+        neighborhood_signal = torch.matmul(coupling_t, neighborhood_weights)
+        neighborhood_mass = float(neighborhood_signal.sum().item())
+        if neighborhood_mass >= self.min_transport_mass and bool(torch.isfinite(neighborhood_signal).all().item()):
+            analogical_pred = neighborhood_signal / neighborhood_signal.sum().clamp_min(self.min_transport_mass)
+            support_size = int((analogical_pred >= self.support_threshold).sum().item())
+            return analogical_pred, neighborhood_mass, support_size, True
+        return neighborhood_signal, neighborhood_mass, 0, True
 
     def _partial_sinkhorn(self, cost: torch.Tensor, *, transported_mass: float) -> torch.Tensor:
         n, m = cost.shape
@@ -372,23 +424,24 @@ class PGWTransporter:
                     r_mv,
                 )
                 coupling_t = coupling_t.to(dtype=torch.float32, device=self.device)
-                source_column = coupling_t[:, int(retrieved_som_idx)]
-                moved_mass = float(source_column.sum().item())
-                if moved_mass >= self.min_transport_mass and bool(torch.isfinite(source_column).all().item()):
-                    analogical_pred = source_column / source_column.sum().clamp_min(self.min_transport_mass)
-                    support_size = int((analogical_pred >= self.support_threshold).sum().item())
+                analogical_pred, moved_mass, support_size, used_neighborhood = self._extract_transport_signal(
+                    coupling_t,
+                    retrieved_mol,
+                    int(retrieved_som_idx),
+                )
+                if moved_mass >= self.min_transport_mass and bool(torch.isfinite(analogical_pred).all().item()):
                     return PGWTransportResult(
                         analogical_pred=analogical_pred,
                         transport_succeeded=True,
                         support_size=support_size,
                         transported_mass=moved_mass,
-                        transport_backend=backend,
+                        transport_backend=f"{backend}_som_neighborhood" if used_neighborhood else backend,
                         distill_loss=distill_loss,
                         neuralgw_used_exact=used_exact,
                         neuralgw_confidence=neuralgw_confidence,
                         neuralgw_distill_loss=neuralgw_distill_loss,
                         coupling_matrix=coupling_t,
-                        neuralgw_route_reason=route_reason,
+                        neuralgw_route_reason=f"{route_reason}_som_neighborhood" if used_neighborhood else route_reason,
                     )
             except Exception as exc:
                 multivector_error = f"{type(exc).__name__}: {exc}"
@@ -429,9 +482,12 @@ class PGWTransporter:
             )
 
         coupling_t = torch.as_tensor(coupling, dtype=torch.float32, device=self.device)
-        source_column = coupling_t[:, int(retrieved_som_idx)]
-        transported_mass = float(source_column.sum().item())
-        if transported_mass < self.min_transport_mass or not torch.isfinite(source_column).all():
+        analogical_pred, transported_mass, support_size, used_neighborhood = self._extract_transport_signal(
+            coupling_t,
+            retrieved_mol,
+            int(retrieved_som_idx),
+        )
+        if transported_mass < self.min_transport_mass or not torch.isfinite(analogical_pred).all():
             return PGWTransportResult(
                 zero_pred,
                 False,
@@ -442,16 +498,18 @@ class PGWTransporter:
                 transport_error_message=multivector_error,
                 neuralgw_route_reason="pgw_low_mass",
             )
-
-        analogical_pred = source_column / source_column.sum().clamp_min(self.min_transport_mass)
-        support_size = int((analogical_pred >= self.support_threshold).sum().item())
         return PGWTransportResult(
             analogical_pred=analogical_pred,
             transport_succeeded=True,
             support_size=support_size,
             transported_mass=transported_mass,
-            transport_backend="pgw_exact",
+            transport_backend="pgw_exact_som_neighborhood" if used_neighborhood else "pgw_exact",
             coupling_matrix=coupling_t,
             transport_error_message=multivector_error,
-            neuralgw_route_reason="pgw_fallback" if multivector_error is not None else "pgw_exact",
+            neuralgw_route_reason=(
+                "pgw_fallback_som_neighborhood" if multivector_error is not None and used_neighborhood
+                else "pgw_fallback" if multivector_error is not None
+                else "pgw_exact_som_neighborhood" if used_neighborhood
+                else "pgw_exact"
+            ),
         )
