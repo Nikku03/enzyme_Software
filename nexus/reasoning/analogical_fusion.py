@@ -120,11 +120,13 @@ class HomoscedasticArbiterLoss(nn.Module):
         morphism_alpha: torch.Tensor | None = None,
         morphism_gamma: float = 2.0,
         burn_in_epochs: int = 1,
+        bootstrap_weight: float = 0.0,
     ) -> None:
         super().__init__()
         self.log_var_fp = nn.Parameter(torch.zeros(1))
         self.log_var_ana = nn.Parameter(torch.zeros(1))
         self.burn_in_epochs = int(max(burn_in_epochs, 0))
+        self.bootstrap_weight = float(max(bootstrap_weight, 0.0))
         self.morphism_criterion = MorphismFocalLoss(
             alpha=DEFAULT_CYP3A4_MORPHISM_ALPHA if morphism_alpha is None else morphism_alpha,
             gamma=morphism_gamma,
@@ -183,6 +185,7 @@ class HomoscedasticArbiterLoss(nn.Module):
         loss_fp_morph = masked_fp_morph.sum() / valid_morph
         loss_ana_morph = masked_ana_morph.sum() / valid_morph
         morph_scale = confidence_t * has_morph_t
+        in_burn_in = int(current_epoch or 0) < self.burn_in_epochs
         mass_quality = min(max(float(transported_mass) / 0.12, 0.0), 1.0)
         support_quality = min(max(float(transport_support) / 4.0, 0.0), 1.0)
         mechanism_quality = min(max(float(retrieval_mechanism_overlap), 0.0), 1.0)
@@ -202,7 +205,14 @@ class HomoscedasticArbiterLoss(nn.Module):
             reduction="none",
         )
         bootstrap_loss = (raw_bootstrap * morph_mask).sum() / valid_morph
-        bootstrap_scale = morph_scale * (0.15 + 0.35 * ana_quality)
+        if self.bootstrap_weight > 0.0 and (not in_burn_in):
+            fp_certainty = (
+                ((bootstrap_target - 0.5).abs() * 2.0 * morph_mask).sum() / valid_morph
+            ).clamp(0.0, 1.0)
+            bootstrap_scale = morph_scale * fp_certainty * ana_quality * self.bootstrap_weight
+        else:
+            bootstrap_scale = y_hat_fp_som.new_zeros(())
+        bootstrap_contrib = bootstrap_loss * bootstrap_scale
 
         bridge_term = (
             torch.as_tensor(bridge_loss, dtype=torch.float32, device=device).view(())
@@ -211,14 +221,13 @@ class HomoscedasticArbiterLoss(nn.Module):
         )
         bridge_term = bridge_term * float(max(bridge_weight, 0.0))
 
-        in_burn_in = int(current_epoch or 0) < self.burn_in_epochs
         if in_burn_in:
             total_loss = (
                 loss_fp_som
                 + loss_ana_som
                 + (loss_fp_morph * morph_scale)
                 + (loss_ana_morph * ana_morph_scale)
-                + (bootstrap_loss * bootstrap_scale)
+                + bootstrap_contrib
                 + bridge_term
             )
             precision_fp = torch.ones((), dtype=torch.float32, device=device)
@@ -235,7 +244,7 @@ class HomoscedasticArbiterLoss(nn.Module):
             loss_fp_scaled = 0.5 * precision_fp * (loss_fp_morph * morph_scale) + 0.5 * self.log_var_fp
             loss_ana_scaled = 0.5 * precision_ana * (
                 (loss_ana_morph * ana_morph_scale)
-                + (bootstrap_loss * bootstrap_scale)
+                + bootstrap_contrib
                 + bridge_term
             ) + 0.5 * self.log_var_ana
             total_loss = loss_fp_som + loss_ana_som + loss_fp_scaled + loss_ana_scaled
@@ -247,7 +256,7 @@ class HomoscedasticArbiterLoss(nn.Module):
             "loss_ana_som": loss_ana_som.detach(),
             "loss_fp_morph": loss_fp_morph.detach(),
             "loss_ana_morph": loss_ana_morph.detach(),
-            "loss_ana_bootstrap": bootstrap_loss.detach(),
+            "loss_ana_bootstrap": bootstrap_contrib.detach(),
             "weight_fp": weight_fp.detach(),
             "weight_ana": weight_ana.detach(),
             "sigma_fp": torch.exp(0.5 * self.log_var_fp).detach(),

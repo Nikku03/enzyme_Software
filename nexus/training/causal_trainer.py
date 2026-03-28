@@ -1858,6 +1858,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                         physics_analogy_agreement=_physics_analogy_agreement,
                         transported_mass=float(_result.transported_mass),
                         transport_backend=str(_result.transport_backend),
+                        current_epoch=int(self.current_epoch_index),
                     )
                     _ana_loss = self._sanitize_tensor(
                         self._to_fp32(_ana_loss), clamp=(0.0, 100.0)
@@ -1883,6 +1884,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                     _morph_f1_epox_fp = torch.zeros((), dtype=torch.float32, device=device)
                     _morph_f1_epox_ana = torch.zeros((), dtype=torch.float32, device=device)
                     _morph_f1_available = torch.zeros((), dtype=torch.float32, device=device)
+                    _mech_contrastive_loss_weighted = torch.zeros((), dtype=torch.float32, device=device)
                     _fusion_error_message: str | None = None
                     _ood_score = 0.0
                     _hard_case = 0.0
@@ -1992,6 +1994,30 @@ class Metabolic_Causal_Trainer(nn.Module):
                                         dtype=torch.float32,
                                         device=device,
                                     )
+                                    if (
+                                        _ret_morph_target is not None
+                                        and _ret_morph_mask is not None
+                                        and bool((_has_morph_label > 0).item())
+                                        and bool((_ret_has_morph > 0).item())
+                                    ):
+                                        from nexus.reasoning.metric_learner import mechanism_contrastive_loss
+
+                                        _mech_contrastive_raw = mechanism_contrastive_loss(
+                                            _q_fp_scan.squeeze(0),
+                                            _ret_mv,
+                                            _morph_target_scan.squeeze(0),
+                                            _ret_morph_target.squeeze(0),
+                                            _morph_mask_scan.squeeze(0),
+                                            _ret_morph_mask.squeeze(0),
+                                            query_confidence=float(_label_confidence.detach().item()),
+                                            retrieved_confidence=float(_ret_label_conf.detach().item()),
+                                        )
+                                        _mech_contrastive_raw = self._sanitize_tensor(
+                                            self._to_fp32(_mech_contrastive_raw),
+                                            clamp=(0.0, 10.0),
+                                        )
+                                        _mech_contrastive_loss_weighted = 0.10 * _mech_contrastive_raw
+                                        total_loss = total_loss + _mech_contrastive_loss_weighted
                                     _y_hat_fp_som, _y_hat_fp_morph, _y_hat_ana_som, _y_hat_ana_morph = self.analogical_dual_decoder(
                                         _q_fp_scan,
                                         _q_ana_scan,
@@ -2194,6 +2220,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "ana_quality": float(metrics.get("ana_quality", torch.zeros((), dtype=torch.float32, device=device)).detach().item()),
                         "ana_morph_bootstrap_loss": float(metrics.get("ana_morph_bootstrap_loss", torch.zeros((), dtype=torch.float32, device=device)).detach().item()),
                         "ana_burn_in_active": float(metrics.get("ana_burn_in_active", torch.zeros((), dtype=torch.float32, device=device)).detach().item()),
+                        "ana_mechanism_contrastive_loss": float(metrics.get("ana_mechanism_contrastive_loss", torch.zeros((), dtype=torch.float32, device=device)).detach().item()),
                         "ood_score": float(_ood_score),
                         "hard_case": bool(_hard_case),
                         "abstain": bool(_abstain),
@@ -2271,6 +2298,11 @@ class Metabolic_Causal_Trainer(nn.Module):
                         ),
                         "ana_transport_gate": torch.as_tensor(
                             _ana_info["transport_gate"], dtype=torch.float32, device=device
+                        ),
+                        "ana_gate_burn_in_active": torch.as_tensor(
+                            _ana_info.get("burn_in_active", 0.0),
+                            dtype=torch.float32,
+                            device=device,
                         ),
                         "ana_watson_agreement": torch.as_tensor(
                             _physics_analogy_agreement, dtype=torch.float32, device=device
@@ -2352,9 +2384,19 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "ana_fusion_loss_total": _fusion_loss_weighted.detach(),
                         "ana_sigma_fp": _fusion_sigma_fp.detach(),
                         "ana_sigma_ana": _fusion_sigma_ana.detach(),
-                        "ana_morph_bootstrap_loss": torch.zeros((), dtype=torch.float32, device=device),
-                        "ana_quality": torch.zeros((), dtype=torch.float32, device=device),
-                        "ana_burn_in_active": torch.zeros((), dtype=torch.float32, device=device),
+                        "ana_mechanism_contrastive_loss": _mech_contrastive_loss_weighted.detach(),
+                        "ana_morph_bootstrap_loss": metrics.get(
+                            "ana_morph_bootstrap_loss",
+                            torch.zeros((), dtype=torch.float32, device=device),
+                        ).detach(),
+                        "ana_quality": metrics.get(
+                            "ana_quality",
+                            torch.zeros((), dtype=torch.float32, device=device),
+                        ).detach(),
+                        "ana_burn_in_active": metrics.get(
+                            "ana_burn_in_active",
+                            torch.zeros((), dtype=torch.float32, device=device),
+                        ).detach(),
                         "ana_direct_lift_top1": (
                             metrics["som_top1"] - metrics["som_top1_fp"]
                         ).detach(),
@@ -2541,6 +2583,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                         f" fuse_w={running.get('ana_fusion_weight', float('nan')):.2f}"
                         f" aq={running.get('ana_quality', float('nan')):.2f}"
                         f" boot={running.get('ana_morph_bootstrap_loss', float('nan')):.3f}"
+                        f" mcl={running.get('ana_mechanism_contrastive_loss', float('nan')):.3f}"
                         f" burn={running.get('ana_burn_in_active', float('nan')):.2f}"
                         f" ngw_exact={running.get('neuralgw_used_exact', float('nan')):.2f}"
                         f" ngw_conf={running.get('neuralgw_confidence', float('nan')):.3f}"

@@ -426,11 +426,15 @@ class GatedAnalogicalGodLoss(nn.Module):
         self,
         confidence_threshold: float = 0.6,  # kept for backward compat, no longer used as hard cutoff
         peak_threshold: float = 0.1,         # kept for backward compat
+        burn_in_epochs: int = 1,
+        burn_in_gate_floor: float = 0.5,
     ) -> None:
         super().__init__()
         # Legacy thresholds kept for logging / external callers that read them.
         self.threshold = float(confidence_threshold)
         self.peak_threshold = float(max(peak_threshold, 0.0))
+        self.burn_in_epochs = int(max(burn_in_epochs, 0))
+        self.burn_in_gate_floor = float(min(max(burn_in_gate_floor, 0.0), 1.0))
         # log(s) where s = 1/σ².  Init at 0 → s=1 → equal weighting.
         self.log_s = nn.Parameter(torch.zeros(2))
         # Watson soft gate
@@ -452,6 +456,7 @@ class GatedAnalogicalGodLoss(nn.Module):
         physics_analogy_agreement: float = 0.0,
         transported_mass: float = 0.0,
         transport_backend: str = "",
+        current_epoch: int | None = None,
     ) -> Tuple[torch.Tensor, Dict[str, Any]]:
         # ── shape guards ──────────────────────────────────────────────
         if pred_fp.dim() == 1:
@@ -495,12 +500,15 @@ class GatedAnalogicalGodLoss(nn.Module):
                 transport_gate = max(0.10, support_quality)
 
         effective_confidence = min(max(float(retrieval_confidence) + confidence_bonus, 0.0), 1.0)
+        in_burn_in = int(current_epoch or 0) < self.burn_in_epochs
 
         # ── soft Watson gate ──────────────────────────────────────────
         # Gate weight is ~0.12 at init; rises as all three signals converge.
         # Skip analogy branch entirely if transport failed (no sensible label).
         if not transport_succeeded:
             gate_weight = pred_fp.new_zeros(())   # exactly 0, no grad through ana
+        elif in_burn_in:
+            gate_weight = pred_fp.new_tensor(max(transport_gate, self.burn_in_gate_floor))
         else:
             gate_weight = self.watson(effective_confidence, ana_peak, physics_analogy_agreement)
             gate_weight = gate_weight * pred_fp.new_tensor(transport_gate)
@@ -531,6 +539,7 @@ class GatedAnalogicalGodLoss(nn.Module):
             "watson_agreement": float(physics_analogy_agreement),
             "effective_confidence": float(effective_confidence),
             "transport_gate": float(transport_gate),
+            "burn_in_active": float(1.0 if in_burn_in else 0.0),
         }
 
 

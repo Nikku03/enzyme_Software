@@ -231,3 +231,68 @@ def hyperbolic_supervision_loss(
     if same_som_class:
         return dist.mean()
     return F.relu(margin_neg - dist).mean()
+
+
+def mechanism_contrastive_loss(
+    query_multivectors: torch.Tensor,
+    retrieved_multivectors: torch.Tensor,
+    query_targets: torch.Tensor,
+    retrieved_targets: torch.Tensor,
+    query_mask: torch.Tensor,
+    retrieved_mask: torch.Tensor,
+    *,
+    margin: float = 1.25,
+    query_confidence: float = 1.0,
+    retrieved_confidence: float = 1.0,
+) -> torch.Tensor:
+    """
+    Node-level mechanism contrastive loss on continuous multivectors.
+
+    Each labeled query atom is compared against each labeled retrieved atom.
+    Pairs that share at least one mechanism class are pulled together; pairs
+    with disjoint mechanism labels are pushed apart up to a margin.
+
+    The retrieved multivectors are detached because retrieval is non-differentiable
+    and only the live query encoder should receive gradients during training.
+    """
+    q_mv = torch.as_tensor(query_multivectors, dtype=torch.float32)
+    r_mv = torch.as_tensor(retrieved_multivectors, dtype=torch.float32).detach()
+    q_target = torch.as_tensor(query_targets, dtype=torch.float32, device=q_mv.device)
+    r_target = torch.as_tensor(retrieved_targets, dtype=torch.float32, device=q_mv.device)
+    q_mask = torch.as_tensor(query_mask, dtype=torch.float32, device=q_mv.device)
+    r_mask = torch.as_tensor(retrieved_mask, dtype=torch.float32, device=q_mv.device)
+
+    if q_mv.ndim != 2 or r_mv.ndim != 2:
+        raise ValueError("mechanism_contrastive_loss expects [N, D] multivector tensors")
+    if q_target.ndim != 2 or r_target.ndim != 2:
+        raise ValueError("mechanism_contrastive_loss expects [N, C] target tensors")
+
+    q_valid = (q_mask.sum(dim=-1) > 0.0)
+    r_valid = (r_mask.sum(dim=-1) > 0.0)
+    if not bool(q_valid.any().item()) or not bool(r_valid.any().item()):
+        return q_mv.new_zeros(())
+
+    q_vec = F.normalize(q_mv[q_valid], p=2, dim=-1)
+    r_vec = F.normalize(r_mv[r_valid], p=2, dim=-1)
+    q_lbl = q_target[q_valid]
+    r_lbl = r_target[r_valid]
+
+    overlap = torch.matmul(q_lbl, r_lbl.transpose(0, 1))
+    positive_pairs = overlap > 0.0
+    negative_pairs = ~positive_pairs
+    distances = torch.cdist(q_vec, r_vec, p=2)
+
+    losses = []
+    if bool(positive_pairs.any().item()):
+        pull_loss = distances[positive_pairs].pow(2).mean()
+        losses.append(pull_loss)
+    if bool(negative_pairs.any().item()):
+        push_loss = F.relu(float(margin) - distances[negative_pairs]).pow(2).mean()
+        losses.append(0.5 * push_loss)
+    if not losses:
+        return q_mv.new_zeros(())
+
+    confidence_scale = math.sqrt(
+        max(float(query_confidence), 0.0) * max(float(retrieved_confidence), 0.0)
+    )
+    return sum(losses) * q_mv.new_tensor(confidence_scale, dtype=torch.float32)
