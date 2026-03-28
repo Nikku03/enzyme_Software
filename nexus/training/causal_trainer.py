@@ -1925,6 +1925,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                                         label_confidence=_label_confidence,
                                         has_morphism_label=_has_morph_label,
                                         bridge_loss=_bridge_loss,
+                                        current_epoch=int(self.current_epoch_index),
                                     )
                                     _fusion_loss = self._sanitize_tensor(
                                         self._to_fp32(_fusion_loss),
@@ -1978,6 +1979,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                                         "ana_bridge_loss": self._to_fp32(_fusion_info["bridge_loss"]).detach(),
                                         "ana_has_morphism_label": self._to_fp32(_fusion_info["has_morphism_label"]).detach(),
                                         "ana_label_confidence": self._to_fp32(_fusion_info["label_confidence"]).detach(),
+                                        "ana_burn_in_active": self._to_fp32(_fusion_info["burn_in_active"]).detach(),
                                     })
                                     _fusion_available = True
                         except Exception as _fusion_err:

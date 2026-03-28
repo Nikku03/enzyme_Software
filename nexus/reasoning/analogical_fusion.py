@@ -105,10 +105,12 @@ class HomoscedasticArbiterLoss(nn.Module):
         *,
         morphism_alpha: torch.Tensor | None = None,
         morphism_gamma: float = 2.0,
+        burn_in_epochs: int = 3,
     ) -> None:
         super().__init__()
         self.log_var_fp = nn.Parameter(torch.zeros(1))
         self.log_var_ana = nn.Parameter(torch.zeros(1))
+        self.burn_in_epochs = int(max(burn_in_epochs, 0))
         self.morphism_criterion = MorphismFocalLoss(
             alpha=DEFAULT_CYP3A4_MORPHISM_ALPHA if morphism_alpha is None else morphism_alpha,
             gamma=morphism_gamma,
@@ -128,6 +130,7 @@ class HomoscedasticArbiterLoss(nn.Module):
         has_morphism_label: torch.Tensor | bool | None = None,
         bridge_loss: torch.Tensor | None = None,
         bridge_weight: float = 0.5,
+        current_epoch: int | None = None,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         if y_hat_fp_som.ndim != 2 or y_hat_ana_som.ndim != 2:
             raise ValueError("SoM dual decoder logits must have shape [B, N]")
@@ -164,17 +167,35 @@ class HomoscedasticArbiterLoss(nn.Module):
         loss_ana_morph = masked_ana_morph.sum() / valid_morph
         morph_scale = confidence_t * has_morph_t
 
-        precision_fp = torch.exp(-self.log_var_fp)
-        precision_ana = torch.exp(-self.log_var_ana)
+        bridge_term = (
+            torch.as_tensor(bridge_loss, dtype=torch.float32, device=device).view(())
+            if bridge_loss is not None
+            else torch.zeros((), dtype=torch.float32, device=device)
+        )
+        bridge_term = bridge_term * float(max(bridge_weight, 0.0))
 
-        loss_fp_scaled = 0.5 * precision_fp * (loss_fp_morph * morph_scale) + 0.5 * self.log_var_fp
-        loss_ana_scaled = 0.5 * precision_ana * (loss_ana_morph * morph_scale) + 0.5 * self.log_var_ana
-        total_loss = loss_fp_som + loss_ana_som + loss_fp_scaled + loss_ana_scaled
-        if bridge_loss is not None:
-            total_loss = total_loss + float(max(bridge_weight, 0.0)) * bridge_loss
+        in_burn_in = int(current_epoch or 0) < self.burn_in_epochs
+        if in_burn_in:
+            total_loss = (
+                loss_fp_som
+                + loss_ana_som
+                + (loss_fp_morph * morph_scale)
+                + (loss_ana_morph * morph_scale)
+                + bridge_term
+            )
+            precision_fp = torch.ones((), dtype=torch.float32, device=device)
+            precision_ana = torch.ones((), dtype=torch.float32, device=device)
+            weight_ana = torch.zeros((), dtype=torch.float32, device=device)
+            weight_fp = torch.ones((), dtype=torch.float32, device=device)
+        else:
+            precision_fp = torch.exp(-self.log_var_fp)
+            precision_ana = torch.exp(-self.log_var_ana)
 
-        weight_ana = precision_ana / (precision_fp + precision_ana).clamp_min(1.0e-9)
-        weight_fp = 1.0 - weight_ana
+            loss_fp_scaled = 0.5 * precision_fp * (loss_fp_morph * morph_scale) + 0.5 * self.log_var_fp
+            loss_ana_scaled = 0.5 * precision_ana * ((loss_ana_morph * morph_scale) + bridge_term) + 0.5 * self.log_var_ana
+            total_loss = loss_fp_som + loss_ana_som + loss_fp_scaled + loss_ana_scaled
+            weight_ana = precision_ana / (precision_fp + precision_ana).clamp_min(1.0e-9)
+            weight_fp = 1.0 - weight_ana
 
         return total_loss.squeeze(), {
             "loss_fp_som": loss_fp_som.detach(),
@@ -187,11 +208,8 @@ class HomoscedasticArbiterLoss(nn.Module):
             "sigma_ana": torch.exp(0.5 * self.log_var_ana).detach(),
             "has_morphism_label": has_morph_t.detach(),
             "label_confidence": confidence_t.detach(),
-            "bridge_loss": (
-                torch.as_tensor(bridge_loss, dtype=torch.float32, device=device).detach()
-                if bridge_loss is not None
-                else torch.zeros((), dtype=torch.float32, device=device)
-            ),
+            "bridge_loss": bridge_term.detach(),
+            "burn_in_active": torch.as_tensor(1.0 if in_burn_in else 0.0, dtype=torch.float32, device=device),
         }
 
 
