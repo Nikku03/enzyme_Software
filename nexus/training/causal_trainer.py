@@ -467,9 +467,13 @@ class Metabolic_Causal_Trainer(nn.Module):
         return self.gated_loss.hyperbolic_projector(node_multivectors)
 
     def encode_smiles_for_memory_bank(self, smiles: str) -> Dict[str, torch.Tensor]:
-        with torch.no_grad():
+        # The manifold refiner internally calls torch.autograd.grad, so it
+        # cannot run under a surrounding no_grad context even for inference-
+        # only memory-bank encoding.
+        with torch.enable_grad():
             seed = self.model.module1.agency(smiles)
             manifold = self.model.module1.refiner(seed)
+        with torch.no_grad():
             _ = self.model.module1.symmetry_engine(manifold)
             with self._autocast_context():
                 field_state = self.model.module1.field_engine.build_state(manifold)

@@ -15,6 +15,8 @@ existing trainer after reindexing into scan order.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import contextlib
+import io
 from typing import Optional
 
 import torch
@@ -28,7 +30,8 @@ except Exception:
     _RDKIT_OK = False
 
 try:
-    import ot
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        import ot
     _POT_OK = True
 except Exception:
     ot = None
