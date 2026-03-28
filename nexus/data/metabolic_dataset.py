@@ -90,6 +90,50 @@ def _label_confidence_from_source(source: str | None) -> float:
     return 0.5
 
 
+def _infer_morphism_classes_for_atom(atom) -> List[int]:
+    classes: List[int] = []
+    seen = set()
+
+    def add(name: str) -> None:
+        idx = REACTION_TAXONOMY.get(name)
+        if idx is not None and idx not in seen:
+            classes.append(idx)
+            seen.add(idx)
+
+    symbol = atom.GetSymbol()
+    is_aromatic = bool(atom.GetIsAromatic())
+    hybrid = str(atom.GetHybridization())
+    neighbors = list(atom.GetNeighbors())
+    neighbor_symbols = {nbr.GetSymbol() for nbr in neighbors}
+
+    if symbol in {"N", "S"}:
+        add("oxidation_n_s")
+
+    if symbol in {"N", "O"} and len(neighbors) >= 2 and any(nbr.GetSymbol() == "C" for nbr in neighbors):
+        add("dealkylation")
+
+    has_c_c_double = any(
+        bond.GetBondTypeAsDouble() >= 1.9
+        and bond.GetBeginAtom().GetSymbol() == "C"
+        and bond.GetEndAtom().GetSymbol() == "C"
+        and not bond.GetIsAromatic()
+        for bond in atom.GetBonds()
+    )
+    if symbol == "C" and has_c_c_double:
+        add("epoxidation")
+
+    if symbol == "C":
+        if is_aromatic:
+            add("aromatic_hydroxylation")
+        else:
+            if hybrid == "SP3":
+                add("aliphatic_hydroxylation")
+            if neighbor_symbols & {"N", "O", "S"}:
+                add("dealkylation")
+
+    return classes
+
+
 class ZaretzkiMetabolicDataset(Dataset):
     """
     SDF-backed metabolic dataset with ETKDGv3 conformer generation and basic
@@ -324,6 +368,15 @@ class ZaretzkiMetabolicDataset(Dataset):
             reaction_names,
         )
         has_morphism_label = len(morphism_class_indices) > 0
+        if not has_morphism_label:
+            morphism_class_indices = _infer_morphism_classes_for_atom(mol.GetAtomWithIdx(int(som_idx)))
+            has_morphism_label = len(morphism_class_indices) > 0
+            if has_morphism_label:
+                if not reaction_names:
+                    inverse_taxonomy = {value: key for key, value in REACTION_TAXONOMY.items()}
+                    reaction_names = [inverse_taxonomy[idx] for idx in morphism_class_indices if idx in inverse_taxonomy]
+                label_source = label_source or "heuristic_atom_type"
+                label_confidence = max(label_confidence, 0.25)
         if has_morphism_label:
             if label_confidence <= 0.0:
                 label_confidence = 0.5

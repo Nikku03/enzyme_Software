@@ -160,6 +160,50 @@ def _label_confidence_from_source(source: str) -> float:
     return 0.5
 
 
+def _infer_morphism_classes_for_atom(atom) -> List[int]:
+    classes: List[int] = []
+    seen = set()
+
+    def add(name: str) -> None:
+        idx = REACTION_TAXONOMY.get(name)
+        if idx is not None and idx not in seen:
+            classes.append(idx)
+            seen.add(idx)
+
+    symbol = atom.GetSymbol()
+    is_aromatic = bool(atom.GetIsAromatic())
+    hybrid = str(atom.GetHybridization())
+    neighbors = list(atom.GetNeighbors())
+    neighbor_symbols = {nbr.GetSymbol() for nbr in neighbors}
+
+    if symbol in {"N", "S"}:
+        add("oxidation_n_s")
+
+    if symbol in {"N", "O"} and len(neighbors) >= 2 and any(nbr.GetSymbol() == "C" for nbr in neighbors):
+        add("dealkylation")
+
+    has_c_c_double = any(
+        bond.GetBondTypeAsDouble() >= 1.9
+        and bond.GetBeginAtom().GetSymbol() == "C"
+        and bond.GetEndAtom().GetSymbol() == "C"
+        and not bond.GetIsAromatic()
+        for bond in atom.GetBonds()
+    )
+    if symbol == "C" and has_c_c_double:
+        add("epoxidation")
+
+    if symbol == "C":
+        if is_aromatic:
+            add("aromatic_hydroxylation")
+        else:
+            if hybrid == "SP3":
+                add("aliphatic_hydroxylation")
+            if neighbor_symbols & {"N", "O", "S"}:
+                add("dealkylation")
+
+    return classes
+
+
 def build_morphism_supervision(mol, som_idx: int, *, device: str | torch.device = "cpu") -> tuple[torch.Tensor, torch.Tensor, bool, float]:
     num_atoms = int(mol.GetNumAtoms())
     morphism_target = torch.zeros((num_atoms, NUM_MORPHISM_CLASSES), dtype=torch.float32, device=device)
@@ -192,6 +236,11 @@ def build_morphism_supervision(mol, som_idx: int, *, device: str | torch.device 
 
     has_label = len(classes) > 0
     confidence = _label_confidence_from_source(_extract_label_source(mol))
+    if not has_label:
+        classes = _infer_morphism_classes_for_atom(atom)
+        has_label = len(classes) > 0
+        if has_label:
+            confidence = max(confidence, 0.25)
     if has_label:
         if confidence <= 0.0:
             confidence = 0.5
