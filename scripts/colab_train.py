@@ -16,6 +16,7 @@ import warnings
 from pathlib import Path
 
 import torch
+from torch.nn.parameter import UninitializedParameter
 from torch.utils.data import DataLoader, Subset
 
 # Suppress FutureWarning from external libraries (e.g. xformers, flash-attn)
@@ -441,7 +442,18 @@ def _epoch_indices(n_items: int, epoch: int, seed: int) -> list[int]:
 
 
 def _serialize_state_dict(module) -> dict:
-    return {k: v.detach().cpu() for k, v in module.state_dict().items()}
+    serialized = {}
+    for key, value in module.state_dict().items():
+        if isinstance(value, UninitializedParameter):
+            continue
+        try:
+            serialized[key] = value.detach().cpu()
+        except ValueError:
+            # Lazy modules can still expose uninitialized parameters in state_dict()
+            # before their first forward pass. Skip them so checkpointing remains
+            # robust; load_state_dict(strict=False) will tolerate the missing keys.
+            continue
+    return serialized
 
 
 def _resolve_target_isoform_path(target_isoform: str, candidates: list[Path]) -> Path:
