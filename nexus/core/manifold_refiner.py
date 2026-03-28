@@ -138,8 +138,8 @@ class MACE_OFF_Refiner(nn.Module):
             grad = torch.autograd.grad(
                 outputs=total_energy,
                 inputs=pos,
-                retain_graph=True,
-                create_graph=True,
+                retain_graph=False,
+                create_graph=False,
                 allow_unused=False,
             )[0]
             base_forces = self.potential.clip_forces(-grad)

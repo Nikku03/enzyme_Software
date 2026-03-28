@@ -328,8 +328,8 @@ class SubAtomicQueryEngine(nn.Module):
             grad = torch.autograd.grad(
                 outputs=objective.sum(),
                 inputs=points,
-                retain_graph=True,
-                create_graph=True,
+                retain_graph=False,
+                create_graph=False,
                 allow_unused=False,
             )[0]
             grad_norm = grad.norm(dim=-1, keepdim=True)
