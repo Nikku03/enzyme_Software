@@ -450,6 +450,8 @@ class GatedAnalogicalGodLoss(nn.Module):
         retrieval_confidence: float,
         transport_succeeded: bool,
         physics_analogy_agreement: float = 0.0,
+        transported_mass: float = 0.0,
+        transport_backend: str = "",
     ) -> Tuple[torch.Tensor, Dict[str, Any]]:
         # ── shape guards ──────────────────────────────────────────────
         if pred_fp.dim() == 1:
@@ -465,6 +467,34 @@ class GatedAnalogicalGodLoss(nn.Module):
             pred_ana = pred_ana.unsqueeze(0)
 
         ana_peak = pred_ana.max(dim=-1).values.mean().item() if pred_ana.numel() > 0 else 0.0
+        support_quality = max(0.0, min(float(transported_mass) / 0.25, 1.0))
+        backend_name = str(transport_backend or "")
+        confidence_bonus = 0.0
+        transport_gate = 0.0
+        if transport_succeeded:
+            if support_quality >= 0.8:
+                confidence_bonus += 0.30
+            elif support_quality >= 0.3:
+                confidence_bonus += 0.15
+            elif support_quality >= 0.08:
+                confidence_bonus += 0.05
+
+            if "mcs_fallback" in backend_name and support_quality >= 0.8:
+                confidence_bonus += 0.10
+                transport_gate = 0.85
+            elif "som_neighborhood" in backend_name:
+                if support_quality >= 0.2:
+                    confidence_bonus += 0.08
+                    transport_gate = 0.40
+                elif support_quality >= 0.08:
+                    confidence_bonus += 0.03
+                    transport_gate = 0.20
+                else:
+                    transport_gate = 0.05
+            else:
+                transport_gate = max(0.10, support_quality)
+
+        effective_confidence = min(max(float(retrieval_confidence) + confidence_bonus, 0.0), 1.0)
 
         # ── soft Watson gate ──────────────────────────────────────────
         # Gate weight is ~0.12 at init; rises as all three signals converge.
@@ -472,7 +502,8 @@ class GatedAnalogicalGodLoss(nn.Module):
         if not transport_succeeded:
             gate_weight = pred_fp.new_zeros(())   # exactly 0, no grad through ana
         else:
-            gate_weight = self.watson(retrieval_confidence, ana_peak, physics_analogy_agreement)
+            gate_weight = self.watson(effective_confidence, ana_peak, physics_analogy_agreement)
+            gate_weight = gate_weight * pred_fp.new_tensor(transport_gate)
 
         loss_term_fp = 0.5 * s_fp * loss_fp - 0.5 * self.log_s[0]
 
@@ -493,11 +524,13 @@ class GatedAnalogicalGodLoss(nn.Module):
             "loss_raw_analogy": loss_ana.item(),
             "gate_open": gate_w_scalar,
             "analogy_peak": ana_peak,
-            "gate_conf_ok": 1.0 if retrieval_confidence >= self.threshold else 0.0,
+            "gate_conf_ok": 1.0 if effective_confidence >= self.threshold else 0.0,
             "gate_peak_ok": 1.0 if ana_peak >= self.peak_threshold else 0.0,
             "weight_physics": s_fp.item(),
             "weight_analogy": s_ana.item(),
             "watson_agreement": float(physics_analogy_agreement),
+            "effective_confidence": float(effective_confidence),
+            "transport_gate": float(transport_gate),
         }
 
 

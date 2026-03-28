@@ -122,7 +122,11 @@ def compute_analogical_ood_metrics(
         + ngw_penalty
     ) / 8.0
     hard_case = 1.0 if ood_score >= 0.60 else 0.0
-    abstain = 1.0 if (ood_score >= 0.82 or retrieval_confidence < 0.25 or (not fusion_available and not transport_succeeded)) else 0.0
+    abstain = 1.0 if (
+        ood_score >= 0.82
+        or (retrieval_confidence < 0.25 and support_quality < 0.40)
+        or (not fusion_available and not transport_succeeded)
+    ) else 0.0
     return float(ood_score), float(hard_case), float(abstain)
 
 
@@ -1852,6 +1856,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                         retrieval_confidence=_result.confidence,
                         transport_succeeded=_transport_mapped,
                         physics_analogy_agreement=_physics_analogy_agreement,
+                        transported_mass=float(_result.transported_mass),
+                        transport_backend=str(_result.transport_backend),
                     )
                     _ana_loss = self._sanitize_tensor(
                         self._to_fp32(_ana_loss), clamp=(0.0, 100.0)
@@ -2171,6 +2177,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "ana_peak": float(_ana_info["analogy_peak"]),
                         "ana_gate_conf_ok": float(_ana_info["gate_conf_ok"]),
                         "ana_gate_peak_ok": float(_ana_info["gate_peak_ok"]),
+                        "ana_gate_effective_confidence": float(_ana_info["effective_confidence"]),
+                        "ana_transport_gate": float(_ana_info["transport_gate"]),
                         "ana_watson_agreement": float(_physics_analogy_agreement),
                         "neuralgw_used_exact": bool(_result.neuralgw_used_exact),
                         "neuralgw_confidence": float(_result.neuralgw_confidence),
@@ -2249,6 +2257,12 @@ class Metabolic_Causal_Trainer(nn.Module):
                         ),
                         "ana_gate_peak_ok": torch.as_tensor(
                             _ana_info["gate_peak_ok"], dtype=torch.float32, device=device
+                        ),
+                        "ana_gate_effective_confidence": torch.as_tensor(
+                            _ana_info["effective_confidence"], dtype=torch.float32, device=device
+                        ),
+                        "ana_transport_gate": torch.as_tensor(
+                            _ana_info["transport_gate"], dtype=torch.float32, device=device
                         ),
                         "ana_watson_agreement": torch.as_tensor(
                             _physics_analogy_agreement, dtype=torch.float32, device=device

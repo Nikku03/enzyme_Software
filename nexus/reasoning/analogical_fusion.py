@@ -185,10 +185,8 @@ class HomoscedasticArbiterLoss(nn.Module):
             )
             precision_fp = torch.ones((), dtype=torch.float32, device=device)
             precision_ana = torch.ones((), dtype=torch.float32, device=device)
-            warmup_progress = 0.0
-            if self.burn_in_epochs > 1:
-                warmup_progress = max(float(int(current_epoch or 0)), 0.0) / float(self.burn_in_epochs - 1)
-            warmup_cap = min(max(warmup_progress, 0.0), 1.0) * 0.10
+            warmup_progress = float(int(current_epoch or 0) + 1) / float(max(self.burn_in_epochs, 1))
+            warmup_cap = min(max(warmup_progress, 0.0), 1.0) * 0.15
             warmup_signal = confidence_t.clamp(0.0, 1.0) * has_morph_t.clamp(0.0, 1.0)
             weight_ana = torch.as_tensor(warmup_cap, dtype=torch.float32, device=device) * warmup_signal
             weight_fp = 1.0 - weight_ana
