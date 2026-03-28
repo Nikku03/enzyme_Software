@@ -145,8 +145,7 @@ class PGWTransporter:
         scale = tensor.max().clamp_min(1.0)
         return tensor / scale
 
-    @staticmethod
-    def _atom_features(mol) -> torch.Tensor:
+    def _atom_features(self, mol) -> torch.Tensor:
         rows = []
         for atom in mol.GetAtoms():
             rows.append(
@@ -159,7 +158,7 @@ class PGWTransporter:
                     atom.GetMass() / 200.0,
                 ]
             )
-        feats = torch.tensor(rows, dtype=torch.float64)
+        feats = torch.tensor(rows, dtype=torch.float64, device=self.device)
         return F.normalize(feats, p=2, dim=-1)
 
     def _cross_feature_cost(self, query_mol, retrieved_mol) -> torch.Tensor:
@@ -168,11 +167,10 @@ class PGWTransporter:
         # bounded [0, 2] Euclidean cost in feature space
         return torch.cdist(q_feat, r_feat, p=2).to(dtype=torch.float64)
 
-    @staticmethod
-    def _prepare_multivectors(multivectors: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
+    def _prepare_multivectors(self, multivectors: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
         if multivectors is None:
             return None
-        mv = torch.as_tensor(multivectors, dtype=torch.float64)
+        mv = torch.as_tensor(multivectors, dtype=torch.float64, device=self.device)
         if mv.ndim == 1:
             mv = mv.unsqueeze(0)
         elif mv.ndim > 2:
@@ -188,7 +186,7 @@ class PGWTransporter:
         z_dist = 1.0 - sim_matrix
         return z_dist / z_dist.max().clamp_min(1.0)
 
-    def _anchor_indices(self, mol) -> torch.Tensor:
+    def _anchor_indices(self, mol, *, device: torch.device | str | None = None) -> torch.Tensor:
         ranked = sorted(
             (
                 (-atom.GetAtomicNum(), -atom.GetDegree(), atom.GetIdx())
@@ -196,7 +194,7 @@ class PGWTransporter:
             )
         )
         chosen = [idx for _, _, idx in ranked[: min(self.anchor_count, mol.GetNumAtoms())]]
-        return torch.tensor(chosen, dtype=torch.long)
+        return torch.tensor(chosen, dtype=torch.long, device=device if device is not None else self.device)
 
     def _linearized_anchor_cost(
         self,
@@ -207,8 +205,8 @@ class PGWTransporter:
     ) -> torch.Tensor:
         q_z = self.compute_z_kernel_matrix(query_multivectors)
         r_z = self.compute_z_kernel_matrix(retrieved_multivectors)
-        q_anchor = self._anchor_indices(query_mol)
-        r_anchor = self._anchor_indices(retrieved_mol)
+        q_anchor = self._anchor_indices(query_mol, device=q_z.device)
+        r_anchor = self._anchor_indices(retrieved_mol, device=r_z.device)
         k = min(int(q_anchor.numel()), int(r_anchor.numel()))
         q_sig = q_z.index_select(1, q_anchor[:k])  # [N, K]
         r_sig = r_z.index_select(1, r_anchor[:k])  # [M, K]
