@@ -630,6 +630,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         loss_params = self._unique(
             self._trainable([self.loss_fn.log_vars])
             + list(self.gated_loss.parameters())
+            + list(getattr(self, "neuralgw_approximator", nn.Module()).parameters())
         )
         return {
             "electronic": electronic_params,
@@ -653,7 +654,10 @@ class Metabolic_Causal_Trainer(nn.Module):
                 ("dag_learner", self.dag_learner),
                 ("gated_loss", self.gated_loss),
                 ("loss_fn", self.loss_fn),
+                ("neuralgw", getattr(self, "neuralgw_approximator", None)),
             ]:
+                if module is None:
+                    continue
                 for name, param in module.named_parameters():
                     if not param.requires_grad:
                         continue
