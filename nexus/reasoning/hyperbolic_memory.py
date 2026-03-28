@@ -641,19 +641,17 @@ class HyperbolicMemoryBank:
         current_epoch: int | None,
         query_embedding: torch.Tensor,
     ) -> float:
+        # Epoch ramp only — the previous radius_weight gate was silently killing
+        # the hyperbolic path because a freshly initialised HGNNProjection maps
+        # near the Poincaré origin (small norm), giving radius_weight ≈ 0 even
+        # after burn-in finished.  The encoder needs the path to be active in
+        # order to receive gradients, but the radius gate prevented activation
+        # until the encoder had already converged — a circular dependency.
         epoch_idx = int(current_epoch or 0)
         if epoch_idx < self.projected_retrieval_burn_in_epochs:
-            epoch_weight = 0.0
-        else:
-            ramp_pos = epoch_idx - self.projected_retrieval_burn_in_epochs + 1
-            epoch_weight = min(float(ramp_pos) / float(self.projected_retrieval_ramp_epochs), 1.0)
-
-        query_vec = torch.as_tensor(query_embedding, dtype=torch.float32, device=self.device).view(-1)
-        radius = float(query_vec.norm(p=2).item())
-        ball_radius = max(self._ball_radius(), 1.0e-6)
-        radius_ratio = max(0.0, min(radius / ball_radius, 1.0))
-        radius_weight = max(0.0, min(radius_ratio / self.projected_query_radius_floor, 1.0))
-        return float(epoch_weight * radius_weight)
+            return 0.0
+        ramp_pos = epoch_idx - self.projected_retrieval_burn_in_epochs + 1
+        return min(float(ramp_pos) / float(self.projected_retrieval_ramp_epochs), 1.0)
 
     def _mcs_transport(
         self,
@@ -1071,16 +1069,16 @@ class HyperbolicMemoryBank:
                     retrieval_best_hub_penalty = float(retrieval_debug.get("best_hub_penalty", 0.0))
                     retrieval_shortlist_top_fraction = float(retrieval_debug.get("shortlist_top_fraction", 0.0))
 
-                    # Compute confidence from hyperbolic distance for the selected candidate.
-                    q_h_embed = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
-                    if q_h_embed.size(-1) < target_dim:
-                        q_h_embed = F.pad(q_h_embed, (0, target_dim - q_h_embed.size(-1)))
-                    elif q_h_embed.size(-1) > target_dim:
-                        q_h_embed = q_h_embed[..., :target_dim]
-                    r_h_embed = self.memory_embeddings[best_idx].unsqueeze(0)
-                    dist = float(self._poincare_distance(q_h_embed, r_h_embed).item())
-                    tau = 10.0
-                    confidence = math.exp(-dist / tau)
+                    # Confidence from cosine similarity in the MechanismEncoder
+                    # space — the same space used for retrieval ranking.  The
+                    # previous code switched to Poincaré distance of fingerprint
+                    # embeddings (a different encoder), making the confidence
+                    # number incoherent with the actual retrieval criterion.
+                    # Both query_embed and retrieved_embed_detached are already
+                    # L2-normalised by MechanismEncoder, so dot product = cosine.
+                    confidence = float(
+                        (query_embed * retrieved_embed_detached).sum().clamp(0.0, 1.0).item()
+                    )
 
                 except Exception:
                     # Encoder failed (e.g. fp_bits mismatch during warm-up) — fall back

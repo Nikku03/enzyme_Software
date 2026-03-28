@@ -511,7 +511,15 @@ class GatedAnalogicalGodLoss(nn.Module):
             gate_weight = pred_fp.new_tensor(max(transport_gate, self.burn_in_gate_floor))
         else:
             gate_weight = self.watson(effective_confidence, ana_peak, physics_analogy_agreement)
-            gate_weight = gate_weight * pred_fp.new_tensor(transport_gate)
+            # transport_gate is a quality signal [0..0.85].  Previously we
+            # multiplied gate_weight × transport_gate, compounding the Watson
+            # sigmoid (~0.12) with the transport quality floor (~0.10) to give
+            # an effective gate of ~0.012 — too small to learn from.
+            # Now we only scale down when transport quality is very low (< 0.15);
+            # otherwise the Watson gate runs at its full learned value so it can
+            # actually open as training progresses.
+            if transport_gate < 0.15:
+                gate_weight = gate_weight * pred_fp.new_tensor(transport_gate / 0.15)
 
         loss_term_fp = 0.5 * s_fp * loss_fp - 0.5 * self.log_s[0]
 

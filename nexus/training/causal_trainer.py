@@ -219,6 +219,9 @@ class Metabolic_Causal_Trainer(nn.Module):
         # before training begins.  Left empty here so training still runs without it.
         self.memory_bank = HyperbolicMemoryBank(device="cpu")
         self.current_epoch_index = 0
+        # Epoch at which the bank was last re-encoded.  Used by re_encode_bank()
+        # to avoid unnecessary repeated work within the same epoch.
+        self._bank_last_encoded_epoch: int = -1
         if self.memory_bank.pgw is not None:
             # Register the NeuralGW student so it trains with the rest of the model.
             self.neuralgw_approximator = self.memory_bank.pgw.neural_approximator
@@ -669,6 +672,38 @@ class Metabolic_Causal_Trainer(nn.Module):
             "graph_embedding": embedding.detach().float().cpu(),
             "node_multivectors": node_multivectors.detach().float().cpu(),
         }
+
+    def re_encode_bank(self) -> None:
+        """Re-populate the memory bank using the **current** HGNNProjection weights.
+
+        The HGNNProjection (gated_loss.hyperbolic_projector) is a trainable module
+        whose weights change every batch.  Bank embeddings computed at epoch 0 become
+        stale within a few epochs: the query encoder and the stored embeddings diverge,
+        so Poincaré distances measure apples vs oranges and retrieval quality degrades
+        exactly when it should be improving.
+
+        Call this at the start of each epoch (or every N epochs) from the training
+        loop.  Uses encode_mol_for_memory_bank (fast SDF-conformer path) so for a
+        457-molecule CYP3A4 bank the overhead is ~45-120 seconds per re-encoding.
+
+        Idempotent within a single epoch: if re_encode_bank() is called multiple
+        times for the same epoch index, only the first call does work.
+        """
+        if not self.memory_bank.historical_mols:
+            return
+        current_epoch = int(self.current_epoch_index)
+        if current_epoch == self._bank_last_encoded_epoch:
+            return
+        _mols = list(self.memory_bank.historical_mols)  # snapshot before overwrite
+        _use_continuous = (
+            self.memory_bank.memory_projected_mask is not None
+            and bool(self.memory_bank.memory_projected_mask.any().item())
+        )
+        self.memory_bank.populate_from_mols(
+            _mols,
+            continuous_encoder=self.encode_mol_for_memory_bank if _use_continuous else None,
+        )
+        self._bank_last_encoded_epoch = current_epoch
 
     def _trainable(self, params: Iterable[nn.Parameter]) -> List[nn.Parameter]:
         return [p for p in params if p is not None and p.requires_grad]
@@ -1865,6 +1900,31 @@ class Metabolic_Causal_Trainer(nn.Module):
                     )
                     _ana_loss_weighted = _ana_loss * self.analogical_loss_weight
                     total_loss = total_loss + _ana_loss_weighted
+
+                    # ── encoder supervision ───────────────────────────────────
+                    # Pull same-mechanism query/retrieved embeddings together and
+                    # push different-mechanism ones apart.  Uses the live GPU
+                    # _query_hyper_embed (still on the computation graph through
+                    # HGNNProjection) so the metric learner actually receives
+                    # gradient signal.  The retrieved embedding is detached
+                    # (retrieval is non-differentiable).
+                    _enc_sup_weighted = torch.zeros((), dtype=torch.float32, device=device)
+                    if _bank_has_continuous and _query_hyper_embed is not None and _result.retrieved_embed_detached is not None:
+                        try:
+                            from nexus.reasoning.metric_learner import hyperbolic_supervision_loss as _hyp_sup_fn
+                            _same_mech = (_result.retrieval_mechanism_overlap > 0.5)
+                            _enc_sup_raw = _hyp_sup_fn(
+                                _query_hyper_embed.to(dtype=torch.float32, device=device),
+                                _result.retrieved_embed_detached.to(dtype=torch.float32, device=device),
+                                same_som_class=_same_mech,
+                            )
+                            _enc_sup_weighted = 0.05 * self._sanitize_tensor(
+                                self._to_fp32(_enc_sup_raw), clamp=(0.0, 5.0)
+                            )
+                            total_loss = total_loss + _enc_sup_weighted
+                        except Exception:
+                            pass
+
                     _neuralgw_distill_weighted = torch.zeros((), dtype=torch.float32, device=device)
                     if _result.transport_distill_loss is not None:
                         _distill_raw = self._sanitize_tensor(
@@ -1891,16 +1951,39 @@ class Metabolic_Causal_Trainer(nn.Module):
                     _abstain = 0.0
                     if (
                         _result.transport_plan is not None
-                        and _result.retrieved_node_multivectors is not None
                         and _result.transport_backend != "mcs"
+                        # retrieved_node_multivectors is no longer required: we
+                        # fall back to 6-dim RDKit atom features when the bank
+                        # molecule has no stored HGNN multivectors, allowing the
+                        # dual decoder to train on every PGW-transported batch
+                        # rather than only those with full continuous embeddings.
                     ):
                         try:
                             _pi_star = self._to_fp32(
                                 torch.as_tensor(_result.transport_plan, device=device)
                             ).detach()
-                            _ret_mv = self._to_fp32(
-                                torch.as_tensor(_result.retrieved_node_multivectors, device=device)
-                            )
+                            if _result.retrieved_node_multivectors is not None:
+                                _ret_mv = self._to_fp32(
+                                    torch.as_tensor(_result.retrieved_node_multivectors, device=device)
+                                )
+                            else:
+                                # Fallback: 6-dim normalised atom features
+                                # [atomic_num/100, degree/8, Hs/8, charge/4,
+                                #  is_aromatic, mass/200] for the retrieved mol.
+                                _ret_mv_rows = [
+                                    [
+                                        a.GetAtomicNum() / 100.0,
+                                        a.GetDegree() / 8.0,
+                                        a.GetTotalNumHs(includeNeighbors=True) / 8.0,
+                                        a.GetFormalCharge() / 4.0,
+                                        1.0 if a.GetIsAromatic() else 0.0,
+                                        a.GetMass() / 200.0,
+                                    ]
+                                    for a in _result.retrieved_mol.GetAtoms()
+                                ]
+                                _ret_mv = torch.tensor(
+                                    _ret_mv_rows, dtype=torch.float32, device=device
+                                )
                             _query_mv = self._to_fp32(atom_mv.squeeze(0))
                             _scan_valid = (
                                 (_scan_atom_idx >= 0)

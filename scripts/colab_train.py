@@ -790,9 +790,29 @@ if ANALOGICAL_TRACE_ENABLED:
     )
 
 
+# Re-encode the memory bank every N epochs so the stored Poincaré embeddings
+# stay aligned with the evolving HGNNProjection encoder.  Bank is already
+# fresh at epoch 0 (just populated), so we skip the first iteration.
+# Use encode_mol_for_memory_bank (SDF-conformer fast path): ~45-120 s for 457
+# molecules vs 30-90 min for the full SMILES → MACE-OFF slow path.
+_BANK_RE_ENCODE_PERIOD = int(os.environ.get("NEXUS_COLAB_BANK_RE_ENCODE_PERIOD", "5"))
+
 # ── training loop ──────────────────────────────────────────────────────────
 for epoch in range(start_epoch, CFG["epochs"]):
     _apply_physics_curriculum(epoch, CFG["epochs"])
+
+    # Re-encode bank at configured interval (skip epoch 0 / start_epoch since bank
+    # was just populated before the loop).
+    if (
+        epoch > start_epoch
+        and _BANK_RE_ENCODE_PERIOD > 0
+        and (epoch - start_epoch) % _BANK_RE_ENCODE_PERIOD == 0
+        and hasattr(trainer, "re_encode_bank")
+    ):
+        print(f"  [bank] Re-encoding memory bank at epoch {epoch+1} …", flush=True)
+        trainer.re_encode_bank()
+        print(f"  [bank] Re-encoding complete.", flush=True)
+
     epoch_indices = _epoch_indices(len(_all_indices), epoch, SHUFFLE_SEED)
     if epoch == start_epoch and resume_batch_in_epoch > 0:
         epoch_indices = epoch_indices[resume_batch_in_epoch:]
