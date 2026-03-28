@@ -351,6 +351,7 @@ PHYSICS_CACHE_PATH = Path(_env_str("NEXUS_COLAB_PHYSICS_CACHE_PATH", str(DEFAULT
 ALLOW_COMPILE = _env_bool("NEXUS_COLAB_ALLOW_COMPILE", False)
 DATA_NUM_WORKERS = _env_int("NEXUS_COLAB_NUM_WORKERS", 0)
 CURRICULUM_PHYSICS = _env_bool("NEXUS_COLAB_CURRICULUM", False)
+IGNORE_CHECKPOINTS = _env_bool("NEXUS_COLAB_IGNORE_CHECKPOINTS", False)
 
 from nexus.data.metabolic_dataset import ZaretzkiMetabolicDataset, geometric_collate_fn
 from nexus.training.causal_trainer import Metabolic_Causal_Trainer
@@ -699,7 +700,9 @@ def _write_batch_metrics(
 start_epoch = 0
 resume_batch_in_epoch = 0
 history = []
-if CKPT_PATH.exists():
+if IGNORE_CHECKPOINTS:
+    print("Ignoring saved checkpoints due to NEXUS_COLAB_IGNORE_CHECKPOINTS=1.\n")
+elif CKPT_PATH.exists():
     print(f"Loading checkpoint from {CKPT_PATH} ...")
     _ckpt = torch.load(CKPT_PATH, map_location=device, weights_only=False)
     trainer.load_state_dict(_ckpt["model_state_dict"], strict=False)
@@ -721,7 +724,7 @@ if CKPT_PATH.exists():
 else:
     print(f"No checkpoint at {CKPT_PATH} — starting fresh.\n")
 
-if SAVE_EVERY_BATCH and BATCH_CKPT_PATH.exists():
+if (not IGNORE_CHECKPOINTS) and SAVE_EVERY_BATCH and BATCH_CKPT_PATH.exists():
     print(f"Loading rolling batch checkpoint from {BATCH_CKPT_PATH} ...")
     _bckpt = torch.load(BATCH_CKPT_PATH, map_location=device, weights_only=False)
     _b_epoch = int(_bckpt.get("epoch", 0))

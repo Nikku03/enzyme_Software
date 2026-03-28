@@ -150,6 +150,8 @@ class HyperbolicMemoryBank:
         fps: List[torch.Tensor] = []
         projected_embeddings: List[torch.Tensor | None] = []
         skipped = 0
+        projection_failures = 0
+        projection_failure_examples: List[str] = []
 
         for mol in mols:
             som_idx = _extract_som_idx(mol)
@@ -184,7 +186,12 @@ class HyperbolicMemoryBank:
                         )
                         if node_multivectors.numel() == 0 or not bool(torch.isfinite(node_multivectors).all().item()):
                             node_multivectors = None
-                except Exception:
+                except Exception as exc:
+                    projection_failures += 1
+                    if len(projection_failure_examples) < 3:
+                        projection_failure_examples.append(
+                            f"{type(exc).__name__}: {exc}"
+                        )
                     projected = None
                     node_multivectors = None
             projected_embeddings.append(projected)
@@ -253,6 +260,17 @@ class HyperbolicMemoryBank:
             f"Hyperbolic Memory Bank Active: {len(self.historical_mols)} molecules "
             f"({skipped} skipped — no SoM label, {projected_count} projected in continuous space)."
         )
+        if continuous_encoder is not None and projection_failures > 0:
+            print(
+                f"  Continuous projection failures: {projection_failures}"
+            )
+            for sample in projection_failure_examples:
+                print(f"    sample failure: {sample}")
+        if continuous_encoder is not None and projected_count == 0 and len(self.historical_mols) > 0:
+            print(
+                "  WARNING: continuous bank mode requested but zero bank molecules "
+                "were projected. Retrieval will fall back to fingerprint/hyperbolic mode."
+            )
 
     def _tanimoto_similarity(self, q_fp: torch.Tensor) -> torch.Tensor:
         if self.memory_fingerprints is None or self.memory_bit_counts is None:
