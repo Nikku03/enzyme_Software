@@ -69,7 +69,7 @@ class HyperbolicMemoryBank:
         tanimoto_shortlist_k: int = 16,
         retrieval_mix_top_k: int = 3,
         retrieval_mix_temperature: float = 0.25,
-        projected_retrieval_burn_in_epochs: int = 2,
+        projected_retrieval_burn_in_epochs: int = 1,
         projected_retrieval_ramp_epochs: int = 3,
         projected_query_radius_floor: float = 0.15,
     ) -> None:

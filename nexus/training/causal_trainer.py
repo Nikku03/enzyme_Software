@@ -2033,6 +2033,9 @@ class Metabolic_Causal_Trainer(nn.Module):
                                         label_confidence=_label_confidence,
                                         has_morphism_label=_has_morph_label,
                                         bridge_loss=_bridge_loss,
+                                        transported_mass=float(_result.transported_mass),
+                                        transport_support=int(_result.transport_support_size),
+                                        retrieval_mechanism_overlap=float(_result.retrieval_mechanism_overlap),
                                         current_epoch=int(self.current_epoch_index),
                                     )
                                     _fusion_loss = self._sanitize_tensor(
@@ -2098,6 +2101,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                                         "ana_sigma_ana": _fusion_sigma_ana.detach(),
                                         "ana_morph_loss_fp": self._to_fp32(_fusion_info["loss_fp_morph"]).detach(),
                                         "ana_morph_loss_ana": self._to_fp32(_fusion_info["loss_ana_morph"]).detach(),
+                                        "ana_morph_bootstrap_loss": self._to_fp32(_fusion_info["loss_ana_bootstrap"]).detach(),
+                                        "ana_quality": self._to_fp32(_fusion_info["ana_quality"]).detach(),
                                         "ana_bridge_loss": self._to_fp32(_fusion_info["bridge_loss"]).detach(),
                                         "ana_has_morphism_label": self._to_fp32(_fusion_info["has_morphism_label"]).detach(),
                                         "ana_label_confidence": self._to_fp32(_fusion_info["label_confidence"]).detach(),
@@ -2528,6 +2533,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                         f" t_ok={running.get('ana_transport_ok', float('nan')):.2f}"
                         f" fuse={running.get('ana_fusion_available', float('nan')):.2f}"
                         f" fuse_w={running.get('ana_fusion_weight', float('nan')):.2f}"
+                        f" aq={running.get('ana_quality', float('nan')):.2f}"
+                        f" boot={running.get('ana_morph_bootstrap_loss', float('nan')):.3f}"
                         f" burn={running.get('ana_burn_in_active', float('nan')):.2f}"
                         f" ngw_exact={running.get('neuralgw_used_exact', float('nan')):.2f}"
                         f" ngw_conf={running.get('neuralgw_confidence', float('nan')):.3f}"

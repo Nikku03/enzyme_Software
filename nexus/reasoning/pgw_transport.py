@@ -111,7 +111,7 @@ class PGWTransporter:
         neuralgw_enabled: bool = True,
         neuralgw_hidden_dim: int = 64,
         neuralgw_temperature: float = 0.1,
-        neuralgw_burn_in_epochs: int = 2,
+        neuralgw_burn_in_epochs: int = 1,
         neuralgw_ambiguity_threshold: float = 0.7,
     ) -> None:
         if not _RDKIT_OK:
@@ -356,7 +356,7 @@ class PGWTransporter:
         confidence_t = self._calculate_neuralgw_confidence(pi_approx, target_mass=target_mass)
         confidence = float(confidence_t.detach().item())
 
-        burn_in_complete = int(self.current_epoch) > self.neuralgw_burn_in_epochs
+        burn_in_complete = int(self.current_epoch) >= self.neuralgw_burn_in_epochs
         use_exact = (not self.neuralgw_enabled) or (not burn_in_complete) or (confidence <= self.neuralgw_ambiguity_threshold)
         route_reason = "fast_path"
         if not self.neuralgw_enabled:
