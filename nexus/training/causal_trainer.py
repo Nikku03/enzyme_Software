@@ -1778,6 +1778,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                     _fusion_loss_weighted = torch.zeros((), dtype=torch.float32, device=device)
                     _fusion_sigma_fp = torch.zeros((), dtype=torch.float32, device=device)
                     _fusion_sigma_ana = torch.zeros((), dtype=torch.float32, device=device)
+                    _fusion_error_message: str | None = None
                     if (
                         _result.transport_plan is not None
                         and _result.retrieved_node_multivectors is not None
@@ -1863,7 +1864,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                                         "ana_sigma_ana": _fusion_sigma_ana.detach(),
                                     })
                                     _fusion_available = True
-                        except Exception:
+                        except Exception as _fusion_err:
+                            _fusion_error_message = f"{type(_fusion_err).__name__}: {_fusion_err}"
                             _fusion_available = False
 
                     analogical_trace = {
@@ -1878,9 +1880,24 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "retrieval_embedding_space": _result.embedding_space,
                         "retrieval_confidence": float(_result.confidence),
                         "retrieved_same_query": bool(_result.retrieved_same_query),
+                        "retrieved_smiles": (
+                            _Chem.MolToSmiles(_result.retrieved_mol)
+                            if _result.retrieved_mol is not None
+                            else None
+                        ),
                         "retrieved_som_idx": int(_result.retrieved_som_idx),
                         "transport_backend": _result.transport_backend,
                         "transport_error_message": _result.transport_error_message,
+                        "transport_plan_shape": (
+                            list(_result.transport_plan.shape)
+                            if _result.transport_plan is not None
+                            else None
+                        ),
+                        "retrieved_node_multivectors_shape": (
+                            list(torch.as_tensor(_result.retrieved_node_multivectors).shape)
+                            if _result.retrieved_node_multivectors is not None
+                            else None
+                        ),
                         "transport_succeeded": bool(_transport_mapped),
                         "transport_support": int(_result.transport_support_size),
                         "transported_mass": float(_result.transported_mass),
@@ -1894,6 +1911,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "neuralgw_distill_loss": float(_result.neuralgw_distill_loss),
                         "fusion_available": bool(_fusion_available),
                         "fusion_weight_ana": float(_fusion_weight_ana),
+                        "fusion_error_message": _fusion_error_message,
                     }
 
                     # Encoder supervision loss: teach MechanismEncoder to embed
