@@ -1166,7 +1166,10 @@ class HyperbolicMemoryBank:
         if mix_candidate_indices and len(mix_candidate_indices) > 1:
             mixture = torch.zeros_like(analogical_pred)
             total_weight = 0.0
+            current_anchor_has_mv = retrieved_multivectors is not None
             best_anchor_score = float(mix_weights[0]) * (transported_mass + 0.05 * max(support_size, 1))
+            if current_anchor_has_mv:
+                best_anchor_score += 0.05
             for candidate_idx, mix_weight in zip(mix_candidate_indices, mix_weights):
                 cand_mol = self.historical_mols[candidate_idx]
                 cand_som = self.historical_soms[candidate_idx]
@@ -1184,9 +1187,18 @@ class HyperbolicMemoryBank:
                     mixture = mixture + float(mix_weight) * cand_pred
                     total_weight += float(mix_weight)
                     cand_score = float(mix_weight) * (float(_cand_mass) + 0.05 * max(int(_cand_support), 1))
-                    if cand_score > best_anchor_score and _cand_plan is not None:
+                    cand_has_mv = cand_mv is not None
+                    if cand_has_mv:
+                        cand_score += 0.05
+                    should_switch_anchor = (
+                        _cand_plan is not None
+                        and cand_score > best_anchor_score
+                        and (cand_has_mv or not current_anchor_has_mv)
+                    )
+                    if should_switch_anchor:
                         best_anchor_score = cand_score
                         anchor_idx = candidate_idx
+                        current_anchor_has_mv = cand_has_mv
                         analogical_pred = cand_pred
                         transport_ok = cand_ok
                         support_size = int(_cand_support)
