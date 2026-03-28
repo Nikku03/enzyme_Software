@@ -53,6 +53,31 @@ class TrainingStepResult:
     metrics: Dict[str, torch.Tensor]
 
 
+def compute_masked_morphism_f1(
+    logits: torch.Tensor,
+    targets: torch.Tensor,
+    mask: torch.Tensor,
+    *,
+    threshold: float = 0.5,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    probs = torch.sigmoid(logits)
+    preds = (probs > threshold).to(dtype=torch.float32)
+    targets_f = targets.to(dtype=torch.float32)
+    mask_f = mask.to(dtype=torch.float32)
+    preds_masked = preds * mask_f
+    targets_masked = targets_f * mask_f
+
+    tp = (preds_masked * targets_masked).sum(dim=(0, 1))
+    fp = (preds_masked * (1.0 - targets_masked)).sum(dim=(0, 1))
+    fn = ((1.0 - preds_masked) * targets_masked).sum(dim=(0, 1))
+    eps = 1.0e-8
+    precision = tp / (tp + fp + eps)
+    recall = tp / (tp + fn + eps)
+    f1_per_class = 2.0 * (precision * recall) / (precision + recall + eps)
+    macro_f1 = f1_per_class.mean()
+    return macro_f1, f1_per_class
+
+
 class Metabolic_Causal_Trainer(nn.Module):
     _PRED_RATE_MAX = 1.0e12
 
@@ -1778,6 +1803,11 @@ class Metabolic_Causal_Trainer(nn.Module):
                     _fusion_loss_weighted = torch.zeros((), dtype=torch.float32, device=device)
                     _fusion_sigma_fp = torch.zeros((), dtype=torch.float32, device=device)
                     _fusion_sigma_ana = torch.zeros((), dtype=torch.float32, device=device)
+                    _morph_f1_macro_fp = torch.zeros((), dtype=torch.float32, device=device)
+                    _morph_f1_macro_ana = torch.zeros((), dtype=torch.float32, device=device)
+                    _morph_f1_epox_fp = torch.zeros((), dtype=torch.float32, device=device)
+                    _morph_f1_epox_ana = torch.zeros((), dtype=torch.float32, device=device)
+                    _morph_f1_available = torch.zeros((), dtype=torch.float32, device=device)
                     _fusion_error_message: str | None = None
                     if (
                         _result.transport_plan is not None
@@ -1937,6 +1967,20 @@ class Metabolic_Causal_Trainer(nn.Module):
                                     _fusion_sigma_ana = self._to_fp32(_fusion_info["sigma_ana"]).view(())
                                     _weight_ana_t = self._to_fp32(_fusion_info["weight_ana"]).view(1, 1)
                                     _fusion_weight_ana = float(_weight_ana_t.detach().item())
+                                    if bool((_has_morph_label > 0).item()) and bool((_morph_mask_scan.sum() > 0).item()):
+                                        _morph_f1_macro_fp, _morph_f1_fp_cls = compute_masked_morphism_f1(
+                                            _y_hat_fp_morph,
+                                            _morph_target_scan,
+                                            _morph_mask_scan,
+                                        )
+                                        _morph_f1_macro_ana, _morph_f1_ana_cls = compute_masked_morphism_f1(
+                                            _y_hat_ana_morph,
+                                            _morph_target_scan,
+                                            _morph_mask_scan,
+                                        )
+                                        _morph_f1_epox_fp = _morph_f1_fp_cls[3].view(())
+                                        _morph_f1_epox_ana = _morph_f1_ana_cls[3].view(())
+                                        _morph_f1_available = torch.ones((), dtype=torch.float32, device=device)
                                     _y_final = (1.0 - _weight_ana_t) * _y_hat_fp_som + _weight_ana_t * _y_hat_ana_som
                                     _rank_order = torch.argsort(_y_final.squeeze(0), descending=True)
                                     _fused_rank = int(
@@ -1980,6 +2024,11 @@ class Metabolic_Causal_Trainer(nn.Module):
                                         "ana_has_morphism_label": self._to_fp32(_fusion_info["has_morphism_label"]).detach(),
                                         "ana_label_confidence": self._to_fp32(_fusion_info["label_confidence"]).detach(),
                                         "ana_burn_in_active": self._to_fp32(_fusion_info["burn_in_active"]).detach(),
+                                        "morphism_f1_available": _morph_f1_available.detach(),
+                                        "morphism_f1_macro_fp": _morph_f1_macro_fp.detach(),
+                                        "morphism_f1_macro_ana": _morph_f1_macro_ana.detach(),
+                                        "morphism_f1_epox_fp": _morph_f1_epox_fp.detach(),
+                                        "morphism_f1_epox_ana": _morph_f1_epox_ana.detach(),
                                     })
                                     _fusion_available = True
                         except Exception as _fusion_err:
@@ -2183,6 +2232,11 @@ class Metabolic_Causal_Trainer(nn.Module):
                     "som_rank_fp": metrics.get("som_rank_fp"),
                     "pred_rate": metrics.get("pred_rate"),
                     "dag_causal_loss": metrics.get("dag_causal_loss"),
+                    "morphism_f1_available": metrics.get("morphism_f1_available"),
+                    "morphism_f1_macro_fp": metrics.get("morphism_f1_macro_fp"),
+                    "morphism_f1_macro_ana": metrics.get("morphism_f1_macro_ana"),
+                    "morphism_f1_epox_fp": metrics.get("morphism_f1_epox_fp"),
+                    "morphism_f1_epox_ana": metrics.get("morphism_f1_epox_ana"),
                 }
             )
             self._append_analogical_trace(analogical_trace)
@@ -2301,8 +2355,13 @@ class Metabolic_Causal_Trainer(nn.Module):
                         f" t_ok={running.get('ana_transport_ok', float('nan')):.2f}"
                         f" fuse={running.get('ana_fusion_available', float('nan')):.2f}"
                         f" fuse_w={running.get('ana_fusion_weight', float('nan')):.2f}"
+                        f" burn={running.get('ana_burn_in_active', float('nan')):.2f}"
                         f" ngw_exact={running.get('neuralgw_used_exact', float('nan')):.2f}"
                         f" ngw_conf={running.get('neuralgw_confidence', float('nan')):.3f}"
+                        f" mf1_fp={running.get('morphism_f1_macro_fp', float('nan')):.3f}"
+                        f" mf1_ana={running.get('morphism_f1_macro_ana', float('nan')):.3f}"
+                        f" epox_fp={running.get('morphism_f1_epox_fp', float('nan')):.3f}"
+                        f" epox_ana={running.get('morphism_f1_epox_ana', float('nan')):.3f}"
                     ) if _ana_active else ""
                     print(
                         f"batch={i}/{total_batches} "
