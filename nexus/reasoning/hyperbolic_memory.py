@@ -475,14 +475,26 @@ class HyperbolicMemoryBank:
             support_size = pgw_result.support_size
             transport_backend = pgw_result.transport_backend
             transported_mass = pgw_result.transported_mass
+            transport_distill_loss = pgw_result.distill_loss
+            neuralgw_used_exact = pgw_result.neuralgw_used_exact
+            neuralgw_confidence = pgw_result.neuralgw_confidence
+            neuralgw_distill_loss = pgw_result.neuralgw_distill_loss
             if (not transport_ok) and self.fallback_to_mcs:
                 analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
                 transport_backend = "mcs_fallback"
                 transported_mass = 0.0
+                transport_distill_loss = None
+                neuralgw_used_exact = False
+                neuralgw_confidence = 0.0
+                neuralgw_distill_loss = 0.0
         else:
             analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
             transport_backend = "mcs"
             transported_mass = 0.0
+            transport_distill_loss = None
+            neuralgw_used_exact = False
+            neuralgw_confidence = 0.0
+            neuralgw_distill_loss = 0.0
 
         return MemoryRetrievalResult(
             analogical_pred=analogical_pred,
@@ -498,6 +510,10 @@ class HyperbolicMemoryBank:
             transport_support_size=support_size,
             transported_mass=transported_mass,
             retrieved_same_query=(query_key is not None and self.historical_smiles[best_idx] == query_key),
+            transport_distill_loss=transport_distill_loss,
+            neuralgw_used_exact=neuralgw_used_exact,
+            neuralgw_confidence=neuralgw_confidence,
+            neuralgw_distill_loss=neuralgw_distill_loss,
         )
 
     def batch_stats(self, mols: List, true_soms: List[int]) -> dict:

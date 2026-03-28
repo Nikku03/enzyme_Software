@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 try:
@@ -41,6 +42,47 @@ class PGWTransportResult:
     support_size: int
     transported_mass: float
     transport_backend: str = "none"
+    distill_loss: Optional[torch.Tensor] = None
+    neuralgw_used_exact: bool = False
+    neuralgw_confidence: float = 0.0
+    neuralgw_distill_loss: float = 0.0
+
+
+class NeuralGWApproximator(nn.Module):
+    def __init__(self, hidden_dim: int = 64, temperature: float = 0.1) -> None:
+        super().__init__()
+        self.hidden_dim = int(max(hidden_dim, 8))
+        self.temperature = float(max(temperature, 1.0e-3))
+        self.compressor = nn.Sequential(
+            nn.LazyLinear(self.hidden_dim),
+            nn.GELU(),
+            nn.Linear(self.hidden_dim, self.hidden_dim),
+        )
+        self.bilinear_align = nn.Bilinear(self.hidden_dim, self.hidden_dim, 1)
+        self.slack_q = nn.Parameter(torch.zeros(1))
+        self.slack_ret = nn.Parameter(torch.zeros(1))
+
+    def forward(self, q_multivectors: torch.Tensor, ret_multivectors: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        q_mv = q_multivectors.to(dtype=torch.float32)
+        r_mv = ret_multivectors.to(dtype=torch.float32)
+        n_atoms = q_mv.size(0)
+        m_atoms = r_mv.size(0)
+
+        h_q = self.compressor(q_mv)
+        h_ret = self.compressor(r_mv)
+
+        h_q_exp = h_q.unsqueeze(1).expand(n_atoms, m_atoms, -1)
+        h_ret_exp = h_ret.unsqueeze(0).expand(n_atoms, m_atoms, -1)
+        logits = self.bilinear_align(h_q_exp, h_ret_exp).squeeze(-1)
+
+        logits_with_slack_col = torch.cat([logits, self.slack_q.expand(n_atoms, 1)], dim=1)
+        pi_rows = F.softmax(logits_with_slack_col / self.temperature, dim=1)[:, :-1]
+
+        logits_with_slack_row = torch.cat([logits, self.slack_ret.expand(1, m_atoms)], dim=0)
+        pi_cols = F.softmax(logits_with_slack_row / self.temperature, dim=0)[:-1, :]
+
+        pi_approx = 0.5 * (pi_rows + pi_cols)
+        return pi_approx, logits
 
 
 class PGWTransporter:
@@ -58,6 +100,11 @@ class PGWTransporter:
         dustbin_epsilon: float = 0.2,
         anchor_count: int = 5,
         linearize_above_atoms: int = 24,
+        neuralgw_enabled: bool = True,
+        neuralgw_hidden_dim: int = 64,
+        neuralgw_temperature: float = 0.1,
+        neuralgw_burn_in_epochs: int = 2,
+        neuralgw_ambiguity_threshold: float = 0.7,
     ) -> None:
         if not _RDKIT_OK:
             raise ImportError("RDKit is required for PGWTransporter")
@@ -74,6 +121,14 @@ class PGWTransporter:
         self.dustbin_epsilon = float(min(max(dustbin_epsilon, 0.0), 0.95))
         self.anchor_count = int(max(anchor_count, 1))
         self.linearize_above_atoms = int(max(linearize_above_atoms, 4))
+        self.neuralgw_enabled = bool(neuralgw_enabled)
+        self.neuralgw_burn_in_epochs = int(max(neuralgw_burn_in_epochs, 0))
+        self.neuralgw_ambiguity_threshold = float(min(max(neuralgw_ambiguity_threshold, 0.0), 1.0))
+        self.current_epoch = 0
+        self.neural_approximator = NeuralGWApproximator(
+            hidden_dim=neuralgw_hidden_dim,
+            temperature=neuralgw_temperature,
+        )
 
     @staticmethod
     def _distance_matrix(mol) -> torch.Tensor:
@@ -198,6 +253,74 @@ class PGWTransporter:
             pi = pi_next
         return pi
 
+    @staticmethod
+    def _normalize_coupling(pi: torch.Tensor, target_mass: float) -> torch.Tensor:
+        pi = torch.clamp(pi, min=1.0e-9)
+        return pi * (target_mass / pi.sum().clamp_min(1.0e-9))
+
+    @staticmethod
+    def _mean_entropy(probabilities: torch.Tensor, dim: int) -> torch.Tensor:
+        safe = probabilities.clamp_min(1.0e-9)
+        norm = safe / safe.sum(dim=dim, keepdim=True).clamp_min(1.0e-9)
+        return -(norm * torch.log(norm)).sum(dim=dim).mean()
+
+    def _calculate_neuralgw_confidence(self, pi_approx: torch.Tensor, *, target_mass: float) -> torch.Tensor:
+        actual_mass = pi_approx.sum()
+        mass_penalty = torch.abs(actual_mass - target_mass)
+        row_entropy = self._mean_entropy(pi_approx, dim=1)
+        col_entropy = self._mean_entropy(pi_approx, dim=0)
+        return 1.0 / (1.0 + row_entropy + col_entropy + mass_penalty)
+
+    def _exact_multivector_coupling(
+        self,
+        query_mol,
+        retrieved_mol,
+        q_mv: torch.Tensor,
+        r_mv: torch.Tensor,
+    ) -> tuple[torch.Tensor, str]:
+        transported_mass = 1.0 - self.dustbin_epsilon
+        if max(q_mv.size(0), r_mv.size(0)) > self.linearize_above_atoms:
+            anchor_cost = self._linearized_anchor_cost(query_mol, retrieved_mol, q_mv, r_mv)
+            return self._partial_sinkhorn(anchor_cost, transported_mass=transported_mass), "zgw_linearized"
+        c_query = self.compute_z_kernel_matrix(q_mv)
+        c_retrieved = self.compute_z_kernel_matrix(r_mv)
+        m_cross = self._cross_feature_cost(query_mol, retrieved_mol)
+        return self._partial_z_gw(c_query, c_retrieved, cross_cost=m_cross), "zgw_exact"
+
+    def _dynamic_multivector_router(
+        self,
+        query_mol,
+        retrieved_mol,
+        q_mv: torch.Tensor,
+        r_mv: torch.Tensor,
+    ) -> tuple[torch.Tensor, str, Optional[torch.Tensor], bool, float, float]:
+        target_mass = 1.0 - self.dustbin_epsilon
+        pi_approx, _ = self.neural_approximator(q_mv, r_mv)
+        pi_approx = self._normalize_coupling(pi_approx, target_mass)
+        confidence_t = self._calculate_neuralgw_confidence(pi_approx, target_mass=target_mass)
+        confidence = float(confidence_t.detach().item())
+
+        burn_in_complete = int(self.current_epoch) > self.neuralgw_burn_in_epochs
+        use_exact = (not self.neuralgw_enabled) or (not burn_in_complete) or (confidence <= self.neuralgw_ambiguity_threshold)
+
+        distill_loss: Optional[torch.Tensor] = None
+        if use_exact:
+            pi_final, backend = self._exact_multivector_coupling(query_mol, retrieved_mol, q_mv, r_mv)
+            if burn_in_complete and self.neuralgw_enabled:
+                teacher = self._normalize_coupling(pi_final.detach().to(dtype=torch.float32), target_mass)
+                student = self._normalize_coupling(pi_approx, target_mass)
+                distill_loss = F.kl_div(
+                    torch.log(student.clamp_min(1.0e-9)),
+                    teacher,
+                    reduction="batchmean",
+                )
+                distill_value = float(distill_loss.detach().item())
+            else:
+                distill_value = 0.0
+            return pi_final, backend, distill_loss, True, confidence, distill_value
+
+        return pi_approx.to(dtype=torch.float64), "neuralgw_fast", None, False, confidence, 0.0
+
     def transport_label(
         self,
         query_mol,
@@ -223,15 +346,12 @@ class PGWTransporter:
             and r_mv.size(0) == retrieved_mol.GetNumAtoms()
         ):
             try:
-                transported_mass = 1.0 - self.dustbin_epsilon
-                if max(q_mv.size(0), r_mv.size(0)) > self.linearize_above_atoms:
-                    anchor_cost = self._linearized_anchor_cost(query_mol, retrieved_mol, q_mv, r_mv)
-                    coupling_t = self._partial_sinkhorn(anchor_cost, transported_mass=transported_mass)
-                else:
-                    c_query = self.compute_z_kernel_matrix(q_mv)
-                    c_retrieved = self.compute_z_kernel_matrix(r_mv)
-                    m_cross = self._cross_feature_cost(query_mol, retrieved_mol)
-                    coupling_t = self._partial_z_gw(c_query, c_retrieved, cross_cost=m_cross)
+                coupling_t, backend, distill_loss, used_exact, neuralgw_confidence, neuralgw_distill_loss = self._dynamic_multivector_router(
+                    query_mol,
+                    retrieved_mol,
+                    q_mv,
+                    r_mv,
+                )
                 coupling_t = coupling_t.to(dtype=torch.float32, device=self.device)
                 source_column = coupling_t[:, int(retrieved_som_idx)]
                 moved_mass = float(source_column.sum().item())
@@ -243,7 +363,11 @@ class PGWTransporter:
                         transport_succeeded=True,
                         support_size=support_size,
                         transported_mass=moved_mass,
-                        transport_backend="zgw_linearized" if max(q_mv.size(0), r_mv.size(0)) > self.linearize_above_atoms else "zgw_exact",
+                        transport_backend=backend,
+                        distill_loss=distill_loss,
+                        neuralgw_used_exact=used_exact,
+                        neuralgw_confidence=neuralgw_confidence,
+                        neuralgw_distill_loss=neuralgw_distill_loss,
                     )
             except Exception:
                 pass

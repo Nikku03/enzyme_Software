@@ -86,6 +86,10 @@ class MemoryRetrievalResult:
     transport_support_size: int = 0
     transported_mass: float = 0.0
     retrieved_same_query: bool = False
+    transport_distill_loss: Optional[torch.Tensor] = None
+    neuralgw_used_exact: bool = False
+    neuralgw_confidence: float = 0.0
+    neuralgw_distill_loss: float = 0.0
 
 
 class BaselineMemoryBank:

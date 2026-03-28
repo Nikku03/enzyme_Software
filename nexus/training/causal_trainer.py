@@ -136,6 +136,10 @@ class Metabolic_Causal_Trainer(nn.Module):
         # Memory bank is populated externally (trainer.memory_bank.populate_from_mols)
         # before training begins.  Left empty here so training still runs without it.
         self.memory_bank = HyperbolicMemoryBank(device="cpu")
+        self.current_epoch_index = 0
+        if self.memory_bank.pgw is not None:
+            # Register the NeuralGW student so it trains with the rest of the model.
+            self.neuralgw_approximator = self.memory_bank.pgw.neural_approximator
         self._maybe_prepare_precision_runtime()
         self._validate_wsd_config()
 
@@ -1696,6 +1700,14 @@ class Metabolic_Causal_Trainer(nn.Module):
                     )
                     _ana_loss_weighted = _ana_loss * self.analogical_loss_weight
                     total_loss = total_loss + _ana_loss_weighted
+                    _neuralgw_distill_weighted = torch.zeros((), dtype=torch.float32, device=device)
+                    if _result.transport_distill_loss is not None:
+                        _distill_raw = self._sanitize_tensor(
+                            self._to_fp32(_result.transport_distill_loss),
+                            clamp=(0.0, 10.0),
+                        )
+                        _neuralgw_distill_weighted = 0.1 * _distill_raw
+                        total_loss = total_loss + _neuralgw_distill_weighted
 
                     # Encoder supervision loss: teach MechanismEncoder to embed
                     # same-SoM-class molecules close together and different classes apart.
@@ -1770,6 +1782,37 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "ana_encoder_loss": torch.as_tensor(
                             _enc_loss_val, dtype=torch.float32, device=device
                         ),
+                        "ana_transport_backend_is_fast": torch.as_tensor(
+                            1.0 if _result.transport_backend == "neuralgw_fast" else 0.0,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
+                        "ana_transport_mass": torch.as_tensor(
+                            _result.transported_mass,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
+                        "ana_transport_support": torch.as_tensor(
+                            _result.transport_support_size,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
+                        "neuralgw_used_exact": torch.as_tensor(
+                            1.0 if _result.neuralgw_used_exact else 0.0,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
+                        "neuralgw_confidence": torch.as_tensor(
+                            _result.neuralgw_confidence,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
+                        "neuralgw_distill_loss": torch.as_tensor(
+                            _result.neuralgw_distill_loss,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
+                        "neuralgw_distill_loss_total": _neuralgw_distill_weighted.detach(),
                     })
             except Exception as _ana_err:
                 # Print once so we can see if the analogical engine is broken,
@@ -1834,6 +1877,8 @@ class Metabolic_Causal_Trainer(nn.Module):
     ) -> Dict[str, float]:
         reducer: Dict[str, List[float]] = {}
         self.train(mode=train)
+        if train and self.memory_bank.pgw is not None:
+            self.memory_bank.pgw.current_epoch = int(self.current_epoch_index)
         
         valid_batches_processed = 0
         if train:
@@ -1886,6 +1931,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                         f" w_fp={running.get('ana_weight_fp', float('nan')):.3f}"
                         f" w_ana={running.get('ana_weight_ana', float('nan')):.3f}"
                         f" t_ok={running.get('ana_transport_ok', float('nan')):.2f}"
+                        f" ngw_exact={running.get('neuralgw_used_exact', float('nan')):.2f}"
+                        f" ngw_conf={running.get('neuralgw_confidence', float('nan')):.3f}"
                     ) if _ana_active else ""
                     print(
                         f"batch={i}/{total_batches} "
@@ -1932,6 +1979,8 @@ class Metabolic_Causal_Trainer(nn.Module):
             self.optimizer.zero_grad(set_to_none=True)
             reducer.setdefault("grad_norm", []).append(grad_norm)
 
+        if train:
+            self.current_epoch_index += 1
         return {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
 
 

@@ -730,6 +730,9 @@ if SAVE_EVERY_BATCH and BATCH_CKPT_PATH.exists():
     else:
         print("  Rolling batch checkpoint is older than epoch checkpoint; ignoring.\n")
 
+if hasattr(trainer, "current_epoch_index"):
+    trainer.current_epoch_index = int(start_epoch)
+
 
 # ── training loop ──────────────────────────────────────────────────────────
 for epoch in range(start_epoch, CFG["epochs"]):
