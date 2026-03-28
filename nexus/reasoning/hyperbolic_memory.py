@@ -114,6 +114,25 @@ class HyperbolicMemoryBank:
         self.memory_bit_counts = None
         self.memory_projected_mask = None
 
+    def set_device(self, device: str | torch.device) -> None:
+        resolved = torch.device(device)
+        self.device = str(resolved)
+        if self.memory_embeddings is not None:
+            self.memory_embeddings = self.memory_embeddings.to(resolved)
+        if self.memory_fingerprints is not None:
+            self.memory_fingerprints = self.memory_fingerprints.to(resolved)
+        if self.memory_bit_counts is not None:
+            self.memory_bit_counts = self.memory_bit_counts.to(resolved)
+        if self.memory_projected_mask is not None:
+            self.memory_projected_mask = self.memory_projected_mask.to(resolved)
+        self.historical_node_multivectors = [
+            None if mv is None else mv.to(resolved)
+            for mv in self.historical_node_multivectors
+        ]
+        if self.pgw is not None:
+            self.pgw.device = str(resolved)
+            self.pgw.neural_approximator = self.pgw.neural_approximator.to(resolved)
+
     def _bank_signatures(self) -> List[str]:
         signatures: List[str] = []
         for mol, som_idx, smiles in zip(self.historical_mols, self.historical_soms, self.historical_smiles):

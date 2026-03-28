@@ -228,6 +228,13 @@ class Metabolic_Causal_Trainer(nn.Module):
             return param.device
         return torch.device("cpu")
 
+    def sync_memory_bank_device(self, device: torch.device | str | None = None) -> torch.device:
+        resolved = torch.device(device) if device is not None else self._module_device()
+        self.memory_bank.set_device(resolved)
+        if self.memory_bank.pgw is not None:
+            self.neuralgw_approximator = self.memory_bank.pgw.neural_approximator
+        return resolved
+
     def _autocast_enabled(self) -> bool:
         return self.enable_bf16_hot_path and self._module_device().type == "cuda"
 

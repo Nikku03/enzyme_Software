@@ -557,6 +557,7 @@ trainer = Metabolic_Causal_Trainer(
     analogical_loss_weight=ANA_LOSS_WEIGHT,
     physics_cache_mode=PHYSICS_CACHE_MODE,
 ).to(device)
+trainer.sync_memory_bank_device(device)
 if PHYSICS_CACHE_MODE != "off":
     if PHYSICS_CACHE_PATH.exists():
         _cache_count = trainer.load_physics_cache(PHYSICS_CACHE_PATH, mode=PHYSICS_CACHE_MODE)
@@ -652,7 +653,6 @@ for _sdf in _ALL_SDFS:
         _bank_mols.extend(_bank_ds.mols)
     except Exception as _e:
         print(f"  Skipping {_sdf.name} for bank: {_e}")
-trainer.memory_bank.device = str(device)
 _continuous_bank_encoder = trainer.encode_mol_for_memory_bank if ANALOGICAL_BANK_MODE == "continuous" else None
 trainer.memory_bank.populate_from_mols(
     _bank_mols,
