@@ -68,6 +68,9 @@ class HyperbolicMemoryBank:
         tanimoto_shortlist_k: int = 16,
         retrieval_mix_top_k: int = 3,
         retrieval_mix_temperature: float = 0.25,
+        projected_retrieval_burn_in_epochs: int = 2,
+        projected_retrieval_ramp_epochs: int = 3,
+        projected_query_radius_floor: float = 0.15,
     ) -> None:
         if not _RDKIT_OK:
             raise ImportError("RDKit is required for HyperbolicMemoryBank")
@@ -86,6 +89,9 @@ class HyperbolicMemoryBank:
         self.tanimoto_shortlist_k = int(max(tanimoto_shortlist_k, 1))
         self.retrieval_mix_top_k = int(max(retrieval_mix_top_k, 1))
         self.retrieval_mix_temperature = float(max(retrieval_mix_temperature, 1.0e-3))
+        self.projected_retrieval_burn_in_epochs = int(max(projected_retrieval_burn_in_epochs, 0))
+        self.projected_retrieval_ramp_epochs = int(max(projected_retrieval_ramp_epochs, 1))
+        self.projected_query_radius_floor = float(min(max(projected_query_radius_floor, 1.0e-3), 0.95))
 
         self.historical_mols: List = []
         self.historical_soms: List[int] = []
@@ -572,6 +578,25 @@ class HyperbolicMemoryBank:
         diversity_score = float(len(used_keys) / max(len(selected_indices), 1))
         return selected_indices, selected_scores, diversity_score
 
+    def _projected_retrieval_weight(
+        self,
+        current_epoch: int | None,
+        query_embedding: torch.Tensor,
+    ) -> float:
+        epoch_idx = int(current_epoch or 0)
+        if epoch_idx < self.projected_retrieval_burn_in_epochs:
+            epoch_weight = 0.0
+        else:
+            ramp_pos = epoch_idx - self.projected_retrieval_burn_in_epochs + 1
+            epoch_weight = min(float(ramp_pos) / float(self.projected_retrieval_ramp_epochs), 1.0)
+
+        query_vec = torch.as_tensor(query_embedding, dtype=torch.float32, device=self.device).view(-1)
+        radius = float(query_vec.norm(p=2).item())
+        ball_radius = max(self._ball_radius(), 1.0e-6)
+        radius_ratio = max(0.0, min(radius / ball_radius, 1.0))
+        radius_weight = max(0.0, min(radius_ratio / self.projected_query_radius_floor, 1.0))
+        return float(epoch_weight * radius_weight)
+
     def _mcs_transport(self, query_mol, retrieved_mol, retrieved_som: int) -> tuple[torch.Tensor, bool, int]:
         n_query = query_mol.GetNumAtoms()
         analogical_pred = torch.zeros(n_query, dtype=torch.float32, device=self.device)
@@ -678,6 +703,7 @@ class HyperbolicMemoryBank:
         query_embedding: torch.Tensor | None = None,
         query_multivectors: torch.Tensor | None = None,
         query_morphism_prior: torch.Tensor | None = None,
+        current_epoch: int | None = None,
     ) -> MemoryRetrievalResult:
         """
         Args:
@@ -701,11 +727,15 @@ class HyperbolicMemoryBank:
                 device=self.device,
             )
 
+        q_fp = _morgan_fp_tensor(query_mol, radius=self.fp_radius, n_bits=self.fp_bits)
+        tanimoto_scores = self._tanimoto_similarity(q_fp)
+
         projected_ready = (
             query_embedding is not None
             and self.memory_projected_mask is not None
             and bool(self.memory_projected_mask.any().item())
         )
+        retrieval_embedding_space = "euclidean"
 
         query_embed: torch.Tensor | None = None
         retrieved_embed_detached: torch.Tensor | None = None
@@ -724,6 +754,8 @@ class HyperbolicMemoryBank:
             candidate_indices = torch.nonzero(candidate_mask, as_tuple=False).view(-1)
             if candidate_indices.numel() > 0:
                 retrieval_candidate_count = int(candidate_indices.numel())
+                projected_weight = self._projected_retrieval_weight(current_epoch, query_embedding)
+                retrieval_embedding_space = "hybrid" if projected_weight < 0.999 else "hyperbolic"
                 target_dim = int(self.memory_embeddings.size(-1))
                 prepared_query = torch.as_tensor(query_embedding, dtype=torch.float32, device=self.device).view(-1)
                 if prepared_query.numel() < target_dim:
@@ -733,15 +765,22 @@ class HyperbolicMemoryBank:
                 q_embed_h = self._project_inside_ball(
                     prepared_query.view(1, -1)
                 )
-                candidate_embeddings = self.memory_embeddings.index_select(0, candidate_indices)
-                distances = self._poincare_distance(q_embed_h, candidate_embeddings).view(-1)
+                candidate_tanimoto = tanimoto_scores.index_select(0, candidate_indices)
                 shortlist_k = min(self.tanimoto_shortlist_k, int(candidate_indices.numel()))
-                top_distances, top_local = torch.topk(distances, shortlist_k, largest=False)
+                top_tanimoto, top_local = torch.topk(candidate_tanimoto, shortlist_k, largest=True)
                 shortlist_candidate_indices = [
                     int(candidate_indices[int(top_local[i].item())].item())
                     for i in range(shortlist_k)
                 ]
-                shortlist_scores = -top_distances[:shortlist_k].to(dtype=torch.float32) / self.retrieval_mix_temperature
+                shortlist_indices = candidate_indices.index_select(0, top_local)
+                shortlist_embeddings = self.memory_embeddings.index_select(0, shortlist_indices)
+                distances = self._poincare_distance(q_embed_h, shortlist_embeddings).view(-1)
+                projected_similarity = torch.exp(-distances / 5.0).to(dtype=torch.float32)
+                blended_similarity = (
+                    projected_weight * projected_similarity
+                    + (1.0 - projected_weight) * top_tanimoto.to(dtype=torch.float32)
+                )
+                shortlist_scores = blended_similarity / self.retrieval_mix_temperature
                 mix_k = min(max(self.retrieval_mix_top_k, 3), shortlist_k)
                 mix_candidate_indices, mix_logits, retrieval_diversity_score = self._select_diverse_candidates(
                     query_mol,
@@ -760,9 +799,11 @@ class HyperbolicMemoryBank:
                     (-(mix_prob * torch.log(mix_prob.clamp_min(1.0e-9))).sum()).item()
                 )
                 best_idx = int(mix_candidate_indices[0])
-                tau = 10.0
                 best_rank_local = shortlist_candidate_indices.index(best_idx)
-                confidence = math.exp(-float(top_distances[best_rank_local].item()) / tau)
+                confidence = float(
+                    projected_weight * projected_similarity[best_rank_local].item()
+                    + (1.0 - projected_weight) * top_tanimoto[best_rank_local].item()
+                )
                 retrieval_mechanism_overlap = self._candidate_mechanism_overlap(query_morphism_prior, best_idx)
                 query_embed = q_embed_h.squeeze(0)
                 retrieved_embed_detached = self.memory_embeddings[best_idx].detach()
@@ -770,8 +811,7 @@ class HyperbolicMemoryBank:
                 projected_ready = False
 
         if not projected_ready:
-            q_fp = _morgan_fp_tensor(query_mol, radius=self.fp_radius, n_bits=self.fp_bits)
-            tanimoto_scores = self._tanimoto_similarity(q_fp)
+            retrieval_embedding_space = "euclidean"
             candidate_mask = torch.ones_like(tanimoto_scores, dtype=torch.bool)
             if same_query is not None and bool(same_query.any().item()):
                 candidate_mask = candidate_mask & (~same_query)
@@ -802,7 +842,7 @@ class HyperbolicMemoryBank:
                     retrieved_som_idx=_pref_som,
                     transport_succeeded=False,
                     mcs_size=0,
-                    embedding_space="hyperbolic" if projected_ready else "euclidean",
+                    embedding_space=retrieval_embedding_space,
                     transport_backend="prefilter_reject",
                     transport_support_size=0,
                     transported_mass=0.0,
@@ -1010,7 +1050,7 @@ class HyperbolicMemoryBank:
             mcs_size=support_size,
             query_embed=query_embed,
             retrieved_embed_detached=retrieved_embed_detached,
-            embedding_space="hyperbolic" if projected_ready else "euclidean",
+            embedding_space=retrieval_embedding_space,
             transport_backend=transport_backend,
             transport_support_size=support_size,
             transported_mass=transported_mass,

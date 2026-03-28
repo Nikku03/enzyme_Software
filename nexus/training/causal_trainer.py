@@ -1808,6 +1808,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                         query_embedding=_query_hyper_embed,
                         query_multivectors=_query_node_multivectors,
                         query_morphism_prior=_query_morphism_prior,
+                        current_epoch=int(self.current_epoch_index),
                     )
                     # Re-index pred_ana (SMILES atom order) onto the scan's
                     # descending-reactivity-sorted atom order so target_idx
