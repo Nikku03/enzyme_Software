@@ -20,6 +20,8 @@ from typing import List, Optional, Tuple
 import torch
 import torch.nn.functional as F
 
+from nexus.data.metabolic_dataset import NUM_MORPHISM_CLASSES, REACTION_TAXONOMY
+
 try:
     from rdkit import Chem
     from rdkit.Chem import AllChem
@@ -39,6 +41,22 @@ _SOM_KEYS = (
     "SOM_INDEX",
     "SECONDARY_SOM",
     "SITE_OF_METABOLISM",
+)
+
+_REACTION_PROP_KEYS = (
+    "REACTIONS",
+    "REACTION",
+    "REACTION_TYPE",
+    "REACTION_TYPES",
+    "METABOLISM_TYPE",
+    "METABOLISM_TYPES",
+)
+
+_LABEL_SOURCE_KEYS = (
+    "LABEL_SOURCE",
+    "SITE_SOURCE",
+    "ANNOTATION_SOURCE",
+    "SOURCE",
 )
 
 
@@ -70,6 +88,109 @@ def _morgan_fp_tensor(mol, radius: int = 2, n_bits: int = 2048) -> torch.Tensor:
     return torch.tensor(list(fp), dtype=torch.float32)
 
 
+def _tokenize_prop(raw: str) -> List[str]:
+    text = str(raw or "").strip()
+    if not text:
+        return []
+    normalized = text.replace(";", ",").replace("|", ",").replace("/", ",")
+    return [token.strip() for token in normalized.split(",") if token.strip()]
+
+
+def _normalize_reaction_name(name: str) -> str:
+    value = str(name or "").strip().lower().replace(" ", "_").replace("-", "_")
+    aliases = {
+        "hydroxylation": "hydroxylation",
+        "aliphatic_hydroxylation": "aliphatic_hydroxylation",
+        "aromatic_hydroxylation": "aromatic_hydroxylation",
+        "n_dealkylation": "dealkylation",
+        "o_dealkylation": "dealkylation",
+        "dealkylation": "dealkylation",
+        "n_oxidation": "oxidation_n_s",
+        "s_oxidation": "oxidation_n_s",
+        "oxidation_n_s": "oxidation_n_s",
+        "epoxidation": "epoxidation",
+    }
+    return aliases.get(value, value)
+
+
+def _extract_reaction_names(mol) -> List[str]:
+    reactions: List[str] = []
+    for key in _REACTION_PROP_KEYS:
+        if not mol.HasProp(key):
+            continue
+        reactions.extend(_tokenize_prop(mol.GetProp(key)))
+    deduped: List[str] = []
+    seen = set()
+    for reaction in reactions:
+        normalized = _normalize_reaction_name(reaction)
+        if normalized and normalized not in seen:
+            deduped.append(normalized)
+            seen.add(normalized)
+    return deduped
+
+
+def _extract_label_source(mol) -> str:
+    for key in _LABEL_SOURCE_KEYS:
+        if mol.HasProp(key):
+            value = str(mol.GetProp(key)).strip()
+            if value:
+                return value
+    return ""
+
+
+def _label_confidence_from_source(source: str) -> float:
+    value = str(source or "").strip().lower()
+    if not value:
+        return 0.0
+    if any(token in value for token in ("assay", "clinical", "validated", "manual", "curated")):
+        return 1.0
+    if any(token in value for token in ("drugbank", "metxbio", "literature", "reported")):
+        return 0.75
+    if any(token in value for token in ("heuristic", "smarts", "inferred", "predicted", "rule")):
+        return 0.5
+    return 0.5
+
+
+def build_morphism_supervision(mol, som_idx: int, *, device: str | torch.device = "cpu") -> tuple[torch.Tensor, torch.Tensor, bool, float]:
+    num_atoms = int(mol.GetNumAtoms())
+    morphism_target = torch.zeros((num_atoms, NUM_MORPHISM_CLASSES), dtype=torch.float32, device=device)
+    morphism_loss_mask = torch.zeros((num_atoms, NUM_MORPHISM_CLASSES), dtype=torch.float32, device=device)
+    if not (0 <= int(som_idx) < num_atoms):
+        return morphism_target, morphism_loss_mask, False, 0.0
+
+    reactions = _extract_reaction_names(mol)
+    atom = mol.GetAtomWithIdx(int(som_idx))
+    classes: List[int] = []
+    seen = set()
+    for reaction in reactions:
+        canonical = _normalize_reaction_name(reaction)
+        if canonical == "hydroxylation":
+            canonical = "aromatic_hydroxylation" if atom.GetIsAromatic() else "aliphatic_hydroxylation"
+        elif canonical == "oxidation_n_s":
+            if atom.GetSymbol() not in {"N", "S"}:
+                continue
+        elif canonical == "epoxidation":
+            if atom.GetSymbol() != "C":
+                continue
+        elif canonical == "dealkylation":
+            if atom.GetSymbol() not in {"C", "N", "O"}:
+                continue
+        class_idx = REACTION_TAXONOMY.get(canonical)
+        if class_idx is None or class_idx in seen:
+            continue
+        classes.append(class_idx)
+        seen.add(class_idx)
+
+    has_label = len(classes) > 0
+    confidence = _label_confidence_from_source(_extract_label_source(mol))
+    if has_label:
+        if confidence <= 0.0:
+            confidence = 0.5
+        morphism_target[int(som_idx), classes] = 1.0
+        morphism_loss_mask[int(som_idx), :] = 1.0
+    return morphism_target, morphism_loss_mask, has_label, confidence
+
+
 @dataclass
 class MemoryRetrievalResult:
     """All outputs produced by a single retrieve-and-transport call."""
@@ -95,6 +216,10 @@ class MemoryRetrievalResult:
     transport_error_message: Optional[str] = None
     retrieval_mix_count: int = 1
     retrieval_mix_entropy: float = 0.0
+    retrieved_morphism_target: Optional[torch.Tensor] = None
+    retrieved_morphism_loss_mask: Optional[torch.Tensor] = None
+    retrieved_has_morphism_label: bool = False
+    retrieved_label_confidence: float = 0.0
 
 
 class BaselineMemoryBank:
@@ -198,6 +323,11 @@ class BaselineMemoryBank:
 
         retrieved_mol = self.historical_mols[best_idx]
         retrieved_som = self.historical_soms[best_idx]
+        morph_target, morph_mask, has_morph, morph_conf = build_morphism_supervision(
+            retrieved_mol,
+            retrieved_som,
+            device=self.device,
+        )
 
         # ── 2. MCS-guided transport ────────────────────────────────────
         mcs_size = 0
@@ -234,6 +364,10 @@ class BaselineMemoryBank:
             retrieved_som_idx=retrieved_som,
             transport_succeeded=transport_ok,
             mcs_size=mcs_size,
+            retrieved_morphism_target=morph_target,
+            retrieved_morphism_loss_mask=morph_mask,
+            retrieved_has_morphism_label=has_morph,
+            retrieved_label_confidence=morph_conf,
         )
 
     # ------------------------------------------------------------------

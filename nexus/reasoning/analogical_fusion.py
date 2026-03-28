@@ -33,30 +33,40 @@ class PGWCrossAttention(nn.Module):
         return torch.matmul(attn_weights, v)
 
 
-class _NodeDecoder(nn.Module):
+class _NodeProjection(nn.Module):
     def __init__(self, hidden_dim: int = 32) -> None:
         super().__init__()
-        inner = max(hidden_dim // 2, 8)
         self.net = nn.Sequential(
             nn.LazyLinear(hidden_dim),
             nn.GELU(),
-            nn.Linear(hidden_dim, inner),
-            nn.GELU(),
-            nn.Linear(inner, 1),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net(x).squeeze(-1)
+        return self.net(x)
 
 
 class NexusDualDecoder(nn.Module):
-    def __init__(self, hidden_dim: int = 32) -> None:
+    def __init__(self, hidden_dim: int = 32, num_morphism_classes: int = 5) -> None:
         super().__init__()
-        self.decoder_fp = _NodeDecoder(hidden_dim=hidden_dim)
-        self.decoder_ana = _NodeDecoder(hidden_dim=hidden_dim)
+        self.fp_feature_proj = _NodeProjection(hidden_dim=hidden_dim)
+        self.ana_feature_proj = _NodeProjection(hidden_dim=hidden_dim)
+        self.fp_som_head = nn.Linear(hidden_dim, 1)
+        self.fp_morph_head = nn.Linear(hidden_dim, num_morphism_classes)
+        self.ana_som_head = nn.Linear(hidden_dim, 1)
+        self.ana_morph_head = nn.Linear(hidden_dim, num_morphism_classes)
 
-    def forward(self, q_fp: torch.Tensor, q_ana: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        return self.decoder_fp(q_fp), self.decoder_ana(q_ana)
+    def forward(
+        self,
+        q_fp: torch.Tensor,
+        q_ana: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        h_fp = self.fp_feature_proj(q_fp)
+        h_ana = self.ana_feature_proj(q_ana)
+        y_hat_fp_som = self.fp_som_head(h_fp).squeeze(-1)
+        y_hat_fp_morph = self.fp_morph_head(h_fp)
+        y_hat_ana_som = self.ana_som_head(h_ana).squeeze(-1)
+        y_hat_ana_morph = self.ana_morph_head(h_ana)
+        return y_hat_fp_som, y_hat_fp_morph, y_hat_ana_som, y_hat_ana_morph
 
 
 class HomoscedasticArbiterLoss(nn.Module):
@@ -67,33 +77,84 @@ class HomoscedasticArbiterLoss(nn.Module):
 
     def forward(
         self,
-        y_hat_fp: torch.Tensor,
-        y_hat_ana: torch.Tensor,
-        target_idx: torch.Tensor,
+        y_hat_fp_som: torch.Tensor,
+        y_hat_fp_morph: torch.Tensor,
+        y_hat_ana_som: torch.Tensor,
+        y_hat_ana_morph: torch.Tensor,
+        som_target: torch.Tensor,
+        morph_target: torch.Tensor,
+        morph_mask: torch.Tensor,
+        *,
+        label_confidence: torch.Tensor | float | None = None,
+        has_morphism_label: torch.Tensor | bool | None = None,
+        bridge_loss: torch.Tensor | None = None,
+        bridge_weight: float = 0.5,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
-        if y_hat_fp.ndim != 2 or y_hat_ana.ndim != 2:
-            raise ValueError("Dual decoder logits must have shape [B, N]")
-        target = target_idx.view(-1).to(dtype=torch.long, device=y_hat_fp.device)
-        loss_fp_raw = F.cross_entropy(y_hat_fp, target)
-        loss_ana_raw = F.cross_entropy(y_hat_ana, target)
+        if y_hat_fp_som.ndim != 2 or y_hat_ana_som.ndim != 2:
+            raise ValueError("SoM dual decoder logits must have shape [B, N]")
+        if y_hat_fp_morph.ndim != 3 or y_hat_ana_morph.ndim != 3:
+            raise ValueError("Morphism dual decoder logits must have shape [B, N, C]")
+        device = y_hat_fp_som.device
+        som_target = som_target.to(device=device, dtype=torch.float32)
+        morph_target = morph_target.to(device=device, dtype=torch.float32)
+        morph_mask = morph_mask.to(device=device, dtype=torch.float32)
+        if label_confidence is None:
+            confidence_t = torch.ones((), dtype=torch.float32, device=device)
+        else:
+            confidence_t = torch.as_tensor(label_confidence, dtype=torch.float32, device=device).view(())
+        if has_morphism_label is None:
+            has_morph_t = torch.ones((), dtype=torch.float32, device=device)
+        else:
+            has_morph_t = torch.as_tensor(has_morphism_label, dtype=torch.float32, device=device).view(())
+
+        loss_fp_som = F.binary_cross_entropy_with_logits(y_hat_fp_som, som_target)
+        loss_ana_som = F.binary_cross_entropy_with_logits(y_hat_ana_som, som_target)
+
+        raw_fp_morph = F.binary_cross_entropy_with_logits(
+            y_hat_fp_morph,
+            morph_target,
+            reduction="none",
+        )
+        raw_ana_morph = F.binary_cross_entropy_with_logits(
+            y_hat_ana_morph,
+            morph_target,
+            reduction="none",
+        )
+        masked_fp_morph = raw_fp_morph * morph_mask
+        masked_ana_morph = raw_ana_morph * morph_mask
+        valid_morph = morph_mask.sum().clamp_min(1.0)
+        loss_fp_morph = masked_fp_morph.sum() / valid_morph
+        loss_ana_morph = masked_ana_morph.sum() / valid_morph
+        morph_scale = confidence_t * has_morph_t
 
         precision_fp = torch.exp(-self.log_var_fp)
         precision_ana = torch.exp(-self.log_var_ana)
 
-        loss_fp_scaled = 0.5 * precision_fp * loss_fp_raw + 0.5 * self.log_var_fp
-        loss_ana_scaled = 0.5 * precision_ana * loss_ana_raw + 0.5 * self.log_var_ana
-        total_loss = loss_fp_scaled + loss_ana_scaled
+        loss_fp_scaled = 0.5 * precision_fp * (loss_fp_morph * morph_scale) + 0.5 * self.log_var_fp
+        loss_ana_scaled = 0.5 * precision_ana * (loss_ana_morph * morph_scale) + 0.5 * self.log_var_ana
+        total_loss = loss_fp_som + loss_ana_som + loss_fp_scaled + loss_ana_scaled
+        if bridge_loss is not None:
+            total_loss = total_loss + float(max(bridge_weight, 0.0)) * bridge_loss
 
         weight_ana = precision_ana / (precision_fp + precision_ana).clamp_min(1.0e-9)
         weight_fp = 1.0 - weight_ana
 
         return total_loss.squeeze(), {
-            "loss_fp_raw": loss_fp_raw.detach(),
-            "loss_ana_raw": loss_ana_raw.detach(),
+            "loss_fp_som": loss_fp_som.detach(),
+            "loss_ana_som": loss_ana_som.detach(),
+            "loss_fp_morph": loss_fp_morph.detach(),
+            "loss_ana_morph": loss_ana_morph.detach(),
             "weight_fp": weight_fp.detach(),
             "weight_ana": weight_ana.detach(),
             "sigma_fp": torch.exp(0.5 * self.log_var_fp).detach(),
             "sigma_ana": torch.exp(0.5 * self.log_var_ana).detach(),
+            "has_morphism_label": has_morph_t.detach(),
+            "label_confidence": confidence_t.detach(),
+            "bridge_loss": (
+                torch.as_tensor(bridge_loss, dtype=torch.float32, device=device).detach()
+                if bridge_loss is not None
+                else torch.zeros((), dtype=torch.float32, device=device)
+            ),
         }
 
 

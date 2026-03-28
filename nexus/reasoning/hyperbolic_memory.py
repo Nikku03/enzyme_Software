@@ -24,7 +24,12 @@ try:
 except Exception:
     _RDKIT_OK = False
 
-from .baseline_memory import MemoryRetrievalResult, _extract_som_idx, _morgan_fp_tensor
+from .baseline_memory import (
+    MemoryRetrievalResult,
+    _extract_som_idx,
+    _morgan_fp_tensor,
+    build_morphism_supervision,
+)
 from .pgw_transport import PGWTransporter
 
 
@@ -592,11 +597,18 @@ class HyperbolicMemoryBank:
 
             if best_tanimoto < self.tanimoto_prefilter_threshold:
                 n_query = query_mol.GetNumAtoms()
+                _pref_mol = self.historical_mols[best_shortlist_idx]
+                _pref_som = self.historical_soms[best_shortlist_idx]
+                _pref_morph_target, _pref_morph_mask, _pref_has_morph, _pref_morph_conf = build_morphism_supervision(
+                    _pref_mol,
+                    _pref_som,
+                    device=self.device,
+                )
                 return MemoryRetrievalResult(
                     analogical_pred=torch.zeros(n_query, dtype=torch.float32, device=self.device),
                     confidence=0.0,
-                    retrieved_mol=self.historical_mols[best_shortlist_idx],
-                    retrieved_som_idx=self.historical_soms[best_shortlist_idx],
+                    retrieved_mol=_pref_mol,
+                    retrieved_som_idx=_pref_som,
                     transport_succeeded=False,
                     mcs_size=0,
                     embedding_space="hyperbolic" if projected_ready else "euclidean",
@@ -610,6 +622,10 @@ class HyperbolicMemoryBank:
                     transport_plan=None,
                     retrieved_node_multivectors=None,
                     transport_error_message=None,
+                    retrieved_morphism_target=_pref_morph_target,
+                    retrieved_morphism_loss_mask=_pref_morph_mask,
+                    retrieved_has_morphism_label=_pref_has_morph,
+                    retrieved_label_confidence=_pref_morph_conf,
                 )
 
             # ── mechanism-aware re-ranking (optional) ─────────────────────
@@ -681,6 +697,11 @@ class HyperbolicMemoryBank:
 
         retrieved_mol = self.historical_mols[best_idx]
         retrieved_som = self.historical_soms[best_idx]
+        retrieved_morph_target, retrieved_morph_mask, retrieved_has_morph, retrieved_morph_conf = build_morphism_supervision(
+            retrieved_mol,
+            retrieved_som,
+            device=self.device,
+        )
         retrieved_multivectors = None
         if 0 <= best_idx < len(self.historical_node_multivectors):
             retrieved_multivectors = self.historical_node_multivectors[best_idx]
@@ -754,6 +775,10 @@ class HyperbolicMemoryBank:
             transport_error_message=transport_error_message,
             retrieval_mix_count=retrieval_mix_count,
             retrieval_mix_entropy=retrieval_mix_entropy,
+            retrieved_morphism_target=retrieved_morph_target,
+            retrieved_morphism_loss_mask=retrieved_morph_mask,
+            retrieved_has_morphism_label=retrieved_has_morph,
+            retrieved_label_confidence=retrieved_morph_conf,
         )
 
     def batch_stats(self, mols: List, true_soms: List[int]) -> dict:

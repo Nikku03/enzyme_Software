@@ -1806,14 +1806,125 @@ class Metabolic_Causal_Trainer(nn.Module):
                                         _ret_mv.unsqueeze(0),
                                         _scan_pi.unsqueeze(0),
                                     )
-                                    _y_hat_fp, _y_hat_ana = self.analogical_dual_decoder(
+                                    _som_target_scan = torch.zeros(
+                                        (1, _q_fp_scan.size(1)),
+                                        dtype=torch.float32,
+                                        device=device,
+                                    )
+                                    _som_target_scan[0, int(true_row_index.item())] = 1.0
+                                    _morph_target_scan = torch.zeros(
+                                        (1, _q_fp_scan.size(1), 5),
+                                        dtype=torch.float32,
+                                        device=device,
+                                    )
+                                    _morph_mask_scan = torch.zeros_like(_morph_target_scan)
+                                    _has_morph_label = torch.zeros((), dtype=torch.float32, device=device)
+                                    _label_confidence = torch.zeros((), dtype=torch.float32, device=device)
+                                    _batch_som = batch.get("som_target")
+                                    if torch.is_tensor(_batch_som) and _batch_som.numel() > 0:
+                                        _som_source = _batch_som[0] if _batch_som.ndim >= 2 else _batch_som.view(-1)
+                                        if _som_source.numel() > 0:
+                                            _som_valid = (_scan_atom_idx >= 0) & (_scan_atom_idx < _som_source.numel())
+                                            if bool(_som_valid.all().item()):
+                                                _som_target_scan = _som_source.index_select(0, _scan_atom_idx).to(
+                                                    dtype=torch.float32,
+                                                    device=device,
+                                                ).unsqueeze(0)
+                                    _batch_morph = batch.get("morphism_target")
+                                    _batch_morph_mask = batch.get("morphism_loss_mask")
+                                    if torch.is_tensor(_batch_morph) and _batch_morph.numel() > 0:
+                                        _morph_source = _batch_morph[0] if _batch_morph.ndim >= 3 else _batch_morph
+                                        if _morph_source.ndim == 2 and _morph_source.size(0) > 0:
+                                            _morph_valid = (_scan_atom_idx >= 0) & (_scan_atom_idx < _morph_source.size(0))
+                                            if bool(_morph_valid.all().item()):
+                                                _morph_target_scan = _morph_source.index_select(0, _scan_atom_idx).to(
+                                                    dtype=torch.float32,
+                                                    device=device,
+                                                ).unsqueeze(0)
+                                    if torch.is_tensor(_batch_morph_mask) and _batch_morph_mask.numel() > 0:
+                                        _mask_source = _batch_morph_mask[0] if _batch_morph_mask.ndim >= 3 else _batch_morph_mask
+                                        if _mask_source.ndim == 2 and _mask_source.size(0) > 0:
+                                            _mask_valid = (_scan_atom_idx >= 0) & (_scan_atom_idx < _mask_source.size(0))
+                                            if bool(_mask_valid.all().item()):
+                                                _morph_mask_scan = _mask_source.index_select(0, _scan_atom_idx).to(
+                                                    dtype=torch.float32,
+                                                    device=device,
+                                                ).unsqueeze(0)
+                                    _batch_has_morph = batch.get("has_morphism_label")
+                                    if torch.is_tensor(_batch_has_morph) and _batch_has_morph.numel() > 0:
+                                        _has_morph_label = _batch_has_morph.view(-1)[0].to(
+                                            dtype=torch.float32,
+                                            device=device,
+                                        )
+                                    _batch_label_conf = batch.get("label_confidence")
+                                    if torch.is_tensor(_batch_label_conf) and _batch_label_conf.numel() > 0:
+                                        _label_confidence = _batch_label_conf.view(-1)[0].to(
+                                            dtype=torch.float32,
+                                            device=device,
+                                        )
+                                    _ret_morph_target = None
+                                    _ret_morph_mask = None
+                                    _ret_has_morph = torch.zeros((), dtype=torch.float32, device=device)
+                                    _ret_label_conf = torch.zeros((), dtype=torch.float32, device=device)
+                                    if torch.is_tensor(_result.retrieved_morphism_target):
+                                        _ret_morph_target = self._to_fp32(
+                                            _result.retrieved_morphism_target.to(device=device)
+                                        ).unsqueeze(0)
+                                    if torch.is_tensor(_result.retrieved_morphism_loss_mask):
+                                        _ret_morph_mask = self._to_fp32(
+                                            _result.retrieved_morphism_loss_mask.to(device=device)
+                                        ).unsqueeze(0)
+                                    _ret_has_morph = torch.as_tensor(
+                                        1.0 if _result.retrieved_has_morphism_label else 0.0,
+                                        dtype=torch.float32,
+                                        device=device,
+                                    )
+                                    _ret_label_conf = torch.as_tensor(
+                                        float(_result.retrieved_label_confidence),
+                                        dtype=torch.float32,
+                                        device=device,
+                                    )
+                                    _y_hat_fp_som, _y_hat_fp_morph, _y_hat_ana_som, _y_hat_ana_morph = self.analogical_dual_decoder(
                                         _q_fp_scan,
                                         _q_ana_scan,
                                     )
+                                    _bridge_loss = None
+                                    if (
+                                        _ret_morph_target is not None
+                                        and _ret_morph_mask is not None
+                                        and bool((_has_morph_label > 0).item())
+                                        and bool((_ret_has_morph > 0).item())
+                                        and _scan_pi.size(1) == _ret_morph_target.size(1)
+                                    ):
+                                        _target_alignment = torch.matmul(
+                                            _morph_target_scan.squeeze(0),
+                                            _ret_morph_target.squeeze(0).transpose(0, 1),
+                                        ).clamp_max(1.0)
+                                        _query_atom_mask = (_morph_mask_scan.squeeze(0).sum(dim=-1) > 0).to(dtype=torch.float32).unsqueeze(1)
+                                        _ret_atom_mask = (_ret_morph_mask.squeeze(0).sum(dim=-1) > 0).to(dtype=torch.float32).unsqueeze(0)
+                                        _joint_mask = _query_atom_mask * _ret_atom_mask
+                                        if bool((_joint_mask.sum() > 0).item()):
+                                            _bridge_raw = F.binary_cross_entropy(
+                                                _scan_pi.clamp(1.0e-7, 1.0 - 1.0e-7),
+                                                _target_alignment,
+                                                reduction="none",
+                                            )
+                                            _bridge_loss = (_bridge_raw * _joint_mask).sum() / _joint_mask.sum().clamp_min(1.0)
+                                            _bridge_loss = _bridge_loss * torch.minimum(
+                                                _label_confidence.clamp_min(0.0),
+                                                _ret_label_conf.clamp_min(0.0),
+                                            )
                                     _fusion_loss, _fusion_info = self.analogical_arbiter(
-                                        _y_hat_fp,
-                                        _y_hat_ana,
-                                        true_row_index,
+                                        _y_hat_fp_som,
+                                        _y_hat_fp_morph,
+                                        _y_hat_ana_som,
+                                        _y_hat_ana_morph,
+                                        _som_target_scan,
+                                        _morph_target_scan,
+                                        _morph_mask_scan,
+                                        label_confidence=_label_confidence,
+                                        has_morphism_label=_has_morph_label,
+                                        bridge_loss=_bridge_loss,
                                     )
                                     _fusion_loss = self._sanitize_tensor(
                                         self._to_fp32(_fusion_loss),
@@ -1825,7 +1936,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                                     _fusion_sigma_ana = self._to_fp32(_fusion_info["sigma_ana"]).view(())
                                     _weight_ana_t = self._to_fp32(_fusion_info["weight_ana"]).view(1, 1)
                                     _fusion_weight_ana = float(_weight_ana_t.detach().item())
-                                    _y_final = (1.0 - _weight_ana_t) * _y_hat_fp + _weight_ana_t * _y_hat_ana
+                                    _y_final = (1.0 - _weight_ana_t) * _y_hat_fp_som + _weight_ana_t * _y_hat_ana_som
                                     _rank_order = torch.argsort(_y_final.squeeze(0), descending=True)
                                     _fused_rank = int(
                                         (_rank_order == true_row_index).nonzero(as_tuple=False)[0].item()
@@ -1862,6 +1973,11 @@ class Metabolic_Causal_Trainer(nn.Module):
                                         "ana_fusion_loss_total": _fusion_loss_weighted.detach(),
                                         "ana_sigma_fp": _fusion_sigma_fp.detach(),
                                         "ana_sigma_ana": _fusion_sigma_ana.detach(),
+                                        "ana_morph_loss_fp": self._to_fp32(_fusion_info["loss_fp_morph"]).detach(),
+                                        "ana_morph_loss_ana": self._to_fp32(_fusion_info["loss_ana_morph"]).detach(),
+                                        "ana_bridge_loss": self._to_fp32(_fusion_info["bridge_loss"]).detach(),
+                                        "ana_has_morphism_label": self._to_fp32(_fusion_info["has_morphism_label"]).detach(),
+                                        "ana_label_confidence": self._to_fp32(_fusion_info["label_confidence"]).detach(),
                                     })
                                     _fusion_available = True
                         except Exception as _fusion_err:
