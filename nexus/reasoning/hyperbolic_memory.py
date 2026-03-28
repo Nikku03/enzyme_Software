@@ -156,6 +156,17 @@ class HyperbolicMemoryBank:
             tensor = torch.as_tensor(item, dtype=torch.float32, device=self.device)
             loaded_multivectors.append(tensor)
 
+        # Fusion requires node-level multivectors for projected entries.
+        # Older or partial caches may contain projected embeddings but missing
+        # multivectors, which would silently disable fusion at runtime.
+        for is_projected, mv in zip(projected_mask.tolist(), loaded_multivectors):
+            if is_projected and mv is None:
+                print(
+                    "  Continuous bank cache mismatch: projected entries are missing "
+                    "node multivectors; rebuilding cache."
+                )
+                return False
+
         self.memory_embeddings = memory_embeddings
         self.memory_projected_mask = projected_mask
         self.historical_node_multivectors = loaded_multivectors
