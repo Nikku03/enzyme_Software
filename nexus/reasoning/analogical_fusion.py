@@ -80,6 +80,7 @@ class NexusDualDecoder(nn.Module):
         super().__init__()
         self.fp_feature_proj = _NodeProjection(hidden_dim=hidden_dim)
         self.ana_feature_proj = _NodeProjection(hidden_dim=hidden_dim)
+        self.ana_context_proj = _NodeProjection(hidden_dim=hidden_dim)
         self.ana_query_gate = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
         self.fp_som_head = nn.Linear(hidden_dim, 1)
         self.fp_morph_head = nn.Linear(hidden_dim, num_morphism_classes)
@@ -92,18 +93,19 @@ class NexusDualDecoder(nn.Module):
         q_ana: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         h_fp = self.fp_feature_proj(q_fp)
-        ana_gate = torch.sigmoid(self.ana_query_gate).to(device=q_fp.device, dtype=q_fp.dtype)
-        q_ana_residual = q_ana + (ana_gate * q_fp)
-        q_ana_context = torch.cat(
+        h_ana_seed = self.ana_feature_proj(q_ana)
+        ana_gate = torch.sigmoid(self.ana_query_gate).to(device=h_fp.device, dtype=h_fp.dtype)
+        h_ana_residual = h_ana_seed + (ana_gate * h_fp)
+        h_ana_context = torch.cat(
             [
-                q_ana_residual,
-                q_fp,
-                q_ana - q_fp,
-                q_ana * q_fp,
+                h_ana_residual,
+                h_fp,
+                h_ana_seed - h_fp,
+                h_ana_seed * h_fp,
             ],
             dim=-1,
         )
-        h_ana = self.ana_feature_proj(q_ana_context)
+        h_ana = self.ana_context_proj(h_ana_context)
         y_hat_fp_som = self.fp_som_head(h_fp).squeeze(-1)
         y_hat_fp_morph = self.fp_morph_head(h_fp)
         y_hat_ana_som = self.ana_som_head(h_ana).squeeze(-1)
