@@ -655,11 +655,20 @@ class HyperbolicMemoryBank:
         radius_weight = max(0.0, min(radius_ratio / self.projected_query_radius_floor, 1.0))
         return float(epoch_weight * radius_weight)
 
-    def _mcs_transport(self, query_mol, retrieved_mol, retrieved_som: int) -> tuple[torch.Tensor, bool, int]:
+    def _mcs_transport(
+        self,
+        query_mol,
+        retrieved_mol,
+        retrieved_som: int,
+    ) -> tuple[torch.Tensor, bool, int, torch.Tensor | None, float, str]:
         n_query = query_mol.GetNumAtoms()
+        n_retrieved = retrieved_mol.GetNumAtoms()
         analogical_pred = torch.zeros(n_query, dtype=torch.float32, device=self.device)
         mcs_size = 0
         transport_ok = False
+        transport_plan: torch.Tensor | None = None
+        transported_mass = 0.0
+        route_reason = "mcs_unmapped"
         res = rdFMCS.FindMCS(
             [query_mol, retrieved_mol],
             timeout=self.mcs_timeout,
@@ -674,14 +683,52 @@ class HyperbolicMemoryBank:
             match_retrieved = retrieved_mol.GetSubstructMatch(mcs_mol)
 
             if match_query and match_retrieved:
-                try:
-                    mcs_pos = match_retrieved.index(retrieved_som)
-                    mapped_query_idx = match_query[mcs_pos]
+                support_cols = list(match_retrieved)
+                support_len = max(len(support_cols), 1)
+                transport_plan = torch.zeros(
+                    (n_query, n_retrieved),
+                    dtype=torch.float32,
+                    device=self.device,
+                )
+                fallback_row = torch.zeros(n_retrieved, dtype=torch.float32, device=self.device)
+                fallback_row[torch.as_tensor(support_cols, dtype=torch.long, device=self.device)] = 1.0 / float(support_len)
+
+                matched_query_set = set(int(idx) for idx in match_query)
+                for q_idx, ret_idx in zip(match_query, match_retrieved):
+                    transport_plan[int(q_idx), int(ret_idx)] = 1.0
+                for q_idx in range(n_query):
+                    if q_idx not in matched_query_set:
+                        transport_plan[q_idx] = fallback_row
+
+                mapped_query_idx: int | None = None
+                if retrieved_som in match_retrieved:
+                    mapped_query_idx = int(match_query[match_retrieved.index(retrieved_som)])
+                    transported_mass = 1.0
+                    route_reason = "mcs_exact"
+                else:
+                    try:
+                        distance_matrix = Chem.GetDistanceMatrix(retrieved_mol)
+                    except Exception:
+                        distance_matrix = None
+                    if distance_matrix is not None:
+                        best_pos = None
+                        best_dist = None
+                        for pos, ret_idx in enumerate(match_retrieved):
+                            dist = float(distance_matrix[int(retrieved_som), int(ret_idx)])
+                            if best_dist is None or dist < best_dist:
+                                best_dist = dist
+                                best_pos = pos
+                        if best_pos is not None and best_dist is not None and best_dist <= 2.0:
+                            mapped_query_idx = int(match_query[int(best_pos)])
+                            transported_mass = float(math.exp(-best_dist))
+                            route_reason = "mcs_som_neighborhood"
+
+                if mapped_query_idx is not None:
                     analogical_pred[mapped_query_idx] = 1.0
                     transport_ok = True
-                except ValueError:
-                    pass
-        return analogical_pred, transport_ok, mcs_size
+                else:
+                    transport_plan = None
+        return analogical_pred, transport_ok, mcs_size, transport_plan, transported_mass, route_reason
 
     def _transport_candidate(
         self,
@@ -713,15 +760,28 @@ class HyperbolicMemoryBank:
             transport_error_message = pgw_result.transport_error_message
             neuralgw_route_reason = pgw_result.neuralgw_route_reason
             if (not transport_ok) and self.fallback_to_mcs:
-                analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
-                transport_backend = "mcs_fallback"
-                transported_mass = 0.0
+                (
+                    analogical_pred,
+                    transport_ok,
+                    support_size,
+                    transport_plan,
+                    transported_mass,
+                    mcs_route_reason,
+                ) = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
+                transport_backend = (
+                    "mcs_fallback_som_neighborhood"
+                    if mcs_route_reason == "mcs_som_neighborhood"
+                    else "mcs_fallback"
+                )
                 transport_distill_loss = None
                 neuralgw_used_exact = False
                 neuralgw_confidence = 0.0
                 neuralgw_distill_loss = 0.0
-                transport_plan = None
-                neuralgw_route_reason = "mcs_fallback"
+                neuralgw_route_reason = (
+                    "mcs_fallback_som_neighborhood"
+                    if mcs_route_reason == "mcs_som_neighborhood"
+                    else "mcs_fallback"
+                )
             return (
                 analogical_pred,
                 transport_ok,
@@ -737,20 +797,27 @@ class HyperbolicMemoryBank:
                 neuralgw_route_reason,
             )
 
-        analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
+        (
+            analogical_pred,
+            transport_ok,
+            support_size,
+            transport_plan,
+            transported_mass,
+            mcs_route_reason,
+        ) = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
         return (
             analogical_pred,
             transport_ok,
             support_size,
-            "mcs",
-            0.0,
+            "mcs_som_neighborhood" if mcs_route_reason == "mcs_som_neighborhood" else "mcs",
+            transported_mass,
             None,
             False,
             0.0,
             0.0,
+            transport_plan,
             None,
-            None,
-            "mcs_only",
+            "mcs_only_som_neighborhood" if mcs_route_reason == "mcs_som_neighborhood" else "mcs_only",
         )
 
     def retrieve_and_transport(

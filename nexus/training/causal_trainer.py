@@ -98,11 +98,17 @@ def compute_analogical_ood_metrics(
     disagreement = 1.0 - max(0.0, min(float(physics_analogy_agreement), 1.0))
     support_quality = max(0.0, min(float(transported_mass) / 0.25, 1.0))
     low_transport = 1.0 - support_quality
-    backend_penalty = 1.0 if (
-        (not transport_succeeded)
-        or ("fallback" in str(transport_backend))
-        or str(transport_backend) in {"prefilter_reject", "pgw_error", "pgw_low_mass", "mcs"}
-    ) else 0.0
+    backend_name = str(transport_backend)
+    if not transport_succeeded:
+        backend_penalty = 1.0
+    elif backend_name in {"prefilter_reject", "pgw_error", "pgw_low_mass", "mcs"}:
+        backend_penalty = 1.0
+    elif "fallback" in backend_name:
+        backend_penalty = 0.45
+    elif "som_neighborhood" in backend_name:
+        backend_penalty = 0.15
+    else:
+        backend_penalty = 0.0
     fusion_penalty = 0.0 if fusion_available else 1.0
     ngw_penalty = 1.0 - max(0.0, min(float(neuralgw_confidence), 1.0))
     ood_score = (
@@ -115,8 +121,8 @@ def compute_analogical_ood_metrics(
         + fusion_penalty
         + ngw_penalty
     ) / 8.0
-    hard_case = 1.0 if ood_score >= 0.55 else 0.0
-    abstain = 1.0 if (ood_score >= 0.75 or retrieval_confidence < 0.35 or (not fusion_available and not transport_succeeded)) else 0.0
+    hard_case = 1.0 if ood_score >= 0.60 else 0.0
+    abstain = 1.0 if (ood_score >= 0.82 or retrieval_confidence < 0.25 or (not fusion_available and not transport_succeeded)) else 0.0
     return float(ood_score), float(hard_case), float(abstain)
 
 

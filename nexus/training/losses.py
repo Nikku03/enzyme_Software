@@ -424,8 +424,8 @@ class GatedAnalogicalGodLoss(nn.Module):
 
     def __init__(
         self,
-        confidence_threshold: float = 0.9,  # kept for backward compat, no longer used as hard cutoff
-        peak_threshold: float = 0.2,         # kept for backward compat
+        confidence_threshold: float = 0.6,  # kept for backward compat, no longer used as hard cutoff
+        peak_threshold: float = 0.1,         # kept for backward compat
     ) -> None:
         super().__init__()
         # Legacy thresholds kept for logging / external callers that read them.

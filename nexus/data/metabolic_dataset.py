@@ -119,7 +119,13 @@ def _infer_morphism_classes_for_atom(atom) -> List[int]:
         and not bond.GetIsAromatic()
         for bond in atom.GetBonds()
     )
+    in_unsaturated_ring = bool(atom.IsInRing()) and hybrid == "SP2" and any(
+        nbr.GetSymbol() == "C" and not bond.GetIsAromatic()
+        for nbr, bond in ((bond.GetOtherAtom(atom), bond) for bond in atom.GetBonds())
+    )
     if symbol == "C" and has_c_c_double:
+        add("epoxidation")
+    elif symbol == "C" and in_unsaturated_ring:
         add("epoxidation")
 
     if symbol == "C":
