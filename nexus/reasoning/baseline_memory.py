@@ -92,6 +92,7 @@ class MemoryRetrievalResult:
     neuralgw_distill_loss: float = 0.0
     transport_plan: Optional[torch.Tensor] = None
     retrieved_node_multivectors: Optional[torch.Tensor] = None
+    transport_error_message: Optional[str] = None
 
 
 class BaselineMemoryBank:

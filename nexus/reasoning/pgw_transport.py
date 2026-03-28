@@ -50,6 +50,7 @@ class PGWTransportResult:
     neuralgw_confidence: float = 0.0
     neuralgw_distill_loss: float = 0.0
     coupling_matrix: Optional[torch.Tensor] = None
+    transport_error_message: Optional[str] = None
 
 
 class NeuralGWApproximator(nn.Module):
@@ -336,9 +337,17 @@ class PGWTransporter:
     ) -> PGWTransportResult:
         n_query = query_mol.GetNumAtoms()
         zero_pred = torch.zeros(n_query, dtype=torch.float32, device=self.device)
+        multivector_error: Optional[str] = None
 
         if not (0 <= int(retrieved_som_idx) < retrieved_mol.GetNumAtoms()):
-            return PGWTransportResult(zero_pred, False, 0, 0.0, "invalid_retrieved_som")
+            return PGWTransportResult(
+                zero_pred,
+                False,
+                0,
+                0.0,
+                "invalid_retrieved_som",
+                transport_error_message="retrieved SoM index outside retrieved molecule atom range",
+            )
 
         q_mv = self._prepare_multivectors(query_multivectors)
         r_mv = self._prepare_multivectors(retrieved_multivectors)
@@ -374,8 +383,8 @@ class PGWTransporter:
                         neuralgw_distill_loss=neuralgw_distill_loss,
                         coupling_matrix=coupling_t,
                     )
-            except Exception:
-                pass
+            except Exception as exc:
+                multivector_error = f"{type(exc).__name__}: {exc}"
 
         c_query = self._distance_matrix(query_mol)
         c_retrieved = self._distance_matrix(retrieved_mol)
@@ -402,13 +411,28 @@ class PGWTransporter:
                 verbose=False,
             )
         except Exception:
-            return PGWTransportResult(zero_pred, False, 0, 0.0, "pgw_error")
+            return PGWTransportResult(
+                zero_pred,
+                False,
+                0,
+                0.0,
+                "pgw_error",
+                transport_error_message=multivector_error,
+            )
 
         coupling_t = torch.as_tensor(coupling, dtype=torch.float32, device=self.device)
         source_column = coupling_t[:, int(retrieved_som_idx)]
         transported_mass = float(source_column.sum().item())
         if transported_mass < self.min_transport_mass or not torch.isfinite(source_column).all():
-            return PGWTransportResult(zero_pred, False, 0, transported_mass, "pgw_low_mass")
+            return PGWTransportResult(
+                zero_pred,
+                False,
+                0,
+                transported_mass,
+                "pgw_low_mass",
+                coupling_matrix=coupling_t,
+                transport_error_message=multivector_error,
+            )
 
         analogical_pred = source_column / source_column.sum().clamp_min(self.min_transport_mass)
         support_size = int((analogical_pred >= self.support_threshold).sum().item())
@@ -418,4 +442,6 @@ class PGWTransporter:
             support_size=support_size,
             transported_mass=transported_mass,
             transport_backend="pgw_exact",
+            coupling_matrix=coupling_t,
+            transport_error_message=multivector_error,
         )

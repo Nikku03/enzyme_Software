@@ -1880,6 +1880,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "retrieved_same_query": bool(_result.retrieved_same_query),
                         "retrieved_som_idx": int(_result.retrieved_som_idx),
                         "transport_backend": _result.transport_backend,
+                        "transport_error_message": _result.transport_error_message,
                         "transport_succeeded": bool(_transport_mapped),
                         "transport_support": int(_result.transport_support_size),
                         "transported_mass": float(_result.transported_mass),

@@ -494,6 +494,7 @@ class HyperbolicMemoryBank:
                     ),
                     transport_plan=None,
                     retrieved_node_multivectors=None,
+                    transport_error_message=None,
                 )
 
             # ── mechanism-aware re-ranking (optional) ─────────────────────
@@ -590,6 +591,7 @@ class HyperbolicMemoryBank:
             neuralgw_confidence = pgw_result.neuralgw_confidence
             neuralgw_distill_loss = pgw_result.neuralgw_distill_loss
             transport_plan = pgw_result.coupling_matrix
+            transport_error_message = pgw_result.transport_error_message
             if (not transport_ok) and self.fallback_to_mcs:
                 analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
                 transport_backend = "mcs_fallback"
@@ -599,6 +601,7 @@ class HyperbolicMemoryBank:
                 neuralgw_confidence = 0.0
                 neuralgw_distill_loss = 0.0
                 transport_plan = None
+                transport_error_message = pgw_result.transport_error_message
         else:
             analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
             transport_backend = "mcs"
@@ -608,6 +611,7 @@ class HyperbolicMemoryBank:
             neuralgw_confidence = 0.0
             neuralgw_distill_loss = 0.0
             transport_plan = None
+            transport_error_message = None
 
         return MemoryRetrievalResult(
             analogical_pred=analogical_pred,
@@ -629,6 +633,7 @@ class HyperbolicMemoryBank:
             neuralgw_distill_loss=neuralgw_distill_loss,
             transport_plan=transport_plan,
             retrieved_node_multivectors=retrieved_multivectors,
+            transport_error_message=transport_error_message,
         )
 
     def batch_stats(self, mols: List, true_soms: List[int]) -> dict:
