@@ -11,7 +11,8 @@ via RDKit MCS, matching the existing baseline memory-bank contract.
 from __future__ import annotations
 
 import math
-from typing import List, Mapping
+from pathlib import Path
+from typing import Any, List, Mapping
 
 import torch
 import torch.nn.functional as F
@@ -101,6 +102,86 @@ class HyperbolicMemoryBank:
         self.memory_bit_counts = None
         self.memory_projected_mask = None
 
+    def _bank_signatures(self) -> List[str]:
+        signatures: List[str] = []
+        for mol, som_idx, smiles in zip(self.historical_mols, self.historical_soms, self.historical_smiles):
+            canonical = smiles or ""
+            signatures.append(f"{canonical}|som={som_idx}|atoms={mol.GetNumAtoms()}")
+        return signatures
+
+    def _load_continuous_bank_cache(self, cache_path: Path) -> bool:
+        try:
+            payload = torch.load(cache_path, map_location="cpu", weights_only=False)
+        except Exception as exc:
+            print(f"  Continuous bank cache load failed: {type(exc).__name__}: {exc}")
+            return False
+
+        signatures = self._bank_signatures()
+        cached_signatures = payload.get("signatures")
+        if cached_signatures != signatures:
+            print("  Continuous bank cache mismatch: signatures changed; rebuilding cache.")
+            return False
+
+        try:
+            memory_embeddings = torch.as_tensor(
+                payload["memory_embeddings"],
+                dtype=torch.float32,
+                device=self.device,
+            )
+            projected_mask = torch.as_tensor(
+                payload["memory_projected_mask"],
+                dtype=torch.bool,
+                device=self.device,
+            ).view(-1)
+            node_mv_payload = list(payload.get("historical_node_multivectors", []))
+        except Exception as exc:
+            print(f"  Continuous bank cache parse failed: {type(exc).__name__}: {exc}")
+            return False
+
+        if memory_embeddings.ndim != 2 or memory_embeddings.size(0) != len(signatures):
+            print("  Continuous bank cache mismatch: memory embedding shape changed; rebuilding cache.")
+            return False
+        if projected_mask.numel() != len(signatures):
+            print("  Continuous bank cache mismatch: projected-mask length changed; rebuilding cache.")
+            return False
+        if len(node_mv_payload) != len(signatures):
+            print("  Continuous bank cache mismatch: multivector list length changed; rebuilding cache.")
+            return False
+
+        loaded_multivectors: List[torch.Tensor | None] = []
+        for item in node_mv_payload:
+            if item is None:
+                loaded_multivectors.append(None)
+                continue
+            tensor = torch.as_tensor(item, dtype=torch.float32, device=self.device)
+            loaded_multivectors.append(tensor)
+
+        self.memory_embeddings = memory_embeddings
+        self.memory_projected_mask = projected_mask
+        self.historical_node_multivectors = loaded_multivectors
+        print(
+            f"  Loaded continuous bank cache → {cache_path} "
+            f"({int(projected_mask.sum().item())}/{len(signatures)} projected)"
+        )
+        return True
+
+    def _save_continuous_bank_cache(self, cache_path: Path) -> None:
+        if self.memory_embeddings is None or self.memory_projected_mask is None:
+            return
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        payload: dict[str, Any] = {
+            "version": 1,
+            "signatures": self._bank_signatures(),
+            "memory_embeddings": self.memory_embeddings.detach().cpu(),
+            "memory_projected_mask": self.memory_projected_mask.detach().cpu(),
+            "historical_node_multivectors": [
+                None if mv is None else mv.detach().cpu()
+                for mv in self.historical_node_multivectors
+            ],
+        }
+        torch.save(payload, cache_path)
+        print(f"  Saved continuous bank cache → {cache_path}")
+
     def _ball_radius(self) -> float:
         return self.poincare_radius / math.sqrt(self.curvature)
 
@@ -144,14 +225,11 @@ class HyperbolicMemoryBank:
         arg = arg.clamp_min(1.0 + eps)
         return torch.acosh(arg) / sqrt_c.clamp_min(eps)
 
-    def populate_from_mols(self, mols: List, *, continuous_encoder=None) -> None:
+    def populate_from_mols(self, mols: List, *, continuous_encoder=None, continuous_cache_path: str | Path | None = None) -> None:
         print(f"Populating Hyperbolic Memory Bank from {len(mols)} input molecules...")
         self._reset()
         fps: List[torch.Tensor] = []
-        projected_embeddings: List[torch.Tensor | None] = []
         skipped = 0
-        projection_failures = 0
-        projection_failure_examples: List[str] = []
 
         for mol in mols:
             som_idx = _extract_som_idx(mol)
@@ -164,6 +242,23 @@ class HyperbolicMemoryBank:
             self.historical_soms.append(som_idx)
             canonical = _canonical_smiles(mol)
             self.historical_smiles.append(canonical)
+
+        if not fps:
+            raise RuntimeError("No labelled molecules found — hyperbolic memory bank is empty.")
+
+        raw = torch.stack(fps).to(self.device)
+        self.memory_fingerprints = raw
+        self.memory_bit_counts = raw.sum(dim=-1)
+        cache_path = Path(continuous_cache_path) if continuous_cache_path is not None else None
+        if continuous_encoder is not None and cache_path is not None and cache_path.exists():
+            if self._load_continuous_bank_cache(cache_path):
+                return
+
+        projected_embeddings: List[torch.Tensor | None] = []
+        self.historical_node_multivectors = []
+        projection_failures = 0
+        projection_failure_examples: List[str] = []
+        for mol in self.historical_mols:
             projected: torch.Tensor | None = None
             node_multivectors: torch.Tensor | None = None
             if continuous_encoder is not None:
@@ -197,14 +292,7 @@ class HyperbolicMemoryBank:
             projected_embeddings.append(projected)
             self.historical_node_multivectors.append(node_multivectors)
 
-        if not fps:
-            raise RuntimeError("No labelled molecules found — hyperbolic memory bank is empty.")
-
-        raw = torch.stack(fps).to(self.device)
-        self.memory_fingerprints = raw
-        self.memory_bit_counts = raw.sum(dim=-1)
         projected_mask = torch.zeros(len(projected_embeddings), dtype=torch.bool, device=self.device)
-
         if any(embed is not None for embed in projected_embeddings):
             # Determine target dimension from the continuous (HGNN) embeddings.
             projected_dim = next(
@@ -271,6 +359,8 @@ class HyperbolicMemoryBank:
                 "  WARNING: continuous bank mode requested but zero bank molecules "
                 "were projected. Retrieval will fall back to fingerprint/hyperbolic mode."
             )
+        if continuous_encoder is not None and cache_path is not None and projected_count > 0:
+            self._save_continuous_bank_cache(cache_path)
 
     def _tanimoto_similarity(self, q_fp: torch.Tensor) -> torch.Tensor:
         if self.memory_fingerprints is None or self.memory_bit_counts is None:

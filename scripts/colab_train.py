@@ -125,6 +125,7 @@ BATCH_CKPT_PATH = CKPT_PATH.with_name(CKPT_PATH.stem + "_batch.pt")
 BATCH_METRICS_PATH = CKPT_PATH.parent / "nexus_colab_batch_metrics.json"
 ANALOGICAL_TRACE_PATH_DEFAULT = CKPT_PATH.parent / "nexus_colab_analogical_trace.jsonl"
 DEFAULT_PHYSICS_CACHE_PATH = CKPT_PATH.parent / "nexus_cyp3a4_physics_cache.pt"
+DEFAULT_ANALOGICAL_BANK_CACHE_PATH = CKPT_PATH.parent / "nexus_continuous_analogical_bank.pt"
 
 def _normalize_profile_name(value: str) -> str:
     aliases = {
@@ -344,6 +345,10 @@ ANALOGICAL_TRACE_ENABLED = _env_bool("NEXUS_COLAB_ANALOGICAL_TRACE", True)
 ANALOGICAL_TRACE_PATH = Path(
     _env_str("NEXUS_COLAB_ANALOGICAL_TRACE_PATH", str(ANALOGICAL_TRACE_PATH_DEFAULT))
 )
+ANALOGICAL_BANK_CACHE_ENABLED = _env_bool("NEXUS_COLAB_ANALOGICAL_BANK_CACHE", True)
+ANALOGICAL_BANK_CACHE_PATH = Path(
+    _env_str("NEXUS_COLAB_ANALOGICAL_BANK_CACHE_PATH", str(DEFAULT_ANALOGICAL_BANK_CACHE_PATH))
+)
 PHYSICS_CACHE_MODE = _env_str("NEXUS_COLAB_PHYSICS_CACHE_MODE", "off").lower() or "off"
 if PHYSICS_CACHE_MODE not in {"off", "cached", "hybrid"}:
     PHYSICS_CACHE_MODE = "off"
@@ -513,6 +518,12 @@ print(
     f"ana_weight={ANA_LOSS_WEIGHT:g}"
 )
 print(f"Analogical bank : mode={ANALOGICAL_BANK_MODE}")
+if ANALOGICAL_BANK_MODE == "continuous":
+    print(
+        f"Analogical bank cache: {'on' if ANALOGICAL_BANK_CACHE_ENABLED else 'off'}"
+    )
+    if ANALOGICAL_BANK_CACHE_ENABLED:
+        print(f"  analogical bank cache → {ANALOGICAL_BANK_CACHE_PATH}")
 print(f"Analogical trace: {'on' if ANALOGICAL_TRACE_ENABLED else 'off'}")
 if ANALOGICAL_TRACE_ENABLED:
     print(f"  analogical trace log → {ANALOGICAL_TRACE_PATH}")
@@ -635,6 +646,11 @@ _continuous_bank_encoder = trainer.encode_mol_for_memory_bank if ANALOGICAL_BANK
 trainer.memory_bank.populate_from_mols(
     _bank_mols,
     continuous_encoder=_continuous_bank_encoder,
+    continuous_cache_path=(
+        ANALOGICAL_BANK_CACHE_PATH
+        if ANALOGICAL_BANK_MODE == "continuous" and ANALOGICAL_BANK_CACHE_ENABLED
+        else None
+    ),
 )
 print(f"Memory bank ready: {len(trainer.memory_bank.historical_mols)} molecules.\n")
 del _bank_mols
