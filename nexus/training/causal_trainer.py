@@ -2349,6 +2349,9 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "ana_fusion_loss_total": _fusion_loss_weighted.detach(),
                         "ana_sigma_fp": _fusion_sigma_fp.detach(),
                         "ana_sigma_ana": _fusion_sigma_ana.detach(),
+                        "ana_morph_bootstrap_loss": torch.zeros((), dtype=torch.float32, device=device),
+                        "ana_quality": torch.zeros((), dtype=torch.float32, device=device),
+                        "ana_burn_in_active": torch.zeros((), dtype=torch.float32, device=device),
                         "ana_direct_lift_top1": (
                             metrics["som_top1"] - metrics["som_top1_fp"]
                         ).detach(),
