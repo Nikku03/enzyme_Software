@@ -509,23 +509,24 @@ class Metabolic_Causal_Trainer(nn.Module):
 
         conf = mol.GetConformer()
         n_atoms = mol.GetNumAtoms()
+        device = self._module_device()
 
         # 3D positions straight from the SDF conformer.
         coords = [
             [conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z]
             for i in range(n_atoms)
         ]
-        pos = torch.tensor(coords, dtype=torch.float32, device=self.device)
+        pos = torch.tensor(coords, dtype=torch.float32, device=device)
 
         species = torch.tensor(
             [a.GetAtomicNum() for a in mol.GetAtoms()],
             dtype=torch.long,
-            device=self.device,
+            device=device,
         )
         atom_symbols = [a.GetSymbol() for a in mol.GetAtoms()]
 
         # Chirality codes — same logic as NEXT_Mol_Generative_Agency.
-        chirality_codes = torch.zeros(n_atoms, dtype=torch.long, device=self.device)
+        chirality_codes = torch.zeros(n_atoms, dtype=torch.long, device=device)
         for atom in mol.GetAtoms():
             tag = str(atom.GetChiralTag())
             if tag == "CHI_TETRAHEDRAL_CCW":
@@ -564,7 +565,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         # uses forces only for RBF feature computation, not for gradient flow.
         manifold = Refined_NEXUS_Manifold(
             pos=pos,
-            energy=torch.zeros((), dtype=pos.dtype, device=self.device),
+            energy=torch.zeros((), dtype=pos.dtype, device=device),
             forces=torch.zeros_like(pos),
             species=species,
             seed=seed,
