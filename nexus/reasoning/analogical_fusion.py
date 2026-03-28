@@ -8,6 +8,36 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+DEFAULT_CYP3A4_MORPHISM_ALPHA = torch.tensor(
+    [0.25, 0.40, 0.25, 0.75, 0.75],
+    dtype=torch.float32,
+)
+
+
+class MorphismFocalLoss(nn.Module):
+    def __init__(
+        self,
+        alpha: torch.Tensor | None = None,
+        gamma: float = 2.0,
+    ) -> None:
+        super().__init__()
+        self.gamma = float(max(gamma, 0.0))
+        if alpha is None:
+            self.register_buffer("alpha", None)
+        else:
+            self.register_buffer("alpha", torch.as_tensor(alpha, dtype=torch.float32).view(-1))
+
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        bce_loss = F.binary_cross_entropy_with_logits(logits, targets, reduction="none")
+        pt = torch.exp(-bce_loss)
+        loss = ((1.0 - pt).clamp_min(0.0) ** self.gamma) * bce_loss
+        if self.alpha is not None:
+            alpha_t = self.alpha.to(device=targets.device, dtype=targets.dtype).view(1, 1, -1)
+            alpha_factor = targets * alpha_t + (1.0 - targets) * (1.0 - alpha_t)
+            loss = loss * alpha_factor
+        return loss
+
+
 class PGWCrossAttention(nn.Module):
     def __init__(self, hidden_dim: int = 32) -> None:
         super().__init__()
@@ -70,10 +100,19 @@ class NexusDualDecoder(nn.Module):
 
 
 class HomoscedasticArbiterLoss(nn.Module):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        morphism_alpha: torch.Tensor | None = None,
+        morphism_gamma: float = 2.0,
+    ) -> None:
         super().__init__()
         self.log_var_fp = nn.Parameter(torch.zeros(1))
         self.log_var_ana = nn.Parameter(torch.zeros(1))
+        self.morphism_criterion = MorphismFocalLoss(
+            alpha=DEFAULT_CYP3A4_MORPHISM_ALPHA if morphism_alpha is None else morphism_alpha,
+            gamma=morphism_gamma,
+        )
 
     def forward(
         self,
@@ -110,15 +149,13 @@ class HomoscedasticArbiterLoss(nn.Module):
         loss_fp_som = F.binary_cross_entropy_with_logits(y_hat_fp_som, som_target)
         loss_ana_som = F.binary_cross_entropy_with_logits(y_hat_ana_som, som_target)
 
-        raw_fp_morph = F.binary_cross_entropy_with_logits(
+        raw_fp_morph = self.morphism_criterion(
             y_hat_fp_morph,
             morph_target,
-            reduction="none",
         )
-        raw_ana_morph = F.binary_cross_entropy_with_logits(
+        raw_ana_morph = self.morphism_criterion(
             y_hat_ana_morph,
             morph_target,
-            reduction="none",
         )
         masked_fp_morph = raw_fp_morph * morph_mask
         masked_ana_morph = raw_ana_morph * morph_mask
