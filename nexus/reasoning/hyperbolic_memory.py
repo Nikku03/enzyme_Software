@@ -60,6 +60,8 @@ class HyperbolicMemoryBank:
         mcs_timeout: int = 2,
         tanimoto_prefilter_threshold: float = 0.5,
         tanimoto_shortlist_k: int = 16,
+        retrieval_mix_top_k: int = 3,
+        retrieval_mix_temperature: float = 0.25,
     ) -> None:
         if not _RDKIT_OK:
             raise ImportError("RDKit is required for HyperbolicMemoryBank")
@@ -76,6 +78,8 @@ class HyperbolicMemoryBank:
         self.mcs_timeout = int(max(mcs_timeout, 1))
         self.tanimoto_prefilter_threshold = float(min(max(tanimoto_prefilter_threshold, 0.0), 1.0))
         self.tanimoto_shortlist_k = int(max(tanimoto_shortlist_k, 1))
+        self.retrieval_mix_top_k = int(max(retrieval_mix_top_k, 1))
+        self.retrieval_mix_temperature = float(max(retrieval_mix_temperature, 1.0e-3))
 
         self.historical_mols: List = []
         self.historical_soms: List[int] = []
@@ -410,6 +414,72 @@ class HyperbolicMemoryBank:
                     pass
         return analogical_pred, transport_ok, mcs_size
 
+    def _transport_candidate(
+        self,
+        query_mol,
+        retrieved_mol,
+        retrieved_som: int,
+        *,
+        query_multivectors: torch.Tensor | None = None,
+        retrieved_multivectors: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, bool, int, str, float, torch.Tensor | None, bool, float, float, torch.Tensor | None, str | None]:
+        if self.transport_backend == "pgw" and self.pgw is not None:
+            pgw_result = self.pgw.transport_label(
+                query_mol,
+                retrieved_mol,
+                retrieved_som,
+                query_multivectors=query_multivectors,
+                retrieved_multivectors=retrieved_multivectors,
+            )
+            analogical_pred = pgw_result.analogical_pred
+            transport_ok = pgw_result.transport_succeeded
+            support_size = pgw_result.support_size
+            transport_backend = pgw_result.transport_backend
+            transported_mass = pgw_result.transported_mass
+            transport_distill_loss = pgw_result.distill_loss
+            neuralgw_used_exact = pgw_result.neuralgw_used_exact
+            neuralgw_confidence = pgw_result.neuralgw_confidence
+            neuralgw_distill_loss = pgw_result.neuralgw_distill_loss
+            transport_plan = pgw_result.coupling_matrix
+            transport_error_message = pgw_result.transport_error_message
+            if (not transport_ok) and self.fallback_to_mcs:
+                analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
+                transport_backend = "mcs_fallback"
+                transported_mass = 0.0
+                transport_distill_loss = None
+                neuralgw_used_exact = False
+                neuralgw_confidence = 0.0
+                neuralgw_distill_loss = 0.0
+                transport_plan = None
+            return (
+                analogical_pred,
+                transport_ok,
+                support_size,
+                transport_backend,
+                transported_mass,
+                transport_distill_loss,
+                neuralgw_used_exact,
+                neuralgw_confidence,
+                neuralgw_distill_loss,
+                transport_plan,
+                transport_error_message,
+            )
+
+        analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
+        return (
+            analogical_pred,
+            transport_ok,
+            support_size,
+            "mcs",
+            0.0,
+            None,
+            False,
+            0.0,
+            0.0,
+            None,
+            None,
+        )
+
     def retrieve_and_transport(
         self,
         query_mol,
@@ -448,6 +518,10 @@ class HyperbolicMemoryBank:
 
         query_embed: torch.Tensor | None = None
         retrieved_embed_detached: torch.Tensor | None = None
+        mix_candidate_indices: List[int] = []
+        mix_weights: List[float] = []
+        retrieval_mix_count = 1
+        retrieval_mix_entropy = 0.0
 
         if projected_ready:
             candidate_mask = self.memory_projected_mask.clone()
@@ -471,6 +545,18 @@ class HyperbolicMemoryBank:
                 best_idx = int(candidate_indices[int(top_local[0].item())].item())
                 tau = 10.0
                 confidence = math.exp(-float(top_distances[0].item()) / tau)
+                mix_k = min(self.retrieval_mix_top_k, shortlist_k)
+                mix_candidate_indices = [
+                    int(candidate_indices[int(top_local[i].item())].item())
+                    for i in range(mix_k)
+                ]
+                mix_logits = -top_distances[:mix_k].to(dtype=torch.float32) / self.retrieval_mix_temperature
+                mix_prob = torch.softmax(mix_logits, dim=0)
+                mix_weights = [float(v.item()) for v in mix_prob]
+                retrieval_mix_count = len(mix_candidate_indices)
+                retrieval_mix_entropy = float(
+                    (-(mix_prob * torch.log(mix_prob.clamp_min(1.0e-9))).sum()).item()
+                )
                 query_embed = q_embed_h.squeeze(0)
                 retrieved_embed_detached = self.memory_embeddings[best_idx].detach()
             else:
@@ -577,52 +663,55 @@ class HyperbolicMemoryBank:
 
         retrieved_mol = self.historical_mols[best_idx]
         retrieved_som = self.historical_soms[best_idx]
+        retrieved_multivectors = None
+        if 0 <= best_idx < len(self.historical_node_multivectors):
+            retrieved_multivectors = self.historical_node_multivectors[best_idx]
+        (
+            analogical_pred,
+            transport_ok,
+            support_size,
+            transport_backend,
+            transported_mass,
+            transport_distill_loss,
+            neuralgw_used_exact,
+            neuralgw_confidence,
+            neuralgw_distill_loss,
+            transport_plan,
+            transport_error_message,
+        ) = self._transport_candidate(
+            query_mol,
+            retrieved_mol,
+            retrieved_som,
+            query_multivectors=query_multivectors,
+            retrieved_multivectors=retrieved_multivectors,
+        )
 
-        analogical_pred: torch.Tensor
-        transport_ok: bool
-        support_size: int
-        if self.transport_backend == "pgw" and self.pgw is not None:
-            retrieved_multivectors = None
-            if 0 <= best_idx < len(self.historical_node_multivectors):
-                retrieved_multivectors = self.historical_node_multivectors[best_idx]
-            pgw_result = self.pgw.transport_label(
-                query_mol,
-                retrieved_mol,
-                retrieved_som,
-                query_multivectors=query_multivectors,
-                retrieved_multivectors=retrieved_multivectors,
-            )
-            analogical_pred = pgw_result.analogical_pred
-            transport_ok = pgw_result.transport_succeeded
-            support_size = pgw_result.support_size
-            transport_backend = pgw_result.transport_backend
-            transported_mass = pgw_result.transported_mass
-            transport_distill_loss = pgw_result.distill_loss
-            neuralgw_used_exact = pgw_result.neuralgw_used_exact
-            neuralgw_confidence = pgw_result.neuralgw_confidence
-            neuralgw_distill_loss = pgw_result.neuralgw_distill_loss
-            transport_plan = pgw_result.coupling_matrix
-            transport_error_message = pgw_result.transport_error_message
-            if (not transport_ok) and self.fallback_to_mcs:
-                analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
-                transport_backend = "mcs_fallback"
-                transported_mass = 0.0
-                transport_distill_loss = None
-                neuralgw_used_exact = False
-                neuralgw_confidence = 0.0
-                neuralgw_distill_loss = 0.0
-                transport_plan = None
-                transport_error_message = pgw_result.transport_error_message
-        else:
-            analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
-            transport_backend = "mcs"
-            transported_mass = 0.0
-            transport_distill_loss = None
-            neuralgw_used_exact = False
-            neuralgw_confidence = 0.0
-            neuralgw_distill_loss = 0.0
-            transport_plan = None
-            transport_error_message = None
+        # Multi-memory mixture for the continuous path: blend a small number of
+        # transported analogical priors while still using the best analogue as
+        # the anchor for fusion / detailed diagnostics.
+        if projected_ready and mix_candidate_indices and len(mix_candidate_indices) > 1:
+            mixture = torch.zeros_like(analogical_pred)
+            total_weight = 0.0
+            for candidate_idx, mix_weight in zip(mix_candidate_indices, mix_weights):
+                cand_mol = self.historical_mols[candidate_idx]
+                cand_som = self.historical_soms[candidate_idx]
+                cand_mv = None
+                if 0 <= candidate_idx < len(self.historical_node_multivectors):
+                    cand_mv = self.historical_node_multivectors[candidate_idx]
+                cand_pred, cand_ok, _cand_support, _cand_backend, _cand_mass, _cand_distill, _cand_exact, _cand_conf, _cand_distill_value, _cand_plan, _cand_err = self._transport_candidate(
+                    query_mol,
+                    cand_mol,
+                    cand_som,
+                    query_multivectors=query_multivectors,
+                    retrieved_multivectors=cand_mv,
+                )
+                if cand_ok:
+                    mixture = mixture + float(mix_weight) * cand_pred
+                    total_weight += float(mix_weight)
+            if total_weight > 0.0:
+                analogical_pred = mixture / mixture.sum().clamp_min(1.0e-8)
+                support_size = int((analogical_pred >= self.pgw.support_threshold).sum().item()) if self.pgw is not None else support_size
+                transport_ok = True
 
         return MemoryRetrievalResult(
             analogical_pred=analogical_pred,
@@ -645,6 +734,8 @@ class HyperbolicMemoryBank:
             transport_plan=transport_plan,
             retrieved_node_multivectors=retrieved_multivectors,
             transport_error_message=transport_error_message,
+            retrieval_mix_count=retrieval_mix_count,
+            retrieval_mix_entropy=retrieval_mix_entropy,
         )
 
     def batch_stats(self, mols: List, true_soms: List[int]) -> dict:

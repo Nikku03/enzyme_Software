@@ -93,6 +93,8 @@ class MemoryRetrievalResult:
     transport_plan: Optional[torch.Tensor] = None
     retrieved_node_multivectors: Optional[torch.Tensor] = None
     transport_error_message: Optional[str] = None
+    retrieval_mix_count: int = 1
+    retrieval_mix_entropy: float = 0.0
 
 
 class BaselineMemoryBank:

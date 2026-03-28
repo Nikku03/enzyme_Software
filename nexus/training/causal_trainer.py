@@ -1879,6 +1879,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "true_row_index": int(true_row_index.detach().cpu().item()),
                         "retrieval_embedding_space": _result.embedding_space,
                         "retrieval_confidence": float(_result.confidence),
+                        "retrieval_mix_count": int(_result.retrieval_mix_count),
+                        "retrieval_mix_entropy": float(_result.retrieval_mix_entropy),
                         "retrieved_same_query": bool(_result.retrieved_same_query),
                         "retrieved_smiles": (
                             _Chem.MolToSmiles(_result.retrieved_mol)
