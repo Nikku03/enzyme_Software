@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 import numpy as np
 import torch
@@ -24,6 +24,70 @@ except Exception:  # pragma: no cover - optional dependency
 def _require_rdkit() -> None:
     if not _RDKIT_OK:
         raise ImportError("RDKit is required for ZaretzkiMetabolicDataset")
+
+
+REACTION_TAXONOMY: Dict[str, int] = {
+    "aliphatic_hydroxylation": 0,
+    "aromatic_hydroxylation": 1,
+    "dealkylation": 2,
+    "epoxidation": 3,
+    "oxidation_n_s": 4,
+}
+NUM_MORPHISM_CLASSES = len(REACTION_TAXONOMY)
+
+_REACTION_PROP_KEYS = (
+    "REACTIONS",
+    "REACTION",
+    "REACTION_TYPE",
+    "REACTION_TYPES",
+    "METABOLISM_TYPE",
+    "METABOLISM_TYPES",
+)
+
+_LABEL_SOURCE_KEYS = (
+    "LABEL_SOURCE",
+    "SITE_SOURCE",
+    "ANNOTATION_SOURCE",
+    "SOURCE",
+)
+
+
+def _tokenize_prop(raw: str) -> List[str]:
+    text = str(raw or "").strip()
+    if not text:
+        return []
+    normalized = text.replace(";", ",").replace("|", ",").replace("/", ",")
+    return [token.strip() for token in normalized.split(",") if token.strip()]
+
+
+def _normalize_reaction_name(name: str) -> str:
+    value = str(name or "").strip().lower().replace(" ", "_").replace("-", "_")
+    aliases = {
+        "hydroxylation": "hydroxylation",
+        "aliphatic_hydroxylation": "aliphatic_hydroxylation",
+        "aromatic_hydroxylation": "aromatic_hydroxylation",
+        "n_dealkylation": "dealkylation",
+        "o_dealkylation": "dealkylation",
+        "dealkylation": "dealkylation",
+        "n_oxidation": "oxidation_n_s",
+        "s_oxidation": "oxidation_n_s",
+        "oxidation_n_s": "oxidation_n_s",
+        "epoxidation": "epoxidation",
+    }
+    return aliases.get(value, value)
+
+
+def _label_confidence_from_source(source: str | None) -> float:
+    value = str(source or "").strip().lower()
+    if not value:
+        return 0.0
+    if any(token in value for token in ("assay", "clinical", "validated", "manual", "curated")):
+        return 1.0
+    if any(token in value for token in ("drugbank", "metxbio", "literature", "reported")):
+        return 0.75
+    if any(token in value for token in ("heuristic", "smarts", "inferred", "predicted", "rule")):
+        return 0.5
+    return 0.5
 
 
 class ZaretzkiMetabolicDataset(Dataset):
@@ -144,6 +208,57 @@ class ZaretzkiMetabolicDataset(Dataset):
                 return idx
         return None
 
+    def _extract_reaction_names(self, mol) -> List[str]:
+        reactions: List[str] = []
+        for key in _REACTION_PROP_KEYS:
+            if not mol.HasProp(key):
+                continue
+            reactions.extend(_tokenize_prop(mol.GetProp(key)))
+        deduped = []
+        seen = set()
+        for reaction in reactions:
+            normalized = _normalize_reaction_name(reaction)
+            if normalized and normalized not in seen:
+                deduped.append(normalized)
+                seen.add(normalized)
+        return deduped
+
+    def _extract_label_source(self, mol) -> Optional[str]:
+        for key in _LABEL_SOURCE_KEYS:
+            if mol.HasProp(key):
+                value = str(mol.GetProp(key)).strip()
+                if value:
+                    return value
+        return None
+
+    @staticmethod
+    def _morphism_classes_for_atom(atom, reactions: Iterable[str]) -> List[int]:
+        classes: List[int] = []
+        seen = set()
+        for reaction in reactions:
+            canonical = _normalize_reaction_name(reaction)
+            if canonical == "hydroxylation":
+                if atom.GetIsAromatic():
+                    canonical = "aromatic_hydroxylation"
+                else:
+                    canonical = "aliphatic_hydroxylation"
+            elif canonical == "oxidation_n_s":
+                if atom.GetSymbol() not in {"N", "S"}:
+                    continue
+            elif canonical == "epoxidation":
+                if atom.GetSymbol() != "C":
+                    continue
+            elif canonical == "dealkylation":
+                if atom.GetSymbol() not in {"C", "N", "O"}:
+                    continue
+
+            class_idx = REACTION_TAXONOMY.get(canonical)
+            if class_idx is None or class_idx in seen:
+                continue
+            classes.append(class_idx)
+            seen.add(class_idx)
+        return classes
+
     def __getitem__(self, idx: int) -> Dict[str, Any]:
         mol = Chem.Mol(self.mols[idx])
 
@@ -196,6 +311,26 @@ class ZaretzkiMetabolicDataset(Dataset):
 
         target_dag = torch.zeros((num_atoms, num_atoms), dtype=torch.float32)
         target_dag[som_idx, som_idx] = 1.0
+        som_target = torch.zeros((num_atoms,), dtype=torch.float32)
+        som_target[som_idx] = 1.0
+
+        morphism_target = torch.zeros((num_atoms, NUM_MORPHISM_CLASSES), dtype=torch.float32)
+        morphism_loss_mask = torch.zeros((num_atoms, NUM_MORPHISM_CLASSES), dtype=torch.float32)
+        reaction_names = self._extract_reaction_names(mol)
+        label_source = self._extract_label_source(mol)
+        label_confidence = _label_confidence_from_source(label_source)
+        morphism_class_indices = self._morphism_classes_for_atom(
+            mol.GetAtomWithIdx(int(som_idx)),
+            reaction_names,
+        )
+        has_morphism_label = len(morphism_class_indices) > 0
+        if has_morphism_label:
+            if label_confidence <= 0.0:
+                label_confidence = 0.5
+            morphism_target[som_idx, morphism_class_indices] = 1.0
+            # Only supervise the labeled SoM row to avoid turning missing
+            # site-level mechanism labels into false negatives elsewhere.
+            morphism_loss_mask[som_idx, :] = 1.0
 
         try:
             smiles = Chem.MolToSmiles(Chem.RemoveHs(Chem.Mol(mol)), canonical=True)
@@ -209,6 +344,13 @@ class ZaretzkiMetabolicDataset(Dataset):
             "charges": torch.tensor(charges, dtype=torch.float32),
             "atomic_numbers": torch.tensor(atomic_numbers, dtype=torch.long),
             "target_dag": target_dag,
+            "som_target": som_target,
+            "morphism_target": morphism_target,
+            "morphism_loss_mask": morphism_loss_mask,
+            "has_morphism_label": torch.tensor(has_morphism_label, dtype=torch.bool),
+            "label_confidence": torch.tensor(label_confidence, dtype=torch.float32),
+            "reaction_names": reaction_names,
+            "label_source": label_source or "",
             "num_atoms": int(num_atoms),
             "true_som_idx": torch.tensor(som_idx, dtype=torch.long),
         }
@@ -232,6 +374,13 @@ def geometric_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
             "charges": torch.empty(0, 0),
             "atomic_numbers": torch.empty(0, 0),
             "target_dag": torch.empty(0, 0, 0),
+            "som_target": torch.empty(0, 0),
+            "morphism_target": torch.empty(0, 0, NUM_MORPHISM_CLASSES),
+            "morphism_loss_mask": torch.empty(0, 0, NUM_MORPHISM_CLASSES),
+            "has_morphism_label": torch.empty(0, dtype=torch.bool),
+            "label_confidence": torch.empty(0),
+            "reaction_names": [],
+            "label_source": [],
             "attention_mask": torch.empty(0, 0, dtype=torch.bool),
             "num_atoms": torch.empty(0, dtype=torch.long),
         }
@@ -240,6 +389,9 @@ def geometric_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
     masses = pad_sequence([item["masses"] for item in batch], batch_first=True, padding_value=0.0)
     charges = pad_sequence([item["charges"] for item in batch], batch_first=True, padding_value=0.0)
     atomic_numbers = pad_sequence([item["atomic_numbers"] for item in batch], batch_first=True, padding_value=0)
+    som_target = pad_sequence([item["som_target"] for item in batch], batch_first=True, padding_value=0.0)
+    morphism_target = pad_sequence([item["morphism_target"] for item in batch], batch_first=True, padding_value=0.0)
+    morphism_loss_mask = pad_sequence([item["morphism_loss_mask"] for item in batch], batch_first=True, padding_value=0.0)
 
     max_atoms = coords.size(1)
     batch_size = len(batch)
@@ -247,6 +399,8 @@ def geometric_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
     attention_mask = torch.zeros((batch_size, max_atoms), dtype=torch.bool)
     smiles = []
     true_som_idx = []
+    reaction_names = []
+    label_source = []
 
     for i, item in enumerate(batch):
         n = int(item["num_atoms"])
@@ -254,6 +408,8 @@ def geometric_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
         attention_mask[i, :n] = True
         smiles.append(item["smiles"])
         true_som_idx.append(item.get("true_som_idx"))
+        reaction_names.append(list(item.get("reaction_names", [])))
+        label_source.append(str(item.get("label_source", "")))
 
     out: Dict[str, Any] = {
         "smiles": smiles,
@@ -262,6 +418,13 @@ def geometric_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
         "charges": charges,
         "atomic_numbers": atomic_numbers,
         "target_dag": padded_dags,
+        "som_target": som_target,
+        "morphism_target": morphism_target,
+        "morphism_loss_mask": morphism_loss_mask,
+        "has_morphism_label": torch.stack([item["has_morphism_label"].view(()) for item in batch], dim=0),
+        "label_confidence": torch.stack([item["label_confidence"].view(()) for item in batch], dim=0),
+        "reaction_names": reaction_names,
+        "label_source": label_source,
         "attention_mask": attention_mask,
         "num_atoms": torch.tensor([item["num_atoms"] for item in batch], dtype=torch.long),
     }
@@ -270,4 +433,9 @@ def geometric_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
     return out
 
 
-__all__ = ["ZaretzkiMetabolicDataset", "geometric_collate_fn"]
+__all__ = [
+    "NUM_MORPHISM_CLASSES",
+    "REACTION_TAXONOMY",
+    "ZaretzkiMetabolicDataset",
+    "geometric_collate_fn",
+]
