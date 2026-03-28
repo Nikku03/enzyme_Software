@@ -10,6 +10,7 @@ via RDKit MCS, matching the existing baseline memory-bank contract.
 """
 from __future__ import annotations
 
+from collections import Counter
 import math
 from pathlib import Path
 from typing import Any, List, Mapping
@@ -99,6 +100,7 @@ class HyperbolicMemoryBank:
         self.historical_scaffolds: List[str] = []
         self.historical_heavy_atoms: List[int] = []
         self.historical_ring_counts: List[int] = []
+        self.historical_shortlist_keys: List[str] = []
         self.historical_node_multivectors: List[torch.Tensor | None] = []
         self.memory_embeddings: torch.Tensor | None = None
         self.memory_fingerprints: torch.Tensor | None = None
@@ -118,6 +120,7 @@ class HyperbolicMemoryBank:
         self.historical_scaffolds = []
         self.historical_heavy_atoms = []
         self.historical_ring_counts = []
+        self.historical_shortlist_keys = []
         self.historical_node_multivectors = []
         self.memory_embeddings = None
         self.memory_fingerprints = None
@@ -312,7 +315,9 @@ class HyperbolicMemoryBank:
             self.historical_soms.append(som_idx)
             canonical = _canonical_smiles(mol)
             self.historical_smiles.append(canonical)
-            self.historical_scaffolds.append(scaffold_key(mol))
+            scaffold = scaffold_key(mol)
+            self.historical_scaffolds.append(scaffold)
+            self.historical_shortlist_keys.append(scaffold or canonical or f"idx:{len(self.historical_mols)-1}")
             self.historical_heavy_atoms.append(int(max(mol.GetNumHeavyAtoms(), 1)))
             try:
                 self.historical_ring_counts.append(int(mol.GetRingInfo().NumRings()))
@@ -537,16 +542,29 @@ class HyperbolicMemoryBank:
         *,
         top_k: int,
         query_morphism_prior: torch.Tensor | None = None,
-    ) -> tuple[List[int], torch.Tensor, float]:
+    ) -> tuple[List[int], torch.Tensor, float, dict[str, float]]:
         if not candidate_indices:
-            return [], torch.empty(0, dtype=torch.float32, device=self.device), 0.0
+            return [], torch.empty(0, dtype=torch.float32, device=self.device), 0.0, {}
         scores = torch.as_tensor(base_scores, dtype=torch.float32, device=self.device).view(-1).clone()
+        candidate_keys = [
+            self.historical_shortlist_keys[candidate_idx]
+            if candidate_idx < len(self.historical_shortlist_keys)
+            else (self.historical_scaffolds[candidate_idx] if candidate_idx < len(self.historical_scaffolds) else "") or (self.historical_smiles[candidate_idx] if candidate_idx < len(self.historical_smiles) else None) or f"idx:{candidate_idx}"
+            for candidate_idx in candidate_indices
+        ]
+        key_counts = Counter(candidate_keys)
         mechanism_overlaps: List[float] = []
+        structural_bonuses: List[float] = []
+        hub_penalties: List[float] = []
         for local_idx, candidate_idx in enumerate(candidate_indices):
             overlap = self._candidate_mechanism_overlap(query_morphism_prior, candidate_idx)
             mechanism_overlaps.append(overlap)
             structural_bonus = self._candidate_structural_bonus(query_mol, candidate_idx)
-            scores[local_idx] = scores[local_idx] + 0.45 * overlap + structural_bonus
+            structural_bonuses.append(structural_bonus)
+            local_fraction = float(key_counts[candidate_keys[local_idx]]) / float(max(len(candidate_indices), 1))
+            hub_penalty = 0.45 * max(local_fraction - (1.0 / max(len(candidate_indices), 1)), 0.0)
+            hub_penalties.append(hub_penalty)
+            scores[local_idx] = scores[local_idx] + 0.45 * overlap + structural_bonus - hub_penalty
         chosen_locals: List[int] = []
         used_keys: set[str] = set()
         k = min(int(top_k), len(candidate_indices))
@@ -556,9 +574,7 @@ class HyperbolicMemoryBank:
             for local_idx, candidate_idx in enumerate(candidate_indices):
                 if local_idx in chosen_locals:
                     continue
-                scaffold = self.historical_scaffolds[candidate_idx] if candidate_idx < len(self.historical_scaffolds) else ""
-                smiles = self.historical_smiles[candidate_idx] if candidate_idx < len(self.historical_smiles) else None
-                diversity_key = scaffold or smiles or f"idx:{candidate_idx}"
+                diversity_key = candidate_keys[local_idx]
                 score = float(scores[local_idx].item())
                 if diversity_key in used_keys:
                     score -= 0.35
@@ -568,15 +584,21 @@ class HyperbolicMemoryBank:
             if best_local is None:
                 break
             chosen_locals.append(best_local)
-            candidate_idx = candidate_indices[best_local]
-            scaffold = self.historical_scaffolds[candidate_idx] if candidate_idx < len(self.historical_scaffolds) else ""
-            smiles = self.historical_smiles[candidate_idx] if candidate_idx < len(self.historical_smiles) else None
-            diversity_key = scaffold or smiles or f"idx:{candidate_idx}"
+            diversity_key = candidate_keys[best_local]
             used_keys.add(diversity_key)
         selected_scores = scores.index_select(0, torch.tensor(chosen_locals, dtype=torch.long, device=self.device))
         selected_indices = [candidate_indices[i] for i in chosen_locals]
         diversity_score = float(len(used_keys) / max(len(selected_indices), 1))
-        return selected_indices, selected_scores, diversity_score
+        debug = {}
+        if chosen_locals:
+            best_local = chosen_locals[0]
+            debug = {
+                "best_mechanism_bonus": float(0.45 * mechanism_overlaps[best_local]),
+                "best_structural_bonus": float(structural_bonuses[best_local]),
+                "best_hub_penalty": float(hub_penalties[best_local]),
+                "shortlist_top_fraction": float(max(key_counts.values()) / max(len(candidate_indices), 1)),
+            }
+        return selected_indices, selected_scores, diversity_score, debug
 
     def _projected_retrieval_weight(
         self,
@@ -746,6 +768,13 @@ class HyperbolicMemoryBank:
         retrieval_mechanism_overlap = 0.0
         retrieval_diversity_score = 0.0
         retrieval_candidate_count = 0
+        retrieval_projected_weight = 0.0
+        retrieval_best_tanimoto = 0.0
+        retrieval_best_projected_similarity = 0.0
+        retrieval_best_mechanism_bonus = 0.0
+        retrieval_best_structural_bonus = 0.0
+        retrieval_best_hub_penalty = 0.0
+        retrieval_shortlist_top_fraction = 0.0
 
         if projected_ready:
             candidate_mask = self.memory_projected_mask.clone()
@@ -755,6 +784,7 @@ class HyperbolicMemoryBank:
             if candidate_indices.numel() > 0:
                 retrieval_candidate_count = int(candidate_indices.numel())
                 projected_weight = self._projected_retrieval_weight(current_epoch, query_embedding)
+                retrieval_projected_weight = float(projected_weight)
                 retrieval_embedding_space = "hybrid" if projected_weight < 0.999 else "hyperbolic"
                 target_dim = int(self.memory_embeddings.size(-1))
                 prepared_query = torch.as_tensor(query_embedding, dtype=torch.float32, device=self.device).view(-1)
@@ -782,7 +812,7 @@ class HyperbolicMemoryBank:
                 )
                 shortlist_scores = blended_similarity / self.retrieval_mix_temperature
                 mix_k = min(max(self.retrieval_mix_top_k, 3), shortlist_k)
-                mix_candidate_indices, mix_logits, retrieval_diversity_score = self._select_diverse_candidates(
+                mix_candidate_indices, mix_logits, retrieval_diversity_score, retrieval_debug = self._select_diverse_candidates(
                     query_mol,
                     shortlist_candidate_indices,
                     shortlist_scores,
@@ -800,11 +830,17 @@ class HyperbolicMemoryBank:
                 )
                 best_idx = int(mix_candidate_indices[0])
                 best_rank_local = shortlist_candidate_indices.index(best_idx)
+                retrieval_best_tanimoto = float(top_tanimoto[best_rank_local].item())
+                retrieval_best_projected_similarity = float(projected_similarity[best_rank_local].item())
                 confidence = float(
                     projected_weight * projected_similarity[best_rank_local].item()
                     + (1.0 - projected_weight) * top_tanimoto[best_rank_local].item()
                 )
                 retrieval_mechanism_overlap = self._candidate_mechanism_overlap(query_morphism_prior, best_idx)
+                retrieval_best_mechanism_bonus = float(retrieval_debug.get("best_mechanism_bonus", 0.0))
+                retrieval_best_structural_bonus = float(retrieval_debug.get("best_structural_bonus", 0.0))
+                retrieval_best_hub_penalty = float(retrieval_debug.get("best_hub_penalty", 0.0))
+                retrieval_shortlist_top_fraction = float(retrieval_debug.get("shortlist_top_fraction", 0.0))
                 query_embed = q_embed_h.squeeze(0)
                 retrieved_embed_detached = self.memory_embeddings[best_idx].detach()
             else:
@@ -861,6 +897,13 @@ class HyperbolicMemoryBank:
                     retrieval_candidate_count=shortlist_k,
                     retrieval_mechanism_overlap=self._candidate_mechanism_overlap(query_morphism_prior, best_shortlist_idx),
                     retrieval_diversity_score=0.0,
+                    retrieval_projected_weight=0.0,
+                    retrieval_best_tanimoto=best_tanimoto,
+                    retrieval_best_projected_similarity=0.0,
+                    retrieval_best_mechanism_bonus=0.0,
+                    retrieval_best_structural_bonus=0.0,
+                    retrieval_best_hub_penalty=0.0,
+                    retrieval_shortlist_top_fraction=0.0,
                     neuralgw_route_reason="prefilter_reject",
                 )
 
@@ -884,7 +927,7 @@ class HyperbolicMemoryBank:
                     mech_scores = (query_embed.detach().unsqueeze(0) * shortlist_embeds.detach()).sum(dim=-1)  # [k]
                     shortlist_candidate_indices = [int(v) for v in shortlist_indices.tolist()]
                     mix_k = min(max(self.retrieval_mix_top_k, 3), shortlist_k)
-                    mix_candidate_indices, mix_logits, retrieval_diversity_score = self._select_diverse_candidates(
+                    mix_candidate_indices, mix_logits, retrieval_diversity_score, retrieval_debug = self._select_diverse_candidates(
                         query_mol,
                         shortlist_candidate_indices,
                         mech_scores.to(dtype=torch.float32) / self.retrieval_mix_temperature,
@@ -904,6 +947,12 @@ class HyperbolicMemoryBank:
                     best_mech_rank = shortlist_candidate_indices.index(best_idx)
                     retrieved_embed_detached = shortlist_embeds[best_mech_rank].detach()
                     retrieval_mechanism_overlap = self._candidate_mechanism_overlap(query_morphism_prior, best_idx)
+                    retrieval_best_tanimoto = float(top_tanimoto[best_mech_rank].item())
+                    retrieval_best_projected_similarity = 0.0
+                    retrieval_best_mechanism_bonus = float(retrieval_debug.get("best_mechanism_bonus", 0.0))
+                    retrieval_best_structural_bonus = float(retrieval_debug.get("best_structural_bonus", 0.0))
+                    retrieval_best_hub_penalty = float(retrieval_debug.get("best_hub_penalty", 0.0))
+                    retrieval_shortlist_top_fraction = float(retrieval_debug.get("shortlist_top_fraction", 0.0))
 
                     # Compute confidence from hyperbolic distance for the selected candidate.
                     q_h_embed = self._encode_hyperbolic(q_fp.unsqueeze(0).to(self.device))
@@ -934,7 +983,7 @@ class HyperbolicMemoryBank:
                 shortlist_candidate_indices = [int(v) for v in shortlist_indices.tolist()]
                 shortlist_scores = -distances.to(dtype=torch.float32) / self.retrieval_mix_temperature
                 mix_k = min(max(self.retrieval_mix_top_k, 3), shortlist_k)
-                mix_candidate_indices, mix_logits, retrieval_diversity_score = self._select_diverse_candidates(
+                mix_candidate_indices, mix_logits, retrieval_diversity_score, retrieval_debug = self._select_diverse_candidates(
                     query_mol,
                     shortlist_candidate_indices,
                     shortlist_scores,
@@ -955,6 +1004,12 @@ class HyperbolicMemoryBank:
                 best_rank_local = shortlist_candidate_indices.index(best_idx)
                 confidence = math.exp(-float(distances[best_rank_local].item()) / tau)
                 retrieval_mechanism_overlap = self._candidate_mechanism_overlap(query_morphism_prior, best_idx)
+                retrieval_best_tanimoto = float(top_tanimoto[best_rank_local].item())
+                retrieval_best_projected_similarity = float(math.exp(-float(distances[best_rank_local].item()) / 5.0))
+                retrieval_best_mechanism_bonus = float(retrieval_debug.get("best_mechanism_bonus", 0.0))
+                retrieval_best_structural_bonus = float(retrieval_debug.get("best_structural_bonus", 0.0))
+                retrieval_best_hub_penalty = float(retrieval_debug.get("best_hub_penalty", 0.0))
+                retrieval_shortlist_top_fraction = float(retrieval_debug.get("shortlist_top_fraction", 0.0))
 
         retrieved_mol = self.historical_mols[best_idx]
         retrieved_som = self.historical_soms[best_idx]
@@ -1072,6 +1127,13 @@ class HyperbolicMemoryBank:
             retrieval_candidate_count=retrieval_candidate_count,
             retrieval_mechanism_overlap=retrieval_mechanism_overlap,
             retrieval_diversity_score=retrieval_diversity_score,
+            retrieval_projected_weight=retrieval_projected_weight,
+            retrieval_best_tanimoto=retrieval_best_tanimoto,
+            retrieval_best_projected_similarity=retrieval_best_projected_similarity,
+            retrieval_best_mechanism_bonus=retrieval_best_mechanism_bonus,
+            retrieval_best_structural_bonus=retrieval_best_structural_bonus,
+            retrieval_best_hub_penalty=retrieval_best_hub_penalty,
+            retrieval_shortlist_top_fraction=retrieval_shortlist_top_fraction,
             neuralgw_route_reason=neuralgw_route_reason,
         )
 

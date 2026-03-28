@@ -282,6 +282,13 @@ class MemoryRetrievalResult:
     retrieval_candidate_count: int = 1
     retrieval_mechanism_overlap: float = 0.0
     retrieval_diversity_score: float = 0.0
+    retrieval_projected_weight: float = 0.0
+    retrieval_best_tanimoto: float = 0.0
+    retrieval_best_projected_similarity: float = 0.0
+    retrieval_best_mechanism_bonus: float = 0.0
+    retrieval_best_structural_bonus: float = 0.0
+    retrieval_best_hub_penalty: float = 0.0
+    retrieval_shortlist_top_fraction: float = 0.0
     neuralgw_route_reason: str = "unavailable"
 
 

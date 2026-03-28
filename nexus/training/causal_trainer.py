@@ -2130,6 +2130,13 @@ class Metabolic_Causal_Trainer(nn.Module):
                         "retrieval_candidate_count": int(_result.retrieval_candidate_count),
                         "retrieval_mechanism_overlap": float(_result.retrieval_mechanism_overlap),
                         "retrieval_diversity_score": float(_result.retrieval_diversity_score),
+                        "retrieval_projected_weight": float(_result.retrieval_projected_weight),
+                        "retrieval_best_tanimoto": float(_result.retrieval_best_tanimoto),
+                        "retrieval_best_projected_similarity": float(_result.retrieval_best_projected_similarity),
+                        "retrieval_best_mechanism_bonus": float(_result.retrieval_best_mechanism_bonus),
+                        "retrieval_best_structural_bonus": float(_result.retrieval_best_structural_bonus),
+                        "retrieval_best_hub_penalty": float(_result.retrieval_best_hub_penalty),
+                        "retrieval_shortlist_top_fraction": float(_result.retrieval_shortlist_top_fraction),
                         "retrieved_same_query": bool(_result.retrieved_same_query),
                         "retrieved_smiles": (
                             _Chem.MolToSmiles(_result.retrieved_mol)
