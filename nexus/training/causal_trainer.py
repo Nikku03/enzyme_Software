@@ -148,6 +148,11 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.pgw_cross_attention = PGWCrossAttention(hidden_dim=32)
         self.analogical_dual_decoder = NexusDualDecoder(hidden_dim=32)
         self.analogical_arbiter = HomoscedasticArbiterLoss()
+        self.analogical_trace_enabled = False
+        self.analogical_trace_path: Optional[Path] = None
+        self._active_phase = "train"
+        self._active_batch_index = 0
+        self._active_total_batches = 0
         self._maybe_prepare_precision_runtime()
         self._validate_wsd_config()
 
@@ -187,6 +192,37 @@ class Metabolic_Causal_Trainer(nn.Module):
         if not isinstance(entries, Mapping):
             raise TypeError("Physics cache must be a mapping or contain an 'entries' mapping")
         return self.set_physics_cache(entries, mode=mode)
+
+    def set_analogical_trace(
+        self,
+        path: str | Path,
+        *,
+        enabled: bool = True,
+        truncate: bool = False,
+    ) -> None:
+        self.analogical_trace_enabled = bool(enabled)
+        self.analogical_trace_path = Path(path)
+        self.analogical_trace_path.parent.mkdir(parents=True, exist_ok=True)
+        if truncate and self.analogical_trace_path.exists():
+            self.analogical_trace_path.unlink()
+
+    @staticmethod
+    def _trace_scalar(value: Any) -> Any:
+        if torch.is_tensor(value):
+            value = value.detach().cpu()
+            if value.numel() == 1:
+                return float(value.item())
+            return value.tolist()
+        if isinstance(value, Path):
+            return str(value)
+        return value
+
+    def _append_analogical_trace(self, payload: Mapping[str, Any]) -> None:
+        if not self.analogical_trace_enabled or self.analogical_trace_path is None:
+            return
+        normalized = {str(key): self._trace_scalar(value) for key, value in payload.items()}
+        with self.analogical_trace_path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(normalized) + "\n")
 
     def _lookup_physics_cache(
         self,
@@ -1190,6 +1226,7 @@ class Metabolic_Causal_Trainer(nn.Module):
     def forward_batch(self, batch: Any) -> TrainingStepResult:
         self._maybe_prepare_precision_runtime()
         smiles = self._resolve_smiles(batch)
+        analogical_trace: Dict[str, Any] | None = None
         module1_out = self._module1_forward_hot_path(smiles)
         device = module1_out.manifold.pos.device
         true_atom_index = self._resolve_true_atom_index(batch, device=device)
@@ -1824,6 +1861,35 @@ class Metabolic_Causal_Trainer(nn.Module):
                         except Exception:
                             _fusion_available = False
 
+                    analogical_trace = {
+                        "smiles": smiles,
+                        "phase": self._active_phase,
+                        "epoch_index": int(self.current_epoch_index),
+                        "batch_index": int(self._active_batch_index),
+                        "total_batches": int(self._active_total_batches),
+                        "global_step": int(self.global_step_counter.detach().cpu().item()),
+                        "true_atom_index": int(true_atom_index.detach().cpu().item()),
+                        "true_row_index": int(true_row_index.detach().cpu().item()),
+                        "retrieval_embedding_space": _result.embedding_space,
+                        "retrieval_confidence": float(_result.confidence),
+                        "retrieved_same_query": bool(_result.retrieved_same_query),
+                        "retrieved_som_idx": int(_result.retrieved_som_idx),
+                        "transport_backend": _result.transport_backend,
+                        "transport_succeeded": bool(_transport_mapped),
+                        "transport_support": int(_result.transport_support_size),
+                        "transported_mass": float(_result.transported_mass),
+                        "ana_gate_open": float(_ana_info["gate_open"]),
+                        "ana_peak": float(_ana_info["analogy_peak"]),
+                        "ana_gate_conf_ok": float(_ana_info["gate_conf_ok"]),
+                        "ana_gate_peak_ok": float(_ana_info["gate_peak_ok"]),
+                        "ana_watson_agreement": float(_physics_analogy_agreement),
+                        "neuralgw_used_exact": bool(_result.neuralgw_used_exact),
+                        "neuralgw_confidence": float(_result.neuralgw_confidence),
+                        "neuralgw_distill_loss": float(_result.neuralgw_distill_loss),
+                        "fusion_available": bool(_fusion_available),
+                        "fusion_weight_ana": float(_fusion_weight_ana),
+                    }
+
                     # Encoder supervision loss: teach MechanismEncoder to embed
                     # same-SoM-class molecules close together and different classes apart.
                     _enc_loss_val = 0.0
@@ -1948,9 +2014,34 @@ class Metabolic_Causal_Trainer(nn.Module):
                 import traceback as _tb
                 print(f"[ANA-ERR] {type(_ana_err).__name__}: {_ana_err}", flush=True)
                 _tb.print_exc()
+                analogical_trace = {
+                    "smiles": smiles,
+                    "phase": self._active_phase,
+                    "epoch_index": int(self.current_epoch_index),
+                    "batch_index": int(self._active_batch_index),
+                    "total_batches": int(self._active_total_batches),
+                    "global_step": int(self.global_step_counter.detach().cpu().item()),
+                    "analogical_error_type": type(_ana_err).__name__,
+                    "analogical_error": str(_ana_err),
+                }
         # ──────────────────────────────────────────────────────────────────
 
         metrics["loss_total"] = total_loss.detach()
+        if analogical_trace is not None:
+            analogical_trace.update(
+                {
+                    "loss_total": metrics.get("loss_total"),
+                    "som_top1": metrics.get("som_top1"),
+                    "som_top2": metrics.get("som_top2"),
+                    "som_rank": metrics.get("som_rank"),
+                    "som_top1_fp": metrics.get("som_top1_fp"),
+                    "som_top2_fp": metrics.get("som_top2_fp"),
+                    "som_rank_fp": metrics.get("som_rank_fp"),
+                    "pred_rate": metrics.get("pred_rate"),
+                    "dag_causal_loss": metrics.get("dag_causal_loss"),
+                }
+            )
+            self._append_analogical_trace(analogical_trace)
 
         if self.optimizer is not None and self.optimizer.param_groups:
             metrics["lr"] = torch.as_tensor(
@@ -2007,6 +2098,7 @@ class Metabolic_Causal_Trainer(nn.Module):
     ) -> Dict[str, float]:
         reducer: Dict[str, List[float]] = {}
         self.train(mode=train)
+        self._active_phase = "train" if train else "val"
         if train and self.memory_bank.pgw is not None:
             self.memory_bank.pgw.current_epoch = int(self.current_epoch_index)
         
@@ -2018,6 +2110,8 @@ class Metabolic_Causal_Trainer(nn.Module):
 
         total_batches = len(dataloader)
         for i, batch in enumerate(dataloader, start=1):
+            self._active_batch_index = i
+            self._active_total_batches = total_batches
             if train:
                 metrics = self.training_step(batch)
                 if metrics is None:
@@ -2113,6 +2207,8 @@ class Metabolic_Causal_Trainer(nn.Module):
 
         if train:
             self.current_epoch_index += 1
+        self._active_batch_index = 0
+        self._active_total_batches = 0
         return {key: sum(values) / max(len(values), 1) for key, values in reducer.items()}
 
 

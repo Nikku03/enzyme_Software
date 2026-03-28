@@ -122,6 +122,7 @@ _LOCAL_CKPT = _REPO_DIR / "colab_nexus_checkpoint.pt"
 CKPT_PATH   = _DRIVE_CKPT if _DRIVE_CKPT.parent.exists() else _LOCAL_CKPT
 BATCH_CKPT_PATH = CKPT_PATH.with_name(CKPT_PATH.stem + "_batch.pt")
 BATCH_METRICS_PATH = CKPT_PATH.parent / "nexus_colab_batch_metrics.json"
+ANALOGICAL_TRACE_PATH_DEFAULT = CKPT_PATH.parent / "nexus_colab_analogical_trace.jsonl"
 DEFAULT_PHYSICS_CACHE_PATH = CKPT_PATH.parent / "nexus_cyp3a4_physics_cache.pt"
 
 def _normalize_profile_name(value: str) -> str:
@@ -338,6 +339,10 @@ ANA_LOSS_WEIGHT = _env_float("NEXUS_COLAB_ANA_LOSS_WEIGHT", 1.0)
 ANALOGICAL_BANK_MODE = _env_str("NEXUS_COLAB_ANALOGICAL_BANK_MODE", "fingerprint").strip().lower() or "fingerprint"
 if ANALOGICAL_BANK_MODE not in {"fingerprint", "continuous"}:
     ANALOGICAL_BANK_MODE = "fingerprint"
+ANALOGICAL_TRACE_ENABLED = _env_bool("NEXUS_COLAB_ANALOGICAL_TRACE", True)
+ANALOGICAL_TRACE_PATH = Path(
+    _env_str("NEXUS_COLAB_ANALOGICAL_TRACE_PATH", str(ANALOGICAL_TRACE_PATH_DEFAULT))
+)
 PHYSICS_CACHE_MODE = _env_str("NEXUS_COLAB_PHYSICS_CACHE_MODE", "off").lower() or "off"
 if PHYSICS_CACHE_MODE not in {"off", "cached", "hybrid"}:
     PHYSICS_CACHE_MODE = "off"
@@ -495,6 +500,9 @@ print(
     f"ana_weight={ANA_LOSS_WEIGHT:g}"
 )
 print(f"Analogical bank : mode={ANALOGICAL_BANK_MODE}")
+print(f"Analogical trace: {'on' if ANALOGICAL_TRACE_ENABLED else 'off'}")
+if ANALOGICAL_TRACE_ENABLED:
+    print(f"  analogical trace log → {ANALOGICAL_TRACE_PATH}")
 print(f"Physics cache : mode={PHYSICS_CACHE_MODE}  path={PHYSICS_CACHE_PATH}")
 
 # ── trainer ────────────────────────────────────────────────────────────────
@@ -732,6 +740,12 @@ if SAVE_EVERY_BATCH and BATCH_CKPT_PATH.exists():
 
 if hasattr(trainer, "current_epoch_index"):
     trainer.current_epoch_index = int(start_epoch)
+if ANALOGICAL_TRACE_ENABLED:
+    trainer.set_analogical_trace(
+        ANALOGICAL_TRACE_PATH,
+        enabled=True,
+        truncate=(start_epoch == 0 and resume_batch_in_epoch == 0),
+    )
 
 
 # ── training loop ──────────────────────────────────────────────────────────
