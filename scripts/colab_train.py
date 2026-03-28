@@ -348,6 +348,7 @@ SAVE_EVERY_BATCH = _env_bool("NEXUS_COLAB_SAVE_EVERY_BATCH", True)
 SHUFFLE_SEED = _env_int("NEXUS_COLAB_SHUFFLE_SEED", 42)
 DAG_LOSS_WEIGHT = _env_float("NEXUS_COLAB_DAG_LOSS_WEIGHT", 1.0)
 DAG_LOSS_CAP = _env_float("NEXUS_COLAB_DAG_LOSS_CAP", 4.0)
+DAG_WARMUP_STEPS = _env_int("NEXUS_COLAB_DAG_WARMUP_STEPS", 0)
 ANA_LOSS_WEIGHT = _env_float("NEXUS_COLAB_ANA_LOSS_WEIGHT", 1.0)
 ANALOGICAL_BANK_MODE = _env_str("NEXUS_COLAB_ANALOGICAL_BANK_MODE", "fingerprint").strip().lower() or "fingerprint"
 if ANALOGICAL_BANK_MODE not in {"fingerprint", "continuous"}:
@@ -554,6 +555,7 @@ trainer = Metabolic_Causal_Trainer(
     use_galore=False,             # plain AdamW — avoids GaLore SVD on Colab
     dag_loss_weight=DAG_LOSS_WEIGHT,
     dag_loss_cap=DAG_LOSS_CAP,
+    dag_warmup_steps=DAG_WARMUP_STEPS,
     analogical_loss_weight=ANA_LOSS_WEIGHT,
     physics_cache_mode=PHYSICS_CACHE_MODE,
 ).to(device)

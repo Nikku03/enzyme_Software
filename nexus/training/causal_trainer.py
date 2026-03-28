@@ -163,6 +163,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         use_galore: bool = True,
         dag_loss_weight: float = 1.0,
         dag_loss_cap: float = 4.0,
+        dag_warmup_steps: int = 0,
         analogical_loss_weight: float = 1.0,
         physics_cache_mode: str = "off",
     ) -> None:
@@ -197,6 +198,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.use_galore = bool(use_galore)
         self.dag_loss_weight = float(max(dag_loss_weight, 0.0))
         self.dag_loss_cap = float(max(dag_loss_cap, 0.0))
+        self.dag_warmup_steps = int(max(dag_warmup_steps, 0))
         self.analogical_loss_weight = float(max(analogical_loss_weight, 0.0))
         self.physics_cache_mode = str(physics_cache_mode).strip().lower() or "off"
         if self.physics_cache_mode not in {"off", "cached", "hybrid"}:
@@ -1704,6 +1706,13 @@ class Metabolic_Causal_Trainer(nn.Module):
         dag_loss_scale = max(n_atoms * n_atoms, 1.0)
         dag_contribution = (dag_causal_loss / dag_loss_scale).clamp_max(self.dag_loss_cap)
         dag_contribution = dag_contribution * self.dag_loss_weight
+        # Warm-up ramp: linearly increase DAG loss from 0 → full weight over
+        # dag_warmup_steps. This prevents the large acyclicity penalty (~4.0)
+        # from overwhelming the SoM ranking signal (~3.2) during early training.
+        if self.dag_warmup_steps > 0:
+            _step = int(self.global_step_counter.detach().cpu().item())
+            _dag_ramp = min(float(_step) / float(self.dag_warmup_steps), 1.0)
+            dag_contribution = dag_contribution * _dag_ramp
         total_loss = self._sanitize_tensor(self._to_fp32(total_loss), clamp=(0.0, 1.0e5)) + dag_contribution
 
         # SoM top-1 / top-2 accuracy — true_ranked_index is the rank of the
