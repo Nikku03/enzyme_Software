@@ -133,7 +133,7 @@ class PGWTransporter:
         self.neural_approximator = NeuralGWApproximator(
             hidden_dim=neuralgw_hidden_dim,
             temperature=neuralgw_temperature,
-        )
+        ).to(self.device)
 
     @staticmethod
     def _distance_matrix(mol) -> torch.Tensor:
