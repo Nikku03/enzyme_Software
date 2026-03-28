@@ -90,6 +90,8 @@ class MemoryRetrievalResult:
     neuralgw_used_exact: bool = False
     neuralgw_confidence: float = 0.0
     neuralgw_distill_loss: float = 0.0
+    transport_plan: Optional[torch.Tensor] = None
+    retrieved_node_multivectors: Optional[torch.Tensor] = None
 
 
 class BaselineMemoryBank:

@@ -384,6 +384,8 @@ class HyperbolicMemoryBank:
                         query_key is not None
                         and self.historical_smiles[best_shortlist_idx] == query_key
                     ),
+                    transport_plan=None,
+                    retrieved_node_multivectors=None,
                 )
 
             # ── mechanism-aware re-ranking (optional) ─────────────────────
@@ -479,6 +481,7 @@ class HyperbolicMemoryBank:
             neuralgw_used_exact = pgw_result.neuralgw_used_exact
             neuralgw_confidence = pgw_result.neuralgw_confidence
             neuralgw_distill_loss = pgw_result.neuralgw_distill_loss
+            transport_plan = pgw_result.coupling_matrix
             if (not transport_ok) and self.fallback_to_mcs:
                 analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
                 transport_backend = "mcs_fallback"
@@ -487,6 +490,7 @@ class HyperbolicMemoryBank:
                 neuralgw_used_exact = False
                 neuralgw_confidence = 0.0
                 neuralgw_distill_loss = 0.0
+                transport_plan = None
         else:
             analogical_pred, transport_ok, support_size = self._mcs_transport(query_mol, retrieved_mol, retrieved_som)
             transport_backend = "mcs"
@@ -495,6 +499,7 @@ class HyperbolicMemoryBank:
             neuralgw_used_exact = False
             neuralgw_confidence = 0.0
             neuralgw_distill_loss = 0.0
+            transport_plan = None
 
         return MemoryRetrievalResult(
             analogical_pred=analogical_pred,
@@ -514,6 +519,8 @@ class HyperbolicMemoryBank:
             neuralgw_used_exact=neuralgw_used_exact,
             neuralgw_confidence=neuralgw_confidence,
             neuralgw_distill_loss=neuralgw_distill_loss,
+            transport_plan=transport_plan,
+            retrieved_node_multivectors=retrieved_multivectors,
         )
 
     def batch_stats(self, mols: List, true_soms: List[int]) -> dict:

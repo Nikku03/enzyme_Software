@@ -46,6 +46,7 @@ class PGWTransportResult:
     neuralgw_used_exact: bool = False
     neuralgw_confidence: float = 0.0
     neuralgw_distill_loss: float = 0.0
+    coupling_matrix: Optional[torch.Tensor] = None
 
 
 class NeuralGWApproximator(nn.Module):
@@ -368,6 +369,7 @@ class PGWTransporter:
                         neuralgw_used_exact=used_exact,
                         neuralgw_confidence=neuralgw_confidence,
                         neuralgw_distill_loss=neuralgw_distill_loss,
+                        coupling_matrix=coupling_t,
                     )
             except Exception:
                 pass

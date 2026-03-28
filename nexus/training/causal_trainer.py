@@ -30,6 +30,11 @@ from nexus.core.inference import NEXUS_Module1_Output
 from nexus.layers.dag_learner import MetabolicDAGLearner
 from nexus.physics.clifford_math import embed_coordinates
 from nexus.pocket.ddi import DDIOccupancyState
+from nexus.reasoning.analogical_fusion import (
+    HomoscedasticArbiterLoss,
+    NexusDualDecoder,
+    PGWCrossAttention,
+)
 from nexus.reasoning.hyperbolic_memory import HyperbolicMemoryBank
 from nexus.training.losses import GatedAnalogicalGodLoss, NEXUS_God_Loss
 
@@ -140,6 +145,9 @@ class Metabolic_Causal_Trainer(nn.Module):
         if self.memory_bank.pgw is not None:
             # Register the NeuralGW student so it trains with the rest of the model.
             self.neuralgw_approximator = self.memory_bank.pgw.neural_approximator
+        self.pgw_cross_attention = PGWCrossAttention(hidden_dim=32)
+        self.analogical_dual_decoder = NexusDualDecoder(hidden_dim=32)
+        self.analogical_arbiter = HomoscedasticArbiterLoss()
         self._maybe_prepare_precision_runtime()
         self._validate_wsd_config()
 
@@ -631,6 +639,9 @@ class Metabolic_Causal_Trainer(nn.Module):
             self._trainable([self.loss_fn.log_vars])
             + list(self.gated_loss.parameters())
             + list(getattr(self, "neuralgw_approximator", nn.Module()).parameters())
+            + list(self.pgw_cross_attention.parameters())
+            + list(self.analogical_dual_decoder.parameters())
+            + list(self.analogical_arbiter.parameters())
         )
         return {
             "electronic": electronic_params,
@@ -655,6 +666,9 @@ class Metabolic_Causal_Trainer(nn.Module):
                 ("gated_loss", self.gated_loss),
                 ("loss_fn", self.loss_fn),
                 ("neuralgw", getattr(self, "neuralgw_approximator", None)),
+                ("pgw_cross_attention", self.pgw_cross_attention),
+                ("analogical_dual_decoder", self.analogical_dual_decoder),
+                ("analogical_arbiter", self.analogical_arbiter),
             ]:
                 if module is None:
                     continue
@@ -1546,6 +1560,10 @@ class Metabolic_Causal_Trainer(nn.Module):
             "som_top2": som_top2,
             "som_top3": som_top3,
             "som_rank": torch.as_tensor(float(_rank), dtype=torch.float32, device=total_loss.device),
+            "som_top1_fp": som_top1,
+            "som_top2_fp": som_top2,
+            "som_top3_fp": som_top3,
+            "som_rank_fp": torch.as_tensor(float(_rank), dtype=torch.float32, device=total_loss.device),
             "som_n_atoms": torch.as_tensor(float(_n), dtype=torch.float32, device=total_loss.device),
             "loss_raw_som": loss_info["som_loss"],
             "loss_raw_rank": loss_info["ranking_loss"],
@@ -1713,6 +1731,99 @@ class Metabolic_Causal_Trainer(nn.Module):
                         _neuralgw_distill_weighted = 0.1 * _distill_raw
                         total_loss = total_loss + _neuralgw_distill_weighted
 
+                    _fusion_available = False
+                    _fusion_weight_ana = 0.0
+                    _fusion_loss_weighted = torch.zeros((), dtype=torch.float32, device=device)
+                    _fusion_sigma_fp = torch.zeros((), dtype=torch.float32, device=device)
+                    _fusion_sigma_ana = torch.zeros((), dtype=torch.float32, device=device)
+                    if (
+                        _result.transport_plan is not None
+                        and _result.retrieved_node_multivectors is not None
+                        and _result.transport_backend != "mcs"
+                    ):
+                        try:
+                            _pi_star = self._to_fp32(
+                                torch.as_tensor(_result.transport_plan, device=device)
+                            ).detach()
+                            _ret_mv = self._to_fp32(
+                                torch.as_tensor(_result.retrieved_node_multivectors, device=device)
+                            )
+                            _query_mv = self._to_fp32(atom_mv.squeeze(0))
+                            _scan_valid = (
+                                (_scan_atom_idx >= 0)
+                                & (_scan_atom_idx < _query_mv.size(0))
+                                & (_scan_atom_idx < _pi_star.size(0))
+                            )
+                            if bool(_scan_valid.all().item()) and _pi_star.ndim == 2 and _ret_mv.ndim == 2:
+                                _scan_pi = _pi_star.index_select(0, _scan_atom_idx)
+                                if _scan_pi.size(1) == _ret_mv.size(0):
+                                    _q_fp_scan = _query_mv.index_select(0, _scan_atom_idx).unsqueeze(0)
+                                    _q_ana_scan = self.pgw_cross_attention(
+                                        _q_fp_scan,
+                                        _ret_mv.unsqueeze(0),
+                                        _scan_pi.unsqueeze(0),
+                                    )
+                                    _y_hat_fp, _y_hat_ana = self.analogical_dual_decoder(
+                                        _q_fp_scan,
+                                        _q_ana_scan,
+                                    )
+                                    _fusion_loss, _fusion_info = self.analogical_arbiter(
+                                        _y_hat_fp,
+                                        _y_hat_ana,
+                                        true_row_index,
+                                    )
+                                    _fusion_loss = self._sanitize_tensor(
+                                        self._to_fp32(_fusion_loss),
+                                        clamp=(0.0, 20.0),
+                                    )
+                                    _fusion_loss_weighted = 0.25 * _fusion_loss
+                                    total_loss = total_loss + _fusion_loss_weighted
+                                    _fusion_sigma_fp = self._to_fp32(_fusion_info["sigma_fp"]).view(())
+                                    _fusion_sigma_ana = self._to_fp32(_fusion_info["sigma_ana"]).view(())
+                                    _weight_ana_t = self._to_fp32(_fusion_info["weight_ana"]).view(1, 1)
+                                    _fusion_weight_ana = float(_weight_ana_t.detach().item())
+                                    _y_final = (1.0 - _weight_ana_t) * _y_hat_fp + _weight_ana_t * _y_hat_ana
+                                    _rank_order = torch.argsort(_y_final.squeeze(0), descending=True)
+                                    _fused_rank = int(
+                                        (_rank_order == true_row_index).nonzero(as_tuple=False)[0].item()
+                                    )
+                                    metrics.update({
+                                        "som_top1": torch.as_tensor(
+                                            1.0 if _fused_rank == 0 else 0.0,
+                                            dtype=torch.float32,
+                                            device=device,
+                                        ),
+                                        "som_top2": torch.as_tensor(
+                                            1.0 if _fused_rank <= 1 else 0.0,
+                                            dtype=torch.float32,
+                                            device=device,
+                                        ),
+                                        "som_top3": torch.as_tensor(
+                                            1.0 if _fused_rank <= 2 else 0.0,
+                                            dtype=torch.float32,
+                                            device=device,
+                                        ),
+                                        "som_rank": torch.as_tensor(
+                                            float(_fused_rank),
+                                            dtype=torch.float32,
+                                            device=device,
+                                        ),
+                                        "ana_fusion_available": torch.as_tensor(
+                                            1.0, dtype=torch.float32, device=device
+                                        ),
+                                        "ana_fusion_weight": torch.as_tensor(
+                                            _fusion_weight_ana,
+                                            dtype=torch.float32,
+                                            device=device,
+                                        ),
+                                        "ana_fusion_loss_total": _fusion_loss_weighted.detach(),
+                                        "ana_sigma_fp": _fusion_sigma_fp.detach(),
+                                        "ana_sigma_ana": _fusion_sigma_ana.detach(),
+                                    })
+                                    _fusion_available = True
+                        except Exception:
+                            _fusion_available = False
+
                     # Encoder supervision loss: teach MechanismEncoder to embed
                     # same-SoM-class molecules close together and different classes apart.
                     _enc_loss_val = 0.0
@@ -1817,6 +1928,19 @@ class Metabolic_Causal_Trainer(nn.Module):
                             device=device,
                         ),
                         "neuralgw_distill_loss_total": _neuralgw_distill_weighted.detach(),
+                        "ana_fusion_available": torch.as_tensor(
+                            1.0 if _fusion_available else 0.0,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
+                        "ana_fusion_weight": torch.as_tensor(
+                            _fusion_weight_ana,
+                            dtype=torch.float32,
+                            device=device,
+                        ),
+                        "ana_fusion_loss_total": _fusion_loss_weighted.detach(),
+                        "ana_sigma_fp": _fusion_sigma_fp.detach(),
+                        "ana_sigma_ana": _fusion_sigma_ana.detach(),
                     })
             except Exception as _ana_err:
                 # Print once so we can see if the analogical engine is broken,
@@ -1825,6 +1949,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                 print(f"[ANA-ERR] {type(_ana_err).__name__}: {_ana_err}", flush=True)
                 _tb.print_exc()
         # ──────────────────────────────────────────────────────────────────
+
+        metrics["loss_total"] = total_loss.detach()
 
         if self.optimizer is not None and self.optimizer.param_groups:
             metrics["lr"] = torch.as_tensor(
@@ -1935,6 +2061,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                         f" w_fp={running.get('ana_weight_fp', float('nan')):.3f}"
                         f" w_ana={running.get('ana_weight_ana', float('nan')):.3f}"
                         f" t_ok={running.get('ana_transport_ok', float('nan')):.2f}"
+                        f" fuse={running.get('ana_fusion_available', float('nan')):.2f}"
+                        f" fuse_w={running.get('ana_fusion_weight', float('nan')):.2f}"
                         f" ngw_exact={running.get('neuralgw_used_exact', float('nan')):.2f}"
                         f" ngw_conf={running.get('neuralgw_confidence', float('nan')):.3f}"
                     ) if _ana_active else ""
