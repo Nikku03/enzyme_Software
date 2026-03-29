@@ -370,6 +370,13 @@ def main() -> None:
     cache_dir = Path(args.cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
 
+    if not sdf_path.exists():
+        raise FileNotFoundError(
+            f"SDF not found at {sdf_path}. "
+            "If running on Colab, bootstrap ATTNSOM assets first with "
+            "scripts/setup_colab_nexus.sh."
+        )
+
     print(f"Quantum distillation target: {sdf_path}")
     print(f"Output: {output_path}")
     print(f"Per-molecule cache: {cache_dir}")
