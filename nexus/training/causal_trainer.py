@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+import importlib
 import json
 import math
 from dataclasses import dataclass
@@ -30,12 +31,6 @@ from nexus.core.inference import NEXUS_Module1_Output
 from nexus.layers.dag_learner import MetabolicDAGLearner
 from nexus.physics.clifford_math import embed_coordinates
 from nexus.pocket.ddi import DDIOccupancyState
-from nexus.reasoning.analogical_fusion import (
-    HomoscedasticArbiterLoss,
-    NexusDualDecoder,
-    PGWCrossAttention,
-)
-from nexus.reasoning.hyperbolic_memory import HyperbolicMemoryBank
 from nexus.training.losses import GatedAnalogicalGodLoss, NEXUS_God_Loss
 
 
@@ -166,6 +161,8 @@ class Metabolic_Causal_Trainer(nn.Module):
         dag_warmup_steps: int = 0,
         kinetic_loss_warmup_steps: int = 0,
         analogical_loss_weight: float = 1.0,
+        analogical_engine: str = "classic",
+        quantum_loss_weight: float = 0.0,
         physics_cache_mode: str = "off",
     ) -> None:
         super().__init__()
@@ -202,6 +199,8 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.dag_warmup_steps = int(max(dag_warmup_steps, 0))
         self.kinetic_loss_warmup_steps = int(max(kinetic_loss_warmup_steps, 0))
         self.analogical_loss_weight = float(max(analogical_loss_weight, 0.0))
+        self.analogical_engine = self._resolve_analogical_engine_name(analogical_engine)
+        self.quantum_loss_weight = float(max(quantum_loss_weight, 0.0))
         self.physics_cache_mode = str(physics_cache_mode).strip().lower() or "off"
         if self.physics_cache_mode not in {"off", "cached", "hybrid"}:
             self.physics_cache_mode = "off"
@@ -219,6 +218,25 @@ class Metabolic_Causal_Trainer(nn.Module):
             confidence_threshold=0.85,
             peak_threshold=0.09,
         )
+        self._analogical_package = self._analogical_package_name(self.analogical_engine)
+        self._metric_learner_module = importlib.import_module(
+            f"{self._analogical_package}.metric_learner"
+        )
+        _memory_module = importlib.import_module(
+            f"{self._analogical_package}.hyperbolic_memory"
+        )
+        _fusion_module = importlib.import_module(
+            f"{self._analogical_package}.analogical_fusion"
+        )
+        HyperbolicMemoryBank = getattr(_memory_module, "HyperbolicMemoryBank")
+        PGWCrossAttention = getattr(_fusion_module, "PGWCrossAttention")
+        NexusDualDecoder = getattr(_fusion_module, "NexusDualDecoder")
+        HomoscedasticArbiterLoss = getattr(_fusion_module, "HomoscedasticArbiterLoss")
+        WaveQuantumDistillationHead = getattr(
+            self._metric_learner_module,
+            "WaveQuantumDistillationHead",
+            None,
+        )
         # Memory bank is populated externally (trainer.memory_bank.populate_from_mols)
         # before training begins.  Left empty here so training still runs without it.
         self.memory_bank = HyperbolicMemoryBank(device="cpu")
@@ -232,6 +250,12 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.pgw_cross_attention = PGWCrossAttention(hidden_dim=32)
         self.analogical_dual_decoder = NexusDualDecoder(hidden_dim=32)
         self.analogical_arbiter = HomoscedasticArbiterLoss()
+        self.wave_quantum_head = (
+            WaveQuantumDistillationHead()
+            if self.analogical_engine == "wave" and WaveQuantumDistillationHead is not None
+            else None
+        )
+        self.quantum_feature_bank: Dict[str, Dict[str, Any]] = {}
         self.analogical_trace_enabled = False
         self.analogical_trace_path: Optional[Path] = None
         self._active_phase = "train"
@@ -239,6 +263,17 @@ class Metabolic_Causal_Trainer(nn.Module):
         self._active_total_batches = 0
         self._maybe_prepare_precision_runtime()
         self._validate_wsd_config()
+
+    @staticmethod
+    def _resolve_analogical_engine_name(engine: str) -> str:
+        resolved = str(engine).strip().lower() or "classic"
+        if resolved not in {"classic", "wave"}:
+            return "classic"
+        return resolved
+
+    @staticmethod
+    def _analogical_package_name(engine: str) -> str:
+        return "nexus.reasoning_wave" if engine == "wave" else "nexus.reasoning"
 
     def _module_device(self) -> torch.device:
         for param in self.model.parameters():
@@ -283,6 +318,67 @@ class Metabolic_Causal_Trainer(nn.Module):
         if not isinstance(entries, Mapping):
             raise TypeError("Physics cache must be a mapping or contain an 'entries' mapping")
         return self.set_physics_cache(entries, mode=mode)
+
+    def set_quantum_feature_bank(self, entries: Mapping[str, Any]) -> int:
+        normalized: Dict[str, Dict[str, Any]] = {}
+        for key, value in dict(entries).items():
+            if not isinstance(key, str) or not isinstance(value, Mapping):
+                continue
+            normalized[key] = dict(value)
+        self.quantum_feature_bank = normalized
+        return len(self.quantum_feature_bank)
+
+    def load_quantum_feature_bank(self, path: str | Path) -> int:
+        payload = torch.load(Path(path), map_location="cpu")
+        if not isinstance(payload, Mapping):
+            raise TypeError("Quantum feature bank must be a mapping keyed by canonical SMILES")
+        return self.set_quantum_feature_bank(payload)
+
+    @staticmethod
+    def _canonicalize_smiles_key(smiles: str) -> str:
+        try:
+            from rdkit import Chem as _Chem
+
+            mol = _Chem.MolFromSmiles(smiles)
+            if mol is None:
+                return smiles
+            try:
+                return _Chem.MolToSmiles(_Chem.RemoveHs(_Chem.Mol(mol)), canonical=True, isomericSmiles=True)
+            except Exception:
+                return _Chem.MolToSmiles(mol, canonical=True, isomericSmiles=True)
+        except Exception:
+            return smiles
+
+    def _lookup_quantum_targets(
+        self,
+        smiles: str,
+        *,
+        atom_count: int,
+        device: torch.device,
+    ) -> Optional[Dict[str, torch.Tensor]]:
+        if not self.quantum_feature_bank:
+            return None
+        key = smiles if smiles in self.quantum_feature_bank else self._canonicalize_smiles_key(smiles)
+        entry = self.quantum_feature_bank.get(key)
+        if not isinstance(entry, Mapping):
+            return None
+        if not bool(entry.get("xtb_valid", False)):
+            return None
+        entry_atom_count = int(entry.get("atom_count", -1))
+        if entry_atom_count != int(atom_count):
+            return None
+        charges = torch.as_tensor(entry.get("charges"), dtype=torch.float32, device=device).view(-1)
+        fukui_zero = torch.as_tensor(entry.get("fukui_f_zero"), dtype=torch.float32, device=device).view(-1)
+        gap = torch.as_tensor(entry.get("homo_lumo_gap_ev"), dtype=torch.float32, device=device).view(())
+        if charges.numel() != atom_count or fukui_zero.numel() != atom_count:
+            return None
+        atom_mask = torch.ones(atom_count, dtype=torch.float32, device=device)
+        return {
+            "charges": charges,
+            "fukui_f_zero": fukui_zero,
+            "homo_lumo_gap_ev": gap,
+            "atom_mask": atom_mask,
+        }
 
     def set_analogical_trace(
         self,
@@ -1672,6 +1768,73 @@ class Metabolic_Causal_Trainer(nn.Module):
         atom_mv = embed_coordinates(manifold_pos.to(dtype=exp_rate.dtype)).clone()
         atom_mv[..., 0] = effective_reactivity
         atom_mv = atom_mv.unsqueeze(0)   # [1, N_atoms, 8]  — single-compound batch dim
+        quantum_loss_weighted = torch.zeros((), dtype=torch.float32, device=device)
+        quantum_loss_charge = torch.zeros((), dtype=torch.float32, device=device)
+        quantum_loss_fukui = torch.zeros((), dtype=torch.float32, device=device)
+        quantum_loss_gap = torch.zeros((), dtype=torch.float32, device=device)
+        quantum_supervision_available = torch.zeros((), dtype=torch.float32, device=device)
+        quantum_pred_charge_mean = torch.zeros((), dtype=torch.float32, device=device)
+        quantum_pred_fukui_mean = torch.zeros((), dtype=torch.float32, device=device)
+        quantum_pred_gap = torch.zeros((), dtype=torch.float32, device=device)
+        if (
+            self.wave_quantum_head is not None
+            and self.quantum_loss_weight > 0.0
+            and self.quantum_feature_bank
+        ):
+            try:
+                _quantum_targets = self._lookup_quantum_targets(
+                    smiles,
+                    atom_count=int(atom_mv.size(1)),
+                    device=device,
+                )
+                _quantum_loss_fn = getattr(
+                    self._metric_learner_module,
+                    "quantum_distillation_loss",
+                    None,
+                )
+                if _quantum_targets is not None and callable(_quantum_loss_fn):
+                    _node_multivectors_live = self._module1_node_multivectors(module1_out)
+                    _quantum_pred = self.wave_quantum_head(
+                        _node_multivectors_live,
+                        atom_mask=_quantum_targets["atom_mask"],
+                    )
+                    _quantum_total_raw, _quantum_info = _quantum_loss_fn(
+                        predicted_charges=_quantum_pred["predicted_charges"],
+                        predicted_fukui=_quantum_pred["predicted_fukui"],
+                        predicted_gap=_quantum_pred["predicted_gap"],
+                        target_charges=_quantum_targets["charges"],
+                        target_fukui=_quantum_targets["fukui_f_zero"],
+                        target_gap=_quantum_targets["homo_lumo_gap_ev"],
+                        atom_mask=_quantum_targets["atom_mask"],
+                    )
+                    quantum_loss_charge = self._sanitize_tensor(
+                        self._to_fp32(_quantum_info["charge_loss"]),
+                        clamp=(0.0, 100.0),
+                    )
+                    quantum_loss_fukui = self._sanitize_tensor(
+                        self._to_fp32(_quantum_info["fukui_loss"]),
+                        clamp=(0.0, 100.0),
+                    )
+                    quantum_loss_gap = self._sanitize_tensor(
+                        self._to_fp32(_quantum_info["gap_loss"]),
+                        clamp=(0.0, 100.0),
+                    )
+                    quantum_loss_weighted = self._sanitize_tensor(
+                        self._to_fp32(_quantum_total_raw),
+                        clamp=(0.0, 100.0),
+                    ) * self.quantum_loss_weight
+                    quantum_supervision_available = torch.ones((), dtype=torch.float32, device=device)
+                    quantum_pred_charge_mean = self._to_fp32(
+                        torch.as_tensor(_quantum_pred["predicted_charges"], device=device)
+                    ).mean().detach()
+                    quantum_pred_fukui_mean = self._to_fp32(
+                        torch.as_tensor(_quantum_pred["predicted_fukui"], device=device)
+                    ).mean().detach()
+                    quantum_pred_gap = self._to_fp32(
+                        torch.as_tensor(_quantum_pred["predicted_gap"], device=device)
+                    ).view(-1)[0].detach()
+            except Exception:
+                pass
         dag_output = self.dag_learner(
             atom_mv,
             # Per-source activation barriers: [1, N, 1] broadcasts against [1, N, N] prior.
@@ -1729,6 +1892,7 @@ class Metabolic_Causal_Trainer(nn.Module):
             _dag_ramp = min(float(_step) / float(self.dag_warmup_steps), 1.0)
             dag_contribution = dag_contribution * _dag_ramp
         total_loss = self._sanitize_tensor(self._to_fp32(total_loss), clamp=(0.0, 1.0e5)) + dag_contribution
+        total_loss = total_loss + quantum_loss_weighted
 
         # SoM top-1 / top-2 accuracy — true_ranked_index is the rank of the
         # ground-truth SoM in the descending-effective_reactivity-sorted list, so
@@ -1827,6 +1991,14 @@ class Metabolic_Causal_Trainer(nn.Module):
             "dag_recon_loss": self._sanitize_tensor(dag_output.reconstruction_loss.detach(), clamp=(0.0, 1.0e4)),
             "dag_manifold_recon_loss": self._sanitize_tensor(dag_output.manifold_recon_loss.detach(), clamp=(0.0, 1.0e4)),
             "dag_manifold_density_penalty": self._sanitize_tensor(dag_output.manifold_density_penalty.detach(), clamp=(0.0, 1.0e4)),
+            "quantum_loss_total": quantum_loss_weighted.detach(),
+            "quantum_loss_charge": quantum_loss_charge.detach(),
+            "quantum_loss_fukui": quantum_loss_fukui.detach(),
+            "quantum_loss_gap": quantum_loss_gap.detach(),
+            "quantum_supervision_available": quantum_supervision_available.detach(),
+            "quantum_pred_charge_mean": quantum_pred_charge_mean.detach(),
+            "quantum_pred_fukui_mean": quantum_pred_fukui_mean.detach(),
+            "quantum_pred_gap": quantum_pred_gap.detach(),
         }
         metrics.update(self.last_kinetics_debug)
 
@@ -1935,7 +2107,10 @@ class Metabolic_Causal_Trainer(nn.Module):
                     _enc_sup_weighted = torch.zeros((), dtype=torch.float32, device=device)
                     if _bank_has_continuous and _query_hyper_embed is not None and _result.retrieved_embed_detached is not None:
                         try:
-                            from nexus.reasoning.metric_learner import hyperbolic_supervision_loss as _hyp_sup_fn
+                            _hyp_sup_fn = getattr(
+                                self._metric_learner_module,
+                                "hyperbolic_supervision_loss",
+                            )
                             _same_mech = (_result.retrieval_mechanism_overlap > 0.5)
                             _enc_sup_raw = _hyp_sup_fn(
                                 _query_hyper_embed.to(dtype=torch.float32, device=device),
@@ -2107,9 +2282,11 @@ class Metabolic_Causal_Trainer(nn.Module):
                                         and bool((_has_morph_label > 0).item())
                                         and bool((_ret_has_morph > 0).item())
                                     ):
-                                        from nexus.reasoning.metric_learner import mechanism_contrastive_loss
-
-                                        _mech_contrastive_raw = mechanism_contrastive_loss(
+                                        _mech_contrastive_fn = getattr(
+                                            self._metric_learner_module,
+                                            "mechanism_contrastive_loss",
+                                        )
+                                        _mech_contrastive_raw = _mech_contrastive_fn(
                                             _q_fp_scan.squeeze(0),
                                             _ret_mv,
                                             _morph_target_scan.squeeze(0),
@@ -2340,11 +2517,15 @@ class Metabolic_Causal_Trainer(nn.Module):
                         _result.query_embed is not None
                         and _result.retrieved_embed_detached is not None
                     ):
-                        from nexus.reasoning.metric_learner import (
-                            encoder_supervision_loss as _enc_sup_loss,
-                            hyperbolic_supervision_loss as _hyp_sup_loss,
-                            _som_class as _som_cls,
+                        _enc_sup_loss = getattr(
+                            self._metric_learner_module,
+                            "encoder_supervision_loss",
                         )
+                        _hyp_sup_loss = getattr(
+                            self._metric_learner_module,
+                            "hyperbolic_supervision_loss",
+                        )
+                        _som_cls = getattr(self._metric_learner_module, "_som_class")
                         _q_som_class = _som_cls(int(true_atom_index.item()), _query_mol)
                         _r_som_class = _som_cls(_result.retrieved_som_idx, _result.retrieved_mol)
                         _same_class = (_q_som_class == _r_som_class) and (_q_som_class >= 0)
@@ -2707,6 +2888,12 @@ class Metabolic_Causal_Trainer(nn.Module):
                         f" epox_fp={running.get('morphism_f1_epox_fp', float('nan')):.3f}"
                         f" epox_ana={running.get('morphism_f1_epox_ana', float('nan')):.3f}"
                     ) if _ana_active else ""
+                    _qdist_str = (
+                        f" | qdist={running.get('quantum_loss_total', float('nan')):.3f}"
+                        f" qchg={running.get('quantum_loss_charge', float('nan')):.3f}"
+                        f" qfuk={running.get('quantum_loss_fukui', float('nan')):.3f}"
+                        f" qgap={running.get('quantum_loss_gap', float('nan')):.3f}"
+                    ) if running.get("quantum_supervision_available", 0.0) > 0.0 else ""
                     print(
                         f"batch={i}/{total_batches} "
                         f"loss_total={running.get('loss_total', float('nan')):.6g} "
@@ -2714,7 +2901,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                         f"top2={running.get('som_top2', float('nan')):.2%} "
                         f"pred_rate={running.get('pred_rate', float('nan')):.6g} "
                         f"dag_loss={running.get('dag_causal_loss', float('nan')):.6g}"
-                        f"{_ana_str}",
+                        f"{_ana_str}"
+                        f"{_qdist_str}",
                         flush=True,
                     )
             

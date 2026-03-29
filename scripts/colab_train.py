@@ -356,6 +356,12 @@ DAG_WARMUP_STEPS = _env_int("NEXUS_COLAB_DAG_WARMUP_STEPS", 0)
 KINETIC_WARMUP_STEPS = _env_int("NEXUS_COLAB_KINETIC_WARMUP_STEPS", 0)
 FLUX_LOSS_WEIGHT = _env_float("NEXUS_COLAB_FLUX_LOSS_WEIGHT", 0.1)
 ANA_LOSS_WEIGHT = _env_float("NEXUS_COLAB_ANA_LOSS_WEIGHT", 1.0)
+ANALOGICAL_ENGINE = _env_str("NEXUS_COLAB_ANALOGICAL_ENGINE", "classic").strip().lower() or "classic"
+if ANALOGICAL_ENGINE not in {"classic", "wave"}:
+    ANALOGICAL_ENGINE = "classic"
+QUANTUM_FEATURES_PATH_STR = _env_str("NEXUS_COLAB_QUANTUM_FEATURES_PATH", "").strip()
+QUANTUM_FEATURES_PATH = Path(QUANTUM_FEATURES_PATH_STR) if QUANTUM_FEATURES_PATH_STR else None
+QUANTUM_LOSS_WEIGHT = _env_float("NEXUS_COLAB_QUANTUM_LOSS_WEIGHT", 0.0)
 ANALOGICAL_BANK_MODE = _env_str("NEXUS_COLAB_ANALOGICAL_BANK_MODE", "fingerprint").strip().lower() or "fingerprint"
 if ANALOGICAL_BANK_MODE not in {"fingerprint", "continuous"}:
     ANALOGICAL_BANK_MODE = "fingerprint"
@@ -535,6 +541,9 @@ print(
     f"dag_cap={DAG_LOSS_CAP:g}  "
     f"ana_weight={ANA_LOSS_WEIGHT:g}"
 )
+print(f"Analogical engine : {ANALOGICAL_ENGINE}")
+if QUANTUM_FEATURES_PATH is not None:
+    print(f"Quantum targets : {QUANTUM_FEATURES_PATH}")
 print(f"Analogical bank : mode={ANALOGICAL_BANK_MODE}")
 if ANALOGICAL_BANK_MODE == "continuous":
     print(
@@ -564,9 +573,19 @@ trainer = Metabolic_Causal_Trainer(
     dag_warmup_steps=DAG_WARMUP_STEPS,
     kinetic_loss_warmup_steps=KINETIC_WARMUP_STEPS,
     analogical_loss_weight=ANA_LOSS_WEIGHT,
+    analogical_engine=ANALOGICAL_ENGINE,
+    quantum_loss_weight=QUANTUM_LOSS_WEIGHT,
     physics_cache_mode=PHYSICS_CACHE_MODE,
 ).to(device)
 trainer.sync_memory_bank_device(device)
+if QUANTUM_FEATURES_PATH is not None:
+    if QUANTUM_FEATURES_PATH.exists():
+        _quantum_count = trainer.load_quantum_feature_bank(QUANTUM_FEATURES_PATH)
+        print(f"  loaded {_quantum_count} quantum target entries")
+    else:
+        raise FileNotFoundError(
+            f"Quantum feature bank path does not exist: {QUANTUM_FEATURES_PATH}"
+        )
 if PHYSICS_CACHE_MODE != "off":
     if PHYSICS_CACHE_PATH.exists():
         _cache_count = trainer.load_physics_cache(PHYSICS_CACHE_PATH, mode=PHYSICS_CACHE_MODE)
