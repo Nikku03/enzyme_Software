@@ -166,7 +166,14 @@ class PGWTransporter:
         feats = torch.tensor(rows, dtype=torch.float64, device=self.device)
         return F.normalize(feats, p=2, dim=-1)
 
-    def _cross_feature_cost(self, query_mol, retrieved_mol) -> torch.Tensor:
+    def _cross_feature_cost(
+        self,
+        query_mol,
+        retrieved_mol,
+        *,
+        query_multivectors: Optional[torch.Tensor] = None,
+        retrieved_multivectors: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
         q_feat = self._atom_features(query_mol)
         r_feat = self._atom_features(retrieved_mol)
         # bounded [0, 2] Euclidean cost in feature space
@@ -340,7 +347,12 @@ class PGWTransporter:
             return self._partial_sinkhorn(anchor_cost, transported_mass=transported_mass), "zgw_linearized"
         c_query = self.compute_z_kernel_matrix(q_mv)
         c_retrieved = self.compute_z_kernel_matrix(r_mv)
-        m_cross = self._cross_feature_cost(query_mol, retrieved_mol)
+        m_cross = self._cross_feature_cost(
+            query_mol,
+            retrieved_mol,
+            query_multivectors=q_mv,
+            retrieved_multivectors=r_mv,
+        )
         return self._partial_z_gw(c_query, c_retrieved, cross_cost=m_cross), "zgw_exact"
 
     def _dynamic_multivector_router(
@@ -448,7 +460,12 @@ class PGWTransporter:
 
         c_query = self._distance_matrix(query_mol)
         c_retrieved = self._distance_matrix(retrieved_mol)
-        m_cross = self._cross_feature_cost(query_mol, retrieved_mol)
+        m_cross = self._cross_feature_cost(
+            query_mol,
+            retrieved_mol,
+            query_multivectors=q_mv,
+            retrieved_multivectors=r_mv,
+        )
 
         p = torch.full((c_query.size(0),), 1.0 / max(c_query.size(0), 1), dtype=torch.float64)
         q = torch.full((c_retrieved.size(0),), 1.0 / max(c_retrieved.size(0), 1), dtype=torch.float64)
