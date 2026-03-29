@@ -237,6 +237,11 @@ class Metabolic_Causal_Trainer(nn.Module):
             "WaveQuantumDistillationHead",
             None,
         )
+        MetricHGNNProjection = getattr(
+            self._metric_learner_module,
+            "HGNNProjection",
+            None,
+        )
         # Memory bank is populated externally (trainer.memory_bank.populate_from_mols)
         # before training begins.  Left empty here so training still runs without it.
         self.memory_bank = HyperbolicMemoryBank(device="cpu")
@@ -254,6 +259,12 @@ class Metabolic_Causal_Trainer(nn.Module):
             WaveQuantumDistillationHead()
             if self.analogical_engine == "wave" and WaveQuantumDistillationHead is not None
             else None
+        )
+        self.analogical_mechanism_encoder = self.gated_loss.mechanism_encoder
+        self.analogical_hyperbolic_projector = (
+            MetricHGNNProjection(hidden_dim=256, poincare_dim=128, c=1.0)
+            if self.analogical_engine == "wave" and MetricHGNNProjection is not None
+            else self.gated_loss.hyperbolic_projector
         )
         self.quantum_feature_bank: Dict[str, Dict[str, Any]] = {}
         self.analogical_trace_enabled = False
@@ -651,7 +662,7 @@ class Metabolic_Causal_Trainer(nn.Module):
 
     def _project_module1_hyperbolic(self, module1_out: NEXUS_Module1_Output) -> torch.Tensor:
         node_multivectors = self._module1_node_multivectors(module1_out)
-        return self.gated_loss.hyperbolic_projector(node_multivectors)
+        return self.analogical_hyperbolic_projector(node_multivectors)
 
     def encode_smiles_for_memory_bank(self, smiles: str) -> Dict[str, torch.Tensor]:
         # The manifold refiner internally calls torch.autograd.grad, so it
@@ -669,7 +680,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                 node_multivectors = latent.mean(dim=-2)
             else:
                 node_multivectors = latent
-            embedding = self.gated_loss.hyperbolic_projector(node_multivectors)
+            embedding = self.analogical_hyperbolic_projector(node_multivectors)
         return {
             "graph_embedding": embedding.detach().float().cpu(),
             "node_multivectors": node_multivectors.detach().float().cpu(),
@@ -766,7 +777,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                 node_multivectors = latent.mean(dim=-2)
             else:
                 node_multivectors = latent
-            embedding = self.gated_loss.hyperbolic_projector(node_multivectors)
+            embedding = self.analogical_hyperbolic_projector(node_multivectors)
 
         return {
             "graph_embedding": embedding.detach().float().cpu(),
@@ -1768,6 +1779,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         atom_mv = embed_coordinates(manifold_pos.to(dtype=exp_rate.dtype)).clone()
         atom_mv[..., 0] = effective_reactivity
         atom_mv = atom_mv.unsqueeze(0)   # [1, N_atoms, 8]  — single-compound batch dim
+        live_node_multivectors = self._to_fp32(self._module1_node_multivectors(module1_out))
         quantum_loss_weighted = torch.zeros((), dtype=torch.float32, device=device)
         quantum_loss_charge = torch.zeros((), dtype=torch.float32, device=device)
         quantum_loss_fukui = torch.zeros((), dtype=torch.float32, device=device)
@@ -1793,9 +1805,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                     None,
                 )
                 if _quantum_targets is not None and callable(_quantum_loss_fn):
-                    _node_multivectors_live = self._module1_node_multivectors(module1_out)
                     _quantum_pred = self.wave_quantum_head(
-                        _node_multivectors_live,
+                        live_node_multivectors,
                         atom_mask=_quantum_targets["atom_mask"],
                     )
                     _quantum_total_raw, _quantum_info = _quantum_loss_fn(
@@ -2011,11 +2022,10 @@ class Metabolic_Causal_Trainer(nn.Module):
                 from rdkit import Chem as _Chem
                 _query_mol = _Chem.MolFromSmiles(smiles)
                 if _query_mol is not None:
-                    # Use the atom multivectors already assembled for the DAG learner
-                    # (atom_mv: [1, N, 8]) instead of re-querying the SIREN field.
-                    # Re-querying SIREN duplicates the most expensive op in the pipeline
-                    # and the atom_mv already encodes position + reactivity in G(3,0,0).
-                    _query_node_multivectors = atom_mv.squeeze(0).detach()  # [N, 8]
+                    # Wave/classic analogical routing should consume the same
+                    # live module-1 node multivectors that upstream supervision
+                    # sees, not the fallback position+reactivity `atom_mv`.
+                    _query_node_multivectors = live_node_multivectors
 
                     # Only project to hyperbolic space when the bank actually contains
                     # continuous (HGNN) embeddings — otherwise the projection is wasted.
@@ -2024,8 +2034,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                         and bool(self.memory_bank.memory_projected_mask.any().item())
                     )
                     if _bank_has_continuous:
-                        _query_hyper_embed = self.gated_loss.hyperbolic_projector(
-                            atom_mv.squeeze(0)
+                        _query_hyper_embed = self.analogical_hyperbolic_projector(
+                            _query_node_multivectors
                         )
                     else:
                         _query_hyper_embed = None
@@ -2045,7 +2055,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                     _result = self.memory_bank.retrieve_and_transport(
                         _query_mol,
                         query_smiles=smiles,
-                        mechanism_encoder=self.gated_loss.mechanism_encoder,
+                        mechanism_encoder=self.analogical_mechanism_encoder,
                         query_embedding=_query_hyper_embed,
                         query_multivectors=_query_node_multivectors,
                         query_morphism_prior=_query_morphism_prior,
@@ -2183,7 +2193,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                                 _ret_mv = torch.tensor(
                                     _ret_mv_rows, dtype=torch.float32, device=device
                                 )
-                            _query_mv = self._to_fp32(atom_mv.squeeze(0))
+                            _query_mv = _query_node_multivectors
                             _scan_valid = (
                                 (_scan_atom_idx >= 0)
                                 & (_scan_atom_idx < _query_mv.size(0))
