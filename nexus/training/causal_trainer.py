@@ -201,6 +201,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.analogical_loss_weight = float(max(analogical_loss_weight, 0.0))
         self.analogical_engine = self._resolve_analogical_engine_name(analogical_engine)
         self.quantum_loss_weight = float(max(quantum_loss_weight, 0.0))
+        self.quantum_som_blend = 0.20
         self.physics_cache_mode = str(physics_cache_mode).strip().lower() or "off"
         if self.physics_cache_mode not in {"off", "cached", "hybrid"}:
             self.physics_cache_mode = "off"
@@ -390,6 +391,43 @@ class Metabolic_Causal_Trainer(nn.Module):
             "homo_lumo_gap_ev": gap,
             "atom_mask": atom_mask,
         }
+
+    def _build_quantum_smoothed_som_target(
+        self,
+        *,
+        true_index: int,
+        atom_count: int,
+        quantum_targets: Optional[Mapping[str, torch.Tensor]],
+        device: torch.device,
+        scan_atom_idx: Optional[torch.Tensor] = None,
+    ) -> Optional[torch.Tensor]:
+        if quantum_targets is None:
+            return None
+        fukui = torch.as_tensor(
+            quantum_targets.get("fukui_f_zero"),
+            dtype=torch.float32,
+            device=device,
+        ).view(-1)
+        if fukui.numel() != int(atom_count):
+            return None
+        fukui = fukui.clamp_min(0.0)
+        if float(fukui.sum().item()) <= 0.0:
+            return None
+        fukui = fukui / fukui.sum().clamp_min(1.0e-8)
+        hard = torch.zeros(atom_count, dtype=torch.float32, device=device)
+        if 0 <= int(true_index) < atom_count:
+            hard[int(true_index)] = 1.0
+        blend = float(min(max(self.quantum_som_blend, 0.0), 1.0))
+        soft = (1.0 - blend) * hard + blend * fukui
+        soft = soft / soft.sum().clamp_min(1.0e-8)
+        if scan_atom_idx is not None:
+            scan_idx = torch.as_tensor(scan_atom_idx, dtype=torch.long, device=device).view(-1)
+            valid = (scan_idx >= 0) & (scan_idx < atom_count)
+            if not bool(valid.all().item()):
+                return None
+            soft = soft.index_select(0, scan_idx)
+            soft = soft / soft.sum().clamp_min(1.0e-8)
+        return soft
 
     def set_analogical_trace(
         self,
@@ -1788,6 +1826,9 @@ class Metabolic_Causal_Trainer(nn.Module):
         quantum_pred_charge_mean = torch.zeros((), dtype=torch.float32, device=device)
         quantum_pred_fukui_mean = torch.zeros((), dtype=torch.float32, device=device)
         quantum_pred_gap = torch.zeros((), dtype=torch.float32, device=device)
+        som_soft_target = None
+        scan_som_soft_target = None
+        _quantum_targets = None
         if (
             self.wave_quantum_head is not None
             and self.quantum_loss_weight > 0.0
@@ -1846,6 +1887,12 @@ class Metabolic_Causal_Trainer(nn.Module):
                     ).view(-1)[0].detach()
             except Exception:
                 pass
+        som_soft_target = self._build_quantum_smoothed_som_target(
+            true_index=int(true_row_index.item()),
+            atom_count=int(atom_mv.size(1)),
+            quantum_targets=_quantum_targets,
+            device=device,
+        )
         dag_output = self.dag_learner(
             atom_mv,
             # Per-source activation barriers: [1, N, 1] broadcasts against [1, N, N] prior.
@@ -1885,6 +1932,7 @@ class Metabolic_Causal_Trainer(nn.Module):
             reconstruction_loss=reconstruction_loss,
             ranking_loss=ranking_loss,
             kinetic_loss_scale=_kinetic_scale,
+            som_soft_target=som_soft_target,
         )
         # Normalise DAG causal loss by N² so the acyclicity penalty does not explode
         # on large molecules: for an N-atom molecule the penalty grows O(N²) otherwise.
@@ -2264,6 +2312,13 @@ class Metabolic_Causal_Trainer(nn.Module):
                                             dtype=torch.float32,
                                             device=device,
                                         )
+                                    scan_som_soft_target = self._build_quantum_smoothed_som_target(
+                                        true_index=int(true_row_index.item()),
+                                        atom_count=int(atom_mv.size(1)),
+                                        quantum_targets=_quantum_targets,
+                                        device=device,
+                                        scan_atom_idx=_scan_atom_idx,
+                                    )
                                     _ret_morph_target = None
                                     _ret_morph_mask = None
                                     _ret_has_morph = torch.zeros((), dtype=torch.float32, device=device)
@@ -2350,6 +2405,11 @@ class Metabolic_Causal_Trainer(nn.Module):
                                         _som_target_scan,
                                         _morph_target_scan,
                                         _morph_mask_scan,
+                                        som_soft_target=(
+                                            scan_som_soft_target.unsqueeze(0)
+                                            if scan_som_soft_target is not None
+                                            else None
+                                        ),
                                         label_confidence=_label_confidence,
                                         has_morphism_label=_has_morph_label,
                                         bridge_loss=_bridge_loss,

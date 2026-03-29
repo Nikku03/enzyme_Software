@@ -142,6 +142,7 @@ class HomoscedasticArbiterLoss(nn.Module):
         morph_target: torch.Tensor,
         morph_mask: torch.Tensor,
         *,
+        som_soft_target: torch.Tensor | None = None,
         label_confidence: torch.Tensor | float | None = None,
         has_morphism_label: torch.Tensor | bool | None = None,
         bridge_loss: torch.Tensor | None = None,
@@ -157,6 +158,15 @@ class HomoscedasticArbiterLoss(nn.Module):
             raise ValueError("Morphism dual decoder logits must have shape [B, N, C]")
         device = y_hat_fp_som.device
         som_target = som_target.to(device=device, dtype=torch.float32)
+        if som_soft_target is not None:
+            som_soft_target = torch.as_tensor(
+                som_soft_target,
+                dtype=torch.float32,
+                device=device,
+            ).view_as(som_target)
+            som_soft_target = som_soft_target.clamp(0.0, 1.0)
+        else:
+            som_soft_target = som_target
         morph_target = morph_target.to(device=device, dtype=torch.float32)
         morph_mask = morph_mask.to(device=device, dtype=torch.float32)
         if label_confidence is None:
@@ -168,8 +178,8 @@ class HomoscedasticArbiterLoss(nn.Module):
         else:
             has_morph_t = torch.as_tensor(has_morphism_label, dtype=torch.float32, device=device).view(())
 
-        loss_fp_som = F.binary_cross_entropy_with_logits(y_hat_fp_som, som_target)
-        loss_ana_som = F.binary_cross_entropy_with_logits(y_hat_ana_som, som_target)
+        loss_fp_som = F.binary_cross_entropy_with_logits(y_hat_fp_som, som_soft_target)
+        loss_ana_som = F.binary_cross_entropy_with_logits(y_hat_ana_som, som_soft_target)
 
         raw_fp_morph = self.morphism_criterion(
             y_hat_fp_morph,

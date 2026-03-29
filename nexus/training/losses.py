@@ -128,10 +128,22 @@ class NEXUS_God_Loss(nn.Module):
         delta_E_tensor: torch.Tensor,
         true_som_idx: torch.Tensor | int,
         beta: Optional[float] = None,
+        som_soft_target: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         if delta_E_tensor.ndim != 1:
             raise ValueError("delta_E_tensor must have shape [N_atoms]")
         logits = -(float(self.beta if beta is None else beta)) * delta_E_tensor
+        if som_soft_target is not None:
+            soft_target = torch.as_tensor(
+                som_soft_target,
+                dtype=torch.float32,
+                device=delta_E_tensor.device,
+            ).view(-1)
+            if soft_target.numel() != delta_E_tensor.numel():
+                raise ValueError("som_soft_target must match delta_E_tensor shape")
+            soft_target = soft_target.clamp_min(0.0)
+            soft_target = soft_target / soft_target.sum().clamp_min(1.0e-8)
+            return -(soft_target * F.log_softmax(logits, dim=-1)).sum()
         if self.som_loss_mode == "listmle":
             return self.ranking_loss_fn(logits, true_som_idx)
         if self.som_loss_mode == "focal":
@@ -201,8 +213,13 @@ class NEXUS_God_Loss(nn.Module):
         reconstruction_loss: Optional[torch.Tensor] = None,
         ranking_loss: Optional[torch.Tensor] = None,
         kinetic_loss_scale: float = 1.0,
+        som_soft_target: Optional[torch.Tensor] = None,
     ) -> GodLossBreakdown:
-        som_loss = self.compute_som_loss(delta_E_tensor, true_som_idx)
+        som_loss = self.compute_som_loss(
+            delta_E_tensor,
+            true_som_idx,
+            som_soft_target=som_soft_target,
+        )
         kinetic_loss = self.compute_kinetic_loss(pred_rate, exp_rate) * float(kinetic_loss_scale)
         physics_loss = self.compute_physics_loss(sobolev_penalty, H_initial, H_final)
         topology_loss = self.compute_topology_loss(ts_eigenvalues)
@@ -244,6 +261,7 @@ class NEXUS_God_Loss(nn.Module):
         reconstruction_loss: Optional[torch.Tensor] = None,
         ranking_loss: Optional[torch.Tensor] = None,
         kinetic_loss_scale: float = 1.0,
+        som_soft_target: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         breakdown = self.compute_raw_losses(
             delta_E_tensor=delta_E_tensor,
@@ -258,6 +276,7 @@ class NEXUS_God_Loss(nn.Module):
             reconstruction_loss=reconstruction_loss,
             kinetic_loss_scale=kinetic_loss_scale,
             ranking_loss=ranking_loss,
+            som_soft_target=som_soft_target,
         )
         safe_log_vars = torch.clamp(self.log_vars, min=self.log_var_min, max=self.log_var_max)
         precision = torch.exp(-safe_log_vars)

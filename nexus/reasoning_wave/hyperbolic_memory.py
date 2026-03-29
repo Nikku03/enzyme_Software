@@ -21,8 +21,30 @@ class HyperbolicMemoryBank(ClassicHyperbolicMemoryBank):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self._wave_query_embedding: torch.Tensor | None = None
         if self.transport_backend == "pgw":
             self.pgw = WavePGWTransporter(device=self.device)
+
+    def _dense_projected_similarity(self, query_embedding: torch.Tensor) -> torch.Tensor:
+        if self.memory_embeddings is None:
+            raise RuntimeError("Call populate_from_mols() before dense projected retrieval.")
+        target_dim = int(self.memory_embeddings.size(-1))
+        prepared_query = torch.as_tensor(query_embedding, dtype=torch.float32, device=self.device).view(-1)
+        if prepared_query.numel() < target_dim:
+            prepared_query = torch.nn.functional.pad(prepared_query, (0, target_dim - prepared_query.numel()))
+        elif prepared_query.numel() > target_dim:
+            prepared_query = prepared_query[:target_dim]
+        q_embed_h = self._project_inside_ball(prepared_query.view(1, -1))
+        distances = self._poincare_distance(q_embed_h, self.memory_embeddings).view(-1)
+        return torch.exp(-distances / 5.0).to(dtype=torch.float32)
+
+    def _tanimoto_similarity(self, q_fp: torch.Tensor) -> torch.Tensor:
+        if self._wave_query_embedding is not None and self.memory_embeddings is not None:
+            try:
+                return self._dense_projected_similarity(self._wave_query_embedding)
+            except Exception:
+                pass
+        return super()._tanimoto_similarity(q_fp)
 
     def _load_continuous_bank_cache(self, cache_path: Path) -> bool:
         try:
@@ -69,6 +91,20 @@ class HyperbolicMemoryBank(ClassicHyperbolicMemoryBank):
                 f"{invalid_projected} downgraded projected entries (missing node multivectors)."
             )
         print(f"  Saved wave continuous bank cache → {cache_path}")
+
+    def retrieve_and_transport(self, *args, query_embedding=None, **kwargs):
+        self._wave_query_embedding = None
+        if query_embedding is not None:
+            try:
+                self._wave_query_embedding = torch.as_tensor(
+                    query_embedding, dtype=torch.float32, device=self.device
+                )
+            except Exception:
+                self._wave_query_embedding = None
+        try:
+            return super().retrieve_and_transport(*args, query_embedding=query_embedding, **kwargs)
+        finally:
+            self._wave_query_embedding = None
 
 
 __all__ = ["HyperbolicMemoryBank"]
