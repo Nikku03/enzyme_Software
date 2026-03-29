@@ -33,6 +33,10 @@ from typing import Any, Dict, Iterable, Optional
 
 import numpy as np
 import torch
+try:
+    from scipy.optimize import linear_sum_assignment
+except Exception:  # pragma: no cover - optional dependency
+    linear_sum_assignment = None
 
 try:
     from rdkit import Chem
@@ -55,6 +59,7 @@ from enzyme_software.liquid_nn_v2.utils.mol_preprocessing import prepare_mol
 
 
 _FLOAT_RE = re.compile(r"[-+]?\d+(?:\.\d+)?(?:[Ee][-+]?\d+)?")
+DISTILL_CACHE_VERSION = 2
 
 
 def _cache_key(smiles: str) -> str:
@@ -107,6 +112,103 @@ def _parse_gap_from_stdout(stdout: str) -> float:
         except ValueError:
             continue
     return 0.0
+
+
+def _atomic_numbers_and_coords(mol) -> tuple[np.ndarray, np.ndarray]:
+    conf = mol.GetConformer()
+    atom_numbers = np.asarray([int(atom.GetAtomicNum()) for atom in mol.GetAtoms()], dtype=np.int64)
+    coords = np.asarray(conf.GetPositions(), dtype=np.float32)
+    return atom_numbers, coords
+
+
+def _parse_xyz_atoms(path: Path) -> Optional[tuple[np.ndarray, np.ndarray]]:
+    if not path.exists():
+        return None
+    lines = path.read_text().splitlines()
+    if len(lines) < 3:
+        return None
+    symbols: list[int] = []
+    coords: list[list[float]] = []
+    for line in lines[2:]:
+        parts = line.strip().split()
+        if len(parts) < 4:
+            continue
+        atom = Chem.GetPeriodicTable().GetAtomicNumber(parts[0])
+        if atom <= 0:
+            continue
+        try:
+            xyz = [float(parts[1]), float(parts[2]), float(parts[3])]
+        except ValueError:
+            continue
+        symbols.append(atom)
+        coords.append(xyz)
+    if not coords:
+        return None
+    return np.asarray(symbols, dtype=np.int64), np.asarray(coords, dtype=np.float32)
+
+
+def _align_xtb_to_rdkit(
+    rdkit_atomic_numbers: np.ndarray,
+    rdkit_coords: np.ndarray,
+    xtb_atomic_numbers: np.ndarray,
+    xtb_coords: np.ndarray,
+    *,
+    threshold: float = 1.0e-2,
+) -> tuple[np.ndarray, float, bool]:
+    if rdkit_coords.shape != xtb_coords.shape:
+        raise ValueError("RDKit/xTB coordinate arrays have different shapes")
+    if rdkit_atomic_numbers.shape != xtb_atomic_numbers.shape:
+        raise ValueError("RDKit/xTB atom-number arrays have different shapes")
+
+    if np.array_equal(rdkit_atomic_numbers, xtb_atomic_numbers):
+        direct = np.linalg.norm(rdkit_coords - xtb_coords, axis=1)
+        max_direct = float(direct.max(initial=0.0))
+        if max_direct <= threshold:
+            identity = np.arange(rdkit_coords.shape[0], dtype=np.int64)
+            return identity, max_direct, False
+
+    n_atoms = int(rdkit_coords.shape[0])
+    dist = np.linalg.norm(
+        rdkit_coords[:, None, :] - xtb_coords[None, :, :],
+        axis=-1,
+    )
+    atom_match = rdkit_atomic_numbers[:, None] == xtb_atomic_numbers[None, :]
+    penalty = np.where(atom_match, 0.0, 1.0e6)
+    cost = dist + penalty
+    assignment = np.full(n_atoms, -1, dtype=np.int64)
+    if linear_sum_assignment is not None:
+        row_ind, col_ind = linear_sum_assignment(cost)
+        if len(row_ind) != n_atoms:
+            raise ValueError("Could not build a full RDKit/xTB atom assignment")
+        assignment[row_ind] = col_ind
+    else:
+        used_cols: set[int] = set()
+        flat_pairs = sorted(
+            (
+                (float(cost[i, j]), i, j)
+                for i in range(n_atoms)
+                for j in range(n_atoms)
+                if atom_match[i, j]
+            ),
+            key=lambda item: item[0],
+        )
+        for _, i, j in flat_pairs:
+            if assignment[i] >= 0 or j in used_cols:
+                continue
+            assignment[i] = j
+            used_cols.add(j)
+    if np.any(assignment < 0):
+        raise ValueError("Incomplete RDKit/xTB atom assignment")
+    assigned_dist = dist[np.arange(n_atoms), assignment]
+    if np.any(~atom_match[np.arange(n_atoms), assignment]):
+        raise ValueError("RDKit/xTB assignment violated atomic-number consistency")
+    max_dist = float(assigned_dist.max(initial=0.0))
+    if max_dist > threshold:
+        raise ValueError(
+            f"RDKit/xTB coordinate alignment exceeded threshold ({max_dist:.6f} > {threshold:.6f})"
+        )
+    remapped = not np.array_equal(assignment, np.arange(n_atoms, dtype=np.int64))
+    return assignment, max_dist, remapped
 
 
 def _parse_vector_file(path: Path, expected_len: int) -> Optional[np.ndarray]:
@@ -215,11 +317,16 @@ def _parse_any_fukui(tmpdir: Path, atom_count: int) -> Optional[dict[str, np.nda
 def _invalid_payload(canonical_smiles: str, atom_count: int, *, status: str, error: Optional[str]) -> Dict[str, Any]:
     zeros = np.zeros(atom_count, dtype=np.float32)
     return {
+        "cache_version": DISTILL_CACHE_VERSION,
         "canonical_smiles": canonical_smiles,
         "xtb_valid": False,
         "status": status,
         "error": error,
         "atom_count": int(atom_count),
+        "atom_numbers": np.zeros(atom_count, dtype=np.int64),
+        "xtb_to_rdkit_map": np.arange(atom_count, dtype=np.int64),
+        "alignment_max_distance": 0.0,
+        "alignment_remapped": False,
         "charges": zeros,
         "wbo_sum": zeros,
         "wbo_max": zeros,
@@ -240,6 +347,7 @@ def compute_quantum_wave_payload(
     prepared = _ensure_conformer(mol)
     canonical = _canonical_smiles(prepared)
     atom_count = prepared.GetNumAtoms()
+    rdkit_atomic_numbers, rdkit_coords = _atomic_numbers_and_coords(prepared)
     if shutil.which(xtb_path) is None:
         return _invalid_payload(
             canonical,
@@ -293,6 +401,9 @@ def compute_quantum_wave_payload(
         wbo = _parse_wbo(tmpdir / "wbo", atom_count)
         fukui = _parse_any_fukui(tmpdir, atom_count)
         gap = _parse_gap_from_stdout(proc.stdout)
+        xtb_xyz = _parse_xyz_atoms(tmpdir / "xtbopt.xyz")
+        if xtb_xyz is None:
+            xtb_xyz = _parse_xyz_atoms(xyz_path)
 
     if charges is None:
         return _invalid_payload(
@@ -301,13 +412,53 @@ def compute_quantum_wave_payload(
             status="charges_missing",
             error="xTB completed but charges file was missing or truncated",
         )
+    if xtb_xyz is None:
+        return _invalid_payload(
+            canonical,
+            atom_count,
+            status="coords_missing",
+            error="xTB completed but no coordinate file could be parsed",
+        )
+
+    try:
+        xtb_atomic_numbers, xtb_coords = xtb_xyz
+        xtb_to_rdkit_map, alignment_max_distance, alignment_remapped = _align_xtb_to_rdkit(
+            rdkit_atomic_numbers,
+            rdkit_coords,
+            xtb_atomic_numbers,
+            xtb_coords,
+        )
+    except Exception as exc:
+        return _invalid_payload(
+            canonical,
+            atom_count,
+            status="alignment_failed",
+            error=str(exc)[:2000],
+        )
+
+    charges = np.asarray(charges, dtype=np.float32)[xtb_to_rdkit_map]
+    if wbo is not None:
+        wbo = {
+            "wbo_sum": np.asarray(wbo["wbo_sum"], dtype=np.float32)[xtb_to_rdkit_map],
+            "wbo_max": np.asarray(wbo["wbo_max"], dtype=np.float32)[xtb_to_rdkit_map],
+        }
+    if fukui is not None:
+        fukui = {
+            key: np.asarray(value, dtype=np.float32)[xtb_to_rdkit_map]
+            for key, value in fukui.items()
+        }
 
     payload = {
+        "cache_version": DISTILL_CACHE_VERSION,
         "canonical_smiles": canonical,
         "xtb_valid": True,
         "status": "ok",
         "error": None,
         "atom_count": int(atom_count),
+        "atom_numbers": rdkit_atomic_numbers.astype(np.int64),
+        "xtb_to_rdkit_map": xtb_to_rdkit_map.astype(np.int64),
+        "alignment_max_distance": float(alignment_max_distance),
+        "alignment_remapped": bool(alignment_remapped),
         "charges": charges,
         "wbo_sum": np.zeros(atom_count, dtype=np.float32) if wbo is None else wbo["wbo_sum"],
         "wbo_max": np.zeros(atom_count, dtype=np.float32) if wbo is None else wbo["wbo_max"],
@@ -331,11 +482,16 @@ def _json_ready(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 def _tensorize_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     return {
+        "cache_version": int(payload.get("cache_version", 0)),
         "canonical_smiles": payload["canonical_smiles"],
         "xtb_valid": bool(payload["xtb_valid"]),
         "status": payload["status"],
         "error": payload["error"],
         "atom_count": int(payload["atom_count"]),
+        "atom_numbers": torch.tensor(payload.get("atom_numbers", []), dtype=torch.long),
+        "xtb_to_rdkit_map": torch.tensor(payload.get("xtb_to_rdkit_map", []), dtype=torch.long),
+        "alignment_max_distance": torch.tensor(float(payload.get("alignment_max_distance", 0.0)), dtype=torch.float32),
+        "alignment_remapped": bool(payload.get("alignment_remapped", False)),
         "charges": torch.tensor(payload["charges"], dtype=torch.float32),
         "wbo_sum": torch.tensor(payload["wbo_sum"], dtype=torch.float32),
         "wbo_max": torch.tensor(payload["wbo_max"], dtype=torch.float32),
@@ -404,10 +560,13 @@ def main() -> None:
             continue
 
         cache_path = cache_dir / f"{_cache_key(canonical)}.json"
+        payload = None
         if args.skip_existing and cache_path.exists():
-            payload = json.loads(cache_path.read_text())
-            skipped += 1
-        else:
+            cached_payload = json.loads(cache_path.read_text())
+            if int(cached_payload.get("cache_version", 0)) == DISTILL_CACHE_VERSION:
+                payload = cached_payload
+                skipped += 1
+        if payload is None:
             payload = _json_ready(
                 compute_quantum_wave_payload(
                     mol,
