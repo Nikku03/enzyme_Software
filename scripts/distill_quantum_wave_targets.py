@@ -1,0 +1,427 @@
+"""
+Offline GFN2-xTB distillation for local quantum targets.
+
+This script builds a per-molecule cache of xTB-derived atomwise quantities and
+then packages the dataset into a single `.pt` payload keyed by canonical
+SMILES. It is intended as Phase 1 fuel for a future wave/equivariant analogical
+engine and deliberately stays outside the main training loop.
+
+Targets captured when available:
+  - partial charges
+  - Wiberg bond-order summaries per atom
+  - vertical Fukui indices f(+), f(-), f(0)
+  - HOMO/LUMO gap (parsed from xTB stdout)
+
+Example:
+    python scripts/distill_quantum_wave_targets.py \
+        --sdf data/ATTNSOM/cyp_dataset/3A4.sdf \
+        --output artifacts/quantum/nexus_3a4_quantum_features.pt \
+        --cache-dir cache/quantum_wave_xtb
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any, Dict, Iterable, Optional
+
+import numpy as np
+import torch
+
+try:
+    from rdkit import Chem
+    from rdkit.Chem import AllChem
+except Exception as exc:  # pragma: no cover - environment issue
+    raise RuntimeError("RDKit is required for quantum distillation") from exc
+
+try:
+    from tqdm import tqdm
+except Exception:  # pragma: no cover - optional dependency
+    tqdm = None
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = REPO_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
+from enzyme_software.liquid_nn_v2.utils.mol_preprocessing import prepare_mol
+
+
+_FLOAT_RE = re.compile(r"[-+]?\d+(?:\.\d+)?(?:[Ee][-+]?\d+)?")
+
+
+def _cache_key(smiles: str) -> str:
+    return hashlib.sha256(smiles.encode("utf-8")).hexdigest()[:24]
+
+
+def _canonical_smiles(mol) -> str:
+    try:
+        return Chem.MolToSmiles(Chem.RemoveHs(Chem.Mol(mol)), canonical=True, isomericSmiles=True)
+    except Exception:
+        return Chem.MolToSmiles(Chem.Mol(mol), canonical=True, isomericSmiles=True)
+
+
+def _ensure_conformer(mol):
+    work = Chem.Mol(mol)
+    if work.GetNumConformers() > 0:
+        return work
+    work = Chem.AddHs(work, addCoords=True)
+    params = AllChem.ETKDGv3()
+    params.randomSeed = 42
+    params.useRandomCoords = False
+    if int(AllChem.EmbedMolecule(work, params)) != 0:
+        if int(AllChem.EmbedMolecule(work, randomSeed=42)) != 0:
+            fallback = AllChem.ETKDGv3()
+            fallback.randomSeed = 0
+            fallback.useRandomCoords = True
+            if int(AllChem.EmbedMolecule(work, fallback)) != 0:
+                raise RuntimeError("RDKit embedding failed")
+    try:
+        AllChem.MMFFOptimizeMolecule(work)
+    except Exception:
+        pass
+    return work
+
+
+def _mol_to_xyz_path(mol, path: Path) -> None:
+    xyz_block = Chem.MolToXYZBlock(mol)
+    path.write_text(xyz_block, encoding="utf-8")
+
+
+def _parse_gap_from_stdout(stdout: str) -> float:
+    for line in stdout.splitlines():
+        if "HOMO-LUMO GAP" not in line.upper():
+            continue
+        floats = _FLOAT_RE.findall(line)
+        if not floats:
+            continue
+        try:
+            return float(floats[-1])
+        except ValueError:
+            continue
+    return 0.0
+
+
+def _parse_vector_file(path: Path, expected_len: int) -> Optional[np.ndarray]:
+    if not path.exists():
+        return None
+    values: list[float] = []
+    for line in path.read_text().splitlines():
+        parts = line.strip().split()
+        if not parts:
+            continue
+        try:
+            values.append(float(parts[-1]))
+        except ValueError:
+            continue
+    if len(values) < expected_len:
+        return None
+    return np.asarray(values[:expected_len], dtype=np.float32)
+
+
+def _parse_wbo(path: Path, atom_count: int) -> Optional[dict[str, np.ndarray]]:
+    if not path.exists():
+        return None
+    wbo_sum = np.zeros(atom_count, dtype=np.float32)
+    wbo_max = np.zeros(atom_count, dtype=np.float32)
+    any_found = False
+    for line in path.read_text().splitlines():
+        parts = line.strip().split()
+        if len(parts) < 3:
+            continue
+        try:
+            a = int(parts[0]) - 1
+            b = int(parts[1]) - 1
+            value = float(parts[2])
+        except ValueError:
+            continue
+        if 0 <= a < atom_count and 0 <= b < atom_count:
+            any_found = True
+            wbo_sum[a] += value
+            wbo_sum[b] += value
+            wbo_max[a] = max(wbo_max[a], value)
+            wbo_max[b] = max(wbo_max[b], value)
+    if not any_found:
+        return None
+    return {
+        "wbo_sum": wbo_sum,
+        "wbo_max": wbo_max,
+    }
+
+
+def _candidate_fukui_files(tmpdir: Path) -> Iterable[Path]:
+    seen: set[Path] = set()
+    for pattern in ("fukui", "fukui.out", "vfukui", "vfukui.out", "*fukui*"):
+        for path in tmpdir.glob(pattern):
+            if path.is_file() and path not in seen:
+                seen.add(path)
+                yield path
+
+
+def _parse_fukui_table(path: Path, atom_count: int) -> Optional[dict[str, np.ndarray]]:
+    lines = path.read_text().splitlines()
+    rows: list[tuple[float, float, float]] = []
+    in_table = False
+    for line in lines:
+        if ("f(+)" in line and "f(-)" in line) or ("fukui" in line.lower() and "#" in line):
+            in_table = True
+            continue
+        if not in_table:
+            continue
+        if not line.strip():
+            if rows:
+                break
+            continue
+        parts = line.split()
+        if len(parts) < 4:
+            continue
+        try:
+            int(parts[0])
+        except ValueError:
+            continue
+        floats = []
+        for token in parts[1:]:
+            try:
+                floats.append(float(token))
+            except ValueError:
+                continue
+        if len(floats) >= 3:
+            rows.append((floats[-3], floats[-2], floats[-1]))
+    if len(rows) < atom_count:
+        return None
+    arr = np.asarray(rows[:atom_count], dtype=np.float32)
+    return {
+        "fukui_f_plus": arr[:, 0],
+        "fukui_f_minus": arr[:, 1],
+        "fukui_f_zero": arr[:, 2],
+    }
+
+
+def _parse_any_fukui(tmpdir: Path, atom_count: int) -> Optional[dict[str, np.ndarray]]:
+    for path in _candidate_fukui_files(tmpdir):
+        parsed = _parse_fukui_table(path, atom_count)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _invalid_payload(canonical_smiles: str, atom_count: int, *, status: str, error: Optional[str]) -> Dict[str, Any]:
+    zeros = np.zeros(atom_count, dtype=np.float32)
+    return {
+        "canonical_smiles": canonical_smiles,
+        "xtb_valid": False,
+        "status": status,
+        "error": error,
+        "atom_count": int(atom_count),
+        "charges": zeros,
+        "wbo_sum": zeros,
+        "wbo_max": zeros,
+        "fukui_f_plus": zeros,
+        "fukui_f_minus": zeros,
+        "fukui_f_zero": zeros,
+        "homo_lumo_gap_ev": 0.0,
+    }
+
+
+def compute_quantum_wave_payload(
+    mol,
+    *,
+    xtb_path: str = "xtb",
+    timeout_s: int = 900,
+    solvent: str = "water",
+) -> Dict[str, Any]:
+    prepared = _ensure_conformer(mol)
+    canonical = _canonical_smiles(prepared)
+    atom_count = prepared.GetNumAtoms()
+    if shutil.which(xtb_path) is None:
+        return _invalid_payload(
+            canonical,
+            atom_count,
+            status="xtb_unavailable",
+            error=f"{xtb_path!r} not found in PATH",
+        )
+
+    charge = int(sum(int(atom.GetFormalCharge()) for atom in prepared.GetAtoms()))
+    with tempfile.TemporaryDirectory(prefix="quantum_wave_xtb_") as tmp:
+        tmpdir = Path(tmp)
+        xyz_path = tmpdir / "input.xyz"
+        _mol_to_xyz_path(prepared, xyz_path)
+        cmd = [
+            xtb_path,
+            str(xyz_path),
+            "--gfn",
+            "2",
+            "--chrg",
+            str(charge),
+            "--uhf",
+            "0",
+            "--vfukui",
+            "--wbo",
+            "--pop",
+        ]
+        if solvent:
+            cmd.extend(["--alpb", str(solvent)])
+        try:
+            proc = subprocess.run(
+                cmd,
+                cwd=tmpdir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=timeout_s,
+                check=False,
+            )
+        except Exception as exc:
+            return _invalid_payload(canonical, atom_count, status="xtb_error", error=str(exc))
+
+        if proc.returncode != 0:
+            return _invalid_payload(
+                canonical,
+                atom_count,
+                status="xtb_failed",
+                error=(proc.stderr.strip() or proc.stdout.strip() or f"returncode={proc.returncode}")[:2000],
+            )
+
+        charges = _parse_vector_file(tmpdir / "charges", atom_count)
+        wbo = _parse_wbo(tmpdir / "wbo", atom_count)
+        fukui = _parse_any_fukui(tmpdir, atom_count)
+        gap = _parse_gap_from_stdout(proc.stdout)
+
+    if charges is None:
+        return _invalid_payload(
+            canonical,
+            atom_count,
+            status="charges_missing",
+            error="xTB completed but charges file was missing or truncated",
+        )
+
+    payload = {
+        "canonical_smiles": canonical,
+        "xtb_valid": True,
+        "status": "ok",
+        "error": None,
+        "atom_count": int(atom_count),
+        "charges": charges,
+        "wbo_sum": np.zeros(atom_count, dtype=np.float32) if wbo is None else wbo["wbo_sum"],
+        "wbo_max": np.zeros(atom_count, dtype=np.float32) if wbo is None else wbo["wbo_max"],
+        "fukui_f_plus": np.zeros(atom_count, dtype=np.float32) if fukui is None else fukui["fukui_f_plus"],
+        "fukui_f_minus": np.zeros(atom_count, dtype=np.float32) if fukui is None else fukui["fukui_f_minus"],
+        "fukui_f_zero": np.zeros(atom_count, dtype=np.float32) if fukui is None else fukui["fukui_f_zero"],
+        "homo_lumo_gap_ev": float(gap),
+    }
+    return payload
+
+
+def _json_ready(payload: Dict[str, Any]) -> Dict[str, Any]:
+    out: Dict[str, Any] = {}
+    for key, value in payload.items():
+        if isinstance(value, np.ndarray):
+            out[key] = value.tolist()
+        else:
+            out[key] = value
+    return out
+
+
+def _tensorize_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "canonical_smiles": payload["canonical_smiles"],
+        "xtb_valid": bool(payload["xtb_valid"]),
+        "status": payload["status"],
+        "error": payload["error"],
+        "atom_count": int(payload["atom_count"]),
+        "charges": torch.tensor(payload["charges"], dtype=torch.float32),
+        "wbo_sum": torch.tensor(payload["wbo_sum"], dtype=torch.float32),
+        "wbo_max": torch.tensor(payload["wbo_max"], dtype=torch.float32),
+        "fukui_f_plus": torch.tensor(payload["fukui_f_plus"], dtype=torch.float32),
+        "fukui_f_minus": torch.tensor(payload["fukui_f_minus"], dtype=torch.float32),
+        "fukui_f_zero": torch.tensor(payload["fukui_f_zero"], dtype=torch.float32),
+        "homo_lumo_gap_ev": torch.tensor(float(payload["homo_lumo_gap_ev"]), dtype=torch.float32),
+    }
+
+
+def _iter_supplier(sdf_path: Path):
+    supplier = Chem.SDMolSupplier(str(sdf_path), removeHs=False)
+    for idx, mol in enumerate(supplier):
+        yield idx, mol
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sdf", required=True, help="Input SDF file")
+    parser.add_argument("--output", required=True, help="Output .pt file")
+    parser.add_argument("--cache-dir", default="cache/quantum_wave_xtb")
+    parser.add_argument("--xtb-path", default="xtb")
+    parser.add_argument("--timeout-s", type=int, default=900)
+    parser.add_argument("--solvent", default="water")
+    parser.add_argument("--skip-existing", action="store_true", default=True)
+    parser.add_argument("--no-skip-existing", dest="skip_existing", action="store_false")
+    parser.add_argument("--limit", type=int, default=0)
+    args = parser.parse_args()
+
+    sdf_path = Path(args.sdf)
+    output_path = Path(args.output)
+    cache_dir = Path(args.cache_dir)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Quantum distillation target: {sdf_path}")
+    print(f"Output: {output_path}")
+    print(f"Per-molecule cache: {cache_dir}")
+    print(f"xTB binary: {args.xtb_path}")
+
+    quantum_dataset: Dict[str, Dict[str, Any]] = {}
+    ok = skipped = failed = 0
+
+    iterator = _iter_supplier(sdf_path)
+    if tqdm is not None:
+        iterator = tqdm(iterator)
+
+    for idx, mol in iterator:
+        if args.limit > 0 and idx >= args.limit:
+            break
+        if mol is None:
+            failed += 1
+            continue
+
+        try:
+            canonical = _canonical_smiles(mol)
+        except Exception as exc:
+            failed += 1
+            print(f"[{idx}] canonicalisation failed: {exc}")
+            continue
+
+        cache_path = cache_dir / f"{_cache_key(canonical)}.json"
+        if args.skip_existing and cache_path.exists():
+            payload = json.loads(cache_path.read_text())
+            skipped += 1
+        else:
+            payload = _json_ready(
+                compute_quantum_wave_payload(
+                    mol,
+                    xtb_path=args.xtb_path,
+                    timeout_s=args.timeout_s,
+                    solvent=args.solvent,
+                )
+            )
+            cache_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+        quantum_dataset[canonical] = _tensorize_payload(payload)
+        if payload.get("xtb_valid"):
+            ok += 1
+        else:
+            failed += 1
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(quantum_dataset, output_path)
+    print(f"\nSaved {len(quantum_dataset)} molecules to {output_path}")
+    print(f"ok={ok}  skipped={skipped}  failed={failed}")
+
+
+if __name__ == "__main__":
+    main()
