@@ -139,7 +139,7 @@ class MetabolicDAGLearner(nn.Module):
         delta: float = 1.0,
         reconstruction_weight: float = 1.0,
         edge_threshold: float = 0.5,
-        activation_threshold: float = 25.0,
+        activation_threshold: float = 2.0,
         thermodynamic_margin: float = 0.0,
         prior_temperature: float = 5.0,
         affinity_scale: float = 2.0,

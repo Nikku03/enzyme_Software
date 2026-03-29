@@ -164,6 +164,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         dag_loss_weight: float = 1.0,
         dag_loss_cap: float = 4.0,
         dag_warmup_steps: int = 0,
+        kinetic_loss_warmup_steps: int = 0,
         analogical_loss_weight: float = 1.0,
         physics_cache_mode: str = "off",
     ) -> None:
@@ -199,6 +200,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.dag_loss_weight = float(max(dag_loss_weight, 0.0))
         self.dag_loss_cap = float(max(dag_loss_cap, 0.0))
         self.dag_warmup_steps = int(max(dag_warmup_steps, 0))
+        self.kinetic_loss_warmup_steps = int(max(kinetic_loss_warmup_steps, 0))
         self.analogical_loss_weight = float(max(analogical_loss_weight, 0.0))
         self.physics_cache_mode = str(physics_cache_mode).strip().lower() or "off"
         if self.physics_cache_mode not in {"off", "cached", "hybrid"}:
@@ -1673,7 +1675,9 @@ class Metabolic_Causal_Trainer(nn.Module):
         dag_output = self.dag_learner(
             atom_mv,
             # Per-source activation barriers: [1, N, 1] broadcasts against [1, N, N] prior.
-            delta_g_activations=delta_E_tensor.view(1, -1, 1),
+            # effective_reactivity = softplus(psi) > 0, so delta_E = -effective_reactivity < 0.
+            # Negate to get positive activation energies before applying the threshold.
+            delta_g_activations=(-delta_E_tensor).clamp_min(0.0).view(1, -1, 1),
             accessibility_mask=(
                 pocket_encoding.accessibility_mask.to(dtype=torch.float32)
                 if pocket_encoding is not None
@@ -1697,6 +1701,21 @@ class Metabolic_Causal_Trainer(nn.Module):
             reconstruction_loss=reconstruction_loss,
             ranking_loss=ranking_loss,
         )
+        # Kinetic warmup ramp: the rate prediction is wildly off during early training
+        # (pred_rate ~1e7 vs exp_rate ~1e-8), producing a kinetic_loss ~36 that dominates
+        # the SoM focal loss (~3) and corrupts SIREN field gradients.  Ramp kinetic
+        # contribution from 0 → full weight over kinetic_loss_warmup_steps so the SIREN
+        # field can first converge on SoM structure before rate prediction is penalised.
+        if self.kinetic_loss_warmup_steps > 0:
+            _step = int(self.global_step_counter.detach().cpu().item())
+            _kinetic_ramp = min(float(_step) / float(self.kinetic_loss_warmup_steps), 1.0)
+            if _kinetic_ramp < 1.0:
+                # Recompute total_loss with kinetic contribution scaled down.
+                # loss_info["weighted_losses"][1] is the homoscedastic-weighted kinetic term.
+                _kinetic_weighted = loss_info["weighted_losses"][1]
+                _kinetic_log_var = loss_info["safe_log_vars"][1]
+                _kinetic_full_contrib = 0.5 * (_kinetic_weighted + _kinetic_log_var)
+                total_loss = total_loss - _kinetic_full_contrib * (1.0 - _kinetic_ramp)
         # Normalise DAG causal loss by N² so the acyclicity penalty does not explode
         # on large molecules: for an N-atom molecule the penalty grows O(N²) otherwise.
         # Also cap the post-normalisation contribution at 4.0 so the untrained DAG's

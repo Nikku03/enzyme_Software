@@ -110,6 +110,7 @@ class NEXUS_God_Loss(nn.Module):
         som_loss_mode: str = "listmle",
         focal_gamma: float = 2.0,
         focal_alpha: Optional[float] = None,
+        flux_loss_weight: float = 0.1,
     ) -> None:
         super().__init__()
         self.beta = float(beta)
@@ -117,6 +118,7 @@ class NEXUS_God_Loss(nn.Module):
         self.log_var_min = float(log_var_min)
         self.log_var_max = float(log_var_max)
         self.som_loss_mode = str(som_loss_mode).lower()
+        self.flux_loss_weight = float(flux_loss_weight)
         self.log_vars = nn.Parameter(torch.zeros(6))
         self.ranking_loss_fn = ListMLERankingLoss()
         self.focal_loss_fn = SoftmaxFocalLoss(gamma=focal_gamma, alpha=focal_alpha)
@@ -174,7 +176,7 @@ class NEXUS_God_Loss(nn.Module):
         self,
         flux_consistency_loss: torch.Tensor,
     ) -> torch.Tensor:
-        return flux_consistency_loss
+        return flux_consistency_loss * self.flux_loss_weight
 
     def compute_reconstruction_loss(
         self,

@@ -90,11 +90,13 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_DAG_LOSS_WEIGHT": "0.10",
         "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
         "NEXUS_COLAB_DAG_WARMUP_STEPS": "50",
+        "NEXUS_COLAB_KINETIC_WARMUP_STEPS": "32",
         "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
     },
     # Default 10-epoch run on any ultra_vram GPU.
     # All 391 CYP3A4 molecules. DAG warmup = 400 steps (~1 epoch).
-    # Scan uses 4 shells and 24 pts for clean per-atom effective_reactivity.
+    # Kinetic warmup = 475 steps (1 epoch): lets SIREN find SoM structure before
+    # rate prediction penalty kicks in.
     "balanced": {
         "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
         "NEXUS_COLAB_TARGET_ISOFORM": "3A4",
@@ -114,11 +116,12 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_DAG_LOSS_WEIGHT": "0.10",
         "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
         "NEXUS_COLAB_DAG_WARMUP_STEPS": "400",
+        "NEXUS_COLAB_KINETIC_WARMUP_STEPS": "475",
         "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
     },
     # 15-epoch full run on a Colab A100/H100 (80 GB).
     # All 391 CYP3A4 molecules, 4 scan shells, 1 refine step.
-    # DAG warmup = 800 steps (~2 epochs) gives SoM ranking priority early.
+    # DAG warmup = 800 steps (~2 epochs). Kinetic warmup = 475 steps (1 epoch).
     "full_3a4": {
         "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
         "NEXUS_COLAB_TARGET_ISOFORM": "3A4",
@@ -138,12 +141,13 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_DAG_LOSS_WEIGHT": "0.10",
         "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
         "NEXUS_COLAB_DAG_WARMUP_STEPS": "800",
+        "NEXUS_COLAB_KINETIC_WARMUP_STEPS": "475",
         "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
     },
     # 30-epoch cloud run on single A100 80GB or H100 80GB.
     # Full physics: dynamics_steps=2, integration_resolution=12, scan_n_points=32.
-    # DAG warmup = 1200 steps (~3 epochs). torch.compile enabled.
-    # NOTE: current code is single-GPU only.
+    # DAG warmup = 1200 steps (~3 epochs). Kinetic warmup = 475 steps (1 epoch).
+    # torch.compile enabled. NOTE: current code is single-GPU only.
     "full_3a4_a100": {
         "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
         "NEXUS_COLAB_TARGET_ISOFORM": "3A4",
@@ -163,6 +167,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_DAG_LOSS_WEIGHT": "0.10",
         "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
         "NEXUS_COLAB_DAG_WARMUP_STEPS": "1200",
+        "NEXUS_COLAB_KINETIC_WARMUP_STEPS": "475",
         "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
         "NEXUS_COLAB_ALLOW_COMPILE": "1",
         "NEXUS_COLAB_NUM_WORKERS": "2",
@@ -178,7 +183,7 @@ PRESETS: dict[str, dict[str, str]] = {
     #   4. num_workers=2: background data loading overlaps GPU compute
     #   5. integration_chunk=256: large GPU passes for better occupancy
     #   6. dynamics_steps=1 (vs 2 in full_3a4_a100) — halves dynamics cost
-    #   7. DAG warmup = 1000 steps (~2.5 epochs)
+    #   7. DAG warmup = 1000 steps (~2.5 epochs). Kinetic warmup = 475 steps (1 epoch).
     "rtx6k_2h": {
         "NEXUS_COLAB_GPU_PROFILE": "ultra_vram",
         "NEXUS_COLAB_TARGET_ISOFORM": "3A4",
@@ -198,6 +203,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_DAG_LOSS_WEIGHT": "0.10",
         "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
         "NEXUS_COLAB_DAG_WARMUP_STEPS": "1000",
+        "NEXUS_COLAB_KINETIC_WARMUP_STEPS": "475",
         "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
         "NEXUS_COLAB_ALLOW_COMPILE": "1",
         "NEXUS_COLAB_NUM_WORKERS": "2",

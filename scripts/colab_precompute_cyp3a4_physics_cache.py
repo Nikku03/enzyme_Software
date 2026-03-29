@@ -274,7 +274,7 @@ def main() -> None:
     print(f"Dataset : {len(dataset)} molecules")
 
     trainer = Metabolic_Causal_Trainer(
-        loss_fn=NEXUS_God_Loss(som_loss_mode="focal", focal_gamma=2.0),
+        loss_fn=NEXUS_God_Loss(som_loss_mode="focal", focal_gamma=2.0, flux_loss_weight=0.1),
         dynamics_steps=max(_env_int("NEXUS_COLAB_DYNAMICS_STEPS", 1), 1),
         dynamics_dt=0.001,
         dynamics_summary_mode="full",

@@ -349,6 +349,8 @@ SHUFFLE_SEED = _env_int("NEXUS_COLAB_SHUFFLE_SEED", 42)
 DAG_LOSS_WEIGHT = _env_float("NEXUS_COLAB_DAG_LOSS_WEIGHT", 1.0)
 DAG_LOSS_CAP = _env_float("NEXUS_COLAB_DAG_LOSS_CAP", 4.0)
 DAG_WARMUP_STEPS = _env_int("NEXUS_COLAB_DAG_WARMUP_STEPS", 0)
+KINETIC_WARMUP_STEPS = _env_int("NEXUS_COLAB_KINETIC_WARMUP_STEPS", 0)
+FLUX_LOSS_WEIGHT = _env_float("NEXUS_COLAB_FLUX_LOSS_WEIGHT", 0.1)
 ANA_LOSS_WEIGHT = _env_float("NEXUS_COLAB_ANA_LOSS_WEIGHT", 1.0)
 ANALOGICAL_BANK_MODE = _env_str("NEXUS_COLAB_ANALOGICAL_BANK_MODE", "fingerprint").strip().lower() or "fingerprint"
 if ANALOGICAL_BANK_MODE not in {"fingerprint", "continuous"}:
@@ -543,7 +545,7 @@ print(f"Physics cache : mode={PHYSICS_CACHE_MODE}  path={PHYSICS_CACHE_PATH}")
 
 # ── trainer ────────────────────────────────────────────────────────────────
 trainer = Metabolic_Causal_Trainer(
-    loss_fn=NEXUS_God_Loss(som_loss_mode="focal", focal_gamma=2.0),
+    loss_fn=NEXUS_God_Loss(som_loss_mode="focal", focal_gamma=2.0, flux_loss_weight=FLUX_LOSS_WEIGHT),
     dynamics_steps=CFG["steps"],
     dynamics_dt=0.001,
     dynamics_summary_mode=CFG["physics_mode"],
@@ -556,6 +558,7 @@ trainer = Metabolic_Causal_Trainer(
     dag_loss_weight=DAG_LOSS_WEIGHT,
     dag_loss_cap=DAG_LOSS_CAP,
     dag_warmup_steps=DAG_WARMUP_STEPS,
+    kinetic_loss_warmup_steps=KINETIC_WARMUP_STEPS,
     analogical_loss_weight=ANA_LOSS_WEIGHT,
     physics_cache_mode=PHYSICS_CACHE_MODE,
 ).to(device)
