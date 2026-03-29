@@ -200,9 +200,10 @@ class NEXUS_God_Loss(nn.Module):
         flux_consistency_loss: Optional[torch.Tensor] = None,
         reconstruction_loss: Optional[torch.Tensor] = None,
         ranking_loss: Optional[torch.Tensor] = None,
+        kinetic_loss_scale: float = 1.0,
     ) -> GodLossBreakdown:
         som_loss = self.compute_som_loss(delta_E_tensor, true_som_idx)
-        kinetic_loss = self.compute_kinetic_loss(pred_rate, exp_rate)
+        kinetic_loss = self.compute_kinetic_loss(pred_rate, exp_rate) * float(kinetic_loss_scale)
         physics_loss = self.compute_physics_loss(sobolev_penalty, H_initial, H_final)
         topology_loss = self.compute_topology_loss(ts_eigenvalues)
         flux_loss = (
@@ -242,6 +243,7 @@ class NEXUS_God_Loss(nn.Module):
         flux_consistency_loss: Optional[torch.Tensor] = None,
         reconstruction_loss: Optional[torch.Tensor] = None,
         ranking_loss: Optional[torch.Tensor] = None,
+        kinetic_loss_scale: float = 1.0,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         breakdown = self.compute_raw_losses(
             delta_E_tensor=delta_E_tensor,
@@ -254,6 +256,7 @@ class NEXUS_God_Loss(nn.Module):
             ts_eigenvalues=ts_eigenvalues,
             flux_consistency_loss=flux_consistency_loss,
             reconstruction_loss=reconstruction_loss,
+            kinetic_loss_scale=kinetic_loss_scale,
             ranking_loss=ranking_loss,
         )
         safe_log_vars = torch.clamp(self.log_vars, min=self.log_var_min, max=self.log_var_max)

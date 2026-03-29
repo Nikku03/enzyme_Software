@@ -1688,6 +1688,16 @@ class Metabolic_Causal_Trainer(nn.Module):
         )
         dag_causal_loss = self._sanitize_tensor(self._to_fp32(dag_output.causal_loss), clamp=(0.0, 1.0e4))
 
+        # Kinetic warmup ramp: the rate prediction is wildly off during early training
+        # (pred_rate ~1e7 vs exp_rate ~1e-8), producing a kinetic_loss ~36 that dominates
+        # the SoM focal loss (~3) and corrupts SIREN field gradients.  Scale kinetic loss
+        # to 0 → 1 over kinetic_loss_warmup_steps BEFORE the homoscedastic weighting so
+        # the gradient itself is correctly attenuated (not just the reported scalar).
+        _kinetic_scale = 1.0
+        if self.kinetic_loss_warmup_steps > 0:
+            _step = int(self.global_step_counter.detach().cpu().item())
+            _kinetic_scale = min(float(_step) / float(self.kinetic_loss_warmup_steps), 1.0)
+
         total_loss, loss_info = self.loss_fn(
             delta_E_tensor=delta_E_tensor,
             true_som_idx=true_row_index,
@@ -1700,22 +1710,8 @@ class Metabolic_Causal_Trainer(nn.Module):
             flux_consistency_loss=flux_consistency_loss,
             reconstruction_loss=reconstruction_loss,
             ranking_loss=ranking_loss,
+            kinetic_loss_scale=_kinetic_scale,
         )
-        # Kinetic warmup ramp: the rate prediction is wildly off during early training
-        # (pred_rate ~1e7 vs exp_rate ~1e-8), producing a kinetic_loss ~36 that dominates
-        # the SoM focal loss (~3) and corrupts SIREN field gradients.  Ramp kinetic
-        # contribution from 0 → full weight over kinetic_loss_warmup_steps so the SIREN
-        # field can first converge on SoM structure before rate prediction is penalised.
-        if self.kinetic_loss_warmup_steps > 0:
-            _step = int(self.global_step_counter.detach().cpu().item())
-            _kinetic_ramp = min(float(_step) / float(self.kinetic_loss_warmup_steps), 1.0)
-            if _kinetic_ramp < 1.0:
-                # Recompute total_loss with kinetic contribution scaled down.
-                # loss_info["weighted_losses"][1] is the homoscedastic-weighted kinetic term.
-                _kinetic_weighted = loss_info["weighted_losses"][1]
-                _kinetic_log_var = loss_info["safe_log_vars"][1]
-                _kinetic_full_contrib = 0.5 * (_kinetic_weighted + _kinetic_log_var)
-                total_loss = total_loss - _kinetic_full_contrib * (1.0 - _kinetic_ramp)
         # Normalise DAG causal loss by N² so the acyclicity penalty does not explode
         # on large molecules: for an N-atom molecule the penalty grows O(N²) otherwise.
         # Also cap the post-normalisation contribution at 4.0 so the untrained DAG's

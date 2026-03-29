@@ -19,6 +19,10 @@ import torch
 from torch.nn.parameter import UninitializedParameter
 from torch.utils.data import DataLoader, Subset
 
+# Reduce CUDA memory fragmentation: allows the allocator to return memory to the OS
+# and re-request it in different sizes, preventing OOM from fragmentation on long runs.
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 # Suppress FutureWarning from external libraries (e.g. xformers, flash-attn)
 # that still call the deprecated torch.backends.cuda.sdp_kernel() API.
 # Our code uses torch.nn.attention.sdpa_kernel() throughout.
@@ -830,6 +834,10 @@ for epoch in range(start_epoch, CFG["epochs"]):
     loader = _make_loader(dataset, epoch_indices, shuffle=False, device=device)
 
     def _on_batch_end(*, batch_index, total_batches, running_metrics, step_metrics, train):
+        # Release cached but unallocated CUDA memory every batch to prevent
+        # fragmentation OOM on large molecules mid-epoch.
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
         if not (SAVE_EVERY_BATCH and train):
             return
         absolute_batch = resume_batch_in_epoch + batch_index if epoch == start_epoch else batch_index
