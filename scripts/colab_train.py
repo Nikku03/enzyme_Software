@@ -524,6 +524,12 @@ for _sdf in _train_sdfs:
         _sub_datasets.append(ZaretzkiMetabolicDataset(_sdf, max_molecules=CFG["max_samples"]))
     except Exception as _sdf_err:
         print(f"  Skipping {_sdf.name}: {_sdf_err}")
+if not _sub_datasets:
+    raise RuntimeError(
+        "No training datasets could be loaded. The most common cause in Colab is "
+        "that RDKit is not installed in the notebook Python environment. "
+        "Install RDKit, restart the runtime, then rerun the notebook."
+    )
 dataset = ConcatDataset(_sub_datasets) if len(_sub_datasets) > 1 else _sub_datasets[0]
 _all_indices = list(range(len(dataset)))
 loader = _make_loader(dataset, _all_indices, shuffle=True, device=device)
