@@ -362,6 +362,7 @@ if ANALOGICAL_ENGINE not in {"classic", "wave"}:
 QUANTUM_FEATURES_PATH_STR = _env_str("NEXUS_COLAB_QUANTUM_FEATURES_PATH", "").strip()
 QUANTUM_FEATURES_PATH = Path(QUANTUM_FEATURES_PATH_STR) if QUANTUM_FEATURES_PATH_STR else None
 QUANTUM_LOSS_WEIGHT = _env_float("NEXUS_COLAB_QUANTUM_LOSS_WEIGHT", 0.0)
+STRICT_ANALOGICAL_DEBUG = _env_bool("NEXUS_COLAB_STRICT_ANALOGICAL_DEBUG", False)
 ANALOGICAL_BANK_MODE = _env_str("NEXUS_COLAB_ANALOGICAL_BANK_MODE", "fingerprint").strip().lower() or "fingerprint"
 if ANALOGICAL_BANK_MODE not in {"fingerprint", "continuous"}:
     ANALOGICAL_BANK_MODE = "fingerprint"
@@ -542,6 +543,7 @@ print(
     f"ana_weight={ANA_LOSS_WEIGHT:g}"
 )
 print(f"Analogical engine : {ANALOGICAL_ENGINE}")
+print(f"Strict ANA debug : {'on' if STRICT_ANALOGICAL_DEBUG else 'off'}")
 if QUANTUM_FEATURES_PATH is not None:
     print(f"Quantum targets : {QUANTUM_FEATURES_PATH}")
 print(f"Analogical bank : mode={ANALOGICAL_BANK_MODE}")
@@ -576,6 +578,7 @@ trainer = Metabolic_Causal_Trainer(
     analogical_engine=ANALOGICAL_ENGINE,
     quantum_loss_weight=QUANTUM_LOSS_WEIGHT,
     physics_cache_mode=PHYSICS_CACHE_MODE,
+    strict_analogical_debug=STRICT_ANALOGICAL_DEBUG,
 ).to(device)
 trainer.sync_memory_bank_device(device)
 if QUANTUM_FEATURES_PATH is not None:

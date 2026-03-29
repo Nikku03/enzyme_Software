@@ -164,6 +164,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         analogical_engine: str = "classic",
         quantum_loss_weight: float = 0.0,
         physics_cache_mode: str = "off",
+        strict_analogical_debug: bool = False,
     ) -> None:
         super().__init__()
         self.model = model or NEXUS_Dynamics_Engine()
@@ -203,6 +204,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.quantum_loss_weight = float(max(quantum_loss_weight, 0.0))
         self.quantum_som_blend = 0.20
         self.physics_cache_mode = str(physics_cache_mode).strip().lower() or "off"
+        self.strict_analogical_debug = bool(strict_analogical_debug)
         if self.physics_cache_mode not in {"off", "cached", "hybrid"}:
             self.physics_cache_mode = "off"
         self.physics_cache: Dict[str, Dict[str, Any]] = {}
@@ -367,6 +369,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         *,
         atom_count: int,
         device: torch.device,
+        atomic_numbers: Optional[torch.Tensor] = None,
     ) -> Optional[Dict[str, torch.Tensor]]:
         if not self.quantum_feature_bank:
             return None
@@ -379,6 +382,39 @@ class Metabolic_Causal_Trainer(nn.Module):
         entry_atom_count = int(entry.get("atom_count", -1))
         if entry_atom_count != int(atom_count):
             return None
+        entry_atom_numbers = torch.as_tensor(
+            entry.get("atom_numbers", []),
+            dtype=torch.long,
+            device=device,
+        ).view(-1)
+        if entry_atom_numbers.numel() not in {0, int(atom_count)}:
+            return None
+        if atomic_numbers is not None:
+            query_atom_numbers = torch.as_tensor(
+                atomic_numbers,
+                dtype=torch.long,
+                device=device,
+            ).view(-1)
+            if query_atom_numbers.numel() != int(atom_count):
+                return None
+            if entry_atom_numbers.numel() == int(atom_count) and not bool(
+                torch.equal(entry_atom_numbers, query_atom_numbers)
+            ):
+                return None
+        xtb_to_rdkit_map = torch.as_tensor(
+            entry.get("xtb_to_rdkit_map", []),
+            dtype=torch.long,
+            device=device,
+        ).view(-1)
+        if xtb_to_rdkit_map.numel() not in {0, int(atom_count)}:
+            return None
+        if xtb_to_rdkit_map.numel() == int(atom_count):
+            expected = torch.arange(atom_count, dtype=torch.long, device=device)
+            if not bool(torch.equal(torch.sort(xtb_to_rdkit_map).values, expected)):
+                return None
+        alignment_max_distance = float(entry.get("alignment_max_distance", 0.0))
+        if alignment_max_distance > 1.0e-1:
+            return None
         charges = torch.as_tensor(entry.get("charges"), dtype=torch.float32, device=device).view(-1)
         fukui_zero = torch.as_tensor(entry.get("fukui_f_zero"), dtype=torch.float32, device=device).view(-1)
         gap = torch.as_tensor(entry.get("homo_lumo_gap_ev"), dtype=torch.float32, device=device).view(())
@@ -390,6 +426,9 @@ class Metabolic_Causal_Trainer(nn.Module):
             "fukui_f_zero": fukui_zero,
             "homo_lumo_gap_ev": gap,
             "atom_mask": atom_mask,
+            "atom_numbers": entry_atom_numbers if entry_atom_numbers.numel() == int(atom_count) else None,
+            "xtb_to_rdkit_map": xtb_to_rdkit_map if xtb_to_rdkit_map.numel() == int(atom_count) else None,
+            "alignment_max_distance": torch.as_tensor(alignment_max_distance, dtype=torch.float32, device=device),
         }
 
     def _build_quantum_smoothed_som_target(
@@ -739,6 +778,9 @@ class Metabolic_Causal_Trainer(nn.Module):
         from nexus.core.generative_agency import NEXUS_Seed
         from nexus.core.manifold_refiner import Refined_NEXUS_Manifold
         from nexus.models.mol_llama_wrapper import LatentBlueprint
+
+        if self.analogical_engine == "wave":
+            return self.encode_smiles_for_memory_bank(_Chem.MolToSmiles(mol))
 
         if mol.GetNumConformers() == 0:
             return self.encode_smiles_for_memory_bank(_Chem.MolToSmiles(mol))
@@ -1818,6 +1860,12 @@ class Metabolic_Causal_Trainer(nn.Module):
         atom_mv[..., 0] = effective_reactivity
         atom_mv = atom_mv.unsqueeze(0)   # [1, N_atoms, 8]  — single-compound batch dim
         live_node_multivectors = self._to_fp32(self._module1_node_multivectors(module1_out))
+        batch_atomic_numbers = None
+        _batch_atomic_numbers = batch.get("atomic_numbers")
+        if torch.is_tensor(_batch_atomic_numbers) and _batch_atomic_numbers.numel() > 0:
+            _atom_source = _batch_atomic_numbers[0] if _batch_atomic_numbers.ndim >= 2 else _batch_atomic_numbers.view(-1)
+            if _atom_source.numel() >= int(atom_mv.size(1)):
+                batch_atomic_numbers = _atom_source[: int(atom_mv.size(1))].to(device=device, dtype=torch.long)
         quantum_loss_weighted = torch.zeros((), dtype=torch.float32, device=device)
         quantum_loss_charge = torch.zeros((), dtype=torch.float32, device=device)
         quantum_loss_fukui = torch.zeros((), dtype=torch.float32, device=device)
@@ -1839,6 +1887,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                     smiles,
                     atom_count=int(atom_mv.size(1)),
                     device=device,
+                    atomic_numbers=batch_atomic_numbers,
                 )
                 _quantum_loss_fn = getattr(
                     self._metric_learner_module,
@@ -2497,6 +2546,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                         except Exception as _fusion_err:
                             _fusion_error_message = f"{type(_fusion_err).__name__}: {_fusion_err}"
                             _fusion_available = False
+                            if self.strict_analogical_debug:
+                                raise
 
                     _ood_score, _hard_case, _abstain = compute_analogical_ood_metrics(
                         retrieval_confidence=float(_result.confidence),
@@ -2786,6 +2837,8 @@ class Metabolic_Causal_Trainer(nn.Module):
             except Exception as _ana_err:
                 # Print once so we can see if the analogical engine is broken,
                 # but never let it crash the physics training loop.
+                if self.strict_analogical_debug:
+                    raise
                 import traceback as _tb
                 print(f"[ANA-ERR] {type(_ana_err).__name__}: {_ana_err}", flush=True)
                 _tb.print_exc()
