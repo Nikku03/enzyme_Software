@@ -1009,9 +1009,25 @@ class Metabolic_Causal_Trainer(nn.Module):
             # Plain AdamW with targeted decay:
             # decay only dense reasoning weights, never physics controls, query-engine
             # routing, embeddings, norms, biases, or homoscedastic balance scalars.
+            #
+            # Three-group setup mirrors the GaLore path so log_vars and gated_loss
+            # precision params get their dedicated lr=1e-3 (10× the electronic LR).
+            # Without this, homoscedastic balance needs ~75 epochs to suppress a
+            # dominant loss term instead of ~7.5 epochs.
+            _loss_balancer_ids: set[int] = set()
+            _loss_balancer_params: List[nn.Parameter] = []
+            for _mod in [self.loss_fn, self.gated_loss, self.analogical_arbiter]:
+                if _mod is None:
+                    continue
+                for _p in _mod.parameters():
+                    if _p.requires_grad and id(_p) not in _loss_balancer_ids:
+                        _loss_balancer_ids.add(id(_p))
+                        _loss_balancer_params.append(_p)
+
             decay_params: List[nn.Parameter] = []
             no_decay_params: List[nn.Parameter] = []
             seen: set[int] = set()
+            seen.update(_loss_balancer_ids)  # exclude loss balancer from the main groups
             for source_prefix, module in [
                 ("model", self.model),
                 ("dag_learner", self.dag_learner),
@@ -1039,9 +1055,11 @@ class Metabolic_Causal_Trainer(nn.Module):
 
             param_groups = []
             if decay_params:
-                param_groups.append({"params": decay_params, "lr": 1.0e-4, "weight_decay": 1.0e-5})
+                param_groups.append({"params": decay_params, "lr": 1.0e-4, "weight_decay": 1.0e-5, "name": "electronic_decay"})
             if no_decay_params:
-                param_groups.append({"params": no_decay_params, "lr": 1.0e-4, "weight_decay": 0.0})
+                param_groups.append({"params": no_decay_params, "lr": 1.0e-4, "weight_decay": 0.0, "name": "electronic_no_decay"})
+            if _loss_balancer_params:
+                param_groups.append({"params": _loss_balancer_params, "lr": 1.0e-3, "weight_decay": 0.0, "name": "god_loss_balancer"})
             self.optimizer = torch.optim.AdamW(param_groups, lr=1.0e-4, weight_decay=1.0e-5)
             if self.enable_wsd_scheduler and self.total_training_steps is not None:
                 self.scheduler = self._build_wsd_scheduler(self.optimizer, self.total_training_steps)

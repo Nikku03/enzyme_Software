@@ -599,7 +599,13 @@ if QUANTUM_FEATURES_PATH is not None:
 if PHYSICS_CACHE_MODE != "off":
     if PHYSICS_CACHE_PATH.exists():
         _cache_count = trainer.load_physics_cache(PHYSICS_CACHE_PATH, mode=PHYSICS_CACHE_MODE)
-        print(f"  loaded { _cache_count } cached physics entries")
+        print(f"  loaded {_cache_count} cached physics entries")
+        print(
+            "  WARNING: physics cache is active — pred_rate / H_initial come from a precomputed\n"
+            "  file and have NO gradient to the SIREN field.  kinetic/physics losses will show\n"
+            "  in loss_total but cannot train the field.  Disable with NEXUS_COLAB_USE_PHYSICS_CACHE=0\n"
+            "  for initial training runs; only enable caching after the field has converged."
+        )
     elif PHYSICS_CACHE_MODE == "cached":
         raise FileNotFoundError(
             f"Physics cache mode is 'cached' but no cache file exists at {PHYSICS_CACHE_PATH}"
