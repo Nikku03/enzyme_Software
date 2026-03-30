@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Dict, Optional
 
 from enzyme_software.liquid_nn_v2._compat import TORCH_AVAILABLE, nn, require_torch, torch
+from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM
 from enzyme_software.liquid_nn_v2.features.route_prior import combine_lnn_with_prior
 from enzyme_software.liquid_nn_v2.model.nexus_bridge import NexusHybridBridge
 from enzyme_software.liquid_nn_v2.model.precedent_logbook import AuditedEpisodeLogbook
@@ -25,7 +26,7 @@ if TORCH_AVAILABLE:
                 atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
                 num_cyp = int(getattr(self.config, "num_cyp_classes", 9))
                 steric_dim = int(getattr(self.config, "steric_feature_dim", 8))
-                xtb_dim = 6
+                xtb_dim = FULL_XTB_FEATURE_DIM
                 graph_dim = int(max(16, int(getattr(self.config, "nexus_graph_dim", 48))))
                 self.nexus_bridge = NexusHybridBridge(
                     atom_feature_dim=atom_dim,
@@ -138,7 +139,7 @@ if TORCH_AVAILABLE:
             dtype = atom_features.dtype
             num_cyp = int(getattr(self.config, "num_cyp_classes", 9))
             steric_dim = int(getattr(self.config, "steric_feature_dim", 8))
-            xtb_dim = 6
+            xtb_dim = FULL_XTB_FEATURE_DIM
 
             graph_embeddings = bridge["graph_embeddings"][batch_index]
             base_cyp_context = torch.softmax(outputs["cyp_logits"], dim=-1)[batch_index]

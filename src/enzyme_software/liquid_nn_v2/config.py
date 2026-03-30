@@ -9,7 +9,7 @@ from enzyme_software.liquid_nn_v2.data.cyp_classes import MAJOR_CYP_CLASSES
 @dataclass
 class ModelConfig:
     model_variant: str = "baseline"
-    atom_input_dim: int = 146  # 140 base + 6 XTB (charge, abs_charge, charge_centered, charge_rank_norm, wbo_sum, wbo_max)
+    atom_input_dim: int = 148  # 140 base + 8 full-xTB features on the hybrid full-xTB path
     hidden_dim: int = 128
     shared_hidden_dim: Optional[int] = None
     som_branch_dim: Optional[int] = None

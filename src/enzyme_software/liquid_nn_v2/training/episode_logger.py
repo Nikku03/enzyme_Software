@@ -114,7 +114,7 @@ class EpisodeLogger:
 
         vote_heads = outputs.get("site_vote_heads") or {}
         vote_heads_cpu = {
-            key: value.detach().cpu().view(-1)
+            key: value.detach().cpu()
             for key, value in vote_heads.items()
             if value is not None
         }
@@ -149,6 +149,14 @@ class EpisodeLogger:
         precedent_brief = bridge.get("precedent_brief")
         precedent_brief_cpu = precedent_brief.detach().cpu() if precedent_brief is not None else None
         bridge_metrics = _to_serializable(bridge.get("metrics") or {})
+
+        def _slice_vote_head(name: str, *, start_idx: int, end_idx: int):
+            value = vote_heads_cpu.get(name)
+            if value is None:
+                return None
+            if hasattr(value, "ndim") and int(value.ndim) <= 1:
+                return _to_serializable(value[start_idx:end_idx].view(-1))
+            return _to_serializable(value[start_idx:end_idx])
 
         offset = 0
         for graph_idx, num_atoms in enumerate(graph_num_atoms):
@@ -219,13 +227,14 @@ class EpisodeLogger:
                     "true_cyp_label": int(cyp_labels_cpu[graph_idx].item()) if cyp_labels_cpu is not None else None,
                 },
                 "votes": {
-                    "lnn_vote": _to_serializable(vote_heads_cpu.get("lnn_vote", site_logits)[start:end]),
-                    "lnn_conf": _to_serializable(vote_heads_cpu.get("lnn_conf")[start:end]) if "lnn_conf" in vote_heads_cpu else None,
-                    "wave_vote": _to_serializable(vote_heads_cpu.get("wave_vote")[start:end]) if "wave_vote" in vote_heads_cpu else None,
-                    "wave_conf": _to_serializable(vote_heads_cpu.get("wave_conf")[start:end]) if "wave_conf" in vote_heads_cpu else None,
-                    "analogical_vote": _to_serializable(vote_heads_cpu.get("analogical_vote")[start:end]) if "analogical_vote" in vote_heads_cpu else None,
-                    "analogical_conf": _to_serializable(vote_heads_cpu.get("analogical_conf")[start:end]) if "analogical_conf" in vote_heads_cpu else None,
-                    "council_logit": _to_serializable(vote_heads_cpu.get("council_logit")[start:end]) if "council_logit" in vote_heads_cpu else None,
+                    "lnn_vote": _slice_vote_head("lnn_vote", start_idx=start, end_idx=end) or _to_serializable(site_logits[start:end]),
+                    "lnn_conf": _slice_vote_head("lnn_conf", start_idx=start, end_idx=end),
+                    "wave_vote": _slice_vote_head("wave_vote", start_idx=start, end_idx=end),
+                    "wave_conf": _slice_vote_head("wave_conf", start_idx=start, end_idx=end),
+                    "analogical_vote": _slice_vote_head("analogical_vote", start_idx=start, end_idx=end),
+                    "analogical_conf": _slice_vote_head("analogical_conf", start_idx=start, end_idx=end),
+                    "council_logit": _slice_vote_head("council_logit", start_idx=start, end_idx=end),
+                    "board_weights": _slice_vote_head("board_weights", start_idx=start, end_idx=end),
                 },
                 "wave": {
                     "atom_multivectors": _to_serializable(atom_multivectors_cpu[start:end]) if atom_multivectors_cpu is not None else None,

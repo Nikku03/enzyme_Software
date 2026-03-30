@@ -205,6 +205,8 @@ def main() -> None:
         argv.append("--site-labeled-only")
     if os.environ.get("HYBRID_COLAB_COMPUTE_XTB_IF_MISSING", "0").strip().lower() in {"1", "true", "yes", "on"}:
         argv.append("--compute-xtb-if-missing")
+    if os.environ.get("HYBRID_COLAB_FREEZE_NEXUS_MEMORY", "0").strip().lower() in {"1", "true", "yes", "on"}:
+        argv.append("--freeze-nexus-memory")
     if os.environ.get("HYBRID_COLAB_INCLUDE_XENOSITE", "1").strip().lower() in {"1", "true", "yes", "on"}:
         argv.extend(["--xenosite-manifest", xenosite_manifest])
         argv.extend(["--xenosite-topk", os.environ["HYBRID_COLAB_XENOSITE_TOPK"]])

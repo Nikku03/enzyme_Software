@@ -51,6 +51,7 @@ def _brief(record: dict) -> dict:
             "analogical_vote": _scalar_at(votes.get("analogical_vote"), idx),
             "analogical_conf": _scalar_at(votes.get("analogical_conf"), idx),
             "council_logit": _scalar_at(votes.get("council_logit"), idx),
+            "board_weights": None if votes.get("board_weights") is None or idx is None else votes.get("board_weights")[idx],
         },
         "analogical_top1": {
             "confidence": _scalar_at(analogical.get("confidence"), idx),
@@ -158,6 +159,31 @@ def analyze(path: Path, split: str, top_n: int) -> dict:
         })
 
     stat_summary = {key: mean(values) for key, values in stats.items() if values}
+    board_weight_summary = {}
+    for stream, col_idx in (("lnn", 0), ("wave", 1), ("analogical", 2)):
+        values = []
+        hit_values = []
+        miss_values = []
+        for row in rows:
+            idx = row.get("decision", {}).get("top1_atom")
+            board_weights = (row.get("votes") or {}).get("board_weights")
+            if idx is None or board_weights is None:
+                continue
+            try:
+                value = float(board_weights[idx][col_idx])
+            except Exception:
+                continue
+            values.append(value)
+            if bool(row.get("outcome", {}).get("top1_hit")):
+                hit_values.append(value)
+            else:
+                miss_values.append(value)
+        if values:
+            board_weight_summary[f"{stream}_board_weight"] = mean(values)
+        if hit_values:
+            board_weight_summary[f"{stream}_board_weight_hit"] = mean(hit_values)
+        if miss_values:
+            board_weight_summary[f"{stream}_board_weight_miss"] = mean(miss_values)
 
     return {
         "log_path": str(path),
@@ -167,6 +193,7 @@ def analyze(path: Path, split: str, top_n: int) -> dict:
         "winner_counts": dict(winner_counts),
         "winner_hits": dict(winner_hits),
         "vote_summary": stat_summary,
+        "board_weight_summary": board_weight_summary,
         "top_confident_misses": misses[:top_n],
         "top_confident_hits": hits[:top_n],
         "top3_rescued_cases": rescued[:top_n],
@@ -205,6 +232,11 @@ def _write_markdown(payload: dict, path: Path) -> None:
     lines.append("## Vote Summary")
     lines.append("")
     for key, value in sorted(payload["vote_summary"].items()):
+        lines.append(f"- `{key}`: `{value:.6f}`")
+    lines.append("")
+    lines.append("## Board Weight Summary")
+    lines.append("")
+    for key, value in sorted(payload.get("board_weight_summary", {}).items()):
         lines.append(f"- `{key}`: `{value:.6f}`")
     lines.append("")
     for section in ("top_confident_misses", "top_confident_hits", "top3_rescued_cases"):

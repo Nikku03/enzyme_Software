@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Dict, Optional
 
 from enzyme_software.liquid_nn_v2._compat import F, TORCH_AVAILABLE, nn, require_torch, torch
+from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM
 from enzyme_software.liquid_nn_v2.model.liquid_branch import scatter_mean
 from enzyme_software.liquid_nn_v2.model.precedent_logbook import AuditedEpisodeLogbook
 from enzyme_software.liquid_nn_v2.model.wave_field import WholeMoleculeWaveField
@@ -158,7 +159,7 @@ if TORCH_AVAILABLE:
             atom_feature_dim: int,
             num_cyp_classes: int,
             steric_feature_dim: int = 8,
-            xtb_feature_dim: int = 6,
+            xtb_feature_dim: int = FULL_XTB_FEATURE_DIM,
             wave_hidden_dim: int = 64,
             graph_dim: int = 48,
             memory_capacity: int = 4096,
