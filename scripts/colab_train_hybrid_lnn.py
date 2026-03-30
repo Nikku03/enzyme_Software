@@ -70,6 +70,8 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
         "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
+        "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
+        "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_SEED": "42",
     },
     "balanced": {
@@ -84,6 +86,8 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
         "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
+        "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
+        "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_SEED": "42",
     },
     "full": {
@@ -98,6 +102,8 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
         "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
+        "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
+        "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_SEED": "42",
     },
 }
@@ -151,6 +157,10 @@ def main() -> None:
         "HYBRID_COLAB_WARM_START",
         "/content/drive/MyDrive/enzyme_hybrid_lnn/checkpoints/hybrid_full_xtb/hybrid_full_xtb_latest.pt",
     )
+    xenosite_manifest = os.environ.get(
+        "HYBRID_COLAB_XENOSITE_MANIFEST",
+        "data/xenosite_suppl/manifest.json",
+    )
 
     argv = [
         str(REPO_DIR / "scripts" / "train_hybrid_full_xtb.py"),
@@ -189,6 +199,9 @@ def main() -> None:
         argv.append("--site-labeled-only")
     if os.environ.get("HYBRID_COLAB_COMPUTE_XTB_IF_MISSING", "0").strip().lower() in {"1", "true", "yes", "on"}:
         argv.append("--compute-xtb-if-missing")
+    if os.environ.get("HYBRID_COLAB_INCLUDE_XENOSITE", "1").strip().lower() in {"1", "true", "yes", "on"}:
+        argv.extend(["--xenosite-manifest", xenosite_manifest])
+        argv.extend(["--xenosite-topk", os.environ["HYBRID_COLAB_XENOSITE_TOPK"]])
 
     print("Hybrid LNN Colab wrapper")
     print(f"preset={preset}")

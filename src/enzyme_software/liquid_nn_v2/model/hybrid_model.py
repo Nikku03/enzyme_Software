@@ -57,6 +57,7 @@ if TORCH_AVAILABLE:
                 site_labels=batch.get("site_labels"),
                 site_supervision_mask=batch.get("site_supervision_mask"),
                 cyp_labels=batch.get("cyp_labels"),
+                cyp_supervision_mask=batch.get("cyp_supervision_mask"),
             )
             result = dict(outputs)
             result["site_logits_base"] = outputs["site_logits"]

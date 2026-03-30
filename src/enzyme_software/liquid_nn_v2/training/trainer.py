@@ -122,6 +122,7 @@ if TORCH_AVAILABLE:
                 batch["cyp_labels"],
                 batch["batch"],
                 batch.get("site_supervision_mask"),
+                batch.get("cyp_supervision_mask"),
                 batch.get("graph_confidence_weights"),
                 batch.get("node_confidence_weights"),
                 outputs.get("tau_history"),

@@ -48,6 +48,66 @@ def _has_site_labels(drug: dict) -> bool:
     return bool(drug.get("som") or drug.get("site_atoms") or drug.get("site_atom_indices") or drug.get("metabolism_sites"))
 
 
+def _canonical_smiles_key(smiles: str) -> str:
+    return " ".join(str(smiles or "").strip().split())
+
+
+def _load_xenosite_aux_entries(manifest_path: Path, *, topk: int = 1, per_file_limit: int = 0) -> list[dict]:
+    payload = json.loads(manifest_path.read_text())
+    datasets = list(payload.get("datasets", []))
+    root = manifest_path.parent
+    merged: list[dict] = []
+    seen_smiles: set[str] = set()
+    topk = max(1, int(topk))
+    per_file_limit = max(0, int(per_file_limit))
+    for meta in datasets:
+        rel = str(meta.get("file", "")).strip()
+        if not rel:
+            continue
+        data_path = root / rel
+        if not data_path.exists():
+            continue
+        data = json.loads(data_path.read_text())
+        entries = list(data.get("entries", []))
+        if per_file_limit > 0:
+            entries = entries[:per_file_limit]
+        for entry in entries:
+            smiles = _canonical_smiles_key(entry.get("smiles", ""))
+            if not smiles or smiles in seen_smiles:
+                continue
+            pairs = list(entry.get("xenosite_score_pairs", []))
+            site_atoms = []
+            for pair in pairs[:topk]:
+                try:
+                    site_atoms.append(int(pair.get("atom_index")))
+                except Exception:
+                    continue
+            if not site_atoms:
+                top_atoms = entry.get("top_atoms") or []
+                site_atoms = [int(v) for v in top_atoms[:topk] if isinstance(v, int)]
+            if not site_atoms:
+                continue
+            seen_smiles.add(smiles)
+            merged.append(
+                {
+                    "id": f"xenosite:{entry.get('source', 'aux')}:{entry.get('mol_index', len(merged))}",
+                    "name": entry.get("name") or f"xenosite_{len(merged)}",
+                    "smiles": smiles,
+                    "primary_cyp": "",
+                    "all_cyps": [],
+                    "reactions": [],
+                    "site_atoms": sorted(set(site_atoms)),
+                    "site_source": f"{entry.get('source', 'xenosite')}_top{topk}",
+                    "source": "XenoSiteAux",
+                    "confidence": "low",
+                    "full_xtb_status": "external_uncomputed",
+                    "auxiliary_site_only": True,
+                    "xenosite_dense_scores": entry.get("xenosite_dense_scores"),
+                }
+            )
+    return merged
+
+
 def _count_xtb_valid(drugs: list[dict], cache_dir: Path) -> tuple[int, dict[str, int]]:
     from enzyme_software.liquid_nn_v2.features.xtb_features import load_or_compute_full_xtb_features
 
@@ -199,6 +259,9 @@ def main() -> None:
     parser.add_argument("--val-ratio", type=float, default=0.15)
     parser.add_argument("--site-labeled-only", action="store_true")
     parser.add_argument("--compute-xtb-if-missing", action="store_true")
+    parser.add_argument("--xenosite-manifest", default="")
+    parser.add_argument("--xenosite-topk", type=int, default=1)
+    parser.add_argument("--xenosite-per-file-limit", type=int, default=0)
     args = parser.parse_args()
     early_stopping_patience = int(args.early_stopping_patience)
     early_stopping_enabled = early_stopping_patience > 0
@@ -231,6 +294,26 @@ def main() -> None:
         print(f"Limited to: {len(drugs)}", flush=True)
 
     train_drugs, val_drugs, test_drugs = split_drugs(drugs, seed=args.seed, train_ratio=args.train_ratio, val_ratio=args.val_ratio)
+    xenosite_added = 0
+    if args.xenosite_manifest:
+        manifest_path = Path(args.xenosite_manifest)
+        if not manifest_path.exists():
+            raise FileNotFoundError(f"XenoSite manifest not found: {manifest_path}")
+        xenosite_entries = _load_xenosite_aux_entries(
+            manifest_path,
+            topk=args.xenosite_topk,
+            per_file_limit=args.xenosite_per_file_limit,
+        )
+        if xenosite_entries:
+            existing = {_canonical_smiles_key(d.get("smiles", "")) for d in train_drugs}
+            xenosite_entries = [d for d in xenosite_entries if _canonical_smiles_key(d.get("smiles", "")) not in existing]
+            train_drugs.extend(xenosite_entries)
+            xenosite_added = len(xenosite_entries)
+            print(
+                f"Added XenoSite auxiliary train entries: {xenosite_added} "
+                f"(topk={max(1, int(args.xenosite_topk))})",
+                flush=True,
+            )
     for split_name, split_items in (("train", train_drugs), ("val", val_drugs), ("test", test_drugs)):
         source_counts = Counter(str(d.get("source", "DrugBank")) for d in split_items)
         site_count = sum(1 for d in split_items if _has_site_labels(d))

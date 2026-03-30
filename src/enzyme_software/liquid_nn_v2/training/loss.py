@@ -407,6 +407,7 @@ if TORCH_AVAILABLE:
             cyp_labels,
             batch,
             site_supervision_mask=None,
+            cyp_supervision_mask=None,
             graph_confidence_weights=None,
             node_confidence_weights=None,
             tau_history=None,
@@ -422,7 +423,19 @@ if TORCH_AVAILABLE:
                 node_weights=node_confidence_weights,
                 graph_weights=graph_confidence_weights,
             )
-            cyp_loss = self.cyp_loss_fn(cyp_logits, cyp_labels, sample_weights=graph_confidence_weights)
+            cyp_loss = site_loss * 0.0
+            cyp_mask = None
+            if cyp_supervision_mask is not None:
+                cyp_mask = cyp_supervision_mask.view(-1) > 0.5
+            if cyp_mask is None:
+                cyp_loss = self.cyp_loss_fn(cyp_logits, cyp_labels, sample_weights=graph_confidence_weights)
+            elif bool(cyp_mask.any()):
+                masked_weights = graph_confidence_weights[cyp_mask] if graph_confidence_weights is not None else None
+                cyp_loss = self.cyp_loss_fn(
+                    cyp_logits[cyp_mask],
+                    cyp_labels[cyp_mask],
+                    sample_weights=masked_weights,
+                )
             log_var_site = self.log_var_site.clamp(min=-4.0, max=4.0)
             log_var_cyp = self.log_var_cyp.clamp(min=-4.0, max=4.0)
             precision_site = torch.exp(-log_var_site)

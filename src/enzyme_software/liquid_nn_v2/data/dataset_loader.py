@@ -85,7 +85,12 @@ class CYPMetabolismDataset(Dataset):
                 self.drugs = source_drugs[n_train + n_val :]
         else:
             supported = set(self.cyp_classes)
-            self.drugs = [d for d in drugs if str(d.get("cyp") or d.get("primary_cyp") or "") in supported]
+            self.drugs = [
+                d
+                for d in drugs
+                if str(d.get("cyp") or d.get("primary_cyp") or "") in supported
+                or bool(d.get("auxiliary_site_only", False))
+            ]
         print(f"Loaded {len(self.drugs)} drugs for {split} split")
         self._cache: Optional[List] = None
         self._valid_count: int = 0
@@ -170,8 +175,10 @@ class CYPMetabolismDataset(Dataset):
                         allow_partial_sanitize=self.allow_partial_sanitize,
                         allow_aggressive_repair=self.allow_aggressive_repair,
                     )
-                graph.cyp_label = int(self.cyp_to_idx[cyp])
+                has_cyp_supervision = (cyp in self.cyp_to_idx) and not bool(drug.get("auxiliary_site_only", False))
+                graph.cyp_label = int(self.cyp_to_idx[cyp]) if cyp in self.cyp_to_idx else 0
                 graph.has_site_supervision = bool(has_site_supervision)
+                graph.has_cyp_supervision = bool(has_cyp_supervision)
         except Exception as exc:
             if self.drop_failed:
                 return self._get_dummy(error_reason=f"{type(exc).__name__}: {exc}")

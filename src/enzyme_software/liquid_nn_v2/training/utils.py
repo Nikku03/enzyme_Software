@@ -33,6 +33,7 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
     site_parts: List[torch.Tensor] = []
     site_mask_parts: List[torch.Tensor] = []
     cyp_labels: List[int] = []
+    cyp_supervision_mask: List[float] = []
     group_assignments = {}
     group_memberships: List[object] = []
     manual_atom_parts: List[object] = []
@@ -64,8 +65,8 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
             site_parts.append(_tensor(graph.site_labels, dtype=torch.float32))
         if getattr(graph, "site_supervision_mask", None) is not None:
             site_mask_parts.append(_tensor(graph.site_supervision_mask, dtype=torch.float32))
-        if graph.cyp_label is not None:
-            cyp_labels.append(int(graph.cyp_label))
+        cyp_labels.append(int(getattr(graph, "cyp_label", 0) or 0))
+        cyp_supervision_mask.append(1.0 if bool(getattr(graph, "has_cyp_supervision", True)) else 0.0)
         for key in physics_keys:
             physics_parts[key].append(_tensor(graph.physics_features[key], dtype=torch.float32))
         group_memberships.append(_tensor(graph.group_membership, dtype=torch.float32) if getattr(graph, "group_membership", None) is not None else None)
@@ -118,6 +119,7 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
         batch["site_supervision_mask"] = torch.cat(site_mask_parts, dim=0)
     if cyp_labels:
         batch["cyp_labels"] = torch.as_tensor(cyp_labels, dtype=torch.long)
+        batch["cyp_supervision_mask"] = torch.as_tensor(cyp_supervision_mask, dtype=torch.float32)
     def _stack_optional(per_graph_values, row_counts, *, keep_rows="atom"):
         present = [value for value in per_graph_values if value is not None]
         if not present:

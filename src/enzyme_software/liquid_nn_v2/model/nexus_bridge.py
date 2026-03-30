@@ -326,6 +326,7 @@ if TORCH_AVAILABLE:
             site_supervision_mask: Optional[torch.Tensor],
             cyp_prior_by_mol: torch.Tensor,
             cyp_labels: Optional[torch.Tensor],
+            cyp_supervision_mask: Optional[torch.Tensor],
         ) -> tuple[torch.Tensor, Dict[str, float]]:
             if self.analogical_aux_weight <= 0.0 or site_labels is None:
                 zero = site_prior.sum() * 0.0
@@ -344,7 +345,16 @@ if TORCH_AVAILABLE:
                 site_loss = site_loss_raw.mean()
             cyp_loss = prior_logits.sum() * 0.0
             if cyp_labels is not None and cyp_prior_by_mol.numel():
-                cyp_loss = F.cross_entropy(torch.log(cyp_prior_by_mol.clamp_min(1.0e-6)), cyp_labels.long())
+                cyp_mask = None
+                if cyp_supervision_mask is not None:
+                    cyp_mask = cyp_supervision_mask.view(-1) > 0.5
+                if cyp_mask is None:
+                    cyp_loss = F.cross_entropy(torch.log(cyp_prior_by_mol.clamp_min(1.0e-6)), cyp_labels.long())
+                elif bool(cyp_mask.any()):
+                    cyp_loss = F.cross_entropy(
+                        torch.log(cyp_prior_by_mol[cyp_mask].clamp_min(1.0e-6)),
+                        cyp_labels[cyp_mask].long(),
+                    )
             total = float(self.analogical_aux_weight) * (site_loss + 0.25 * cyp_loss)
             return total, {
                 "analogical_aux_loss": float(total.detach().item()),
@@ -363,6 +373,7 @@ if TORCH_AVAILABLE:
             site_labels: Optional[torch.Tensor] = None,
             site_supervision_mask: Optional[torch.Tensor] = None,
             cyp_labels: Optional[torch.Tensor] = None,
+            cyp_supervision_mask: Optional[torch.Tensor] = None,
         ) -> Dict[str, object]:
             atom_features = atom_features.float()
             multivectors, coords = self._build_multivectors(atom_features, atom_3d_features, xtb_atom_features)
@@ -410,6 +421,7 @@ if TORCH_AVAILABLE:
                 site_supervision_mask=site_supervision_mask,
                 cyp_prior_by_mol=cyp_prior_by_mol,
                 cyp_labels=cyp_labels,
+                cyp_supervision_mask=cyp_supervision_mask,
             )
             total_aux_loss = wave_aux_loss + analogical_aux_loss
             if (not self.memory_frozen) and self.training and site_labels is not None and cyp_logits.numel():
