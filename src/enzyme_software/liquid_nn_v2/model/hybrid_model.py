@@ -92,7 +92,7 @@ if TORCH_AVAILABLE:
             outputs: Dict[str, object],
             bridge: Dict[str, object],
             batch: Dict[str, object],
-        ) -> torch.Tensor:
+        ) -> tuple[torch.Tensor, Dict[str, torch.Tensor]]:
             atom_features = outputs["atom_features"]
             batch_index = batch["batch"]
             rows = int(atom_features.size(0))
@@ -194,7 +194,16 @@ if TORCH_AVAILABLE:
             arbiter_in = torch.nan_to_num(arbiter_in, nan=0.0, posinf=4.0, neginf=-4.0)
             site_logits = council_logit + self.site_arbiter_head(arbiter_in)
             site_logits = torch.nan_to_num(site_logits, nan=0.0, posinf=20.0, neginf=-20.0)
-            return site_logits.clamp(-20.0, 20.0)
+            council = {
+                "lnn_vote": lnn_vote,
+                "lnn_conf": lnn_conf,
+                "wave_vote": bridge["wave_site_bias"],
+                "wave_conf": wave_conf,
+                "analogical_vote": bridge["analogical_site_bias"],
+                "analogical_conf": analogical_conf,
+                "council_logit": council_logit,
+            }
+            return site_logits.clamp(-20.0, 20.0), council
 
         def _apply_nexus_bridge(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
             if self.nexus_bridge is None:
@@ -217,8 +226,9 @@ if TORCH_AVAILABLE:
             result["site_logits_base"] = outputs["site_logits"]
             result["cyp_logits_base"] = outputs["cyp_logits"]
             ana_cyp_weight = torch.sigmoid(self.ana_cyp_weight_logit)
+            council = None
             if self.site_arbiter_head is not None and self.site_arbiter_uses_bridge:
-                site_logits = self._site_logits_from_arbiter(outputs, bridge, batch)
+                site_logits, council = self._site_logits_from_arbiter(outputs, bridge, batch)
                 site_mode = "nexus_arbiter"
             else:
                 site_logits = outputs["site_logits"]
@@ -242,6 +252,7 @@ if TORCH_AVAILABLE:
                     "nexus_bridge_outputs": bridge,
                     "nexus_bridge_losses": bridge["losses"],
                     "atom_multivectors": bridge["atom_multivectors"],
+                    "site_vote_heads": council,
                     "diagnostics": diagnostics,
                 }
             )

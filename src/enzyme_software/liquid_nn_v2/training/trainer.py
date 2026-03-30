@@ -5,7 +5,7 @@ from typing import Dict, Iterable, List, Optional
 
 import numpy as np
 
-from enzyme_software.liquid_nn_v2._compat import TORCH_AVAILABLE, require_torch, torch
+from enzyme_software.liquid_nn_v2._compat import F, TORCH_AVAILABLE, require_torch, torch
 from enzyme_software.liquid_nn_v2.config import TrainingConfig
 from enzyme_software.liquid_nn_v2.training.loss import AdaptiveLossV2
 from enzyme_software.liquid_nn_v2.training.metrics import compute_cyp_metrics, compute_site_metrics_v2
@@ -114,6 +114,14 @@ if TORCH_AVAILABLE:
         def _apply_confidence_weights(self, loss, batch):
             return loss
 
+        def _masked_bce_with_logits(self, logits, labels, supervision_mask):
+            labels = labels.float().view_as(logits)
+            raw = F.binary_cross_entropy_with_logits(logits, labels, reduction="none")
+            if supervision_mask is None:
+                return raw.mean()
+            mask = supervision_mask.float().view_as(logits)
+            return (raw * mask).sum() / mask.sum().clamp_min(1.0)
+
         def compute_loss(self, batch: Dict[str, object], outputs: Dict[str, object]):
             loss, stats = self.loss_fn(
                 outputs["site_logits"],
@@ -142,6 +150,42 @@ if TORCH_AVAILABLE:
                         continue
                     if hasattr(value, "detach"):
                         stats[f"nexus_{key}_loss"] = float(value.detach().item())
+            vote_heads = outputs.get("site_vote_heads") or {}
+            model_config = getattr(self.model, "config", None)
+            if isinstance(vote_heads, dict) and vote_heads:
+                site_labels = batch["site_labels"]
+                site_mask = batch.get("site_supervision_mask")
+                aux_specs = [
+                    ("lnn", "lnn_vote", float(getattr(model_config, "nexus_lnn_vote_aux_weight", 0.0))),
+                    ("wave", "wave_vote", float(getattr(model_config, "nexus_wave_vote_aux_weight", 0.0))),
+                    ("analogical", "analogical_vote", float(getattr(model_config, "nexus_analogical_vote_aux_weight", 0.0))),
+                ]
+                for name, key, weight in aux_specs:
+                    tensor = vote_heads.get(key)
+                    if tensor is None or weight <= 0.0:
+                        continue
+                    aux_loss = self._masked_bce_with_logits(tensor, site_labels, site_mask)
+                    loss = loss + (weight * aux_loss)
+                    stats[f"nexus_{name}_vote_loss"] = float(aux_loss.detach().item())
+                    stats[f"nexus_{name}_vote_weight"] = float(weight)
+                final_probs = torch.sigmoid(outputs["site_logits"]).detach()
+                consistency_specs = [
+                    ("wave", "wave_vote", float(getattr(model_config, "nexus_wave_vote_consistency_weight", 0.0))),
+                    ("analogical", "analogical_vote", float(getattr(model_config, "nexus_analogical_vote_consistency_weight", 0.0))),
+                ]
+                for name, key, weight in consistency_specs:
+                    tensor = vote_heads.get(key)
+                    if tensor is None or weight <= 0.0:
+                        continue
+                    raw = F.binary_cross_entropy_with_logits(tensor, final_probs, reduction="none")
+                    if site_mask is not None:
+                        mask = site_mask.float().view_as(raw)
+                        cons_loss = (raw * mask).sum() / mask.sum().clamp_min(1.0)
+                    else:
+                        cons_loss = raw.mean()
+                    loss = loss + (weight * cons_loss)
+                    stats[f"nexus_{name}_vote_consistency_loss"] = float(cons_loss.detach().item())
+                    stats[f"nexus_{name}_vote_consistency_weight"] = float(weight)
             stats.update(self._collect_output_stats(outputs))
             weighted_loss = self._apply_confidence_weights(loss, batch)
             if weighted_loss is not loss:

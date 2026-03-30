@@ -109,6 +109,11 @@ class ModelConfig:
     use_nexus_site_arbiter: bool = True
     nexus_site_arbiter_hidden_dim: int = 128
     nexus_site_arbiter_dropout: float = 0.10
+    nexus_lnn_vote_aux_weight: float = 0.00
+    nexus_wave_vote_aux_weight: float = 0.00
+    nexus_analogical_vote_aux_weight: float = 0.00
+    nexus_wave_vote_consistency_weight: float = 0.00
+    nexus_analogical_vote_consistency_weight: float = 0.00
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
     cyp_names: Tuple[str, ...] = tuple(MAJOR_CYP_CLASSES)
@@ -183,6 +188,11 @@ class ModelConfig:
         self.nexus_analogical_cyp_init = min(max(float(self.nexus_analogical_cyp_init), 1.0e-3), 1.0 - 1.0e-3)
         self.nexus_site_arbiter_hidden_dim = max(32, int(self.nexus_site_arbiter_hidden_dim))
         self.nexus_site_arbiter_dropout = min(max(float(self.nexus_site_arbiter_dropout), 0.0), 0.5)
+        self.nexus_lnn_vote_aux_weight = max(0.0, float(self.nexus_lnn_vote_aux_weight))
+        self.nexus_wave_vote_aux_weight = max(0.0, float(self.nexus_wave_vote_aux_weight))
+        self.nexus_analogical_vote_aux_weight = max(0.0, float(self.nexus_analogical_vote_aux_weight))
+        self.nexus_wave_vote_consistency_weight = max(0.0, float(self.nexus_wave_vote_consistency_weight))
+        self.nexus_analogical_vote_consistency_weight = max(0.0, float(self.nexus_analogical_vote_consistency_weight))
 
     @property
     def num_cyp_classes(self) -> int:
