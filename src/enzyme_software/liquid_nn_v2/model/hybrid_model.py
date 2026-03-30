@@ -43,9 +43,25 @@ if TORCH_AVAILABLE:
                     torch.logit(torch.tensor(float(getattr(self.config, "nexus_analogical_cyp_init", 0.12))))
                 )
                 if bool(getattr(self.config, "use_nexus_site_arbiter", True)):
-                    arbiter_in = atom_dim + 16 + graph_dim + num_cyp + 3 + 2 + num_cyp + steric_dim + xtb_dim + 10 + 1 + 1 + 5
+                    arbiter_in = atom_dim + 16 + graph_dim + num_cyp + 3 + 2 + num_cyp + steric_dim + xtb_dim + 10 + 1 + 1 + 5 + 6
                     arbiter_hidden = int(getattr(self.config, "nexus_site_arbiter_hidden_dim", 128))
                     arbiter_dropout = float(getattr(self.config, "nexus_site_arbiter_dropout", 0.10))
+                    council_hidden = max(32, arbiter_hidden // 2)
+                    self.lnn_conf_head = nn.Sequential(
+                        nn.Linear(atom_dim, council_hidden),
+                        nn.SiLU(),
+                        nn.Linear(council_hidden, 1),
+                    )
+                    self.wave_conf_head = nn.Sequential(
+                        nn.Linear(14, council_hidden),
+                        nn.SiLU(),
+                        nn.Linear(council_hidden, 1),
+                    )
+                    self.analogical_conf_head = nn.Sequential(
+                        nn.Linear(8, council_hidden),
+                        nn.SiLU(),
+                        nn.Linear(council_hidden, 1),
+                    )
                     self.site_arbiter_head = nn.Sequential(
                         nn.Linear(arbiter_in, arbiter_hidden),
                         nn.SiLU(),
@@ -112,12 +128,44 @@ if TORCH_AVAILABLE:
             steric_b = torch.tanh(steric)
             xtb_b = torch.tanh(xtb)
             wave_field_b = torch.tanh(wave_field["atom_field_features"].detach())
+            lnn_vote = outputs["site_logits"]
+            lnn_conf = torch.sigmoid(self.lnn_conf_head(atom_features_b))
             wave_site_bias_b = torch.tanh(bridge["wave_site_bias"].detach())
+            wave_conf = torch.sigmoid(
+                self.wave_conf_head(
+                    torch.cat(
+                        [
+                            wave_field_b,
+                            wave_scalar_b,
+                            wave_site_bias_b,
+                        ],
+                        dim=-1,
+                    )
+                )
+            )
             analogical_site_bias_b = torch.tanh(bridge["analogical_site_bias"].detach())
             continuous_reasoning_b = torch.tanh(bridge["continuous_reasoning_features"].detach())
             analogical_site_prior = bridge["analogical_site_prior"].detach()
             confidence_b = confidence.detach()
             analogical_cyp_context_b = analogical_cyp_context.detach()
+            analogical_conf = torch.sigmoid(
+                self.analogical_conf_head(
+                    torch.cat(
+                        [
+                            analogical_site_prior,
+                            confidence_b,
+                            analogical_site_bias_b,
+                            continuous_reasoning_b,
+                        ],
+                        dim=-1,
+                    )
+                )
+            )
+            council_logit = (
+                lnn_conf * lnn_vote
+                + wave_conf * bridge["wave_site_bias"].detach()
+                + analogical_conf * bridge["analogical_site_bias"].detach()
+            )
             arbiter_in = torch.cat(
                 [
                     atom_features_b,
@@ -134,11 +182,17 @@ if TORCH_AVAILABLE:
                     wave_site_bias_b,
                     analogical_site_bias_b,
                     continuous_reasoning_b,
+                    lnn_vote,
+                    lnn_conf,
+                    bridge["wave_site_bias"].detach(),
+                    wave_conf,
+                    bridge["analogical_site_bias"].detach(),
+                    analogical_conf,
                 ],
                 dim=-1,
             )
             arbiter_in = torch.nan_to_num(arbiter_in, nan=0.0, posinf=4.0, neginf=-4.0)
-            site_logits = self.site_arbiter_head(arbiter_in)
+            site_logits = council_logit + self.site_arbiter_head(arbiter_in)
             site_logits = torch.nan_to_num(site_logits, nan=0.0, posinf=20.0, neginf=-20.0)
             return site_logits.clamp(-20.0, 20.0)
 
