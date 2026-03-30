@@ -14,6 +14,7 @@ from typing import Optional
 import torch
 import torch.nn.functional as F
 
+from nexus.pocket.pga import PGA_DIM
 from nexus.reasoning.pgw_transport import (
     PGWTransportResult,
     PGWTransporter as ClassicPGWTransporter,
@@ -41,10 +42,28 @@ class PGWTransporter(ClassicPGWTransporter):
         self.metric_electronic_weight = 0.45
 
     @staticmethod
-    def _wave_feature_signature(multivectors: torch.Tensor) -> torch.Tensor:
-        mv = torch.as_tensor(multivectors, dtype=torch.float64)
+    def _canonicalize_multivectors(multivectors: torch.Tensor) -> torch.Tensor:
+        mv = torch.as_tensor(multivectors)
         if mv.ndim != 2:
             raise ValueError("wave transport expects [N, D] multivectors")
+        if mv.size(-1) == PGA_DIM:
+            return mv
+        if mv.size(-1) != 8:
+            raise ValueError(
+                f"wave transport expects trailing multivector dimension 8 or {PGA_DIM}, got {mv.size(-1)}"
+            )
+        out = torch.zeros(mv.shape[:-1] + (PGA_DIM,), dtype=mv.dtype, device=mv.device)
+        out[..., 0] = mv[..., 0]
+        out[..., 1:4] = mv[..., 1:4]
+        out[..., 5] = mv[..., 4]
+        out[..., 6] = mv[..., 6]
+        out[..., 7] = mv[..., 5]
+        out[..., 11] = mv[..., 7]
+        return out
+
+    @classmethod
+    def _wave_feature_signature(multivectors: torch.Tensor) -> torch.Tensor:
+        mv = cls._canonicalize_multivectors(multivectors).to(dtype=torch.float64)
         mv_centered = mv - mv.mean(dim=0, keepdim=True)
         mv_norm = F.normalize(mv_centered, p=2, dim=-1)
         magnitude = mv.norm(p=2, dim=-1, keepdim=True)
@@ -63,6 +82,8 @@ class PGWTransporter(ClassicPGWTransporter):
             return None
         if q_mv.size(0) == 0 or r_mv.size(0) == 0:
             return None
+        q_mv = self._canonicalize_multivectors(q_mv)
+        r_mv = self._canonicalize_multivectors(r_mv)
         q_sig = self._wave_feature_signature(q_mv)
         r_sig = self._wave_feature_signature(r_mv)
         elec = torch.cdist(q_sig, r_sig, p=2).to(dtype=torch.float64)
@@ -71,6 +92,7 @@ class PGWTransporter(ClassicPGWTransporter):
 
     def _combined_metric_tensor(self, mol, multivectors: torch.Tensor) -> torch.Tensor:
         structural_metric = self._distance_matrix(mol).to(dtype=torch.float64, device=self.device)
+        multivectors = self._canonicalize_multivectors(multivectors)
         electronic_metric = self.compute_z_kernel_matrix(multivectors).to(dtype=torch.float64, device=self.device)
         total_weight = self.metric_structural_weight + self.metric_electronic_weight
         if total_weight <= 0.0:
@@ -131,6 +153,8 @@ class PGWTransporter(ClassicPGWTransporter):
         q_mv: torch.Tensor,
         r_mv: torch.Tensor,
     ) -> tuple[torch.Tensor, str]:
+        q_mv = self._canonicalize_multivectors(q_mv)
+        r_mv = self._canonicalize_multivectors(r_mv)
         q_metric = self._combined_metric_tensor(query_mol, q_mv)
         r_metric = self._combined_metric_tensor(retrieved_mol, r_mv)
         cross_cost = self._cross_feature_cost(
