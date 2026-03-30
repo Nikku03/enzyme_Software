@@ -14,6 +14,80 @@ from enzyme_software.liquid_nn_v2.training.utils import collate_molecule_graphs,
 
 
 if TORCH_AVAILABLE:
+    class _NoOpScheduler:
+        def step(self, val_metric: float) -> None:
+            return None
+
+
+    class _ManualAdamW:
+        def __init__(
+            self,
+            params,
+            *,
+            lr: float,
+            weight_decay: float,
+            betas,
+            eps: float = 1.0e-8,
+        ):
+            self.param_groups = [{
+                "params": [param for param in params if param is not None],
+                "lr": float(lr),
+                "weight_decay": float(weight_decay),
+                "betas": tuple(float(value) for value in betas),
+                "eps": float(eps),
+            }]
+            self.state: Dict[int, Dict[str, object]] = {}
+
+        def zero_grad(self, set_to_none: bool = False) -> None:
+            for group in self.param_groups:
+                for param in group["params"]:
+                    grad = param.grad
+                    if grad is None:
+                        continue
+                    if set_to_none:
+                        param.grad = None
+                    else:
+                        grad.zero_()
+
+        @torch.no_grad()
+        def step(self) -> None:
+            for group in self.param_groups:
+                lr = float(group["lr"])
+                weight_decay = float(group["weight_decay"])
+                beta1, beta2 = group["betas"]
+                eps = float(group["eps"])
+                for param in group["params"]:
+                    grad = param.grad
+                    if grad is None:
+                        continue
+                    if grad.is_sparse:
+                        raise RuntimeError("ManualAdamW does not support sparse gradients")
+                    state = self.state.setdefault(
+                        id(param),
+                        {
+                            "step": 0,
+                            "exp_avg": torch.zeros_like(param),
+                            "exp_avg_sq": torch.zeros_like(param),
+                        },
+                    )
+                    exp_avg = state["exp_avg"]
+                    exp_avg_sq = state["exp_avg_sq"]
+                    state["step"] = int(state["step"]) + 1
+                    step = int(state["step"])
+
+                    if weight_decay != 0.0:
+                        param.mul_(1.0 - (lr * weight_decay))
+
+                    exp_avg.mul_(beta1).add_(grad, alpha=1.0 - beta1)
+                    exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1.0 - beta2)
+
+                    bias_correction1 = 1.0 - (beta1 ** step)
+                    bias_correction2 = 1.0 - (beta2 ** step)
+                    denom = exp_avg_sq.sqrt().div_(bias_correction2 ** 0.5).add_(eps)
+                    step_size = lr / bias_correction1
+                    param.addcdiv_(exp_avg, denom, value=-step_size)
+
+
     @dataclass
     class Trainer:
         model: object
@@ -39,19 +113,38 @@ if TORCH_AVAILABLE:
                 energy_loss_clip=float(getattr(model_config, "energy_loss_clip", 2.0)),
             )
             self.loss_fn.to(self.device)
-            self.optimizer = torch.optim.AdamW(
-                self._trainable_parameters(),
-                lr=self.config.learning_rate,
-                weight_decay=self.config.weight_decay,
-                betas=self.config.betas,
-            )
-            self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                self.optimizer,
-                mode="max",
-                factor=self.config.scheduler_factor,
-                patience=self.config.scheduler_patience,
-                min_lr=1e-6,
-            )
+            trainable_params = self._trainable_parameters()
+            self._optimizer_backend = "torch"
+            try:
+                self.optimizer = torch.optim.AdamW(
+                    trainable_params,
+                    lr=self.config.learning_rate,
+                    weight_decay=self.config.weight_decay,
+                    betas=self.config.betas,
+                )
+                self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                    self.optimizer,
+                    mode="max",
+                    factor=self.config.scheduler_factor,
+                    patience=self.config.scheduler_patience,
+                    min_lr=1e-6,
+                )
+            except AttributeError as exc:
+                if "torch._inductor" not in str(exc) and "custom_graph_pass" not in str(exc):
+                    raise
+                print(
+                    "Falling back to ManualAdamW due to broken torch compile runtime "
+                    f"({exc}).",
+                    flush=True,
+                )
+                self._optimizer_backend = "manual"
+                self.optimizer = _ManualAdamW(
+                    trainable_params,
+                    lr=self.config.learning_rate,
+                    weight_decay=self.config.weight_decay,
+                    betas=self.config.betas,
+                )
+                self.scheduler = _NoOpScheduler()
 
         def _disable_broken_torch_compile_wrappers(self) -> None:
             # Some Colab torch builds hit a circular-import bug the first time
