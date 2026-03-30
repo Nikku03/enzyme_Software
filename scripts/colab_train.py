@@ -558,7 +558,7 @@ print(
     "ANA gate : "
     f"burn_in_floor={ANALOGICAL_BURN_IN_GATE_FLOOR:g}  "
     f"post_burn_floor={ANALOGICAL_POST_BURN_GATE_FLOOR:g}  "
-    f"forced={'off' if FORCE_ANA_GATE is None else FORCE_ANA_GATE:g}"
+    f"forced={'off' if FORCE_ANA_GATE is None else f'{FORCE_ANA_GATE:g}'}"
 )
 print(f"Strict ANA debug : {'on' if STRICT_ANALOGICAL_DEBUG else 'off'}")
 if QUANTUM_FEATURES_PATH is not None:
