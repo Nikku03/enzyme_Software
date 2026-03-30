@@ -769,8 +769,17 @@ def _load_model_state_compat(module: torch.nn.Module, state_dict: dict, *, label
         if key not in current_state:
             skipped.append((key, "missing"))
             continue
-        if current_state[key].shape != value.shape:
-            skipped.append((key, f"shape {tuple(value.shape)} -> {tuple(current_state[key].shape)}"))
+        current_value = current_state[key]
+        if isinstance(current_value, UninitializedParameter):
+            filtered_state[key] = value
+            continue
+        try:
+            current_shape = current_value.shape
+        except RuntimeError:
+            filtered_state[key] = value
+            continue
+        if current_shape != value.shape:
+            skipped.append((key, f"shape {tuple(value.shape)} -> {tuple(current_shape)}"))
             continue
         filtered_state[key] = value
     missing, unexpected = module.load_state_dict(filtered_state, strict=False)
