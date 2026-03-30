@@ -36,6 +36,21 @@ def _setdefault_env(name: str, value: str) -> None:
         os.environ[name] = value
 
 
+def _resolve_warm_start(output_dir: str) -> str:
+    explicit = os.environ.get("HYBRID_COLAB_WARM_START", "").strip()
+    if explicit:
+        return explicit
+    mode = os.environ.get("HYBRID_COLAB_WARM_START_MODE", "best").strip().lower() or "best"
+    out = Path(output_dir)
+    best = out / "hybrid_full_xtb_best.pt"
+    latest = out / "hybrid_full_xtb_latest.pt"
+    if mode == "latest":
+        return str(latest)
+    if best.exists():
+        return str(best)
+    return str(latest)
+
+
 def _ensure_rdkit() -> None:
     try:
         from rdkit import Chem  # noqa: F401
@@ -106,7 +121,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
-        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
+        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "1",
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
@@ -125,7 +140,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
-        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
+        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "3",
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
@@ -144,7 +159,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "1",
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
-        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
+        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "3",
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
@@ -203,10 +218,7 @@ def main() -> None:
         "HYBRID_COLAB_XTB_CACHE_DIR",
         "/content/drive/MyDrive/enzyme_hybrid_lnn/cache/full_xtb",
     )
-    checkpoint = os.environ.get(
-        "HYBRID_COLAB_WARM_START",
-        "/content/drive/MyDrive/enzyme_hybrid_lnn/checkpoints/hybrid_full_xtb/hybrid_full_xtb_latest.pt",
-    )
+    checkpoint = _resolve_warm_start(output_dir)
     xenosite_manifest = os.environ.get(
         "HYBRID_COLAB_XENOSITE_MANIFEST",
         "data/xenosite_suppl/manifest.json",
@@ -267,6 +279,7 @@ def main() -> None:
     print(f"manual_cache_dir={manual_cache_dir}")
     print(f"xtb_cache_dir={xtb_cache_dir}")
     print(f"warm_start={checkpoint}")
+    print(f"warm_start_mode={os.environ.get('HYBRID_COLAB_WARM_START_MODE', 'best')}")
     print(f"disable_precedent_logbook={os.environ.get('HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK', '1')}")
     print(f"live_wave_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS', '0')}")
     print(f"live_analogical_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS', '0')}")

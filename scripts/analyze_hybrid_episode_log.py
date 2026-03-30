@@ -98,6 +98,7 @@ def analyze(path: Path, split: str, top_n: int) -> dict:
     source_counts = Counter()
     winner_counts = Counter()
     winner_hits = Counter()
+    winner_misses = Counter()
     source_hits = Counter()
     stats = defaultdict(list)
     misses = []
@@ -129,6 +130,8 @@ def analyze(path: Path, split: str, top_n: int) -> dict:
             winner_counts[winner] += 1
             if top1_hit:
                 winner_hits[winner] += 1
+            else:
+                winner_misses[winner] += 1
 
         brief = _brief(row)
         if top1_hit:
@@ -192,6 +195,9 @@ def analyze(path: Path, split: str, top_n: int) -> dict:
         "source_summary": source_summary,
         "winner_counts": dict(winner_counts),
         "winner_hits": dict(winner_hits),
+        "winner_misses": dict(winner_misses),
+        "non_lnn_correct_wins": int(sum(count for stream, count in winner_hits.items() if stream != "lnn")),
+        "non_lnn_total_wins": int(sum(count for stream, count in winner_counts.items() if stream != "lnn")),
         "vote_summary": stat_summary,
         "board_weight_summary": board_weight_summary,
         "top_confident_misses": misses[:top_n],
