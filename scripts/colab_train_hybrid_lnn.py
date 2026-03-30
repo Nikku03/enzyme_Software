@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import os
 import runpy
+import subprocess
 import sys
 from pathlib import Path
 
@@ -32,6 +33,28 @@ if str(SRC_DIR) not in sys.path:
 def _setdefault_env(name: str, value: str) -> None:
     if not os.environ.get(name):
         os.environ[name] = value
+
+
+def _ensure_rdkit() -> None:
+    try:
+        from rdkit import Chem  # noqa: F401
+        return
+    except Exception:
+        pass
+    print("RDKit not found. Installing rdkit-pypi for this Colab runtime...", flush=True)
+    subprocess.check_call(
+        [sys.executable, "-m", "pip", "install", "-q", "rdkit-pypi"],
+        cwd=str(REPO_DIR),
+    )
+    import importlib
+
+    importlib.invalidate_caches()
+    try:
+        from rdkit import Chem  # noqa: F401
+    except Exception as exc:  # pragma: no cover - runtime bootstrap failure
+        raise RuntimeError(
+            "RDKit installation completed but import still failed in the current runtime."
+        ) from exc
 
 
 PRESETS: dict[str, dict[str, str]] = {
@@ -80,6 +103,7 @@ PRESETS: dict[str, dict[str, str]] = {
 def main() -> None:
     os.chdir(REPO_DIR)
     os.environ["PYTHONPATH"] = f"{SRC_DIR}:{os.environ.get('PYTHONPATH', '')}".rstrip(":")
+    _ensure_rdkit()
     preset = os.environ.get("HYBRID_COLAB_PRESET", "balanced").strip().lower() or "balanced"
     if preset not in PRESETS:
         valid = ", ".join(sorted(PRESETS))
