@@ -151,11 +151,11 @@ def quantum_distillation_loss(
     target_fukui: torch.Tensor,
     target_gap: torch.Tensor,
     atom_mask: Optional[torch.Tensor] = None,
-    charge_weight: float = 0.35,
-    fukui_weight: float = 4.0,
+    charge_weight: float = 0.50,
+    fukui_weight: float = 12.0,
     gap_weight: float = 0.02,
     huber_beta: float = 0.25,
-    fukui_sharpen_power: float = 2.5,
+    fukui_sharpen_temperature: float = 3.0,
     predicted_harmonics: Optional[torch.Tensor] = None,
     target_harmonics: Optional[torch.Tensor] = None,
     harmonic_weight: float = 0.35,
@@ -197,22 +197,23 @@ def quantum_distillation_loss(
     norm = mask.sum().clamp_min(1.0)
     charge_raw = F.smooth_l1_loss(pred_charge, tgt_charge, reduction="none", beta=huber_beta)
     charge_loss = (charge_raw * mask).sum() / norm
-    fukui_raw = F.smooth_l1_loss(pred_fukui, tgt_fukui, reduction="none", beta=huber_beta)
+    fukui_raw = F.smooth_l1_loss(pred_fukui, tgt_fukui, reduction="none", beta=0.1)
     fukui_raw_loss = (fukui_raw * mask).sum() / norm
     tgt_fukui_pos = (tgt_fukui * mask).clamp_min(0.0)
-    tgt_fukui_mass = tgt_fukui_pos.sum(dim=-1, keepdim=True)
-    if bool((tgt_fukui_mass > 0.0).any().item()):
-        tgt_fukui_dist = tgt_fukui_pos / tgt_fukui_mass.clamp_min(1.0e-8)
-        sharpen_power = max(float(fukui_sharpen_power), 1.0)
-        if sharpen_power > 1.0:
-            tgt_fukui_dist = tgt_fukui_dist.pow(sharpen_power)
-            tgt_fukui_dist = tgt_fukui_dist / tgt_fukui_dist.sum(dim=-1, keepdim=True).clamp_min(1.0e-8)
-        pred_fukui_logprob = F.log_softmax(pred_fukui, dim=-1)
-        fukui_kl = F.kl_div(pred_fukui_logprob, tgt_fukui_dist, reduction="none").sum(dim=-1)
-        valid_rows = (tgt_fukui_mass.view(-1) > 0.0).to(dtype=torch.float32)
-        fukui_dist_loss = (fukui_kl * valid_rows).sum() / valid_rows.sum().clamp_min(1.0)
-        fukui_loss = 0.15 * fukui_raw_loss + 0.85 * fukui_dist_loss
+    valid_rows = (mask.sum(dim=-1) > 0.0) & (tgt_fukui_pos.sum(dim=-1) > 0.0)
+    if bool(valid_rows.any().item()):
+        safe_mask = mask > 0.0
+        pred_fukui_logits = pred_fukui.masked_fill(~safe_mask, -1.0e9)
+        pred_fukui_logprob = F.log_softmax(pred_fukui_logits, dim=-1)
+        sharpen_temp = max(float(fukui_sharpen_temperature), 1.0)
+        target_logits = (tgt_fukui_pos * sharpen_temp).masked_fill(~safe_mask, -1.0e9)
+        target_dist = F.softmax(target_logits, dim=-1)
+        fukui_kl = F.kl_div(pred_fukui_logprob, target_dist, reduction="none").sum(dim=-1)
+        valid_rows_f = valid_rows.to(dtype=torch.float32, device=pred_charge.device)
+        fukui_dist_loss = (fukui_kl * valid_rows_f).sum() / valid_rows_f.sum().clamp_min(1.0)
+        fukui_loss = 0.05 * fukui_raw_loss + 0.95 * fukui_dist_loss
     else:
+        fukui_dist_loss = pred_charge.new_zeros(())
         fukui_loss = fukui_raw_loss
     gap_loss = F.smooth_l1_loss(pred_gap.view(-1), tgt_gap.view(-1), reduction="mean", beta=huber_beta)
     harmonic_loss = pred_charge.new_zeros(())
@@ -236,6 +237,8 @@ def quantum_distillation_loss(
     return total, {
         "charge_loss": charge_loss,
         "fukui_loss": fukui_loss,
+        "fukui_raw_loss": fukui_raw_loss,
+        "fukui_kl_loss": fukui_dist_loss,
         "gap_loss": gap_loss,
         "harmonic_loss": harmonic_loss,
     }
