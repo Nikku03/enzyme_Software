@@ -91,6 +91,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
         "NEXUS_COLAB_DAG_WARMUP_STEPS": "50",
         "NEXUS_COLAB_KINETIC_WARMUP_STEPS": "32",
+        "NEXUS_COLAB_KINETIC_LOSS_WEIGHT": "0.10",
         "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
     },
     # Default 10-epoch run on any ultra_vram GPU.
@@ -117,6 +118,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
         "NEXUS_COLAB_DAG_WARMUP_STEPS": "400",
         "NEXUS_COLAB_KINETIC_WARMUP_STEPS": "475",
+        "NEXUS_COLAB_KINETIC_LOSS_WEIGHT": "0.10",
         "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
     },
     # 15-epoch full run on a Colab A100/H100 (80 GB).
@@ -142,6 +144,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
         "NEXUS_COLAB_DAG_WARMUP_STEPS": "800",
         "NEXUS_COLAB_KINETIC_WARMUP_STEPS": "475",
+        "NEXUS_COLAB_KINETIC_LOSS_WEIGHT": "0.10",
         "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
     },
     # 30-epoch cloud run on single A100 80GB or H100 80GB.
@@ -168,6 +171,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
         "NEXUS_COLAB_DAG_WARMUP_STEPS": "1200",
         "NEXUS_COLAB_KINETIC_WARMUP_STEPS": "475",
+        "NEXUS_COLAB_KINETIC_LOSS_WEIGHT": "0.10",
         "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
         "NEXUS_COLAB_ALLOW_COMPILE": "1",
         "NEXUS_COLAB_NUM_WORKERS": "2",
@@ -204,6 +208,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "NEXUS_COLAB_DAG_LOSS_CAP": "1.0",
         "NEXUS_COLAB_DAG_WARMUP_STEPS": "1000",
         "NEXUS_COLAB_KINETIC_WARMUP_STEPS": "475",
+        "NEXUS_COLAB_KINETIC_LOSS_WEIGHT": "0.10",
         "NEXUS_COLAB_ANA_LOSS_WEIGHT": "0.25",
         "NEXUS_COLAB_ALLOW_COMPILE": "1",
         "NEXUS_COLAB_NUM_WORKERS": "2",

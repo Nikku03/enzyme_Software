@@ -354,6 +354,7 @@ DAG_LOSS_WEIGHT = _env_float("NEXUS_COLAB_DAG_LOSS_WEIGHT", 1.0)
 DAG_LOSS_CAP = _env_float("NEXUS_COLAB_DAG_LOSS_CAP", 4.0)
 DAG_WARMUP_STEPS = _env_int("NEXUS_COLAB_DAG_WARMUP_STEPS", 0)
 KINETIC_WARMUP_STEPS = _env_int("NEXUS_COLAB_KINETIC_WARMUP_STEPS", 0)
+KINETIC_LOSS_WEIGHT = _env_float("NEXUS_COLAB_KINETIC_LOSS_WEIGHT", 0.1)
 FLUX_LOSS_WEIGHT = _env_float("NEXUS_COLAB_FLUX_LOSS_WEIGHT", 0.1)
 ANA_LOSS_WEIGHT = _env_float("NEXUS_COLAB_ANA_LOSS_WEIGHT", 1.0)
 ANALOGICAL_ENGINE = _env_str("NEXUS_COLAB_ANALOGICAL_ENGINE", "classic").strip().lower() or "classic"
@@ -566,7 +567,7 @@ print(f"Physics cache : mode={PHYSICS_CACHE_MODE}  path={PHYSICS_CACHE_PATH}")
 
 # ── trainer ────────────────────────────────────────────────────────────────
 trainer = Metabolic_Causal_Trainer(
-    loss_fn=NEXUS_God_Loss(som_loss_mode="focal", focal_gamma=2.0, flux_loss_weight=FLUX_LOSS_WEIGHT),
+    loss_fn=NEXUS_God_Loss(som_loss_mode="focal", focal_gamma=2.0, flux_loss_weight=FLUX_LOSS_WEIGHT, kinetic_loss_weight=KINETIC_LOSS_WEIGHT),
     dynamics_steps=CFG["steps"],
     dynamics_dt=0.001,
     dynamics_summary_mode=CFG["physics_mode"],

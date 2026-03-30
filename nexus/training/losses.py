@@ -111,6 +111,7 @@ class NEXUS_God_Loss(nn.Module):
         focal_gamma: float = 2.0,
         focal_alpha: Optional[float] = None,
         flux_loss_weight: float = 0.1,
+        kinetic_loss_weight: float = 0.1,
     ) -> None:
         super().__init__()
         self.beta = float(beta)
@@ -119,6 +120,13 @@ class NEXUS_God_Loss(nn.Module):
         self.log_var_max = float(log_var_max)
         self.som_loss_mode = str(som_loss_mode).lower()
         self.flux_loss_weight = float(flux_loss_weight)
+        # Permanent scale applied to kinetic loss BEFORE homoscedastic weighting.
+        # At random init, log(pred_rate) ≈ +17.7 vs log(exp_rate) ≈ -18.4, giving
+        # huber_loss ≈ 36 which is 11× the SoM focal loss (≈3.2).  log_vars would
+        # need ~75 epochs at lr=1e-3 to suppress this — we only train for 8–30.
+        # A permanent 0.1 weight brings kinetic to ≈3.6, matching SoM magnitude,
+        # so the field spends its gradient budget on SoM ranking from the start.
+        self.kinetic_loss_weight = float(max(kinetic_loss_weight, 0.0))
         self.log_vars = nn.Parameter(torch.zeros(6))
         self.ranking_loss_fn = ListMLERankingLoss()
         self.focal_loss_fn = SoftmaxFocalLoss(gamma=focal_gamma, alpha=focal_alpha)
@@ -220,7 +228,11 @@ class NEXUS_God_Loss(nn.Module):
             true_som_idx,
             som_soft_target=som_soft_target,
         )
-        kinetic_loss = self.compute_kinetic_loss(pred_rate, exp_rate) * float(kinetic_loss_scale)
+        kinetic_loss = (
+            self.compute_kinetic_loss(pred_rate, exp_rate)
+            * float(kinetic_loss_scale)
+            * self.kinetic_loss_weight
+        )
         physics_loss = self.compute_physics_loss(sobolev_penalty, H_initial, H_final)
         topology_loss = self.compute_topology_loss(ts_eigenvalues)
         flux_loss = (
