@@ -280,6 +280,7 @@ if TORCH_AVAILABLE:
             arbiter_in = torch.cat(
                 [
                     board_context,
+                    board_weights,
                     lnn_vote,
                     lnn_conf,
                     wave_vote,
