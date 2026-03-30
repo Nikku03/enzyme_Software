@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 
 from nexus.physics.clifford_math import clifford_geometric_product, embed_coordinates
+from nexus.physics.pga_math import embed_point
 
 SIREN_OMEGA_0 = 30.0
 
@@ -294,6 +295,70 @@ class CliffordSirenLayer(nn.Module):
         return activated.squeeze(0) if squeezed else activated
 
 
+class EquivariantSineLayer(nn.Module):
+    """
+    Grade-preserving G(3,0,1) SIREN layer.
+
+    Channel mixing is scalar-only, so the 16 PGA grades are preserved.
+    The non-linearity acts on the multivector norm and rescales the
+    orientation-preserving unit multivector.
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        *,
+        is_first: bool = False,
+        omega_0: float = SIREN_OMEGA_0,
+    ) -> None:
+        super().__init__()
+        self.in_channels = int(max(in_channels, 1))
+        self.out_channels = int(max(out_channels, 1))
+        if abs(float(omega_0) - SIREN_OMEGA_0) > 1.0e-8:
+            raise ValueError(f"EquivariantSineLayer requires omega_0={SIREN_OMEGA_0}")
+        self.omega_0 = float(omega_0)
+        self.is_first = bool(is_first)
+        self.weight = nn.Parameter(torch.empty(self.out_channels, self.in_channels))
+        self.bias = nn.Parameter(torch.zeros(self.out_channels, 16))
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        if self.is_first:
+            bound = 1.0 / float(max(self.in_channels, 1))
+        else:
+            bound = (6.0 / float(max(self.in_channels, 1))) ** 0.5 / self.omega_0
+        with torch.no_grad():
+            self.weight.uniform_(-bound, bound)
+            self.bias.zero_()
+
+    def forward(
+        self,
+        x_mv: torch.Tensor,
+        row_scale: torch.Tensor | None = None,
+        col_scale: torch.Tensor | None = None,
+        bias_shift: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        weight = self.weight
+        if row_scale is not None:
+            weight = weight * row_scale.unsqueeze(-1)
+        if col_scale is not None:
+            weight = weight * col_scale.unsqueeze(0)
+        weight = torch.nan_to_num(weight, nan=0.0)
+        out_mv = torch.einsum("...ci,dc->...di", x_mv, weight)
+
+        bias = self.bias
+        if bias_shift is not None:
+            bias = bias.clone()
+            bias[..., 0] = bias[..., 0] + bias_shift
+        bias = torch.nan_to_num(bias, nan=0.0)
+        out_mv = out_mv + bias
+
+        norm = out_mv.norm(dim=-1, keepdim=True).clamp_min(1.0e-8)
+        phase = self.omega_0 * norm
+        return torch.sin(phase) * (out_mv / norm)
+
+
 @dataclass
 class DynamicLayerParams:
     row_scale: torch.Tensor
@@ -317,27 +382,26 @@ class DynamicSIREN(nn.Module):
             raise ValueError(f"DynamicSIREN requires omega_0={SIREN_OMEGA_0}")
         self.omega_0 = float(omega_0)
         self.omega_base = float(omega_0)
-
-        layers: List[CliffordSirenLayer] = []
-        in_dim = 1
+        self.pga_dim = 16
+        layers: List[EquivariantSineLayer] = []
+        in_channels = 1
         for idx in range(self.hidden_layers):
             layers.append(
-                CliffordSirenLayer(
-                    in_dim,
+                EquivariantSineLayer(
+                    in_channels,
                     self.hidden_dim,
-                    omega_base=self.omega_base,
+                    is_first=(idx == 0),
+                    omega_0=self.omega_base,
                 )
             )
-            in_dim = self.hidden_dim
+            in_channels = self.hidden_dim
         self.layers = nn.ModuleList(layers)
-        self.output_layer = nn.Linear(self.hidden_dim, 1)
-        siren_init_(
-            self.output_layer.weight,
-            self.output_layer.bias,
-            in_dim=self.hidden_dim,
-            omega_0=self.omega_0,
-            is_first=False,
-        )
+        self.output_weight = nn.Parameter(torch.empty(1, self.hidden_dim))
+        self.output_bias = nn.Parameter(torch.zeros(1, self.pga_dim))
+        with torch.no_grad():
+            bound = (6.0 / float(max(self.hidden_dim, 1))) ** 0.5 / self.omega_0
+            self.output_weight.uniform_(-bound, bound)
+            self.output_bias.zero_()
 
     def forward(
         self,
@@ -349,27 +413,28 @@ class DynamicSIREN(nn.Module):
         output_bias_shift: torch.Tensor,
         return_latent: bool = False,
     ) -> torch.Tensor:
-        x = embed_coordinates(coords).unsqueeze(-2)
+        x = embed_point(coords).unsqueeze(-2)
         for layer, params in zip(self.layers, hidden_params):
             x = layer(
                 x,
-                coords,
-                atomic_coords,
                 row_scale=params.row_scale,
                 col_scale=params.col_scale,
                 bias_shift=params.bias_shift,
             )
         latent = x
-        # Guard: CliffordLinear's nan_to_num(weight) stops NaN from corrupted
-        # hypernetwork scale, but if any layer still propagated NaN (e.g. via
-        # clifford_geometric_product with NaN x from a previous layer), block it
-        # here so AddmmBackward0 2th output (grad_out @ W) stays finite.
-        x_scalar = torch.nan_to_num(latent[..., 0], nan=0.0)
-        weight = self.output_layer.weight * output_row_scale.unsqueeze(-1) * output_col_scale.unsqueeze(0)
-        bias = self.output_layer.bias + output_bias_shift
+        weight = self.output_weight
+        if output_row_scale is not None:
+            weight = weight * output_row_scale.unsqueeze(-1)
+        if output_col_scale is not None:
+            weight = weight * output_col_scale.unsqueeze(0)
         weight = torch.nan_to_num(weight, nan=0.0)
+        output = torch.einsum("...ci,dc->...di", latent, weight)
+        bias = self.output_bias.clone()
+        if output_bias_shift is not None:
+            bias[..., 0] = bias[..., 0] + output_bias_shift
         bias = torch.nan_to_num(bias, nan=0.0)
-        output = torch.nn.functional.linear(x_scalar, weight, bias).squeeze(-1)
+        output = output + bias
+        output = output.squeeze(-2)
         if return_latent:
-            return output, latent
+            return output, latent.squeeze(-2) if latent.size(-2) == 1 else latent
         return output

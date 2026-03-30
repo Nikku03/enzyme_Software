@@ -31,6 +31,28 @@ def _symmetric_traceless_coefficients(tensor: torch.Tensor) -> torch.Tensor:
     return torch.stack([c0, c1, c2, c3, c4], dim=-1)
 
 
+def _reconstruct_quadrupole(coefficients: torch.Tensor) -> torch.Tensor:
+    c0, c1, c2, c3, c4 = coefficients.unbind(dim=-1)
+    sq2 = torch.sqrt(torch.tensor(2.0, dtype=coefficients.dtype, device=coefficients.device))
+    sq2_3 = torch.sqrt(torch.tensor(2.0 / 3.0, dtype=coefficients.dtype, device=coefficients.device))
+
+    zz = c1 * sq2_3
+    xx = 0.5 * (c0 * sq2 - zz)
+    yy = 0.5 * (-c0 * sq2 - zz)
+    xy = c2 / sq2
+    xz = c3 / sq2
+    yz = c4 / sq2
+
+    return torch.stack(
+        [
+            xx, xy, xz,
+            xy, yy, yz,
+            xz, yz, zz,
+        ],
+        dim=-1,
+    ).reshape(*coefficients.shape[:-1], 3, 3)
+
+
 def _fallback_real_spherical_harmonics(direction: torch.Tensor, degree: int) -> torch.Tensor:
     if degree == 0:
         return torch.ones(*direction.shape[:-1], 1, dtype=direction.dtype, device=direction.device)
@@ -109,6 +131,10 @@ class TensorSplatter(nn.Module):
         self.readout_odd1 = nn.Linear(reconstruction_dim, 1)
         self.readout_even2 = nn.Linear(reconstruction_dim, 1)
         self.readout_odd2 = nn.Linear(reconstruction_dim, 1)
+        self.readout_vector_odd = nn.Linear(reconstruction_dim, 1)
+        self.readout_vector_even = nn.Linear(reconstruction_dim, 1)
+        self.readout_tensor_even = nn.Linear(reconstruction_dim, 1)
+        self.readout_tensor_odd = nn.Linear(reconstruction_dim, 1)
 
     def _project_vector(self, x: torch.Tensor, linear: nn.Linear) -> torch.Tensor:
         projected = linear(x.transpose(1, 2))
@@ -117,6 +143,12 @@ class TensorSplatter(nn.Module):
     def _project_tensor(self, x: torch.Tensor, linear: nn.Linear) -> torch.Tensor:
         projected = linear(x.transpose(1, 2))
         return projected.transpose(1, 2)
+
+    def _readout_vector(self, x: torch.Tensor, linear: nn.Linear) -> torch.Tensor:
+        return linear(x.transpose(1, 2)).squeeze(-1)
+
+    def _readout_tensor(self, x: torch.Tensor, linear: nn.Linear) -> torch.Tensor:
+        return linear(x.transpose(1, 2)).squeeze(-1)
 
     def _alpha_targets(self, species: torch.Tensor, dtype: torch.dtype, device: torch.device) -> torch.Tensor:
         base_alpha = self.radial_kernel.alpha.to(device=device, dtype=dtype)
@@ -160,28 +192,65 @@ class TensorSplatter(nn.Module):
 
         c0e = self.readout_even0(state.even_scalar).squeeze(-1)
         c0o = self.readout_odd0(state.odd_scalar).squeeze(-1)
+        dipole_coeff = self._readout_vector(state.odd_vector, self.readout_vector_odd)
+        bivector_coeff = self._readout_vector(state.even_vector, self.readout_vector_even)
+        quadrupole_coeff = self._readout_tensor(state.even_tensor, self.readout_tensor_even)
+        odd_quadrupole_coeff = self._readout_tensor(state.odd_tensor, self.readout_tensor_odd)
+
+        rel_unit = torch.where(
+            dist.unsqueeze(-1) > 1.0e-6,
+            rel / dist.unsqueeze(-1),
+            torch.zeros_like(rel),
+        )
+        quadrupole = _reconstruct_quadrupole(quadrupole_coeff)
+        odd_quadrupole = _reconstruct_quadrupole(odd_quadrupole_coeff)
+        quad_vector = torch.einsum("aij,qaj->qai", quadrupole, rel_unit)
+        odd_quad_vector = torch.einsum("aij,qaj->qai", odd_quadrupole, rel_unit)
+
+        scalar_field = torch.einsum("qa,a->q", normalized_weights, c0e)
+        pseudoscalar_field = torch.einsum("qa,a->q", normalized_weights, c0o)
+        dipole_field = torch.einsum("qa,ai->qi", normalized_weights, dipole_coeff)
+        quadrupole_field = (normalized_weights.unsqueeze(-1) * quad_vector).sum(dim=1)
+        vector_field = dipole_field + quadrupole_field
+
+        bivector_seed = torch.einsum("qa,ai->qi", normalized_weights, bivector_coeff)
+        odd_quadrupole_field = (normalized_weights.unsqueeze(-1) * odd_quad_vector).sum(dim=1)
+        bivector_field = bivector_seed + odd_quadrupole_field
+
         angular_1o = self.readout_even1((state.odd_vector.unsqueeze(0) * y1.unsqueeze(2)).sum(dim=-1)).squeeze(-1)
         angular_1e = self.readout_odd1((state.even_vector.unsqueeze(0) * y1.unsqueeze(2)).sum(dim=-1)).squeeze(-1)
         angular_2e = self.readout_even2((state.even_tensor.unsqueeze(0) * y2.unsqueeze(2)).sum(dim=-1)).squeeze(-1)
         angular_2o = self.readout_odd2((state.odd_tensor.unsqueeze(0) * y2.unsqueeze(2)).sum(dim=-1)).squeeze(-1)
+        even_angular = torch.einsum("qa,qa->q", normalized_weights, angular_1o + angular_2e)
+        odd_angular = torch.einsum("qa,qa->q", normalized_weights, angular_1e + angular_2o)
 
-        even_raw = (
-            weights * c0e.unsqueeze(0)
-            + weights * angular_1o
-            + weights * angular_2e
-        ).sum(dim=1)
-        odd_raw = (
-            weights * c0o.unsqueeze(0)
-            + weights * angular_1e
-            + weights * angular_2o
-        ).sum(dim=1)
-        even_contrib = even_raw / weight_sum.squeeze(-1).clamp_min(1.0e-8)
-        odd_contrib = odd_raw / weight_sum.squeeze(-1).clamp_min(1.0e-8)
-        total = even_contrib + odd_contrib
+        multivector = torch.zeros(query_coords.size(0), 16, dtype=query_coords.dtype, device=query_coords.device)
+        multivector[..., 0] = scalar_field
+        multivector[..., 1:4] = vector_field
+        multivector[..., 5] = bivector_field[..., 2]
+        multivector[..., 6] = -bivector_field[..., 1]
+        multivector[..., 7] = bivector_field[..., 0]
+        multivector[..., 11] = pseudoscalar_field
+
+        even_contrib = scalar_field + even_angular
+        odd_contrib = pseudoscalar_field + odd_angular
+        total = (
+            even_contrib
+            + odd_contrib
+            + 0.10 * vector_field.norm(dim=-1)
+            + 0.05 * bivector_field.norm(dim=-1)
+        )
         return {
             "total": total,
             "even": even_contrib,
             "odd": odd_contrib,
+            "multivector": multivector,
+            "scalar_field": scalar_field,
+            "vector_field": vector_field,
+            "bivector_field": bivector_field,
+            "pseudoscalar_field": pseudoscalar_field,
+            "quadrupole_field": quadrupole_field,
+            "odd_quadrupole_field": odd_quadrupole_field,
             "weights": weights,
             "normalized_weights": normalized_weights,
             "weight_sum": weight_sum.squeeze(-1),

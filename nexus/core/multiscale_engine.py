@@ -34,6 +34,56 @@ class MultiScale_Topology_Engine(nn.Module):
         self.scalar_fuse = nn.Sequential(nn.Linear(128 + 128 + 128, 128), nn.SiLU(), nn.Linear(128, 128))
         self.vector_fuse = nn.Sequential(nn.Linear(128 + 1, 128), nn.SiLU(), nn.Linear(128, 128))
         self.tensor_fuse = nn.Sequential(nn.Linear(64 + 1, 64), nn.SiLU(), nn.Linear(64, 64))
+        self.scalar_to_pga = nn.Linear(128, 1)
+        self.odd_scalar_to_pga = nn.Linear(128, 1)
+        self.vector_to_pga = nn.Linear(128, 1)
+        self.even_vector_to_trivector = nn.Linear(128, 1)
+        self.tensor_coeff_to_pga = nn.Linear(64, 1)
+        self.odd_tensor_coeff_to_pga = nn.Linear(64, 1)
+        self.quadrupole_to_bivector = nn.Linear(5, 6)
+        self.odd_tensor_to_trivector = nn.Linear(5, 4)
+
+    def _collapse_vector_irrep(self, x: torch.Tensor, linear: nn.Linear) -> torch.Tensor:
+        # x: [N, C, 3] -> [N, 3], preserving the vector basis while collapsing only channels.
+        collapsed = linear(x.transpose(1, 2)).squeeze(-1)
+        return collapsed
+
+    def _collapse_tensor_irrep(self, x: torch.Tensor, linear: nn.Linear) -> torch.Tensor:
+        # x: [N, C, 5] -> [N, 5], preserving the l=2 coefficient basis while collapsing channels.
+        collapsed = linear(x.transpose(1, 2)).squeeze(-1)
+        return collapsed
+
+    def _pack_pga_multivector(
+        self,
+        *,
+        scalar_even: torch.Tensor,
+        scalar_odd: torch.Tensor,
+        vector_odd: torch.Tensor,
+        vector_even: torch.Tensor,
+        tensor_even: torch.Tensor,
+        tensor_odd: torch.Tensor,
+    ) -> torch.Tensor:
+        scalar = self.scalar_to_pga(scalar_even).squeeze(-1)
+        odd_scalar = self.odd_scalar_to_pga(scalar_odd).squeeze(-1)
+        vector = self._collapse_vector_irrep(vector_odd, self.vector_to_pga)
+        trivector_seed = self._collapse_vector_irrep(vector_even, self.even_vector_to_trivector)
+        quad_coeff = self._collapse_tensor_irrep(tensor_even, self.tensor_coeff_to_pga)
+        odd_tensor_coeff = self._collapse_tensor_irrep(tensor_odd, self.odd_tensor_coeff_to_pga)
+        bivector = self.quadrupole_to_bivector(quad_coeff)
+        trivector = self.odd_tensor_to_trivector(odd_tensor_coeff)
+
+        mv = torch.zeros(scalar_even.size(0), 16, dtype=scalar_even.dtype, device=scalar_even.device)
+        mv[..., 0] = scalar
+        mv[..., 1:4] = vector
+        mv[..., 4] = odd_scalar
+        mv[..., 5:11] = bivector
+        mv[..., 11:14] = trivector[..., :3]
+        mv[..., 14] = trivector[..., 3]
+        mv[..., 15] = odd_scalar
+        mv[..., 11] = mv[..., 11] + trivector_seed[..., 2]
+        mv[..., 12] = mv[..., 12] + trivector_seed[..., 0]
+        mv[..., 13] = mv[..., 13] + trivector_seed[..., 1]
+        return mv
 
     def forward(self, manifold) -> MultiScaleEngineOutput:
         topology = self.topology_kernel(manifold)
@@ -63,6 +113,22 @@ class MultiScale_Topology_Engine(nn.Module):
         fused["0e_topology"] = fused_0e
         fused["1o_topology"] = fused_1o
         fused["2e_topology"] = fused_2e
+        fused["pga_multivector"] = self._pack_pga_multivector(
+            scalar_even=symmetry["0e"],
+            scalar_odd=symmetry["0o"],
+            vector_odd=symmetry["1o"],
+            vector_even=symmetry["1e"],
+            tensor_even=symmetry["2e"],
+            tensor_odd=symmetry["2o"],
+        )
+        fused["pga_multivector_topology"] = self._pack_pga_multivector(
+            scalar_even=fused_0e,
+            scalar_odd=symmetry["0o"],
+            vector_odd=fused_1o,
+            vector_even=symmetry["1e"],
+            tensor_even=fused_2e,
+            tensor_odd=symmetry["2o"],
+        )
         fused["topology_atomic"] = attention.atomic_features
         fused["topology_group"] = attention.group_features
         fused["topology_conformer"] = attention.conformer_features

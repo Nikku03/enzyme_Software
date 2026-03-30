@@ -30,6 +30,7 @@ from nexus.core.flux_analysis import NCFAFluxPropagator
 from nexus.core.inference import NEXUS_Module1_Output
 from nexus.layers.dag_learner import MetabolicDAGLearner
 from nexus.physics.clifford_math import embed_coordinates
+from nexus.pocket.pga import PGA_DIM
 from nexus.pocket.ddi import DDIOccupancyState
 from nexus.training.losses import GatedAnalogicalGodLoss, NEXUS_God_Loss
 
@@ -1835,10 +1836,28 @@ class Metabolic_Causal_Trainer(nn.Module):
         # T2: flux consistency — penalise models that route more than 100 % of substrate
         # mass to metabolic sites (mass creation).  sigmoid(-delta_E) gives an unnormalised
         # per-site activation; if multiple sites are simultaneously near-certain the row sum
-        # exceeds 1.0 and the NCFA propagator fires a relu penalty.
+        # exceeds 1.0 and the NCFA propagator fires a relu penalty. Apply a
+        # global kinetic gate from the live TS/barrier estimate so high-barrier
+        # chemistry cannot route mass as freely as barrier-free chemistry.
         site_fluxes = torch.sigmoid(-delta_E_tensor)
+        flux_kinetic_gate = self.flux_propagator.build_kinetic_gate(
+            barrier_energy=self.last_kinetics_debug.get("kinetics_effective_delta_g_dagger"),
+            transmission=self.last_kinetics_debug.get("kinetics_transmission"),
+            metabolic_rate=self.last_kinetics_debug.get("kinetics_quantum_rate_rpmd"),
+        )
+        if flux_kinetic_gate is not None:
+            flux_kinetic_gate = self._sanitize_tensor(
+                self._to_fp32(flux_kinetic_gate),
+                nan=1.0,
+                posinf=1.0,
+                neginf=self.flux_propagator.eps,
+                clamp=(self.flux_propagator.eps, 1.0),
+            )
         W_flux = site_fluxes.view(1, 1, -1)   # [1 batch, 1 source node, N_atoms]
-        flux_consistency_loss = self.flux_propagator.compute_flux_consistency_loss(W_flux).to(dtype=torch.float32)
+        flux_consistency_loss = self.flux_propagator.compute_flux_consistency_loss(
+            W_flux,
+            kinetic_gate=flux_kinetic_gate,
+        ).to(dtype=torch.float32)
 
         # T3: ranking loss on geometric alignment scores — a structural signal independent
         # of the thermodynamic delta_E ranking already captured by som_loss.
@@ -1852,13 +1871,19 @@ class Metabolic_Causal_Trainer(nn.Module):
             ranking_loss = ranking_loss.detach()
 
         # T5: Metabolic DAG forward pass.
-        # Build per-atom Clifford multivectors: position in the vector grade (indices 1-3),
-        # effective reactivity in the scalar grade (index 0).  This gives the GraNDAG edge
-        # predictor a geometry- and thermodynamics-aware representation of each candidate
-        # metabolic site without requiring an additional neural forward pass.
-        atom_mv = embed_coordinates(manifold_pos.to(dtype=exp_rate.dtype)).clone()
-        atom_mv[..., 0] = effective_reactivity
-        atom_mv = atom_mv.unsqueeze(0)   # [1, N_atoms, 8]  — single-compound batch dim
+        # Seed the reaction graph directly in 16D PGA space so the DAG learner
+        # does not need to infer the ideal/pseudoscalar components from a legacy
+        # 8D fallback basis.
+        atom_mv = torch.zeros(
+            (1, int(manifold_pos.size(0)), PGA_DIM),
+            dtype=exp_rate.dtype,
+            device=manifold_pos.device,
+        )
+        atom_mv[..., 0] = effective_reactivity.unsqueeze(0)
+        atom_mv[..., 1:4] = manifold_pos.to(dtype=exp_rate.dtype).unsqueeze(0)
+        _chirality_codes = getattr(getattr(module1_out, "seed", None), "chirality_codes", None)
+        if torch.is_tensor(_chirality_codes) and _chirality_codes.numel() >= int(manifold_pos.size(0)):
+            atom_mv[..., 15] = _chirality_codes[: int(manifold_pos.size(0))].to(device=manifold_pos.device, dtype=exp_rate.dtype).unsqueeze(0)
         live_node_multivectors = self._to_fp32(self._module1_node_multivectors(module1_out))
         batch_atomic_numbers = None
         _batch_atomic_numbers = batch.get("atomic_numbers")
@@ -2132,6 +2157,11 @@ class Metabolic_Causal_Trainer(nn.Module):
             "quantum_pred_charge_mean": quantum_pred_charge_mean.detach(),
             "quantum_pred_fukui_mean": quantum_pred_fukui_mean.detach(),
             "quantum_pred_gap": quantum_pred_gap.detach(),
+            "flux_kinetic_gate": (
+                flux_kinetic_gate.detach()
+                if flux_kinetic_gate is not None
+                else torch.as_tensor(1.0, dtype=total_loss.dtype, device=total_loss.device)
+            ),
         }
         metrics.update(self.last_kinetics_debug)
 

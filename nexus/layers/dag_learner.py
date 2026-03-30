@@ -15,21 +15,22 @@ from .manifold_projector import ManifoldProjectionOutput, MultivectorManifoldPro
 # ---------------------------------------------------------------------------
 
 # Invariant scalar descriptors per (Mi, Mj) pair:
-#   scalar dot, vector dot, bivector dot, trivector dot, L2 distance, scalar delta
-_PAIR_FEAT_DIM: int = 6
+#   scalar dot, vector dot, bivector dot, trivector dot, pseudoscalar dot,
+#   L2 distance, scalar delta
+_PAIR_FEAT_DIM: int = 7
 
 
 class GraNDAGEdgePredictor(nn.Module):
-    """MLP edge predictor that maps a pair of Cl(3,0) multivectors to a
+    """MLP edge predictor that maps a pair of G(3,0,1) multivectors to a
     weight distribution over reaction operators.
 
-    Input : multivectors [..., n_nodes, 8]  (public layout)
+    Input : multivectors [..., n_nodes, 16]  (public layout)
     Output: operator_weights [..., n_nodes, n_nodes, n_reaction_ops]
             — non-negative (Softplus), diagonal zeroed by caller.
 
     Feature engineering keeps strict O(3)-invariance:
-      * grade-wise dot products  (scalar, vector, bivector, trivector)
-      * L2 distance in 8-D Clifford space
+      * grade-wise dot products  (scalar, vector, bivector, trivector, pseudoscalar)
+      * L2 distance in 16-D PGA space
       * scalar-component delta  (mass / charge density proxy)
 
     Backbone is a 3-layer residual bottleneck:
@@ -38,17 +39,18 @@ class GraNDAGEdgePredictor(nn.Module):
       Layer 3 – projection : Linear(512 → n_reaction_ops) + Softplus
     """
 
-    def __init__(self, n_reaction_ops: int = 8) -> None:
+    def __init__(self, n_reaction_ops: int = 8, hidden_dim: int = 512) -> None:
         super().__init__()
         self.n_reaction_ops = int(n_reaction_ops)
+        self.hidden_dim = int(hidden_dim)
 
         self.expand = nn.Sequential(
-            nn.Linear(_PAIR_FEAT_DIM, 512),
+            nn.Linear(_PAIR_FEAT_DIM, self.hidden_dim),
             nn.ReLU(),
         )
-        self.process = nn.Linear(512, 512)   # residual: ReLU(process(h) + h)
+        self.process = nn.Linear(self.hidden_dim, self.hidden_dim)   # residual: ReLU(process(h) + h)
         self.project = nn.Sequential(
-            nn.Linear(512, self.n_reaction_ops),
+            nn.Linear(self.hidden_dim, self.n_reaction_ops),
             nn.Softplus(),                   # non-negative — required by NOTEARS h(W)
         )
         # Sparse initialisation: bias the final layer strongly negative so
@@ -59,37 +61,45 @@ class GraNDAGEdgePredictor(nn.Module):
         nn.init.constant_(self.project[0].bias, -5.0)
 
     @staticmethod
-    def _pair_invariants(mi: torch.Tensor, mj: torch.Tensor) -> torch.Tensor:
-        """Build 6 invariant scalars from two broadcast-expanded multivectors.
+    def _require_pga16(multivectors: torch.Tensor) -> torch.Tensor:
+        if multivectors.size(-1) != 16:
+            raise ValueError(
+                f"GraNDAGEdgePredictor expects trailing multivector dimension 16, got {multivectors.size(-1)}"
+            )
+        return multivectors
 
-        mi : [..., n, 1, 8]
-        mj : [..., 1, n, 8]
-        returns [..., n, n, 6]
+    @staticmethod
+    def _pair_invariants(mi: torch.Tensor, mj: torch.Tensor) -> torch.Tensor:
+        """Build 7 invariant scalars from two broadcast-expanded multivectors.
+
+        mi : [..., n, 1, 16]
+        mj : [..., 1, n, 16]
+        returns [..., n, n, 7]
         """
-        scalar_dot   = mi[..., 0:1] * mj[..., 0:1]
-        vector_dot   = (mi[..., 1:4] * mj[..., 1:4]).sum(dim=-1, keepdim=True)
-        bivector_dot = (mi[..., 4:7] * mj[..., 4:7]).sum(dim=-1, keepdim=True)
-        trivector_dot = mi[..., 7:8] * mj[..., 7:8]
-        distance     = (mi - mj).norm(dim=-1, keepdim=True)
-        scalar_delta = mi[..., 0:1] - mj[..., 0:1]
-        return torch.cat(
-            [scalar_dot, vector_dot, bivector_dot, trivector_dot, distance, scalar_delta],
+        scalar_dot = (mi[..., 0:1] * mj[..., 0:1]).sum(dim=-1)
+        vector_dot = (mi[..., 1:5] * mj[..., 1:5]).sum(dim=-1)
+        bivector_dot = (mi[..., 5:11] * mj[..., 5:11]).sum(dim=-1)
+        trivector_dot = (mi[..., 11:15] * mj[..., 11:15]).sum(dim=-1)
+        pseudoscalar_dot = (mi[..., 15:16] * mj[..., 15:16]).sum(dim=-1)
+        distance = (mi - mj).norm(dim=-1)
+        scalar_delta = (mi[..., 0] - mj[..., 0]).abs()
+        return torch.stack(
+            [scalar_dot, vector_dot, bivector_dot, trivector_dot, pseudoscalar_dot, distance, scalar_delta],
             dim=-1,
         )
 
     def forward(self, multivectors: torch.Tensor) -> torch.Tensor:
         """
         Args:
-            multivectors: [..., n_nodes, 8]
+            multivectors: [..., n_nodes, 16]
 
         Returns:
             [..., n_nodes, n_nodes, n_reaction_ops]  — non-negative edge weights.
         """
-        if multivectors.size(-1) != 8:
-            raise ValueError("multivectors must have trailing dimension 8")
-        mi = multivectors.unsqueeze(-2)   # [..., n, 1, 8]
-        mj = multivectors.unsqueeze(-3)   # [..., 1, n, 8]
-        pair_feat = self._pair_invariants(mi, mj)   # [..., n, n, 6]
+        multivectors = self._require_pga16(multivectors)
+        mi = multivectors.unsqueeze(-2)   # [..., n, 1, 16]
+        mj = multivectors.unsqueeze(-3)   # [..., 1, n, 16]
+        pair_feat = self._pair_invariants(mi, mj)   # [..., n, n, 7]
         h = self.expand(pair_feat)                  # [..., n, n, 512]
         h = F.relu(self.process(h) + h)             # [..., n, n, 512]  residual
         return self.project(h)                       # [..., n, n, n_ops]
@@ -128,7 +138,7 @@ class MetabolicDAGOutput:
 class MetabolicDAGLearner(nn.Module):
     def __init__(
         self,
-        node_feature_dim: int = 8,
+        node_feature_dim: int = 16,
         invariant_dim: int = 8,
         hidden_dim: int = 64,
         pair_hidden_dim: int = 128,
@@ -176,7 +186,10 @@ class MetabolicDAGLearner(nn.Module):
         # GraN-DAG edge predictor replaces the old pair-embedding MLP.
         # It operates directly on raw multivectors and predicts per-operator
         # edge weights; the structural adjacency is their max over operators.
-        self.gran_dag = GraNDAGEdgePredictor(n_reaction_ops=self.n_reaction_ops)
+        self.gran_dag = GraNDAGEdgePredictor(
+            n_reaction_ops=self.n_reaction_ops,
+            hidden_dim=max(self.pair_hidden_dim, 32),
+        )
         # Phase 1.5 – Admissible Manifold Projector.
         # Validates that reconstructed child multivectors lie on the learned
         # chemical manifold; provides L_recon, density penalty, and the
@@ -193,25 +206,34 @@ class MetabolicDAGLearner(nn.Module):
             nn.Linear(self.hidden_dim, self.node_feature_dim),
         )
 
+    @staticmethod
+    def _require_pga16(multivectors: torch.Tensor) -> torch.Tensor:
+        if multivectors.size(-1) != 16:
+            raise ValueError(
+                f"MetabolicDAGLearner expects trailing multivector dimension 16, got {multivectors.size(-1)}"
+            )
+        return multivectors
+
     def invariant_node_features(self, multivectors: torch.Tensor) -> torch.Tensor:
-        scalar = multivectors[..., 0:1]
+        multivectors = self._require_pga16(multivectors)
+        scalar = multivectors[..., 0:1].abs()
         vector_norm = multivectors[..., 1:4].norm(dim=-1, keepdim=True)
-        bivector_norm = multivectors[..., 4:7].norm(dim=-1, keepdim=True)
-        trivector = multivectors[..., 7:8]
-        total_norm = multivectors.norm(dim=-1, keepdim=True)
-        vector_bivector_overlap = (multivectors[..., 1:4] * multivectors[..., 4:7]).sum(dim=-1, keepdim=True)
-        scalar_trivector_mix = scalar * trivector
-        parity_balance = vector_norm - bivector_norm
+        ideal_vector = multivectors[..., 4:5].abs()
+        bivector_norm = multivectors[..., 5:8].norm(dim=-1, keepdim=True)
+        ideal_bivector_norm = multivectors[..., 8:11].norm(dim=-1, keepdim=True)
+        trivector = multivectors[..., 11:12].abs()
+        ideal_trivector_norm = multivectors[..., 12:15].norm(dim=-1, keepdim=True)
+        pseudoscalar = multivectors[..., 15:16].abs()
         return torch.cat(
             [
                 scalar,
                 vector_norm,
+                ideal_vector,
                 bivector_norm,
+                ideal_bivector_norm,
                 trivector,
-                total_norm,
-                vector_bivector_overlap,
-                scalar_trivector_mix,
-                parity_balance,
+                ideal_trivector_norm,
+                pseudoscalar,
             ],
             dim=-1,
         )
@@ -228,6 +250,7 @@ class MetabolicDAGLearner(nn.Module):
         physics_prior: Optional[torch.Tensor] = None,
         accessibility_prior: Optional[torch.Tensor] = None,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        multivectors = self._require_pga16(multivectors)
         # Node embeddings are still produced for the reconstruction head.
         node_embeddings = self.encode_nodes(multivectors)
 
@@ -381,6 +404,7 @@ class MetabolicDAGLearner(nn.Module):
         node_embeddings: torch.Tensor,
         adjacency: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
+        multivectors = self._require_pga16(multivectors)
         message = torch.matmul(adjacency.transpose(-1, -2), node_embeddings)
         reconstruction = self.reconstruction_head(node_embeddings + message)
         loss = F.mse_loss(reconstruction, multivectors, reduction="mean")
@@ -559,6 +583,7 @@ class MetabolicDAGLearner(nn.Module):
         physics_loss: Optional[torch.Tensor] = None,
         flux_consistency_loss: Optional[torch.Tensor] = None,
     ) -> MetabolicDAGOutput:
+        multivectors = self._require_pga16(multivectors)
         batch_size, n_nodes = multivectors.shape[:2]
         physics_prior = self.compute_physics_prior(
             delta_g_activations=delta_g_activations,

@@ -92,6 +92,50 @@ class _SinusoidalTimeEmbedding(nn.Module):
         return embedding
 
 
+def e3_canonical_alignment(coords: torch.Tensor) -> torch.Tensor:
+    """
+    Canonicalize generated coordinates with the principal moments of inertia.
+
+    This removes arbitrary global translation/rotation from the diffusion output
+    so downstream equivariant modules see molecules in a consistent frame.
+    """
+    squeezed = False
+    if coords.ndim == 2:
+        coords = coords.unsqueeze(0)
+        squeezed = True
+    if coords.ndim != 3 or coords.size(-1) != 3:
+        raise ValueError(f"coords must have shape [N, 3] or [B, N, 3], got {tuple(coords.shape)}")
+
+    centroid = coords.mean(dim=-2, keepdim=True)
+    centered = coords - centroid
+
+    x, y, z = centered.unbind(dim=-1)
+    r2 = centered.square().sum(dim=-1)
+    inertia = torch.zeros(coords.size(0), 3, 3, dtype=coords.dtype, device=coords.device)
+    inertia[:, 0, 0] = (r2 - x.square()).sum(dim=-1)
+    inertia[:, 1, 1] = (r2 - y.square()).sum(dim=-1)
+    inertia[:, 2, 2] = (r2 - z.square()).sum(dim=-1)
+    inertia[:, 0, 1] = inertia[:, 1, 0] = -(x * y).sum(dim=-1)
+    inertia[:, 0, 2] = inertia[:, 2, 0] = -(x * z).sum(dim=-1)
+    inertia[:, 1, 2] = inertia[:, 2, 1] = -(y * z).sum(dim=-1)
+
+    _, eigenvectors = torch.linalg.eigh(inertia.to(dtype=torch.float64))
+    eigenvectors = eigenvectors.detach().to(dtype=coords.dtype)
+    canonical = centered @ eigenvectors
+
+    skewness = canonical.pow(3).sum(dim=-2)
+    signs = torch.where(skewness < 0, -torch.ones_like(skewness), torch.ones_like(skewness))
+    canonical = canonical * signs.unsqueeze(-2)
+
+    det = torch.linalg.det(eigenvectors.to(dtype=torch.float64)).to(dtype=coords.dtype)
+    flip_mask = det < 0
+    if flip_mask.any():
+        canonical = canonical.clone()
+        canonical[flip_mask, :, 0] = -canonical[flip_mask, :, 0]
+
+    return canonical.squeeze(0) if squeezed else canonical
+
+
 class _DiffusionRefinementBlock(nn.Module):
     def __init__(self, hidden_dim: int, radial_dim: int) -> None:
         super().__init__()
@@ -249,6 +293,7 @@ class StructuralDiffusion3D(nn.Module):
             time_embedding = self.time_embed(step_value).to(device=device, dtype=pos.dtype).squeeze(0)
             node_state, pos = block(node_state, pos, token_latent, time_embedding)
 
+        pos = e3_canonical_alignment(pos)
         pos = pos.requires_grad_(True)
         jacobian_hook = Jacobian_Hook(initial_R=pos, latent=latent_blueprint.sequence)
         return pos, jacobian_hook

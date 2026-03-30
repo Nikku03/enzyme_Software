@@ -17,15 +17,34 @@ from nexus.reasoning.analogical_fusion import (
 class _WaveNodeProjection(nn.Module):
     def __init__(self, hidden_dim: int = 32) -> None:
         super().__init__()
-        self.net = nn.Sequential(
-            nn.LazyLinear(hidden_dim),
+        self.scalar_proj = nn.Linear(1, hidden_dim)
+        self.vector_proj = nn.Linear(4, hidden_dim)
+        self.bivector_proj = nn.Linear(6, hidden_dim)
+        self.trivector_proj = nn.Linear(4, hidden_dim)
+        self.pseudo_proj = nn.Linear(1, hidden_dim)
+        self.fuse = nn.Sequential(
+            nn.Linear(hidden_dim * 5, hidden_dim),
             nn.SiLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.SiLU(),
         )
 
+    def _pad_to_pga(self, x: torch.Tensor) -> torch.Tensor:
+        if x.size(-1) == 16:
+            return x
+        out = x.new_zeros(x.shape[:-1] + (16,))
+        take = min(int(x.size(-1)), 16)
+        out[..., :take] = x[..., :take]
+        return out
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net(x)
+        x = self._pad_to_pga(torch.as_tensor(x, dtype=torch.float32, device=x.device))
+        scalar = self.scalar_proj(x[..., 0:1])
+        vector = self.vector_proj(x[..., 1:5])
+        bivector = self.bivector_proj(x[..., 5:11])
+        trivector = self.trivector_proj(x[..., 11:15])
+        pseudo = self.pseudo_proj(x[..., 15:16])
+        return self.fuse(torch.cat([scalar, vector, bivector, trivector, pseudo], dim=-1))
 
 
 class PGWCrossAttention(nn.Module):

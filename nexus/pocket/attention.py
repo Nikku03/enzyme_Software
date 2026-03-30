@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Optional
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from .encoder import PocketEncoderOutput
-from ..physics.pga_math import pga_geometric_product, pga_reverse
-from .pga import PGA_DIM
+from ..physics.pga_math import pga_geometric_product
+from .pga import PGA_DIM, geometric_inner_product
 
 
 @dataclass
@@ -24,7 +26,7 @@ class ReversedGeometricAttentionOutput:
 class ReversedGeometricAttention(nn.Module):
     def __init__(
         self,
-        drug_dim: int = 8,
+        drug_dim: int = PGA_DIM,
         pocket_dim: int = PGA_DIM,
         heads: int = 4,
         hidden_dim: int = 64,
@@ -35,16 +37,42 @@ class ReversedGeometricAttention(nn.Module):
         self.heads = int(heads)
         self.hidden_dim = int(hidden_dim)
 
-        self.drug_proj = nn.Linear(self.drug_dim, self.pocket_dim)
-        self.query_proj = nn.Linear(self.pocket_dim, self.heads * self.pocket_dim)
-        self.key_proj = nn.Linear(self.pocket_dim, self.heads * self.pocket_dim)
-        self.value_proj = nn.Linear(self.pocket_dim, self.heads * self.hidden_dim)
+        self.q_transform = nn.Parameter(torch.empty(self.heads, self.pocket_dim))
+        self.k_transform = nn.Parameter(torch.empty(self.heads, self.pocket_dim))
+        self.value_proj = nn.Sequential(
+            nn.Linear(5, self.heads * self.hidden_dim),
+            nn.SiLU(),
+        )
         self.out_proj = nn.Linear(self.heads * self.hidden_dim, self.pocket_dim)
+        self._init_weights()
+
+    def _init_weights(self) -> None:
+        nn.init.normal_(self.q_transform, std=0.02)
+        nn.init.normal_(self.k_transform, std=0.02)
+        with torch.no_grad():
+            self.q_transform[:, 0] += 1.0
+            self.k_transform[:, 0] += 1.0
 
     def _ensure_batch(self, x: torch.Tensor) -> tuple[torch.Tensor, bool]:
         if x.ndim == 2:
             return x.unsqueeze(0), True
         return x, False
+
+    def _pad_to_pga(self, x: torch.Tensor) -> torch.Tensor:
+        if x.size(-1) == self.pocket_dim:
+            return x
+        out = x.new_zeros(x.shape[:-1] + (self.pocket_dim,))
+        take = min(x.size(-1), self.pocket_dim)
+        out[..., :take] = x[..., :take]
+        return out
+
+    def _extract_invariants(self, mv: torch.Tensor) -> torch.Tensor:
+        g0 = mv[..., 0:1].abs()
+        g1 = mv[..., 1:5].norm(dim=-1, keepdim=True)
+        g2 = mv[..., 5:11].norm(dim=-1, keepdim=True)
+        g3 = mv[..., 11:15].norm(dim=-1, keepdim=True)
+        g4 = mv[..., 15:16].abs()
+        return torch.cat([g0, g1, g2, g3, g4], dim=-1)
 
     def forward(
         self,
@@ -55,42 +83,46 @@ class ReversedGeometricAttention(nn.Module):
     ) -> ReversedGeometricAttentionOutput:
         drug_mv, squeeze = self._ensure_batch(drug_multivectors)
         pocket_mv, _ = self._ensure_batch(pocket.attention_anchors)
+        drug_mv = self._pad_to_pga(drug_mv)
+        pocket_mv = self._pad_to_pga(pocket_mv)
 
-        drug_mv = self.drug_proj(drug_mv)
         if drug_mask is None:
             drug_mask = torch.ones(drug_mv.shape[:2], dtype=torch.bool, device=drug_mv.device)
         if residue_mask is None:
             residue_mask = torch.ones(pocket_mv.shape[:2], dtype=torch.bool, device=pocket_mv.device)
 
-        # Q and K are per-head 16D PGA multivectors — each head learns a distinct
-        # geometric projection of the drug/pocket into G(3,0,1) space.
-        # V stays in hidden_dim for rich aggregation (out_proj maps it back to pocket_dim).
-        q = self.query_proj(drug_mv).view(drug_mv.size(0), drug_mv.size(1), self.heads, self.pocket_dim)
-        k = self.key_proj(pocket_mv).view(pocket_mv.size(0), pocket_mv.size(1), self.heads, self.pocket_dim)
-        v = self.value_proj(pocket_mv).view(pocket_mv.size(0), pocket_mv.size(1), self.heads, self.hidden_dim)
+        batch_size, n_drug, _ = drug_mv.shape
+        _, n_prot, _ = pocket_mv.shape
 
-        # True reversed geometric attention: score = scalar_part(Q × reverse(K))
-        # k_rev: [B, N_p, H, 16];  expand to [B, N_d, N_p, H, 16] for pairwise product
-        N_d, N_p = drug_mv.size(1), pocket_mv.size(1)
-        k_rev = pga_reverse(k)
-        logits = pga_geometric_product(
-            q.unsqueeze(2).expand(-1, -1, N_p, -1, -1),
-            k_rev.unsqueeze(1).expand(-1, N_d, -1, -1, -1),
-        )[..., 0] / (self.pocket_dim ** 0.5)
+        q = pga_geometric_product(
+            drug_mv.unsqueeze(2).expand(batch_size, n_drug, self.heads, self.pocket_dim),
+            self.q_transform.view(1, 1, self.heads, self.pocket_dim).expand(batch_size, n_drug, self.heads, self.pocket_dim),
+        )
+        k = pga_geometric_product(
+            pocket_mv.unsqueeze(2).expand(batch_size, n_prot, self.heads, self.pocket_dim),
+            self.k_transform.view(1, 1, self.heads, self.pocket_dim).expand(batch_size, n_prot, self.heads, self.pocket_dim),
+        )
 
-        mask = drug_mask.unsqueeze(-1).unsqueeze(-1) & residue_mask.unsqueeze(1).unsqueeze(-1)
+        inv_pocket = self._extract_invariants(pocket_mv)
+        v = self.value_proj(inv_pocket).view(batch_size, n_prot, self.heads, self.hidden_dim)
+
+        logits = geometric_inner_product(
+            q.unsqueeze(2),
+            k.unsqueeze(1),
+        ).permute(0, 3, 1, 2) / math.sqrt(float(self.pocket_dim))
+
+        mask = drug_mask.unsqueeze(1).unsqueeze(-1) & residue_mask.unsqueeze(1).unsqueeze(1)
         logits = logits.masked_fill(~mask, float("-inf"))
-        attention_weights = torch.softmax(logits, dim=2)
-        attended = torch.einsum("bdph,bphf->bdhf", attention_weights, v)
-        attended_flat = attended.reshape(drug_mv.size(0), drug_mv.size(1), self.heads * self.hidden_dim)
+        attention_weights = F.softmax(logits, dim=-1)
+
+        v_heads = v.permute(0, 2, 1, 3)
+        attended = torch.matmul(attention_weights, v_heads)
+        attended_flat = attended.permute(0, 2, 1, 3).reshape(batch_size, n_drug, self.heads * self.hidden_dim)
         attended_drug = self.out_proj(attended_flat)
 
-        residue_importance = attention_weights.mean(dim=(1, 3))
-        accessibility_mask = attention_weights.mean(dim=-1).max(dim=2).values
-        # Global pocket context: importance-weighted pool of protein value features.
-        # residue_importance: [B, N_prot] — global, drug-atom-agnostic importance score.
-        # Weighted sum across residues → [B, heads*hidden_dim] → project to [B, pocket_dim].
-        v_flat = v.reshape(v.size(0), v.size(1), self.heads * self.hidden_dim)
+        residue_importance = attention_weights.mean(dim=(1, 2))
+        accessibility_mask = attention_weights.mean(dim=1).max(dim=-1).values
+        v_flat = v.reshape(batch_size, n_prot, self.heads * self.hidden_dim)
         pocket_context = self.out_proj(
             torch.einsum("bp,bpf->bf", residue_importance, v_flat)
         )

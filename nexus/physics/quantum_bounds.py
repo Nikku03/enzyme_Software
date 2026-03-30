@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Callable, Tuple
 
@@ -148,6 +149,35 @@ class HohenbergKohn_Field_Enforcer(nn.Module):
             factors = factors.expand(rho_batched.size(0))
         constrained = rho_batched * factors.view(-1, 1, 1)
         return constrained[0] if rho_squeezed else constrained
+
+    def enforce_electron_conservation(
+        self,
+        field,
+        total_electrons: torch.Tensor,
+        squeezed: bool = True,
+    ) -> torch.Tensor:
+        """
+        Analytical electron-conservation approximation for the splatter field.
+
+        This bypasses the dense 3D integration grid by integrating the atomic
+        Gaussian basis in closed form. The result is an O(N_atoms) estimate of
+        the normalization factor instead of an O(grid^3) volumetric quadrature.
+        """
+        state = field.splatter_state
+        tensor_splatter = field.engine.tensor_splatter
+
+        alpha = state.alpha.to(dtype=state.even_scalar.dtype, device=state.even_scalar.device).clamp_min(1.0e-6)
+        gaussian_vol = (torch.as_tensor(math.pi, dtype=alpha.dtype, device=alpha.device) / alpha).pow(1.5)
+
+        c0e = tensor_splatter.readout_even0(state.even_scalar).squeeze(-1)
+        c0e = torch.nan_to_num(c0e, nan=0.0, posinf=0.0, neginf=0.0)
+        integral_val = (c0e.abs() * gaussian_vol).sum(dim=-1)
+
+        electrons = torch.as_tensor(total_electrons, dtype=integral_val.dtype, device=integral_val.device)
+        if electrons.ndim == 0:
+            electrons = electrons.expand_as(integral_val)
+        factors = electrons / integral_val.clamp_min(1.0e-8)
+        return factors[0] if squeezed and factors.ndim > 0 and factors.numel() == 1 else factors
 
     def compute_normalization_factor(
         self,

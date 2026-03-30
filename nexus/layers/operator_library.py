@@ -9,6 +9,7 @@ import torch.nn as nn
 from nexus.core.generative_agency import NEXUS_Seed
 from nexus.models.mol_llama_wrapper import LatentBlueprint
 from nexus.physics.clifford_math import clifford_geometric_product, embed_coordinates
+from nexus.pocket.pga import PGA_DIM
 
 
 DEFAULT_OPERATOR_NAMES: tuple[str, ...] = (
@@ -58,9 +59,9 @@ class DifferentiableGeometricOperatorLibrary(nn.Module):
             nn.Linear(self.hidden_dim, self.latent_dim),
         )
         self.local_field_head = nn.Sequential(
-            nn.Linear(self.hidden_dim + 4, self.hidden_dim),
+            nn.Linear(self.hidden_dim + 2, self.hidden_dim),
             nn.SiLU(),
-            nn.Linear(self.hidden_dim, 8),
+            nn.Linear(self.hidden_dim, 5),
         )
 
         plane_lookup = torch.tensor([4, 5, 6, 4, 5, 6, 4, 5], dtype=torch.long)
@@ -157,9 +158,24 @@ class DifferentiableGeometricOperatorLibrary(nn.Module):
 
         child_latent = self._latent_shift(seed.latent_blueprint, op_embed, edge_weight)
 
-        field_feat = torch.cat([rel, edge_expand, op_expand], dim=-1)
-        field_delta = field_scale * self.local_field_head(field_feat)
-        transformed_multivector = embed_coordinates(child_pos) + field_delta
+        rel_norm = rel.norm(dim=-1, keepdim=True)
+        field_feat = torch.cat([rel_norm, edge_expand, op_expand], dim=-1)
+        grade_scales = 1.0 + 0.1 * torch.tanh(self.local_field_head(field_feat))
+        grade_scales = grade_scales * (1.0 + field_scale)
+
+        base_mv = torch.zeros((child_pos.size(0), PGA_DIM), device=child_pos.device, dtype=child_pos.dtype)
+        base_mv[..., 0] = seed.z.to(device=child_pos.device, dtype=child_pos.dtype)
+        base_mv[..., 1:4] = child_pos
+        if seed.chirality_codes is not None:
+            base_mv[..., 15] = seed.chirality_codes.to(device=child_pos.device, dtype=child_pos.dtype)
+
+        transformed_multivector = base_mv.clone()
+        transformed_multivector[..., 0] *= grade_scales[..., 0]
+        transformed_multivector[..., 1:5] *= grade_scales[..., 1].unsqueeze(-1)
+        transformed_multivector[..., 5:11] *= grade_scales[..., 2].unsqueeze(-1)
+        transformed_multivector[..., 11:15] *= grade_scales[..., 3].unsqueeze(-1)
+        transformed_multivector[..., 15] *= grade_scales[..., 4]
+        field_delta = transformed_multivector - base_mv
 
         metadata = dict(seed.metadata)
         metadata.update(

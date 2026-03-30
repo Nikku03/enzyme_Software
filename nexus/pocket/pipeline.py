@@ -15,6 +15,7 @@ from .encoder import PocketEncoderOutput, SEGNNPocketEncoder
 from .hypernetwork import IsoformHyperOutput, IsoformSpecificHyperNetwork
 from .nftm import NFTMReadout
 from .pga import PGA_DIM, geometric_inner_product
+from nexus.physics.pga_math import pga_geometric_product
 
 
 @dataclass
@@ -168,9 +169,13 @@ class EnzymePocketEncoder(nn.Module):
             encoder_layers=2,
             attention_heads=4,
         )
-        self.drug_projector = nn.Linear(8, algebra_dim)
+        self.drug_transform = nn.Parameter(torch.zeros(self.algebra_dim))
+        self.field_transform = nn.Parameter(torch.zeros(self.algebra_dim))
+        with torch.no_grad():
+            self.drug_transform[0] = 1.0
+            self.field_transform[0] = 1.0
         self.reversed_attention = ReversedGeometricAttention(
-            drug_dim=8,
+            drug_dim=algebra_dim,
             pocket_dim=algebra_dim,
             heads=4,
             hidden_dim=hidden_dim,
@@ -181,6 +186,14 @@ class EnzymePocketEncoder(nn.Module):
         if drug_mv.size(-1) >= 4:
             return drug_mv[..., 1:4]   # both 8D Cl(3,0) and 16D G(3,0,1): e1,e2,e3 at 1-3
         raise ValueError("drug_mv must expose at least 3 coordinate-like channels")
+
+    def _pad_to_algebra(self, drug_mv: torch.Tensor) -> torch.Tensor:
+        if drug_mv.size(-1) == self.algebra_dim:
+            return drug_mv
+        out = drug_mv.new_zeros(drug_mv.shape[:-1] + (self.algebra_dim,))
+        take = min(drug_mv.size(-1), self.algebra_dim)
+        out[..., :take] = drug_mv[..., :take]
+        return out
 
     def forward(
         self,
@@ -219,39 +232,46 @@ class EnzymePocketEncoder(nn.Module):
             allosteric_embedding=allosteric_embedding,
         )
 
-        attention = self.reversed_attention(drug_mv, pocket)
-        padded_drug = self.drug_projector(drug_mv)
+        padded_drug = self._pad_to_algebra(drug_mv)
+        projected_drug = pga_geometric_product(
+            padded_drug,
+            self.drug_transform.view(*([1] * (padded_drug.ndim - 1)), self.algebra_dim),
+        )
+        attention = self.reversed_attention(projected_drug, pocket)
         anchors = pocket.attention_anchors
-        if padded_drug.ndim == 2:
+        if projected_drug.ndim == 2:
             attn_scores = geometric_inner_product(
-                padded_drug.unsqueeze(1).expand(-1, anchors.size(0), -1),
+                projected_drug.unsqueeze(1).expand(-1, anchors.size(0), -1),
                 anchors.unsqueeze(0).expand(padded_drug.size(0), -1, -1),
             )
             attn_weights = torch.softmax(attn_scores / (float(self.algebra_dim) ** 0.5), dim=-1)
-            conditioned_field = torch.matmul(attn_weights, anchors)
+            conditioned_field = pga_geometric_product(
+                attention.attended_drug,
+                self.field_transform.view(1, self.algebra_dim).expand_as(attention.attended_drug),
+            )
         else:
-            raise ValueError("drug_mv must have shape [N, 8]")
+            raise ValueError(f"drug_mv must have shape [N, {self.algebra_dim}]")
 
         accessibility_mask, _, accessibility_state, accessibility_output, nftm_readout = self.a_field_controller(
             protein_coords,
-            padded_drug,
+            projected_drug,
             residue_types=residue_types,
             conservation_scores=conservation_scores,
             isoform=hyper,
             allosteric=allosteric,
         )
 
-        query_coords = self._infer_query_coords(drug_mv)
+        query_coords = self._infer_query_coords(projected_drug)
         dynamic_state = self.dynamic_refiner.step(
             protein_coords,
             residue_types,
-            drug_mv,
+            projected_drug,
             query_coords,
             conservation_scores=conservation_scores,
             isoform=hyper,
             t=t,
         )
-        gated_multivector_field = drug_mv * accessibility_mask.unsqueeze(-1)
+        gated_multivector_field = projected_drug * accessibility_mask.unsqueeze(-1)
         return EnzymePocketEncodingOutput(
             gated_multivector_field=gated_multivector_field,
             refined_coords=dynamic_state.residue_positions,
@@ -277,9 +297,14 @@ class EnzymePocketEncoder(nn.Module):
         a_field: torch.Tensor,
     ) -> torch.Tensor:
         loss_affinity = F.mse_loss(pred_affinity, true_affinity)
-        loss_causal = F.binary_cross_entropy_with_logits(causal_adj, true_dag)
-        loss_steric = torch.mean(torch.relu(-a_field))
-        return loss_affinity + 0.5 * loss_causal + 0.1 * loss_steric
+        clash_penalty = F.relu(-a_field) * 50.0
+        if causal_adj.dim() == 3 and clash_penalty.dim() == 2:
+            gated_causal_logits = causal_adj - clash_penalty.unsqueeze(-1)
+        else:
+            gated_causal_logits = causal_adj - clash_penalty
+        loss_causal = F.binary_cross_entropy_with_logits(gated_causal_logits, true_dag)
+        loss_steric = torch.mean(F.relu(-a_field))
+        return loss_affinity + loss_causal + 0.5 * loss_steric
 
 
 __all__ = [

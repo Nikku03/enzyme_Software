@@ -91,11 +91,11 @@ class ContinuousReactivityField:
             return_latent=return_latent,
         )
         if return_latent:
-            siren, latent = siren_out
+            siren_mv, latent = siren_out
         else:
-            siren = siren_out
+            siren_mv = siren_out
         splat = self.engine.tensor_splatter(splat_input, splatter_state)
-        total = siren + splat["total"]
+        total = siren_mv[..., 0] + splat["total"]
         if return_latent:
             return total, latent
         return total
@@ -154,13 +154,14 @@ class ContinuousReactivityField:
             return_latent=compute_observables,
         )
         if compute_observables:
-            siren, latent = siren_out
+            siren_mv, latent = siren_out
         else:
-            siren = siren_out
+            siren_mv = siren_out
             latent = None
         splat = self.engine.tensor_splatter(splat_input, splatter_state)
         out = dict(splat)
-        raw_total = siren + splat["total"]
+        raw_total = siren_mv[..., 0] + splat["total"]
+        raw_total_multivector = siren_mv + splat.get("multivector", torch.zeros_like(siren_mv))
         rho = self.quantum_enforcer.apply_cusp_envelope(
             raw_total.unsqueeze(-1),
             internal,
@@ -172,8 +173,10 @@ class ContinuousReactivityField:
             self.total_electrons,
             self.quantum_norm_factor,
         ).squeeze(-1)
-        out["siren"] = siren
+        out["siren"] = siren_mv[..., 0]
+        out["siren_multivector"] = siren_mv
         out["raw_total"] = raw_total
+        out["raw_total_multivector"] = raw_total_multivector
         if latent is not None:
             out["latent_multivector"] = latent
         out["cusp_envelope"] = (rho.squeeze(-1) / raw_total.pow(2).clamp_min(1.0e-12))
@@ -261,30 +264,26 @@ class FSHN_Field_Generator(nn.Module):
         )
         bounding_box = self.quantum_enforcer.make_bounding_box(atom_internal)
 
-        def _raw_field_fn(query_internal: torch.Tensor) -> torch.Tensor:
-            query_batched = query_internal if query_internal.ndim == 3 else query_internal.unsqueeze(0)
-            outputs = []
-            for points in query_batched:
-                siren_input = (points / max_radius.clamp_min(1.0e-8)).to(dtype=conditioning.molecular_context.dtype)
-                splat_input = points.to(dtype=splatter_state.atom_coords.dtype)
-                siren = self.siren_field(
-                    siren_input,
-                    atom_internal.to(dtype=siren_input.dtype, device=siren_input.device),
-                    conditioning.hidden_params,
-                    conditioning.output_row_scale,
-                    conditioning.output_col_scale,
-                    conditioning.output_bias_shift,
-                )
-                splat = self.tensor_splatter(splat_input, splatter_state)
-                outputs.append((siren + splat["total"]).unsqueeze(-1))
-            return torch.stack(outputs, dim=0)
-
-        quantum_norm_factor = self.quantum_enforcer.compute_normalization_factor(
-            _raw_field_fn,
-            atom_internal,
-            manifold.species.to(dtype=atom_internal.dtype),
+        field_stub = ContinuousReactivityField(
+            conditioning=conditioning,
+            splatter_state=splatter_state,
+            centroid=centroid,
+            frame=frame,
+            max_radius=max_radius,
+            engine=self,
+            source_output=engine_output,
+            atom_coords=atom_internal,
+            atomic_numbers=manifold.species.to(dtype=atom_internal.dtype),
+            total_electrons=torch.as_tensor(total_electrons, dtype=atom_internal.dtype, device=atom_internal.device),
+            bounding_box=bounding_box,
+            quantum_norm_factor=torch.as_tensor(1.0, dtype=atom_internal.dtype, device=atom_internal.device),
+            quantum_enforcer=self.quantum_enforcer,
+            query_engine=self.query_engine,
+        )
+        quantum_norm_factor = self.quantum_enforcer.enforce_electron_conservation(
+            field_stub,
             total_electrons,
-            bounding_box,
+            squeezed=True,
         )
         return ContinuousReactivityField(
             conditioning=conditioning,
