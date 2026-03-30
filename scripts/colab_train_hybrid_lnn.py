@@ -19,6 +19,7 @@ import os
 import runpy
 import subprocess
 import sys
+import importlib
 from pathlib import Path
 
 
@@ -55,6 +56,42 @@ def _ensure_rdkit() -> None:
         raise RuntimeError(
             "RDKit installation completed but import still failed in the current runtime."
         ) from exc
+
+
+def _clear_repo_python_caches() -> None:
+    for pattern in ("*.pyc",):
+        subprocess.run(
+            ["find", str(REPO_DIR / "src"), "-name", pattern, "-delete"],
+            check=False,
+        )
+    subprocess.run(
+        [
+            "find",
+            str(REPO_DIR / "src"),
+            "-name",
+            "__pycache__",
+            "-type",
+            "d",
+            "-exec",
+            "rm",
+            "-rf",
+            "{}",
+            "+",
+        ],
+        check=False,
+    )
+    stale_modules = [
+        name
+        for name in list(sys.modules)
+        if name == "enzyme_software"
+        or name.startswith("enzyme_software.")
+        or name == "train_hybrid_full_xtb"
+        or name.startswith("scripts.train_hybrid_full_xtb")
+    ]
+    for name in stale_modules:
+        sys.modules.pop(name, None)
+    importlib.invalidate_caches()
+    print("Cleared repo bytecode and module caches.", flush=True)
 
 
 PRESETS: dict[str, dict[str, str]] = {
@@ -114,6 +151,7 @@ PRESETS: dict[str, dict[str, str]] = {
 
 def main() -> None:
     os.chdir(REPO_DIR)
+    _clear_repo_python_caches()
     os.environ.setdefault("TORCHDYNAMO_DISABLE", "1")
     os.environ.setdefault("TORCH_COMPILE_DISABLE", "1")
     os.environ.setdefault("HYBRID_FORCE_MANUAL_OPTIMIZER", "1")
