@@ -24,6 +24,7 @@ if TORCH_AVAILABLE:
 
         def __post_init__(self):
             self.device = self.device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self._disable_broken_torch_compile_wrappers()
             self.model.to(self.device)
             weights = None
             model_config = getattr(self.model, "config", None)
@@ -51,6 +52,22 @@ if TORCH_AVAILABLE:
                 patience=self.config.scheduler_patience,
                 min_lr=1e-6,
             )
+
+        def _disable_broken_torch_compile_wrappers(self) -> None:
+            # Some Colab torch builds hit a circular-import bug the first time
+            # torch._compile's lazy _disable_dynamo wrapper touches torch._inductor.
+            # Short-circuit those optimizer wrappers to the original methods.
+            try:
+                import torch.optim.optimizer as optimizer_mod
+            except Exception:
+                return
+            for name in ("add_param_group", "zero_grad"):
+                wrapped = getattr(optimizer_mod.Optimizer, name, None)
+                original = getattr(wrapped, "__wrapped__", None)
+                if wrapped is None or original is None:
+                    continue
+                if getattr(original, "__dynamo_disable", None) is None:
+                    original.__dynamo_disable = original  # type: ignore[attr-defined]
 
         def step_scheduler(self, val_metric: float) -> None:
             self.scheduler.step(val_metric)
