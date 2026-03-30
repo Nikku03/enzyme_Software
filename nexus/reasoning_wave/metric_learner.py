@@ -108,6 +108,7 @@ def quantum_distillation_loss(
     fukui_weight: float = 4.0,
     gap_weight: float = 0.02,
     huber_beta: float = 0.25,
+    fukui_sharpen_power: float = 2.5,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """
     Robust multi-task quantum distillation loss.
@@ -152,11 +153,15 @@ def quantum_distillation_loss(
     tgt_fukui_mass = tgt_fukui_pos.sum(dim=-1, keepdim=True)
     if bool((tgt_fukui_mass > 0.0).any().item()):
         tgt_fukui_dist = tgt_fukui_pos / tgt_fukui_mass.clamp_min(1.0e-8)
+        sharpen_power = max(float(fukui_sharpen_power), 1.0)
+        if sharpen_power > 1.0:
+            tgt_fukui_dist = tgt_fukui_dist.pow(sharpen_power)
+            tgt_fukui_dist = tgt_fukui_dist / tgt_fukui_dist.sum(dim=-1, keepdim=True).clamp_min(1.0e-8)
         pred_fukui_logprob = F.log_softmax(pred_fukui, dim=-1)
         fukui_kl = F.kl_div(pred_fukui_logprob, tgt_fukui_dist, reduction="none").sum(dim=-1)
         valid_rows = (tgt_fukui_mass.view(-1) > 0.0).to(dtype=torch.float32)
         fukui_dist_loss = (fukui_kl * valid_rows).sum() / valid_rows.sum().clamp_min(1.0)
-        fukui_loss = 0.25 * fukui_raw_loss + 0.75 * fukui_dist_loss
+        fukui_loss = 0.15 * fukui_raw_loss + 0.85 * fukui_dist_loss
     else:
         fukui_loss = fukui_raw_loss
     gap_loss = F.smooth_l1_loss(pred_gap.view(-1), tgt_gap.view(-1), reduction="mean", beta=huber_beta)

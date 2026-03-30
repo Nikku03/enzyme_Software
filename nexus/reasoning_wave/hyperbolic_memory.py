@@ -7,6 +7,7 @@ continuous caches automatically and swaps in the wave-aware PGW transporter.
 """
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import torch
@@ -61,6 +62,8 @@ class HyperbolicMemoryBank(ClassicHyperbolicMemoryBank):
         if sims.numel() == 0:
             return 0.0
         best_sim = float(sims[best_local].detach().item())
+        mean_sim = float(sims.mean().detach().item())
+        sim_spread = float((sims - sims.mean()).abs().mean().clamp_min(1.0e-4).detach().item())
         if sims.numel() > 1:
             sorted_sim = torch.sort(sims.detach(), descending=True).values
             second_sim = float(sorted_sim[1].item())
@@ -69,7 +72,21 @@ class HyperbolicMemoryBank(ClassicHyperbolicMemoryBank):
         margin = max(best_sim - second_sim, 0.0)
         probs = torch.softmax(torch.as_tensor(shortlist_scores, dtype=torch.float32, device=self.device).view(-1), dim=0)
         top_prob = float(probs[best_local].item()) if probs.numel() > best_local else 0.0
-        confidence = 0.45 * best_sim + 0.30 * margin + 0.25 * top_prob
+        best_local_z = 1.0 / (1.0 + math.exp(-(best_sim - mean_sim) / sim_spread))
+        margin_z = 1.0 / (1.0 + math.exp(-(margin / sim_spread)))
+        uniform_prob = 1.0 / float(max(int(probs.numel()), 1))
+        top_prob_excess = (top_prob - uniform_prob) / max(1.0 - uniform_prob, 1.0e-6)
+        top_prob_excess = min(max(top_prob_excess, 0.0), 1.0)
+        entropy = float((-(probs * probs.clamp_min(1.0e-9).log()).sum()).detach().item())
+        max_entropy = math.log(float(max(int(probs.numel()), 1))) if probs.numel() > 1 else 0.0
+        concentration = 1.0 - (entropy / max(max_entropy, 1.0e-8)) if max_entropy > 0.0 else top_prob_excess
+        concentration = min(max(concentration, 0.0), 1.0)
+        confidence = (
+            0.40 * best_local_z
+            + 0.25 * margin_z
+            + 0.20 * top_prob_excess
+            + 0.15 * concentration
+        )
         return float(min(max(confidence, 0.0), 1.0))
 
     def _tanimoto_similarity(self, q_fp: torch.Tensor) -> torch.Tensor:
