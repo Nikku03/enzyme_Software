@@ -61,9 +61,8 @@ class PGWTransporter(ClassicPGWTransporter):
         out[..., 11] = mv[..., 7]
         return out
 
-    @classmethod
-    def _wave_feature_signature(multivectors: torch.Tensor) -> torch.Tensor:
-        mv = cls._canonicalize_multivectors(multivectors).to(dtype=torch.float64)
+    def _wave_feature_signature(self, multivectors: torch.Tensor) -> torch.Tensor:
+        mv = self._canonicalize_multivectors(multivectors).to(dtype=torch.float64)
         mv_centered = mv - mv.mean(dim=0, keepdim=True)
         mv_norm = F.normalize(mv_centered, p=2, dim=-1)
         magnitude = mv.norm(p=2, dim=-1, keepdim=True)
