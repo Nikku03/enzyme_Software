@@ -23,6 +23,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from nexus.pocket.pga import PGA_DIM
+
 
 class MechanismEncoder(nn.Module):
     """
@@ -255,15 +257,32 @@ def mechanism_contrastive_loss(
     The retrieved multivectors are detached because retrieval is non-differentiable
     and only the live query encoder should receive gradients during training.
     """
-    q_mv = torch.as_tensor(query_multivectors, dtype=torch.float32)
-    r_mv = torch.as_tensor(retrieved_multivectors, dtype=torch.float32).detach()
+    def _canonicalize_multivectors(multivectors: torch.Tensor) -> torch.Tensor:
+        mv = torch.as_tensor(multivectors, dtype=torch.float32)
+        if mv.ndim != 2:
+            raise ValueError("mechanism_contrastive_loss expects [N, D] multivector tensors")
+        if mv.size(-1) == PGA_DIM:
+            return mv
+        if mv.size(-1) != 8:
+            raise ValueError(
+                f"mechanism_contrastive_loss expects trailing multivector dimension 8 or {PGA_DIM}, got {mv.size(-1)}"
+            )
+        out = torch.zeros(mv.shape[:-1] + (PGA_DIM,), dtype=mv.dtype, device=mv.device)
+        out[..., 0] = mv[..., 0]
+        out[..., 1:4] = mv[..., 1:4]
+        out[..., 5] = mv[..., 4]
+        out[..., 6] = mv[..., 6]
+        out[..., 7] = mv[..., 5]
+        out[..., 11] = mv[..., 7]
+        return out
+
+    q_mv = _canonicalize_multivectors(query_multivectors)
+    r_mv = _canonicalize_multivectors(retrieved_multivectors).detach()
     q_target = torch.as_tensor(query_targets, dtype=torch.float32, device=q_mv.device)
     r_target = torch.as_tensor(retrieved_targets, dtype=torch.float32, device=q_mv.device)
     q_mask = torch.as_tensor(query_mask, dtype=torch.float32, device=q_mv.device)
     r_mask = torch.as_tensor(retrieved_mask, dtype=torch.float32, device=q_mv.device)
 
-    if q_mv.ndim != 2 or r_mv.ndim != 2:
-        raise ValueError("mechanism_contrastive_loss expects [N, D] multivector tensors")
     if q_target.ndim != 2 or r_target.ndim != 2:
         raise ValueError("mechanism_contrastive_loss expects [N, C] target tensors")
 
