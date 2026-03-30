@@ -248,6 +248,22 @@ if TORCH_AVAILABLE:
             mask = supervision_mask.float().view_as(logits)
             return (raw * mask).sum() / mask.sum().clamp_min(1.0)
 
+        def _site_style_vote_loss(self, logits, batch: Dict[str, object]):
+            site_labels = batch["site_labels"]
+            site_mask = batch.get("site_supervision_mask")
+            node_weights = batch.get("node_confidence_weights")
+            graph_weights = batch.get("graph_confidence_weights")
+            site_batch = batch["batch"]
+            loss_value, _ = self.loss_fn.site_loss(
+                logits,
+                site_labels,
+                site_batch,
+                supervision_mask=site_mask,
+                node_weights=node_weights,
+                graph_weights=graph_weights,
+            )
+            return loss_value
+
         def compute_loss(self, batch: Dict[str, object], outputs: Dict[str, object]):
             loss, stats = self.loss_fn(
                 outputs["site_logits"],
@@ -290,7 +306,7 @@ if TORCH_AVAILABLE:
                     tensor = vote_heads.get(key)
                     if tensor is None or weight <= 0.0:
                         continue
-                    aux_loss = self._masked_bce_with_logits(tensor, site_labels, site_mask)
+                    aux_loss = self._site_style_vote_loss(tensor, batch)
                     loss = loss + (weight * aux_loss)
                     stats[f"nexus_{name}_vote_loss"] = float(aux_loss.detach().item())
                     stats[f"nexus_{name}_vote_weight"] = float(weight)
