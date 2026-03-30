@@ -118,6 +118,8 @@ class ModelConfig:
     nexus_vote_logit_scale: float = 2.0
     nexus_live_wave_vote_inputs: bool = True
     nexus_live_analogical_vote_inputs: bool = True
+    nexus_live_wave_vote_grad_scale: float = 0.05
+    nexus_live_analogical_vote_grad_scale: float = 0.05
     nexus_analogical_cyp_aux_scale: float = 0.10
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
@@ -202,6 +204,8 @@ class ModelConfig:
         self.nexus_vote_logit_scale = max(0.1, float(self.nexus_vote_logit_scale))
         self.nexus_live_wave_vote_inputs = bool(self.nexus_live_wave_vote_inputs)
         self.nexus_live_analogical_vote_inputs = bool(self.nexus_live_analogical_vote_inputs)
+        self.nexus_live_wave_vote_grad_scale = min(max(float(self.nexus_live_wave_vote_grad_scale), 0.0), 1.0)
+        self.nexus_live_analogical_vote_grad_scale = min(max(float(self.nexus_live_analogical_vote_grad_scale), 0.0), 1.0)
         self.nexus_analogical_cyp_aux_scale = max(0.0, float(self.nexus_analogical_cyp_aux_scale))
 
     @property

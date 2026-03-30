@@ -127,6 +127,16 @@ if TORCH_AVAILABLE:
                 return out[..., :width]
             return torch.nn.functional.pad(out, (0, width - int(out.size(-1))))
 
+        def _scaled_live(self, value: torch.Tensor, *, enabled: bool, grad_scale: float) -> torch.Tensor:
+            base = value.detach()
+            if not enabled or grad_scale <= 0.0:
+                return base
+            scale = float(grad_scale)
+            return base + scale * (value - base)
+
+        def _safe_vote_tensor(self, value: torch.Tensor) -> torch.Tensor:
+            return torch.nan_to_num(value, nan=0.0, posinf=4.0, neginf=-4.0).clamp(-4.0, 4.0)
+
         def _site_logits_from_arbiter(
             self,
             outputs: Dict[str, object],
@@ -154,6 +164,8 @@ if TORCH_AVAILABLE:
             vote_scale = float(getattr(self.config, "nexus_vote_logit_scale", 2.0))
             live_wave_vote_inputs = bool(getattr(self.config, "nexus_live_wave_vote_inputs", True))
             live_analogical_vote_inputs = bool(getattr(self.config, "nexus_live_analogical_vote_inputs", True))
+            wave_vote_grad_scale = float(getattr(self.config, "nexus_live_wave_vote_grad_scale", 0.05))
+            analogical_vote_grad_scale = float(getattr(self.config, "nexus_live_analogical_vote_grad_scale", 0.05))
             atom_features_b = torch.tanh(atom_features)
             # Keep the LNN encoder live, but stop the main site loss from backpropagating
             # through the heavier wave/analogical sidecar. Those modules still learn via
@@ -174,11 +186,23 @@ if TORCH_AVAILABLE:
             steric_b = torch.tanh(steric)
             xtb_b = torch.tanh(xtb)
             wave_field_b = torch.tanh(wave_field["atom_field_features"].detach())
-            wave_scalar_vote = torch.tanh(wave_scalar if live_wave_vote_inputs else wave_scalar.detach())
+            wave_scalar_vote = torch.tanh(
+                self._safe_vote_tensor(
+                    self._scaled_live(
+                        wave_scalar,
+                        enabled=live_wave_vote_inputs,
+                        grad_scale=wave_vote_grad_scale,
+                    )
+                )
+            )
             wave_field_vote = torch.tanh(
-                wave_field["atom_field_features"]
-                if live_wave_vote_inputs
-                else wave_field["atom_field_features"].detach()
+                self._safe_vote_tensor(
+                    self._scaled_live(
+                        wave_field["atom_field_features"],
+                        enabled=live_wave_vote_inputs,
+                        grad_scale=wave_vote_grad_scale,
+                    )
+                )
             )
             lnn_vote_raw = self.lnn_vote_head(
                 torch.cat(
@@ -193,9 +217,13 @@ if TORCH_AVAILABLE:
             lnn_conf = torch.sigmoid(self.lnn_conf_head(atom_features_b))
             wave_site_bias_b = torch.tanh(bridge["wave_site_bias"].detach())
             wave_site_bias_vote = torch.tanh(
-                bridge["wave_site_bias"]
-                if live_wave_vote_inputs
-                else bridge["wave_site_bias"].detach()
+                self._safe_vote_tensor(
+                    self._scaled_live(
+                        bridge["wave_site_bias"],
+                        enabled=live_wave_vote_inputs,
+                        grad_scale=wave_vote_grad_scale,
+                    )
+                )
             )
             wave_vote_raw = self.wave_vote_head(
                 torch.cat(
@@ -225,26 +253,44 @@ if TORCH_AVAILABLE:
             analogical_site_prior = bridge["analogical_site_prior"].detach()
             confidence_b = confidence.detach()
             analogical_cyp_context_b = analogical_cyp_context.detach()
-            analogical_site_prior_vote = (
-                bridge["analogical_site_prior"]
-                if live_analogical_vote_inputs
-                else bridge["analogical_site_prior"].detach()
+            analogical_site_prior_vote = self._safe_vote_tensor(
+                self._scaled_live(
+                    bridge["analogical_site_prior"],
+                    enabled=live_analogical_vote_inputs,
+                    grad_scale=analogical_vote_grad_scale,
+                )
             )
-            confidence_vote = confidence if live_analogical_vote_inputs else confidence.detach()
+            confidence_vote = self._safe_vote_tensor(
+                self._scaled_live(
+                    confidence,
+                    enabled=live_analogical_vote_inputs,
+                    grad_scale=analogical_vote_grad_scale,
+                )
+            )
             analogical_site_bias_vote = torch.tanh(
-                bridge["analogical_site_bias"]
-                if live_analogical_vote_inputs
-                else bridge["analogical_site_bias"].detach()
+                self._safe_vote_tensor(
+                    self._scaled_live(
+                        bridge["analogical_site_bias"],
+                        enabled=live_analogical_vote_inputs,
+                        grad_scale=analogical_vote_grad_scale,
+                    )
+                )
             )
             continuous_reasoning_vote = torch.tanh(
-                bridge["continuous_reasoning_features"]
-                if live_analogical_vote_inputs
-                else bridge["continuous_reasoning_features"].detach()
+                self._safe_vote_tensor(
+                    self._scaled_live(
+                        bridge["continuous_reasoning_features"],
+                        enabled=live_analogical_vote_inputs,
+                        grad_scale=analogical_vote_grad_scale,
+                    )
+                )
             )
-            precedent_brief_vote = (
-                precedent_brief
-                if live_analogical_vote_inputs
-                else precedent_brief.detach()
+            precedent_brief_vote = self._safe_vote_tensor(
+                self._scaled_live(
+                    precedent_brief,
+                    enabled=live_analogical_vote_inputs,
+                    grad_scale=analogical_vote_grad_scale,
+                )
             )
             analogical_vote_raw = self.analogical_vote_head(
                 torch.cat(
