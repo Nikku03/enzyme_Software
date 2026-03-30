@@ -114,6 +114,8 @@ PRESETS: dict[str, dict[str, str]] = {
 
 def main() -> None:
     os.chdir(REPO_DIR)
+    os.environ.setdefault("TORCHDYNAMO_DISABLE", "1")
+    os.environ.setdefault("TORCH_COMPILE_DISABLE", "1")
     os.environ["PYTHONPATH"] = f"{SRC_DIR}:{os.environ.get('PYTHONPATH', '')}".rstrip(":")
     _ensure_rdkit()
     preset = os.environ.get("HYBRID_COLAB_PRESET", "balanced").strip().lower() or "balanced"
@@ -219,6 +221,8 @@ def main() -> None:
     print(f"xtb_cache_dir={xtb_cache_dir}")
     print(f"warm_start={checkpoint}")
     print(f"disable_precedent_logbook={os.environ.get('HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK', '1')}")
+    print(f"TORCHDYNAMO_DISABLE={os.environ.get('TORCHDYNAMO_DISABLE', '')}")
+    print(f"TORCH_COMPILE_DISABLE={os.environ.get('TORCH_COMPILE_DISABLE', '')}")
     if precedent_logbook:
         print(f"precedent_logbook={precedent_logbook}")
     for key in sorted(PRESETS[preset]):
