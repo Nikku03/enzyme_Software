@@ -72,6 +72,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
+        "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
         "HYBRID_COLAB_SEED": "42",
     },
     "balanced": {
@@ -88,6 +89,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
+        "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
         "HYBRID_COLAB_SEED": "42",
     },
     "full": {
@@ -104,6 +106,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
+        "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
         "HYBRID_COLAB_SEED": "42",
     },
 }
@@ -202,6 +205,8 @@ def main() -> None:
     if os.environ.get("HYBRID_COLAB_INCLUDE_XENOSITE", "1").strip().lower() in {"1", "true", "yes", "on"}:
         argv.extend(["--xenosite-manifest", xenosite_manifest])
         argv.extend(["--xenosite-topk", os.environ["HYBRID_COLAB_XENOSITE_TOPK"]])
+    if os.environ.get("HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK", "1").strip().lower() in {"1", "true", "yes", "on"}:
+        argv.append("--disable-precedent-logbook")
     precedent_logbook = os.environ.get("HYBRID_COLAB_PRECEDENT_LOGBOOK", "").strip()
     if precedent_logbook:
         argv.extend(["--precedent-logbook", precedent_logbook])
@@ -213,6 +218,7 @@ def main() -> None:
     print(f"manual_cache_dir={manual_cache_dir}")
     print(f"xtb_cache_dir={xtb_cache_dir}")
     print(f"warm_start={checkpoint}")
+    print(f"disable_precedent_logbook={os.environ.get('HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK', '1')}")
     if precedent_logbook:
         print(f"precedent_logbook={precedent_logbook}")
     for key in sorted(PRESETS[preset]):

@@ -294,6 +294,7 @@ def main() -> None:
     parser.add_argument("--episode-log", default="")
     parser.add_argument("--disable-episode-log", action="store_true")
     parser.add_argument("--precedent-logbook", default="")
+    parser.add_argument("--disable-precedent-logbook", action="store_true")
     args = parser.parse_args()
     early_stopping_patience = int(args.early_stopping_patience)
     early_stopping_enabled = early_stopping_patience > 0
@@ -412,7 +413,7 @@ def main() -> None:
     else:
         print(f"No warm-start checkpoint found at {checkpoint_path}; starting from current initialization", flush=True)
 
-    precedent_logbook = _resolve_precedent_logbook(args.precedent_logbook, artifact_dir)
+    precedent_logbook = None if args.disable_precedent_logbook else _resolve_precedent_logbook(args.precedent_logbook, artifact_dir)
     if precedent_logbook is not None and precedent_logbook.exists():
         precedent_stats = model.load_nexus_precedent_logbook(
             str(precedent_logbook),
@@ -425,7 +426,10 @@ def main() -> None:
             flush=True,
         )
     else:
-        print("No precedent logbook found; analogical precedent briefs will remain empty for this run", flush=True)
+        if args.disable_precedent_logbook:
+            print("Precedent logbook loading disabled; analogical precedent briefs will remain empty for this run", flush=True)
+        else:
+            print("No precedent logbook found; analogical precedent briefs will remain empty for this run", flush=True)
 
     model.to(device)
 
