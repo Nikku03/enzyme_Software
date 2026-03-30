@@ -12,6 +12,7 @@ from nexus.reasoning.analogical_fusion import (
     HomoscedasticArbiterLoss,
     MorphismFocalLoss,
 )
+from nexus.reasoning.metric_learner import PoincareMath
 
 
 class _WaveNodeProjection(nn.Module):
@@ -43,6 +44,8 @@ class PGWCrossAttention(nn.Module):
         self.scale = math.sqrt(float(self.hidden_dim))
         self.transport_gamma = nn.Parameter(torch.ones(1))
         self.electronic_weight = nn.Parameter(torch.tensor(1.0, dtype=torch.float32))
+        self.orientation_weight = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
+        self.poincare = PoincareMath(c=1.0)
 
         self.q_struct_proj = nn.LazyLinear(self.hidden_dim)
         self.k_struct_proj = nn.LazyLinear(self.hidden_dim)
@@ -51,6 +54,8 @@ class PGWCrossAttention(nn.Module):
         self.q_elec_proj = nn.LazyLinear(self.hidden_dim)
         self.k_elec_proj = nn.LazyLinear(self.hidden_dim)
         self.v_elec_proj = nn.LazyLinear(self.hidden_dim)
+        self.q_orient_proj = nn.LazyLinear(3)
+        self.k_orient_proj = nn.LazyLinear(3)
 
         self.out_proj = nn.Sequential(
             nn.Linear(self.hidden_dim * 4, self.hidden_dim),
@@ -58,27 +63,43 @@ class PGWCrossAttention(nn.Module):
             nn.Linear(self.hidden_dim, self.hidden_dim),
         )
 
+    def _log_map_bridge(self, x: torch.Tensor) -> torch.Tensor:
+        safe = 0.85 * torch.tanh(x.to(dtype=torch.float32))
+        return self.poincare.log_map_0(safe)
+
     def forward(
         self,
         q_fp: torch.Tensor,
         v_ret: torch.Tensor,
         pi_star: torch.Tensor,
     ) -> torch.Tensor:
-        q_struct = self.q_struct_proj(q_fp)
-        k_struct = self.k_struct_proj(v_ret)
-        v_struct = self.v_struct_proj(v_ret)
+        q_struct = self._log_map_bridge(self.q_struct_proj(q_fp))
+        k_struct = self._log_map_bridge(self.k_struct_proj(v_ret))
+        v_struct = self._log_map_bridge(self.v_struct_proj(v_ret))
 
-        q_elec = self.q_elec_proj(q_fp)
-        k_elec = self.k_elec_proj(v_ret)
-        v_elec = self.v_elec_proj(v_ret)
+        q_elec = self._log_map_bridge(self.q_elec_proj(q_fp))
+        k_elec = self._log_map_bridge(self.k_elec_proj(v_ret))
+        v_elec = self._log_map_bridge(self.v_elec_proj(v_ret))
+        q_orient = F.normalize(self.q_orient_proj(q_fp), p=2, dim=-1)
+        k_orient = F.normalize(self.k_orient_proj(v_ret), p=2, dim=-1)
 
         structural_logits = torch.matmul(q_struct, k_struct.transpose(-2, -1)) / self.scale
         electronic_distance = torch.cdist(q_elec, k_elec, p=2)
         electronic_scale = electronic_distance.mean(dim=(-2, -1), keepdim=True).clamp_min(1.0e-4)
         electronic_logits = -(electronic_distance / electronic_scale)
+        orient_dot = torch.matmul(q_orient, k_orient.transpose(-2, -1))
+        q_orient_exp = q_orient.unsqueeze(-2).expand(-1, -1, k_orient.size(-2), -1)
+        k_orient_exp = k_orient.unsqueeze(-3).expand(-1, q_orient.size(-2), -1, -1)
+        wedge_penalty = torch.linalg.norm(torch.cross(q_orient_exp, k_orient_exp, dim=-1), dim=-1)
+        orientation_logits = orient_dot - wedge_penalty
 
         pi_mask = self.transport_gamma * torch.log(pi_star.clamp_min(1.0e-9))
-        final_logits = structural_logits + (self.electronic_weight * electronic_logits) + pi_mask
+        final_logits = (
+            structural_logits
+            + (self.electronic_weight * electronic_logits)
+            + (self.orientation_weight * orientation_logits)
+            + pi_mask
+        )
         attn_weights = F.softmax(final_logits, dim=-1)
 
         context_struct = torch.matmul(attn_weights, v_struct)
@@ -109,6 +130,8 @@ class NexusDualDecoder(nn.Module):
         self.fp_elec_proj = _WaveNodeProjection(hidden_dim=hidden_dim)
         self.ana_struct_proj = _WaveNodeProjection(hidden_dim=hidden_dim)
         self.ana_elec_proj = _WaveNodeProjection(hidden_dim=hidden_dim)
+        self.fp_orient_proj = nn.LazyLinear(3)
+        self.ana_orient_proj = nn.LazyLinear(3)
 
         self.struct_gate_proj = nn.Sequential(
             nn.LazyLinear(hidden_dim),
@@ -145,8 +168,12 @@ class NexusDualDecoder(nn.Module):
         fp_elec = self.fp_elec_proj(q_fp)
         ana_struct = self.ana_struct_proj(q_ana)
         ana_elec = self.ana_elec_proj(q_ana)
+        fp_orient = F.normalize(self.fp_orient_proj(q_fp), p=2, dim=-1)
+        ana_orient = F.normalize(self.ana_orient_proj(q_ana), p=2, dim=-1)
+        orient_cross = torch.linalg.norm(torch.cross(fp_orient, ana_orient, dim=-1), dim=-1, keepdim=True)
+        orient_dot = (fp_orient * ana_orient).sum(dim=-1, keepdim=True)
 
-        fp_hidden = self.fp_context_proj(torch.cat([fp_struct, fp_elec, fp_struct * fp_elec], dim=-1))
+        fp_hidden = self.fp_context_proj(torch.cat([fp_struct, fp_elec, fp_struct * fp_elec, fp_orient, orient_dot], dim=-1))
 
         struct_gate = torch.sigmoid(
             self.struct_gate_proj(torch.cat([ana_struct, fp_struct, ana_struct - fp_struct], dim=-1))
@@ -164,6 +191,10 @@ class NexusDualDecoder(nn.Module):
                     mixed_elec,
                     mixed_struct - mixed_elec,
                     mixed_struct * mixed_elec,
+                    ana_orient,
+                    fp_orient,
+                    orient_dot,
+                    orient_cross,
                 ],
                 dim=-1,
             )

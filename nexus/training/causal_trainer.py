@@ -1870,6 +1870,7 @@ class Metabolic_Causal_Trainer(nn.Module):
         quantum_loss_charge = torch.zeros((), dtype=torch.float32, device=device)
         quantum_loss_fukui = torch.zeros((), dtype=torch.float32, device=device)
         quantum_loss_gap = torch.zeros((), dtype=torch.float32, device=device)
+        quantum_loss_harmonic = torch.zeros((), dtype=torch.float32, device=device)
         quantum_supervision_available = torch.zeros((), dtype=torch.float32, device=device)
         quantum_pred_charge_mean = torch.zeros((), dtype=torch.float32, device=device)
         quantum_pred_fukui_mean = torch.zeros((), dtype=torch.float32, device=device)
@@ -1883,6 +1884,12 @@ class Metabolic_Causal_Trainer(nn.Module):
             and self.quantum_feature_bank
         ):
             try:
+                batch_coords = None
+                _batch_coords = batch.get("coords")
+                if torch.is_tensor(_batch_coords) and _batch_coords.numel() > 0:
+                    _coord_source = _batch_coords[0] if _batch_coords.ndim >= 3 else _batch_coords
+                    if _coord_source.ndim == 2 and _coord_source.size(0) >= int(atom_mv.size(1)):
+                        batch_coords = _coord_source[: int(atom_mv.size(1))].to(device=device, dtype=torch.float32)
                 _quantum_targets = self._lookup_quantum_targets(
                     smiles,
                     atom_count=int(atom_mv.size(1)),
@@ -1895,9 +1902,20 @@ class Metabolic_Causal_Trainer(nn.Module):
                     None,
                 )
                 if _quantum_targets is not None and callable(_quantum_loss_fn):
+                    _harmonic_target_fn = getattr(
+                        self._metric_learner_module,
+                        "real_spherical_harmonics",
+                        None,
+                    )
+                    _target_harmonics = (
+                        _harmonic_target_fn(batch_coords)
+                        if callable(_harmonic_target_fn) and batch_coords is not None
+                        else None
+                    )
                     _quantum_pred = self.wave_quantum_head(
                         live_node_multivectors,
                         atom_mask=_quantum_targets["atom_mask"],
+                        atom_coords=batch_coords,
                     )
                     _quantum_total_raw, _quantum_info = _quantum_loss_fn(
                         predicted_charges=_quantum_pred["predicted_charges"],
@@ -1907,6 +1925,8 @@ class Metabolic_Causal_Trainer(nn.Module):
                         target_fukui=_quantum_targets["fukui_f_zero"],
                         target_gap=_quantum_targets["homo_lumo_gap_ev"],
                         atom_mask=_quantum_targets["atom_mask"],
+                        predicted_harmonics=_quantum_pred.get("predicted_harmonics"),
+                        target_harmonics=_target_harmonics,
                     )
                     quantum_loss_charge = self._sanitize_tensor(
                         self._to_fp32(_quantum_info["charge_loss"]),
@@ -1918,6 +1938,10 @@ class Metabolic_Causal_Trainer(nn.Module):
                     )
                     quantum_loss_gap = self._sanitize_tensor(
                         self._to_fp32(_quantum_info["gap_loss"]),
+                        clamp=(0.0, 100.0),
+                    )
+                    quantum_loss_harmonic = self._sanitize_tensor(
+                        self._to_fp32(_quantum_info.get("harmonic_loss", torch.zeros((), dtype=torch.float32, device=device))),
                         clamp=(0.0, 100.0),
                     )
                     quantum_loss_weighted = self._sanitize_tensor(
@@ -2103,6 +2127,7 @@ class Metabolic_Causal_Trainer(nn.Module):
             "quantum_loss_charge": quantum_loss_charge.detach(),
             "quantum_loss_fukui": quantum_loss_fukui.detach(),
             "quantum_loss_gap": quantum_loss_gap.detach(),
+            "quantum_loss_harmonic": quantum_loss_harmonic.detach(),
             "quantum_supervision_available": quantum_supervision_available.detach(),
             "quantum_pred_charge_mean": quantum_pred_charge_mean.detach(),
             "quantum_pred_fukui_mean": quantum_pred_fukui_mean.detach(),
@@ -3016,6 +3041,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                         f" qchg={running.get('quantum_loss_charge', float('nan')):.3f}"
                         f" qfuk={running.get('quantum_loss_fukui', float('nan')):.3f}"
                         f" qgap={running.get('quantum_loss_gap', float('nan')):.3f}"
+                        f" qharm={running.get('quantum_loss_harmonic', float('nan')):.3f}"
                     ) if running.get("quantum_supervision_available", 0.0) > 0.0 else ""
                     print(
                         f"batch={i}/{total_batches} "

@@ -23,6 +23,7 @@ from .metric_learner import (
     hyperbolic_supervision_loss,
     mechanism_contrastive_loss,
     quantum_distillation_loss,
+    real_spherical_harmonics,
 )
 from .pgw_transport import PGWTransportResult, PGWTransporter
 
@@ -42,4 +43,5 @@ __all__ = [
     "hyperbolic_supervision_loss",
     "mechanism_contrastive_loss",
     "quantum_distillation_loss",
+    "real_spherical_harmonics",
 ]

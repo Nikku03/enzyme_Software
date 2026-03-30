@@ -37,6 +37,8 @@ class PGWTransporter(ClassicPGWTransporter):
         super().__init__(**kwargs)
         self.structural_cost_weight = float(max(structural_cost_weight, 0.0))
         self.electronic_cost_weight = float(max(electronic_cost_weight, 0.0))
+        self.metric_structural_weight = 0.55
+        self.metric_electronic_weight = 0.45
 
     @staticmethod
     def _wave_feature_signature(multivectors: torch.Tensor) -> torch.Tensor:
@@ -67,6 +69,35 @@ class PGWTransporter(ClassicPGWTransporter):
         scale = elec.max().clamp_min(1.0)
         return elec / scale
 
+    def _combined_metric_tensor(self, mol, multivectors: torch.Tensor) -> torch.Tensor:
+        structural_metric = self._distance_matrix(mol).to(dtype=torch.float64, device=self.device)
+        electronic_metric = self.compute_z_kernel_matrix(multivectors).to(dtype=torch.float64, device=self.device)
+        total_weight = self.metric_structural_weight + self.metric_electronic_weight
+        if total_weight <= 0.0:
+            return electronic_metric
+        combined = (
+            self.metric_structural_weight * structural_metric
+            + self.metric_electronic_weight * electronic_metric
+        ) / total_weight
+        scale = combined.max().clamp_min(1.0e-8)
+        return combined / scale
+
+    def _anchor_metric_cost(
+        self,
+        query_mol,
+        retrieved_mol,
+        q_metric: torch.Tensor,
+        r_metric: torch.Tensor,
+        cross_cost: torch.Tensor,
+    ) -> torch.Tensor:
+        q_anchor = self._anchor_indices(query_mol, device=q_metric.device)
+        r_anchor = self._anchor_indices(retrieved_mol, device=r_metric.device)
+        k = min(int(q_anchor.numel()), int(r_anchor.numel()))
+        q_sig = q_metric.index_select(1, q_anchor[:k])
+        r_sig = r_metric.index_select(1, r_anchor[:k])
+        metric_cost = torch.cdist(q_sig, r_sig, p=2).to(dtype=torch.float64)
+        return 0.5 * metric_cost + 0.5 * cross_cost
+
     def _cross_feature_cost(
         self,
         query_mol,
@@ -92,6 +123,33 @@ class PGWTransporter(ClassicPGWTransporter):
             + self.electronic_cost_weight * electronic
         ) / total_weight
         return blended.to(dtype=torch.float64)
+
+    def _exact_multivector_coupling(
+        self,
+        query_mol,
+        retrieved_mol,
+        q_mv: torch.Tensor,
+        r_mv: torch.Tensor,
+    ) -> tuple[torch.Tensor, str]:
+        q_metric = self._combined_metric_tensor(query_mol, q_mv)
+        r_metric = self._combined_metric_tensor(retrieved_mol, r_mv)
+        cross_cost = self._cross_feature_cost(
+            query_mol,
+            retrieved_mol,
+            query_multivectors=q_mv,
+            retrieved_multivectors=r_mv,
+        )
+        transported_mass = 1.0 - self.dustbin_epsilon
+        if max(q_mv.size(0), r_mv.size(0)) > self.linearize_above_atoms:
+            anchor_cost = self._anchor_metric_cost(
+                query_mol,
+                retrieved_mol,
+                q_metric,
+                r_metric,
+                cross_cost,
+            )
+            return self._partial_sinkhorn(anchor_cost, transported_mass=transported_mass), "wave_gw_linearized"
+        return self._partial_z_gw(q_metric, r_metric, cross_cost=cross_cost), "wave_gw_exact"
 
 
 __all__ = ["PGWTransportResult", "PGWTransporter", "WaveTransportDiagnostics"]
