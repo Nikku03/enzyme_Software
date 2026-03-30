@@ -56,7 +56,7 @@ if TORCH_AVAILABLE:
         def _disable_broken_torch_compile_wrappers(self) -> None:
             # Some Colab torch builds hit a circular-import bug the first time
             # torch._compile's lazy _disable_dynamo wrapper touches torch._inductor.
-            # Short-circuit those optimizer wrappers to the original methods.
+            # Replace those optimizer wrappers with the original methods.
             try:
                 import torch.optim.optimizer as optimizer_mod
             except Exception:
@@ -66,8 +66,7 @@ if TORCH_AVAILABLE:
                 original = getattr(wrapped, "__wrapped__", None)
                 if wrapped is None or original is None:
                     continue
-                if getattr(original, "__dynamo_disable", None) is None:
-                    original.__dynamo_disable = original  # type: ignore[attr-defined]
+                setattr(optimizer_mod.Optimizer, name, original)
 
         def step_scheduler(self, val_metric: float) -> None:
             self.scheduler.step(val_metric)
