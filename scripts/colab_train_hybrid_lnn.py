@@ -49,7 +49,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_SEED": "42",
     },
     "balanced": {
-        "HYBRID_COLAB_DATASET": "data/merged_all_sources_cleaned.json",
+        "HYBRID_COLAB_DATASET": "data/prepared_training/main5_site_conservative_singlecyp_clean.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
         "HYBRID_COLAB_EPOCHS": "12",
         "HYBRID_COLAB_BATCH_SIZE": "16",
@@ -62,7 +62,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_SEED": "42",
     },
     "full": {
-        "HYBRID_COLAB_DATASET": "data/merged_all_sources_cleaned.json",
+        "HYBRID_COLAB_DATASET": "data/combined_drugbank_supercyp_full_xtb_valid_site_labeled.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
         "HYBRID_COLAB_EPOCHS": "25",
         "HYBRID_COLAB_BATCH_SIZE": "24",
