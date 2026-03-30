@@ -235,7 +235,7 @@ def main() -> None:
         )
         print(f"Loaded warm-start checkpoint: {checkpoint_path}", flush=True)
     else:
-        raise FileNotFoundError(f"Warm-start checkpoint not found: {checkpoint_path}")
+        print(f"No warm-start checkpoint found at {checkpoint_path}; starting from current initialization", flush=True)
 
     trainer = Trainer(
         model=model,

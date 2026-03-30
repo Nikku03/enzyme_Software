@@ -1,8 +1,13 @@
 """
-Dedicated Colab entrypoint for the hybrid LNN with both imported NEXUS parts:
+Dedicated Colab entrypoint for the hybrid LNN with both imported NEXUS parts
+running on the full-xTB hybrid path.
 
-- wave / quantum bridge
+This is the correct Colab route for:
 - analogical memory bank
+- wave / quantum bridge
+
+because it feeds real xTB atom features into the bridge instead of starving the
+wave side on the plain baseline loader.
 
 Run from a Colab cell with:
 
@@ -28,42 +33,42 @@ def _setdefault_env(name: str, value: str) -> None:
 
 PRESETS: dict[str, dict[str, str]] = {
     "fast": {
-        "HYBRID_COLAB_DATASET": "data/training_dataset_580.json",
+        "HYBRID_COLAB_DATASET": "data/prepared_training/main5_site_conservative_singlecyp_clean.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
         "HYBRID_COLAB_EPOCHS": "3",
-        "HYBRID_COLAB_BATCH_SIZE": "16",
+        "HYBRID_COLAB_BATCH_SIZE": "12",
         "HYBRID_COLAB_LR": "2e-4",
         "HYBRID_COLAB_WD": "1e-4",
-        "HYBRID_COLAB_DISABLE_3D": "0",
-        "HYBRID_COLAB_DISABLE_NEXUS_BRIDGE": "0",
+        "HYBRID_COLAB_LIMIT": "128",
+        "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
+        "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
-        "HYBRID_COLAB_SKIP_MEMORY_REBUILD": "0",
         "HYBRID_COLAB_SEED": "42",
     },
     "balanced": {
-        "HYBRID_COLAB_DATASET": "data/training_dataset_580.json",
+        "HYBRID_COLAB_DATASET": "data/merged_all_sources_cleaned.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
         "HYBRID_COLAB_EPOCHS": "12",
-        "HYBRID_COLAB_BATCH_SIZE": "24",
+        "HYBRID_COLAB_BATCH_SIZE": "16",
         "HYBRID_COLAB_LR": "2e-4",
         "HYBRID_COLAB_WD": "1e-4",
-        "HYBRID_COLAB_DISABLE_3D": "0",
-        "HYBRID_COLAB_DISABLE_NEXUS_BRIDGE": "0",
+        "HYBRID_COLAB_LIMIT": "0",
+        "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
+        "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
-        "HYBRID_COLAB_SKIP_MEMORY_REBUILD": "0",
         "HYBRID_COLAB_SEED": "42",
     },
     "full": {
-        "HYBRID_COLAB_DATASET": "data/training_dataset_580.json",
+        "HYBRID_COLAB_DATASET": "data/merged_all_sources_cleaned.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
         "HYBRID_COLAB_EPOCHS": "25",
-        "HYBRID_COLAB_BATCH_SIZE": "32",
+        "HYBRID_COLAB_BATCH_SIZE": "24",
         "HYBRID_COLAB_LR": "2e-4",
         "HYBRID_COLAB_WD": "1e-4",
-        "HYBRID_COLAB_DISABLE_3D": "0",
-        "HYBRID_COLAB_DISABLE_NEXUS_BRIDGE": "0",
+        "HYBRID_COLAB_LIMIT": "0",
+        "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "1",
+        "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
-        "HYBRID_COLAB_SKIP_MEMORY_REBUILD": "0",
         "HYBRID_COLAB_SEED": "42",
     },
 }
@@ -80,19 +85,35 @@ def main() -> None:
 
     output_dir = os.environ.get(
         "HYBRID_COLAB_OUTPUT_DIR",
-        "/content/drive/MyDrive/enzyme_hybrid_lnn/checkpoints",
+        "/content/drive/MyDrive/enzyme_hybrid_lnn/checkpoints/hybrid_full_xtb",
+    )
+    artifact_dir = os.environ.get(
+        "HYBRID_COLAB_ARTIFACT_DIR",
+        "/content/drive/MyDrive/enzyme_hybrid_lnn/artifacts/hybrid_full_xtb",
     )
     manual_cache_dir = os.environ.get(
         "HYBRID_COLAB_MANUAL_CACHE_DIR",
         "/content/drive/MyDrive/enzyme_hybrid_lnn/cache/manual_engine_full",
     )
+    xtb_cache_dir = os.environ.get(
+        "HYBRID_COLAB_XTB_CACHE_DIR",
+        "/content/drive/MyDrive/enzyme_hybrid_lnn/cache/full_xtb",
+    )
+    checkpoint = os.environ.get(
+        "HYBRID_COLAB_WARM_START",
+        "/content/drive/MyDrive/enzyme_hybrid_lnn/checkpoints/hybrid_full_xtb/hybrid_full_xtb_latest.pt",
+    )
 
     argv = [
-        str(REPO_DIR / "scripts" / "train_hybrid_lnn.py"),
+        str(REPO_DIR / "scripts" / "train_hybrid_full_xtb.py"),
         "--dataset",
         os.environ["HYBRID_COLAB_DATASET"],
         "--structure-sdf",
         os.environ["HYBRID_COLAB_STRUCTURE_SDF"],
+        "--checkpoint",
+        checkpoint,
+        "--xtb-cache-dir",
+        xtb_cache_dir,
         "--epochs",
         os.environ["HYBRID_COLAB_EPOCHS"],
         "--batch-size",
@@ -105,30 +126,33 @@ def main() -> None:
         os.environ["HYBRID_COLAB_SEED"],
         "--output-dir",
         output_dir,
+        "--artifact-dir",
+        artifact_dir,
         "--manual-feature-cache-dir",
         manual_cache_dir,
-        "--auto-resume-latest",
     ]
 
-    if os.environ.get("HYBRID_COLAB_DISABLE_3D", "0").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.append("--disable-3d-branch")
-    if os.environ.get("HYBRID_COLAB_DISABLE_NEXUS_BRIDGE", "0").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.append("--disable-nexus-bridge")
-    if os.environ.get("HYBRID_COLAB_FREEZE_NEXUS_MEMORY", "1").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.append("--freeze-nexus-memory")
-    if os.environ.get("HYBRID_COLAB_SKIP_MEMORY_REBUILD", "0").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.append("--skip-nexus-memory-rebuild")
+    limit = int(os.environ.get("HYBRID_COLAB_LIMIT", "0") or "0")
+    if limit > 0:
+        argv.extend(["--limit", str(limit)])
+    if os.environ.get("HYBRID_COLAB_SITE_LABELED_ONLY", "1").strip().lower() in {"1", "true", "yes", "on"}:
+        argv.append("--site-labeled-only")
+    if os.environ.get("HYBRID_COLAB_COMPUTE_XTB_IF_MISSING", "0").strip().lower() in {"1", "true", "yes", "on"}:
+        argv.append("--compute-xtb-if-missing")
 
     print("Hybrid LNN Colab wrapper")
     print(f"preset={preset}")
     print(f"output_dir={output_dir}")
+    print(f"artifact_dir={artifact_dir}")
     print(f"manual_cache_dir={manual_cache_dir}")
+    print(f"xtb_cache_dir={xtb_cache_dir}")
+    print(f"warm_start={checkpoint}")
     for key in sorted(PRESETS[preset]):
         print(f"{key}={os.environ[key]}")
     print()
 
     sys.argv = argv
-    runpy.run_path(str(REPO_DIR / "scripts" / "train_hybrid_lnn.py"), run_name="__main__")
+    runpy.run_path(str(REPO_DIR / "scripts" / "train_hybrid_full_xtb.py"), run_name="__main__")
 
 
 main()
