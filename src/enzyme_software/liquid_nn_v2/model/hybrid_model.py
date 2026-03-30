@@ -44,10 +44,41 @@ if TORCH_AVAILABLE:
                     torch.logit(torch.tensor(float(getattr(self.config, "nexus_analogical_cyp_init", 0.12))))
                 )
                 if bool(getattr(self.config, "use_nexus_site_arbiter", True)):
-                    arbiter_in = atom_dim + 16 + graph_dim + num_cyp + 3 + 2 + num_cyp + steric_dim + xtb_dim + 10 + 1 + 1 + 5 + AuditedEpisodeLogbook.brief_dim + 6
                     arbiter_hidden = int(getattr(self.config, "nexus_site_arbiter_hidden_dim", 128))
                     arbiter_dropout = float(getattr(self.config, "nexus_site_arbiter_dropout", 0.10))
                     council_hidden = max(32, arbiter_hidden // 2)
+                    board_context_dim = (
+                        atom_dim
+                        + 16
+                        + graph_dim
+                        + num_cyp
+                        + 3
+                        + 2
+                        + num_cyp
+                        + steric_dim
+                        + xtb_dim
+                        + 10
+                        + AuditedEpisodeLogbook.brief_dim
+                        + 1
+                        + 1
+                        + 5
+                    )
+                    arbiter_in = board_context_dim + 9
+                    self.lnn_vote_head = nn.Sequential(
+                        nn.Linear(atom_dim + 1, council_hidden),
+                        nn.SiLU(),
+                        nn.Linear(council_hidden, 1),
+                    )
+                    self.wave_vote_head = nn.Sequential(
+                        nn.Linear(14, council_hidden),
+                        nn.SiLU(),
+                        nn.Linear(council_hidden, 1),
+                    )
+                    self.analogical_vote_head = nn.Sequential(
+                        nn.Linear(8 + AuditedEpisodeLogbook.brief_dim, council_hidden),
+                        nn.SiLU(),
+                        nn.Linear(council_hidden, 1),
+                    )
                     self.lnn_conf_head = nn.Sequential(
                         nn.Linear(atom_dim, council_hidden),
                         nn.SiLU(),
@@ -62,6 +93,12 @@ if TORCH_AVAILABLE:
                         nn.Linear(8 + AuditedEpisodeLogbook.brief_dim, council_hidden),
                         nn.SiLU(),
                         nn.Linear(council_hidden, 1),
+                    )
+                    self.council_board_head = nn.Sequential(
+                        nn.Linear(board_context_dim + 3, arbiter_hidden),
+                        nn.SiLU(),
+                        nn.Dropout(arbiter_dropout),
+                        nn.Linear(arbiter_hidden, 3),
                     )
                     self.site_arbiter_head = nn.Sequential(
                         nn.Linear(arbiter_in, arbiter_hidden),
@@ -132,9 +169,27 @@ if TORCH_AVAILABLE:
             steric_b = torch.tanh(steric)
             xtb_b = torch.tanh(xtb)
             wave_field_b = torch.tanh(wave_field["atom_field_features"].detach())
-            lnn_vote = outputs["site_logits"]
+            lnn_vote = self.lnn_vote_head(
+                torch.cat(
+                    [
+                        atom_features_b,
+                        torch.tanh(outputs["site_logits"]),
+                    ],
+                    dim=-1,
+                )
+            )
             lnn_conf = torch.sigmoid(self.lnn_conf_head(atom_features_b))
             wave_site_bias_b = torch.tanh(bridge["wave_site_bias"].detach())
+            wave_vote = self.wave_vote_head(
+                torch.cat(
+                    [
+                        wave_field_b,
+                        wave_scalar_b,
+                        wave_site_bias_b,
+                    ],
+                    dim=-1,
+                )
+            )
             wave_conf = torch.sigmoid(
                 self.wave_conf_head(
                     torch.cat(
@@ -152,6 +207,18 @@ if TORCH_AVAILABLE:
             analogical_site_prior = bridge["analogical_site_prior"].detach()
             confidence_b = confidence.detach()
             analogical_cyp_context_b = analogical_cyp_context.detach()
+            analogical_vote = self.analogical_vote_head(
+                torch.cat(
+                    [
+                        analogical_site_prior,
+                        confidence_b,
+                        analogical_site_bias_b,
+                        continuous_reasoning_b,
+                        precedent_brief.detach(),
+                    ],
+                    dim=-1,
+                )
+            )
             analogical_conf = torch.sigmoid(
                 self.analogical_conf_head(
                     torch.cat(
@@ -166,12 +233,7 @@ if TORCH_AVAILABLE:
                     )
                 )
             )
-            council_logit = (
-                lnn_conf * lnn_vote
-                + wave_conf * bridge["wave_site_bias"].detach()
-                + analogical_conf * bridge["analogical_site_bias"].detach()
-            )
-            arbiter_in = torch.cat(
+            board_context = torch.cat(
                 [
                     atom_features_b,
                     multivectors_b,
@@ -188,11 +250,40 @@ if TORCH_AVAILABLE:
                     wave_site_bias_b,
                     analogical_site_bias_b,
                     continuous_reasoning_b,
+                ],
+                dim=-1,
+            )
+            council_stream_meta = torch.cat(
+                [
+                    lnn_conf,
+                    wave_conf,
+                    analogical_conf,
+                ],
+                dim=-1,
+            )
+            board_logits = self.council_board_head(
+                torch.cat(
+                    [
+                        board_context,
+                        council_stream_meta,
+                    ],
+                    dim=-1,
+                )
+            )
+            board_weights = torch.softmax(board_logits, dim=-1)
+            council_logit = (
+                board_weights[:, 0:1] * lnn_vote
+                + board_weights[:, 1:2] * wave_vote
+                + board_weights[:, 2:3] * analogical_vote
+            )
+            arbiter_in = torch.cat(
+                [
+                    board_context,
                     lnn_vote,
                     lnn_conf,
-                    bridge["wave_site_bias"].detach(),
+                    wave_vote,
                     wave_conf,
-                    bridge["analogical_site_bias"].detach(),
+                    analogical_vote,
                     analogical_conf,
                 ],
                 dim=-1,
@@ -203,11 +294,12 @@ if TORCH_AVAILABLE:
             council = {
                 "lnn_vote": lnn_vote,
                 "lnn_conf": lnn_conf,
-                "wave_vote": bridge["wave_site_bias"],
+                "wave_vote": wave_vote,
                 "wave_conf": wave_conf,
-                "analogical_vote": bridge["analogical_site_bias"],
+                "analogical_vote": analogical_vote,
                 "analogical_conf": analogical_conf,
                 "council_logit": council_logit,
+                "board_weights": board_weights,
             }
             return site_logits.clamp(-20.0, 20.0), council
 
