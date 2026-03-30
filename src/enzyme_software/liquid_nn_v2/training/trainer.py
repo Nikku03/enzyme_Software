@@ -233,8 +233,11 @@ if TORCH_AVAILABLE:
                 torch.nn.utils.clip_grad_norm_(params, self.config.max_grad_norm)
 
         def _sanitize_trainable_parameters(self) -> int:
+            _uninit_cls = getattr(torch.nn.parameter, "UninitializedParameter", None)
             fixed = 0
             for param in self._trainable_parameters():
+                if _uninit_cls is not None and isinstance(param, _uninit_cls):
+                    continue
                 if not bool(torch.isfinite(param).all()):
                     param.data = torch.nan_to_num(param.data, nan=0.0, posinf=1.0, neginf=-1.0)
                     param.data.clamp_(-20.0, 20.0)
@@ -248,7 +251,10 @@ if TORCH_AVAILABLE:
             return fixed
 
         def _has_nonfinite_gradients(self) -> bool:
+            _uninit_cls = getattr(torch.nn.parameter, "UninitializedParameter", None)
             for param in self._trainable_parameters():
+                if _uninit_cls is not None and isinstance(param, _uninit_cls):
+                    continue
                 grad = param.grad
                 if grad is not None and not bool(torch.isfinite(grad).all()):
                     return True
