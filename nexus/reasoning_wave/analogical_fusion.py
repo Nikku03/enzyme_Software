@@ -12,7 +12,6 @@ from nexus.reasoning.analogical_fusion import (
     HomoscedasticArbiterLoss,
     MorphismFocalLoss,
 )
-from nexus.reasoning.metric_learner import PoincareMath
 
 
 class _WaveNodeProjection(nn.Module):
@@ -31,41 +30,56 @@ class _WaveNodeProjection(nn.Module):
 
 class PGWCrossAttention(nn.Module):
     """
-    Wave-aware cross attention.
+    Decoupled wave-native cross attention.
 
-    Structural compatibility and electronic compatibility are scored separately,
-    then fused with the transport prior instead of collapsing everything into a
-    single raw dot product.
+    Structural geometry and thermodynamic wave channels are scored separately:
+    - structural branch uses scaled dot-product attention
+    - wave branch uses negative squared Euclidean distance
+    A learned blend parameter then mixes the two logits before softmax.
     """
 
-    def __init__(self, hidden_dim: int = 32) -> None:
+    def __init__(
+        self,
+        spatial_dim: int = 8,
+        wave_dim: int = 3,
+        heads: int = 4,
+        hidden_dim: int = 64,
+        wave_temperature: float = 0.1,
+    ) -> None:
         super().__init__()
-        self.hidden_dim = int(max(hidden_dim, 8))
-        self.scale = math.sqrt(float(self.hidden_dim))
-        self.transport_gamma = nn.Parameter(torch.ones(1))
-        self.electronic_weight = nn.Parameter(torch.tensor(1.0, dtype=torch.float32))
-        self.orientation_weight = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
-        self.poincare = PoincareMath(c=1.0)
+        self.spatial_dim = int(max(spatial_dim, 1))
+        self.wave_dim = int(max(wave_dim, 1))
+        self.heads = int(max(heads, 1))
+        self.hidden_dim = int(max(hidden_dim, self.heads))
+        if self.hidden_dim % self.heads != 0:
+            self.hidden_dim = self.heads * math.ceil(self.hidden_dim / self.heads)
+        self.head_dim = self.hidden_dim // self.heads
+        self.wave_temperature = float(max(wave_temperature, 1.0e-4))
 
-        self.q_struct_proj = nn.LazyLinear(self.hidden_dim)
-        self.k_struct_proj = nn.LazyLinear(self.hidden_dim)
-        self.v_struct_proj = nn.LazyLinear(self.hidden_dim)
+        self.q_spatial = nn.Linear(self.spatial_dim, self.hidden_dim)
+        self.k_spatial = nn.Linear(self.spatial_dim, self.hidden_dim)
+        self.q_wave = nn.Linear(self.wave_dim, self.hidden_dim)
+        self.k_wave = nn.Linear(self.wave_dim, self.hidden_dim)
+        self.v_proj = nn.LazyLinear(self.hidden_dim)
+        self.out_proj = nn.Linear(self.hidden_dim, self.hidden_dim)
+        self.wave_blend = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
 
-        self.q_elec_proj = nn.LazyLinear(self.hidden_dim)
-        self.k_elec_proj = nn.LazyLinear(self.hidden_dim)
-        self.v_elec_proj = nn.LazyLinear(self.hidden_dim)
-        self.q_orient_proj = nn.LazyLinear(3)
-        self.k_orient_proj = nn.LazyLinear(3)
+    def _split_streams(self, mv: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        x = torch.as_tensor(mv, dtype=torch.float32)
+        feature_dim = int(x.size(-1))
+        spatial_end = min(self.spatial_dim, feature_dim)
+        wave_end = min(self.spatial_dim + self.wave_dim, feature_dim)
 
-        self.out_proj = nn.Sequential(
-            nn.Linear(self.hidden_dim * 4, self.hidden_dim),
-            nn.SiLU(),
-            nn.Linear(self.hidden_dim, self.hidden_dim),
-        )
+        spatial = x[..., :spatial_end]
+        if spatial_end < self.spatial_dim:
+            spatial = F.pad(spatial, (0, self.spatial_dim - spatial_end))
 
-    def _log_map_bridge(self, x: torch.Tensor) -> torch.Tensor:
-        safe = 0.85 * torch.tanh(x.to(dtype=torch.float32))
-        return self.poincare.log_map_0(safe)
+        wave = x[..., self.spatial_dim:wave_end]
+        if wave_end <= self.spatial_dim:
+            wave = x.new_zeros(*x.shape[:-1], self.wave_dim)
+        elif int(wave.size(-1)) < self.wave_dim:
+            wave = F.pad(wave, (0, self.wave_dim - int(wave.size(-1))))
+        return spatial, wave
 
     def forward(
         self,
@@ -73,47 +87,32 @@ class PGWCrossAttention(nn.Module):
         v_ret: torch.Tensor,
         pi_star: torch.Tensor,
     ) -> torch.Tensor:
-        q_struct = self._log_map_bridge(self.q_struct_proj(q_fp))
-        k_struct = self._log_map_bridge(self.k_struct_proj(v_ret))
-        v_struct = self._log_map_bridge(self.v_struct_proj(v_ret))
+        batch = int(q_fp.size(0))
+        q_len = int(q_fp.size(1))
+        k_len = int(v_ret.size(1))
 
-        q_elec = self._log_map_bridge(self.q_elec_proj(q_fp))
-        k_elec = self._log_map_bridge(self.k_elec_proj(v_ret))
-        v_elec = self._log_map_bridge(self.v_elec_proj(v_ret))
-        q_orient = F.normalize(self.q_orient_proj(q_fp), p=2, dim=-1)
-        k_orient = F.normalize(self.k_orient_proj(v_ret), p=2, dim=-1)
+        q_spatial, q_wave = self._split_streams(q_fp)
+        k_spatial, k_wave = self._split_streams(v_ret)
 
-        structural_logits = torch.matmul(q_struct, k_struct.transpose(-2, -1)) / self.scale
-        electronic_distance = torch.cdist(q_elec, k_elec, p=2)
-        electronic_scale = electronic_distance.mean(dim=(-2, -1), keepdim=True).clamp_min(1.0e-4)
-        electronic_logits = -(electronic_distance / electronic_scale)
-        orient_dot = torch.matmul(q_orient, k_orient.transpose(-2, -1))
-        q_orient_exp = q_orient.unsqueeze(-2).expand(-1, -1, k_orient.size(-2), -1)
-        k_orient_exp = k_orient.unsqueeze(-3).expand(-1, q_orient.size(-2), -1, -1)
-        wedge_penalty = torch.linalg.norm(torch.cross(q_orient_exp, k_orient_exp, dim=-1), dim=-1)
-        orientation_logits = orient_dot - wedge_penalty
+        q_struct = self.q_spatial(q_spatial).view(batch, q_len, self.heads, self.head_dim).transpose(1, 2)
+        k_struct = self.k_spatial(k_spatial).view(batch, k_len, self.heads, self.head_dim).transpose(1, 2)
+        spatial_logits = torch.matmul(q_struct, k_struct.transpose(-2, -1)) / math.sqrt(float(self.head_dim))
 
-        pi_mask = self.transport_gamma * torch.log(pi_star.clamp_min(1.0e-9))
-        final_logits = (
-            structural_logits
-            + (self.electronic_weight * electronic_logits)
-            + (self.orientation_weight * orientation_logits)
-            + pi_mask
-        )
-        attn_weights = F.softmax(final_logits, dim=-1)
+        q_wave_proj = self.q_wave(q_wave).view(batch, q_len, self.heads, self.head_dim).transpose(1, 2)
+        k_wave_proj = self.k_wave(k_wave).view(batch, k_len, self.heads, self.head_dim).transpose(1, 2)
+        wave_diff = q_wave_proj.unsqueeze(3) - k_wave_proj.unsqueeze(2)
+        wave_dist = wave_diff.square().sum(dim=-1)
+        wave_logits = -(wave_dist / self.wave_temperature)
 
-        context_struct = torch.matmul(attn_weights, v_struct)
-        context_elec = torch.matmul(attn_weights, v_elec)
-        fused = torch.cat(
-            [
-                context_struct,
-                context_elec,
-                context_struct - context_elec,
-                context_struct * context_elec,
-            ],
-            dim=-1,
-        )
-        return self.out_proj(fused)
+        alpha = torch.sigmoid(self.wave_blend).to(device=q_fp.device, dtype=q_fp.dtype)
+        combined_logits = ((1.0 - alpha) * spatial_logits) + (alpha * wave_logits)
+        transport_mask = torch.log(pi_star.clamp_min(1.0e-9)).unsqueeze(1)
+        attention_weights = F.softmax(combined_logits + transport_mask, dim=-1)
+
+        values = self.v_proj(v_ret).view(batch, k_len, self.heads, self.head_dim).transpose(1, 2)
+        context = torch.matmul(attention_weights, values)
+        context = context.transpose(1, 2).contiguous().view(batch, q_len, self.hidden_dim)
+        return self.out_proj(context)
 
 
 class NexusDualDecoder(nn.Module):
