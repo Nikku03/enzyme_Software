@@ -201,6 +201,9 @@ def main() -> None:
     parser.add_argument("--anchor-sources", nargs="*", default=["DrugBank", "SuperCYP"])
     parser.add_argument("--external-to-anchor-ratio", type=float, default=None)
     parser.add_argument("--disable-3d-branch", action="store_true")
+    parser.add_argument("--disable-nexus-bridge", action="store_true")
+    parser.add_argument("--freeze-nexus-memory", action="store_true")
+    parser.add_argument("--skip-nexus-memory-rebuild", action="store_true")
     args = parser.parse_args()
 
     dataset_path = Path(args.dataset)
@@ -270,6 +273,9 @@ def main() -> None:
     base_config = ModelConfig.light_advanced(
         use_manual_engine_priors=True,
         use_3d_branch=not bool(args.disable_3d_branch),
+        use_nexus_bridge=not bool(args.disable_nexus_bridge),
+        nexus_memory_frozen=bool(args.freeze_nexus_memory),
+        nexus_rebuild_memory_before_train=not bool(args.skip_nexus_memory_rebuild),
         return_intermediate_stats=True,
         # Architecture improvements
         use_cyp_site_conditioning=True,
@@ -296,6 +302,19 @@ def main() -> None:
         print(f"Loaded warm-start checkpoint: {warm_start_path}", flush=True)
     else:
         print("No warm-start checkpoint found; starting from current initialization", flush=True)
+
+    if (
+        getattr(base_config, "use_nexus_bridge", False)
+        and getattr(base_config, "nexus_rebuild_memory_before_train", False)
+        and getattr(model, "nexus_bridge", None) is not None
+    ):
+        memory_stats = model.rebuild_nexus_memory(train_loader, device=device)
+        print(
+            f"Built NEXUS memory: size={int(memory_stats.get('memory_size', 0.0))} "
+            f"from_batches={int(memory_stats.get('batches', 0.0))} "
+            f"frozen={'yes' if base_config.nexus_memory_frozen else 'no'}",
+            flush=True,
+        )
 
     cyp_class_weights, train_cyp_counts = _compute_split_cyp_weights(train_drugs)
     print(f"Train CYP counts: {train_cyp_counts}", flush=True)

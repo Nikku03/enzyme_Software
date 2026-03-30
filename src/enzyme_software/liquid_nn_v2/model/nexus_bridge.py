@@ -39,6 +39,15 @@ if TORCH_AVAILABLE:
         def size(self) -> int:
             return int(self.valid.sum().item())
 
+        @torch.no_grad()
+        def clear(self) -> None:
+            self.keys.zero_()
+            self.graph.zero_()
+            self.site.zero_()
+            self.cyp.zero_()
+            self.valid.zero_()
+            self.ptr.zero_()
+
         def lookup(self, query_keys: torch.Tensor, query_graph: torch.Tensor) -> Optional[Dict[str, torch.Tensor]]:
             size = self.size()
             if size <= 0:
@@ -150,6 +159,7 @@ if TORCH_AVAILABLE:
             self.xtb_feature_dim = int(max(0, xtb_feature_dim))
             self.wave_aux_weight = float(max(0.0, wave_aux_weight))
             self.analogical_aux_weight = float(max(0.0, analogical_aux_weight))
+            self.memory_frozen = False
             total_in = self.atom_feature_dim + self.steric_feature_dim + self.xtb_feature_dim
             hidden = max(64, int(wave_hidden_dim))
             self.atom_to_multivector = nn.Sequential(
@@ -195,6 +205,13 @@ if TORCH_AVAILABLE:
                 capacity=memory_capacity,
                 topk=memory_topk,
             )
+
+        @torch.no_grad()
+        def clear_memory(self) -> None:
+            self.memory.clear()
+
+        def set_memory_frozen(self, frozen: bool) -> None:
+            self.memory_frozen = bool(frozen)
 
         def _optional_feature(self, value: Optional[torch.Tensor], rows: int, width: int, *, device, dtype) -> torch.Tensor:
             if value is None:
@@ -395,7 +412,7 @@ if TORCH_AVAILABLE:
                 cyp_labels=cyp_labels,
             )
             total_aux_loss = wave_aux_loss + analogical_aux_loss
-            if self.training and site_labels is not None and cyp_logits.numel():
+            if (not self.memory_frozen) and self.training and site_labels is not None and cyp_logits.numel():
                 cyp_probs_atom = F.softmax(cyp_logits.detach(), dim=-1)[batch_index]
                 self.memory.update(
                     atom_keys=atom_keys,
@@ -429,6 +446,35 @@ if TORCH_AVAILABLE:
                 },
                 "metrics": metrics,
             }
+
+        @torch.no_grad()
+        def ingest_batch(
+            self,
+            *,
+            atom_features: torch.Tensor,
+            batch_index: torch.Tensor,
+            cyp_logits: torch.Tensor,
+            atom_3d_features: Optional[torch.Tensor] = None,
+            xtb_atom_features: Optional[torch.Tensor] = None,
+            site_labels: Optional[torch.Tensor] = None,
+            site_supervision_mask: Optional[torch.Tensor] = None,
+        ) -> Dict[str, float]:
+            if site_labels is None or cyp_logits.numel() == 0:
+                return {"memory_size": float(self.memory.size()), "used": 0.0}
+            atom_features = atom_features.float()
+            multivectors, _coords = self._build_multivectors(atom_features, atom_3d_features, xtb_atom_features)
+            graph_embeddings = self._group_graph_embedding(multivectors, batch_index)
+            per_atom_graph = graph_embeddings[batch_index] if graph_embeddings.numel() else multivectors.new_zeros((multivectors.size(0), self.memory.graph_dim))
+            atom_keys = self.atom_key(torch.cat([multivectors, atom_features], dim=-1))
+            cyp_probs_atom = F.softmax(cyp_logits.detach(), dim=-1)[batch_index]
+            self.memory.update(
+                atom_keys=atom_keys,
+                atom_graph=per_atom_graph,
+                site_labels=site_labels.float().view(-1, 1),
+                cyp_probs=cyp_probs_atom,
+                supervision_mask=site_supervision_mask,
+            )
+            return {"memory_size": float(self.memory.size()), "used": 1.0}
 else:  # pragma: no cover
     class NexusHybridBridge:  # type: ignore[override]
         def __init__(self, *args, **kwargs):

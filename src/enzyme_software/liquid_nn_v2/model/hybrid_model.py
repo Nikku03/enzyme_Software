@@ -31,6 +31,7 @@ if TORCH_AVAILABLE:
                     wave_aux_weight=float(getattr(self.config, "nexus_wave_aux_weight", 0.10)),
                     analogical_aux_weight=float(getattr(self.config, "nexus_analogical_aux_weight", 0.08)),
                 )
+                self.nexus_bridge.set_memory_frozen(bool(getattr(self.config, "nexus_memory_frozen", False)))
                 self.wave_site_weight_logit = nn.Parameter(
                     torch.logit(torch.tensor(float(getattr(self.config, "nexus_wave_site_init", 0.18))))
                 )
@@ -89,6 +90,47 @@ if TORCH_AVAILABLE:
                 }
             )
             return result
+
+        @torch.no_grad()
+        def rebuild_nexus_memory(self, loader, *, device=None, max_batches: int | None = None) -> Dict[str, float]:
+            if self.nexus_bridge is None:
+                return {"used": 0.0, "memory_size": 0.0}
+            from enzyme_software.liquid_nn_v2.training.utils import collate_molecule_graphs, move_to_device
+
+            self.nexus_bridge.clear_memory()
+            was_training = self.training
+            self.eval()
+            total_batches = 0
+            total_used = 0.0
+            try:
+                for batch_idx, raw_batch in enumerate(loader):
+                    if max_batches is not None and batch_idx >= int(max_batches):
+                        break
+                    if raw_batch is None:
+                        continue
+                    batch = raw_batch if isinstance(raw_batch, dict) else collate_molecule_graphs(raw_batch)
+                    batch = move_to_device(batch, device or next(self.parameters()).device)
+                    outputs = self.base_lnn(batch)
+                    stats = self.nexus_bridge.ingest_batch(
+                        atom_features=outputs["atom_features"],
+                        batch_index=batch["batch"],
+                        cyp_logits=outputs["cyp_logits"],
+                        atom_3d_features=batch.get("atom_3d_features"),
+                        xtb_atom_features=batch.get("xtb_atom_features"),
+                        site_labels=batch.get("site_labels"),
+                        site_supervision_mask=batch.get("site_supervision_mask"),
+                    )
+                    total_batches += 1
+                    total_used += float(stats.get("used", 0.0))
+            finally:
+                self.train(was_training)
+            if bool(getattr(self.config, "nexus_memory_frozen", False)):
+                self.nexus_bridge.set_memory_frozen(True)
+            return {
+                "used": total_used,
+                "batches": float(total_batches),
+                "memory_size": float(self.nexus_bridge.memory.size()),
+            }
 
         def forward(
             self,
