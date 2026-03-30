@@ -412,11 +412,11 @@ class WatsonGate(nn.Module):
         total_loss = loss_term_fp + gate_weight * loss_term_ana
     """
 
-    def __init__(self) -> None:
+    def __init__(self, init_bias: float = -1.4) -> None:
         super().__init__()
         self.fc1 = nn.Linear(3, 16)
         self.fc2 = nn.Linear(16, 1)
-        nn.init.constant_(self.fc2.bias, -2.0)
+        nn.init.constant_(self.fc2.bias, float(init_bias))
 
     def forward(
         self,
@@ -464,6 +464,8 @@ class GatedAnalogicalGodLoss(nn.Module):
         peak_threshold: float = 0.1,         # kept for backward compat
         burn_in_epochs: int = 1,
         burn_in_gate_floor: float = 0.5,
+        post_burn_gate_floor: float = 0.15,
+        force_gate_weight: float | None = None,
     ) -> None:
         super().__init__()
         # Legacy thresholds kept for logging / external callers that read them.
@@ -471,6 +473,10 @@ class GatedAnalogicalGodLoss(nn.Module):
         self.peak_threshold = float(max(peak_threshold, 0.0))
         self.burn_in_epochs = int(max(burn_in_epochs, 0))
         self.burn_in_gate_floor = float(min(max(burn_in_gate_floor, 0.0), 1.0))
+        self.post_burn_gate_floor = float(min(max(post_burn_gate_floor, 0.0), 1.0))
+        self.force_gate_weight = (
+            None if force_gate_weight is None else float(min(max(force_gate_weight, 0.0), 1.0))
+        )
         # log(s) where s = 1/σ².  Init at 0 → s=1 → equal weighting.
         self.log_s = nn.Parameter(torch.zeros(2))
         # Watson soft gate
@@ -509,6 +515,7 @@ class GatedAnalogicalGodLoss(nn.Module):
 
         ana_peak = pred_ana.max(dim=-1).values.mean().item() if pred_ana.numel() > 0 else 0.0
         support_quality = max(0.0, min(float(transported_mass) / 0.25, 1.0))
+        agreement_quality = max(0.0, min(0.5 * (float(physics_analogy_agreement) + 1.0), 1.0))
         backend_name = str(transport_backend or "")
         confidence_bonus = 0.0
         transport_gate = 0.0
@@ -543,6 +550,8 @@ class GatedAnalogicalGodLoss(nn.Module):
         # Skip analogy branch entirely if transport failed (no sensible label).
         if not transport_succeeded:
             gate_weight = pred_fp.new_zeros(())   # exactly 0, no grad through ana
+        elif self.force_gate_weight is not None:
+            gate_weight = pred_fp.new_tensor(self.force_gate_weight)
         elif in_burn_in:
             gate_weight = pred_fp.new_tensor(max(transport_gate, self.burn_in_gate_floor))
         else:
@@ -556,6 +565,8 @@ class GatedAnalogicalGodLoss(nn.Module):
             # actually open as training progresses.
             if transport_gate < 0.15:
                 gate_weight = gate_weight * pred_fp.new_tensor(transport_gate / 0.15)
+            quality_floor = self.post_burn_gate_floor * (0.20 + 0.80 * support_quality) * (0.15 + 0.85 * agreement_quality)
+            gate_weight = torch.maximum(gate_weight, pred_fp.new_tensor(quality_floor))
 
         loss_term_fp = 0.5 * s_fp * loss_fp - 0.5 * self.log_s[0]
 
@@ -583,6 +594,13 @@ class GatedAnalogicalGodLoss(nn.Module):
             "watson_agreement": float(physics_analogy_agreement),
             "effective_confidence": float(effective_confidence),
             "transport_gate": float(transport_gate),
+            "agreement_quality": float(agreement_quality),
+            "gate_floor": float(
+                self.burn_in_gate_floor if in_burn_in else self.post_burn_gate_floor
+            ),
+            "force_gate_weight": (
+                float(self.force_gate_weight) if self.force_gate_weight is not None else -1.0
+            ),
             "burn_in_active": float(1.0 if in_burn_in else 0.0),
         }
 

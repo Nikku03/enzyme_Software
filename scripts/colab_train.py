@@ -360,6 +360,10 @@ ANA_LOSS_WEIGHT = _env_float("NEXUS_COLAB_ANA_LOSS_WEIGHT", 1.0)
 ANALOGICAL_ENGINE = _env_str("NEXUS_COLAB_ANALOGICAL_ENGINE", "classic").strip().lower() or "classic"
 if ANALOGICAL_ENGINE not in {"classic", "wave"}:
     ANALOGICAL_ENGINE = "classic"
+ANALOGICAL_BURN_IN_GATE_FLOOR = _env_float("NEXUS_COLAB_ANA_BURN_IN_GATE_FLOOR", 0.5)
+ANALOGICAL_POST_BURN_GATE_FLOOR = _env_float("NEXUS_COLAB_ANA_GATE_FLOOR", 0.15)
+_FORCE_ANA_GATE_RAW = _env_str("NEXUS_COLAB_FORCE_ANA_GATE", "").strip()
+FORCE_ANA_GATE = None if _FORCE_ANA_GATE_RAW == "" else float(_FORCE_ANA_GATE_RAW)
 QUANTUM_FEATURES_PATH_STR = _env_str("NEXUS_COLAB_QUANTUM_FEATURES_PATH", "").strip()
 QUANTUM_FEATURES_PATH = Path(QUANTUM_FEATURES_PATH_STR) if QUANTUM_FEATURES_PATH_STR else None
 QUANTUM_LOSS_WEIGHT = _env_float("NEXUS_COLAB_QUANTUM_LOSS_WEIGHT", 0.0)
@@ -550,6 +554,12 @@ print(
     f"ana_weight={ANA_LOSS_WEIGHT:g}"
 )
 print(f"Analogical engine : {ANALOGICAL_ENGINE}")
+print(
+    "ANA gate : "
+    f"burn_in_floor={ANALOGICAL_BURN_IN_GATE_FLOOR:g}  "
+    f"post_burn_floor={ANALOGICAL_POST_BURN_GATE_FLOOR:g}  "
+    f"forced={'off' if FORCE_ANA_GATE is None else FORCE_ANA_GATE:g}"
+)
 print(f"Strict ANA debug : {'on' if STRICT_ANALOGICAL_DEBUG else 'off'}")
 if QUANTUM_FEATURES_PATH is not None:
     print(f"Quantum targets : {QUANTUM_FEATURES_PATH}")
@@ -586,6 +596,9 @@ trainer = Metabolic_Causal_Trainer(
     quantum_loss_weight=QUANTUM_LOSS_WEIGHT,
     physics_cache_mode=PHYSICS_CACHE_MODE,
     strict_analogical_debug=STRICT_ANALOGICAL_DEBUG,
+    analogical_burn_in_gate_floor=ANALOGICAL_BURN_IN_GATE_FLOOR,
+    analogical_post_burn_gate_floor=ANALOGICAL_POST_BURN_GATE_FLOOR,
+    analogical_force_gate_weight=FORCE_ANA_GATE,
 ).to(device)
 trainer.sync_memory_bank_device(device)
 if QUANTUM_FEATURES_PATH is not None:

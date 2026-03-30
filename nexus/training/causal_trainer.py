@@ -166,6 +166,9 @@ class Metabolic_Causal_Trainer(nn.Module):
         quantum_loss_weight: float = 0.0,
         physics_cache_mode: str = "off",
         strict_analogical_debug: bool = False,
+        analogical_burn_in_gate_floor: float = 0.5,
+        analogical_post_burn_gate_floor: float = 0.15,
+        analogical_force_gate_weight: float | None = None,
     ) -> None:
         super().__init__()
         self.model = model or NEXUS_Dynamics_Engine()
@@ -221,6 +224,9 @@ class Metabolic_Causal_Trainer(nn.Module):
         self.gated_loss = GatedAnalogicalGodLoss(
             confidence_threshold=0.85,
             peak_threshold=0.09,
+            burn_in_gate_floor=analogical_burn_in_gate_floor,
+            post_burn_gate_floor=analogical_post_burn_gate_floor,
+            force_gate_weight=analogical_force_gate_weight,
         )
         self._analogical_package = self._analogical_package_name(self.analogical_engine)
         self._metric_learner_module = importlib.import_module(
@@ -2785,6 +2791,15 @@ class Metabolic_Causal_Trainer(nn.Module):
                         ),
                         "ana_transport_gate": torch.as_tensor(
                             _ana_info["transport_gate"], dtype=torch.float32, device=device
+                        ),
+                        "ana_gate_floor": torch.as_tensor(
+                            _ana_info.get("gate_floor", 0.0), dtype=torch.float32, device=device
+                        ),
+                        "ana_force_gate_weight": torch.as_tensor(
+                            _ana_info.get("force_gate_weight", -1.0), dtype=torch.float32, device=device
+                        ),
+                        "ana_gate_agreement_quality": torch.as_tensor(
+                            _ana_info.get("agreement_quality", 0.0), dtype=torch.float32, device=device
                         ),
                         "ana_gate_burn_in_active": torch.as_tensor(
                             _ana_info.get("burn_in_active", 0.0),
