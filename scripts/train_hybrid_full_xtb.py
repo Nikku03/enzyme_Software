@@ -65,6 +65,51 @@ def _count_xtb_valid(drugs: list[dict], cache_dir: Path) -> tuple[int, dict[str,
     return valid, statuses
 
 
+def _build_loaders_with_fallback(
+    train_drugs: list[dict],
+    val_drugs: list[dict],
+    test_drugs: list[dict],
+    *,
+    args,
+):
+    common = dict(
+        batch_size=args.batch_size,
+        structure_sdf=args.structure_sdf,
+        manual_target_bond=args.manual_target_bond,
+        manual_feature_cache_dir=args.manual_feature_cache_dir,
+        full_xtb_cache_dir=str(Path(args.xtb_cache_dir)),
+        compute_full_xtb_if_missing=args.compute_xtb_if_missing,
+        drop_failed=True,
+    )
+    try:
+        loaders = create_full_xtb_dataloaders_from_drugs(
+            train_drugs,
+            val_drugs,
+            test_drugs,
+            use_manual_engine_features=True,
+            **common,
+        )
+        return loaders, True
+    except RuntimeError as exc:
+        message = str(exc)
+        if "zero valid graphs" not in message:
+            raise
+        print(
+            "Full-xTB loader produced zero valid graphs with manual-engine features enabled. "
+            "Retrying without manual-engine features.",
+            flush=True,
+        )
+        print(f"Loader failure: {message}", flush=True)
+        loaders = create_full_xtb_dataloaders_from_drugs(
+            train_drugs,
+            val_drugs,
+            test_drugs,
+            use_manual_engine_features=False,
+            **common,
+        )
+        return loaders, False
+
+
 def _save_training_state(
     *,
     model,
@@ -195,27 +240,20 @@ def main() -> None:
     xtb_valid_count, xtb_statuses = _count_xtb_valid(drugs, xtb_cache_dir)
     print(f"xTB cache valid molecules: {xtb_valid_count}/{len(drugs)} | statuses={xtb_statuses}", flush=True)
 
-    train_loader, val_loader, test_loader = create_full_xtb_dataloaders_from_drugs(
+    (train_loader, val_loader, test_loader), manual_engine_enabled = _build_loaders_with_fallback(
         train_drugs,
         val_drugs,
         test_drugs,
-        batch_size=args.batch_size,
-        structure_sdf=args.structure_sdf,
-        use_manual_engine_features=True,
-        manual_target_bond=args.manual_target_bond,
-        manual_feature_cache_dir=args.manual_feature_cache_dir,
-        full_xtb_cache_dir=str(xtb_cache_dir),
-        compute_full_xtb_if_missing=args.compute_xtb_if_missing,
-        drop_failed=True,
+        args=args,
     )
 
-    manual_atom_feature_dim = 32 + FULL_XTB_FEATURE_DIM
+    manual_atom_feature_dim = (32 if manual_engine_enabled else 0) + FULL_XTB_FEATURE_DIM
     # Step 1 atom_input_dim = 146 = 140 base graph features + 6 standard XTB dims.
     # Step 2 appends FULL_XTB_FEATURE_DIM (8) instead of 6, so atom_input_dim = 140 + 8 = 148.
     _BASE_GRAPH_ATOM_DIM = 140
     full_xtb_atom_input_dim = _BASE_GRAPH_ATOM_DIM + FULL_XTB_FEATURE_DIM
     base_config = ModelConfig.light_advanced(
-        use_manual_engine_priors=True,
+        use_manual_engine_priors=manual_engine_enabled,
         use_3d_branch=True,
         return_intermediate_stats=True,
         manual_atom_feature_dim=manual_atom_feature_dim,
@@ -226,7 +264,7 @@ def main() -> None:
 
     checkpoint_path = Path(args.checkpoint)
     if checkpoint_path.exists():
-        load_full_xtb_warm_start(
+        load_report = load_full_xtb_warm_start(
             model,
             checkpoint_path,
             device=device,
@@ -234,6 +272,14 @@ def main() -> None:
             new_atom_input_dim=full_xtb_atom_input_dim,
         )
         print(f"Loaded warm-start checkpoint: {checkpoint_path}", flush=True)
+        print(
+            "Warm-start load summary: "
+            f"loaded={load_report.get('loaded', 0)} "
+            f"missing={load_report.get('missing', 0)} "
+            f"mismatch={load_report.get('mismatch', 0)} "
+            f"nonfinite={load_report.get('nonfinite', 0)}",
+            flush=True,
+        )
     else:
         print(f"No warm-start checkpoint found at {checkpoint_path}; starting from current initialization", flush=True)
 

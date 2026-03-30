@@ -44,7 +44,31 @@ class FullXTBHybridDataset(CYPMetabolismDataset):
         # Without this override, precompute caches 40-dim items and __getitem__
         # would add XTB again → 48 dims, causing a dimension mismatch.
         if self._cache is None:
-            self._cache = [CYPMetabolismDataset.__getitem__(self, i) for i in range(len(self.drugs))]
+            cached = [CYPMetabolismDataset.__getitem__(self, i) for i in range(len(self.drugs))]
+            self._cache = cached
+            self._valid_count = sum(1 for item in cached if item.get("graph") is not None and item.get("name") != "INVALID")
+            reasons: Dict[str, int] = {}
+            for item in cached:
+                if item.get("graph") is not None and item.get("name") != "INVALID":
+                    continue
+                reason = str(item.get("error_reason") or "unknown")
+                reasons[reason] = reasons.get(reason, 0) + 1
+            self._invalid_reasons = reasons
+            if reasons:
+                top = ", ".join(
+                    f"{key}={value}"
+                    for key, value in sorted(reasons.items(), key=lambda kv: kv[1], reverse=True)[:5]
+                )
+                print(
+                    f"[{self.__class__.__name__}:{self.split}] valid={self._valid_count}/{len(cached)} "
+                    f"invalid={len(cached) - self._valid_count} | {top}",
+                    flush=True,
+                )
+            else:
+                print(
+                    f"[{self.__class__.__name__}:{self.split}] valid={self._valid_count}/{len(cached)} invalid=0",
+                    flush=True,
+                )
 
     def __getitem__(self, idx):
         item = super().__getitem__(idx)
@@ -134,6 +158,16 @@ def create_full_xtb_dataloaders_from_drugs(
     test_ds = FullXTBHybridDataset(split="test", augment=False, drugs=test_drugs, **common)
     for ds in (train_ds, val_ds, test_ds):
         ds.precompute()
+    for name, ds in (("train", train_ds), ("val", val_ds), ("test", test_ds)):
+        if int(getattr(ds, "_valid_count", 0)) <= 0:
+            reasons = getattr(ds, "_invalid_reasons", {}) or {}
+            top = ", ".join(
+                f"{key}={value}"
+                for key, value in sorted(reasons.items(), key=lambda kv: kv[1], reverse=True)[:5]
+            ) or "unknown"
+            raise RuntimeError(
+                f"FullXTBHybridDataset produced zero valid graphs for {name} split. Top failure reasons: {top}"
+            )
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=0, pin_memory=False)
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=False)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=False)

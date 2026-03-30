@@ -52,6 +52,7 @@ class CYPMetabolismDataset(Dataset):
         drop_failed: bool = True,
     ):
         require_torch()
+        self.split = str(split)
         self.augment = augment
         self.cyp_classes = list(cyp_classes or self.CYP_CLASSES)
         self.cyp_to_idx = {name: idx for idx, name in enumerate(self.cyp_classes)}
@@ -87,10 +88,36 @@ class CYPMetabolismDataset(Dataset):
             self.drugs = [d for d in drugs if str(d.get("cyp") or d.get("primary_cyp") or "") in supported]
         print(f"Loaded {len(self.drugs)} drugs for {split} split")
         self._cache: Optional[List] = None
+        self._valid_count: int = 0
+        self._invalid_reasons: Dict[str, int] = {}
 
     def precompute(self) -> None:
         if self._cache is None:
-            self._cache = [self[i] for i in range(len(self.drugs))]
+            cached = [self[i] for i in range(len(self.drugs))]
+            self._cache = cached
+            self._valid_count = sum(1 for item in cached if item.get("graph") is not None and item.get("name") != "INVALID")
+            reasons: Dict[str, int] = {}
+            for item in cached:
+                if item.get("graph") is not None and item.get("name") != "INVALID":
+                    continue
+                reason = str(item.get("error_reason") or "unknown")
+                reasons[reason] = reasons.get(reason, 0) + 1
+            self._invalid_reasons = reasons
+            if reasons:
+                top = ", ".join(
+                    f"{key}={value}"
+                    for key, value in sorted(reasons.items(), key=lambda kv: kv[1], reverse=True)[:5]
+                )
+                print(
+                    f"[{self.__class__.__name__}:{self.split}] valid={self._valid_count}/{len(cached)} "
+                    f"invalid={len(cached) - self._valid_count} | {top}",
+                    flush=True,
+                )
+            else:
+                print(
+                    f"[{self.__class__.__name__}:{self.split}] valid={self._valid_count}/{len(cached)} invalid=0",
+                    flush=True,
+                )
 
     def __len__(self):
         return len(self.drugs)
@@ -145,9 +172,9 @@ class CYPMetabolismDataset(Dataset):
                     )
                 graph.cyp_label = int(self.cyp_to_idx[cyp])
                 graph.has_site_supervision = bool(has_site_supervision)
-        except Exception:
+        except Exception as exc:
             if self.drop_failed:
-                return self._get_dummy()
+                return self._get_dummy(error_reason=f"{type(exc).__name__}: {exc}")
             raise
         confidence_value = str(drug.get("confidence") or drug.get("source") or "unknown")
         return {
@@ -158,8 +185,15 @@ class CYPMetabolismDataset(Dataset):
             "confidence_weight": float(CONFIDENCE_WEIGHTS.get(confidence_value, 0.5)),
         }
 
-    def _get_dummy(self):
-        return {"graph": None, "name": "INVALID", "smiles": "", "confidence": "none", "confidence_weight": 0.0}
+    def _get_dummy(self, *, error_reason: str = "unknown"):
+        return {
+            "graph": None,
+            "name": "INVALID",
+            "smiles": "",
+            "confidence": "none",
+            "confidence_weight": 0.0,
+            "error_reason": str(error_reason),
+        }
 
 
 

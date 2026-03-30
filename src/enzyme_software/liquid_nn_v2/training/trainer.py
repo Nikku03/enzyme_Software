@@ -254,7 +254,10 @@ if TORCH_AVAILABLE:
                 self.optimizer.step()
                 history.append(stats)
             if not history:
-                return {"total_loss": float("inf")}
+                raise RuntimeError(
+                    "train_loader_epoch received zero valid batches. "
+                    "This usually means the dataset loader dropped every molecule."
+                )
             keys = sorted({key for stats in history for key in stats.keys()})
             return {
                 key: float(sum(float(stats.get(key, 0.0)) for stats in history) / len(history))
