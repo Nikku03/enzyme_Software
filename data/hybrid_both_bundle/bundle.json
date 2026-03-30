@@ -1,0 +1,62 @@
+{
+  "bundle_name": "hybrid_both_main5_clean_plus_xenosite",
+  "created_utc": "2026-03-30T10:45:26.308714+00:00",
+  "description": "Canonical hybrid+both training bundle: clean single-CYP base set, train-only XenoSite auxiliary, 3D structure SDF, and xTB warmup union.",
+  "paths": {
+    "base_dataset": "data/prepared_training/main5_site_conservative_singlecyp_clean.json",
+    "xenosite_manifest": "data/hybrid_both_bundle/xenosite_manifest_resolved.json",
+    "xtb_union_dataset": "data/hybrid_both_bundle/xtb_union.json",
+    "structure_sdf": "3D structures.sdf",
+    "fallback_structure_sdf": "structures.sdf"
+  },
+  "defaults": {
+    "epochs": 75,
+    "batch_size": 16,
+    "learning_rate": 0.0002,
+    "weight_decay": 0.0001,
+    "site_labeled_only": true,
+    "include_xenosite": true,
+    "xenosite_topk": 1,
+    "compute_xtb_if_missing": false,
+    "freeze_nexus_memory": false,
+    "rebuild_nexus_memory": true,
+    "disable_nexus_bridge": false,
+    "early_stopping_patience": 0,
+    "xtb_cache_dir": "cache/full_xtb_hybrid_both"
+  },
+  "summaries": {
+    "base_dataset": {
+      "count": 278,
+      "site_labeled": 278,
+      "primary_cyp": 278,
+      "source_counts": {
+        "SuperCYP": 5,
+        "MetXBioDB": 194,
+        "DrugBank": 70,
+        "MetaPred": 9
+      },
+      "cyp_counts": {
+        "CYP1A2": 37,
+        "CYP2C9": 25,
+        "CYP2C19": 4,
+        "CYP2D6": 49,
+        "CYP3A4": 163
+      }
+    },
+    "xenosite_auxiliary": {
+      "count": 117,
+      "site_labeled": 117,
+      "source_counts": {
+        "XenoSiteAux": 117
+      }
+    },
+    "xtb_union": {
+      "count": 393
+    }
+  },
+  "notes": [
+    "The base dataset remains the supervised split source.",
+    "XenoSite entries are weak site-only auxiliary rows and must stay train-only.",
+    "xtb_union.json is for xTB cache warming and wave-feature coverage, not direct split generation."
+  ]
+}

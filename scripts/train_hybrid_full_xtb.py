@@ -3,10 +3,18 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import sys
 import time
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
 from enzyme_software.liquid_nn_v2 import HybridLNNModel, LiquidMetabolismNetV2, ModelConfig, TrainingConfig
 from enzyme_software.liquid_nn_v2._compat import require_torch, torch
@@ -53,6 +61,8 @@ def _canonical_smiles_key(smiles: str) -> str:
 
 
 def _load_xenosite_aux_entries(manifest_path: Path, *, topk: int = 1, per_file_limit: int = 0) -> list[dict]:
+    from rdkit import Chem
+
     payload = json.loads(manifest_path.read_text())
     datasets = list(payload.get("datasets", []))
     root = manifest_path.parent
@@ -75,6 +85,10 @@ def _load_xenosite_aux_entries(manifest_path: Path, *, topk: int = 1, per_file_l
             smiles = _canonical_smiles_key(entry.get("smiles", ""))
             if not smiles or smiles in seen_smiles:
                 continue
+            mol = Chem.MolFromSmiles(smiles)
+            if mol is None:
+                continue
+            num_atoms = int(mol.GetNumAtoms())
             pairs = list(entry.get("xenosite_score_pairs", []))
             site_atoms = []
             for pair in pairs[:topk]:
@@ -85,6 +99,7 @@ def _load_xenosite_aux_entries(manifest_path: Path, *, topk: int = 1, per_file_l
             if not site_atoms:
                 top_atoms = entry.get("top_atoms") or []
                 site_atoms = [int(v) for v in top_atoms[:topk] if isinstance(v, int)]
+            site_atoms = sorted(set(idx for idx in site_atoms if 0 <= int(idx) < num_atoms))
             if not site_atoms:
                 continue
             seen_smiles.add(smiles)
@@ -259,6 +274,9 @@ def main() -> None:
     parser.add_argument("--val-ratio", type=float, default=0.15)
     parser.add_argument("--site-labeled-only", action="store_true")
     parser.add_argument("--compute-xtb-if-missing", action="store_true")
+    parser.add_argument("--disable-nexus-bridge", action="store_true")
+    parser.add_argument("--freeze-nexus-memory", action="store_true")
+    parser.add_argument("--skip-nexus-memory-rebuild", action="store_true")
     parser.add_argument("--xenosite-manifest", default="")
     parser.add_argument("--xenosite-topk", type=int, default=1)
     parser.add_argument("--xenosite-per-file-limit", type=int, default=0)
@@ -340,6 +358,9 @@ def main() -> None:
     base_config = ModelConfig.light_advanced(
         use_manual_engine_priors=manual_engine_enabled,
         use_3d_branch=True,
+        use_nexus_bridge=not bool(args.disable_nexus_bridge),
+        nexus_memory_frozen=bool(args.freeze_nexus_memory),
+        nexus_rebuild_memory_before_train=not bool(args.skip_nexus_memory_rebuild),
         return_intermediate_stats=True,
         manual_atom_feature_dim=manual_atom_feature_dim,
         atom_input_dim=full_xtb_atom_input_dim,
@@ -367,6 +388,21 @@ def main() -> None:
         )
     else:
         print(f"No warm-start checkpoint found at {checkpoint_path}; starting from current initialization", flush=True)
+
+    model.to(device)
+
+    if (
+        getattr(base_config, "use_nexus_bridge", False)
+        and getattr(base_config, "nexus_rebuild_memory_before_train", False)
+        and getattr(model, "nexus_bridge", None) is not None
+    ):
+        memory_stats = model.rebuild_nexus_memory(train_loader, device=device)
+        print(
+            f"Built NEXUS memory: size={int(memory_stats.get('memory_size', 0.0))} "
+            f"from_batches={int(memory_stats.get('batches', 0.0))} "
+            f"frozen={'yes' if base_config.nexus_memory_frozen else 'no'}",
+            flush=True,
+        )
 
     trainer = Trainer(
         model=model,
