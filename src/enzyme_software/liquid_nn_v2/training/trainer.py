@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import os
 from typing import Dict, Iterable, List, Optional
 
 import numpy as np
@@ -114,30 +115,12 @@ if TORCH_AVAILABLE:
             )
             self.loss_fn.to(self.device)
             trainable_params = self._trainable_parameters()
-            self._optimizer_backend = "torch"
-            try:
-                self.optimizer = torch.optim.AdamW(
-                    trainable_params,
-                    lr=self.config.learning_rate,
-                    weight_decay=self.config.weight_decay,
-                    betas=self.config.betas,
-                )
-                self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                    self.optimizer,
-                    mode="max",
-                    factor=self.config.scheduler_factor,
-                    patience=self.config.scheduler_patience,
-                    min_lr=1e-6,
-                )
-            except AttributeError as exc:
-                if "torch._inductor" not in str(exc) and "custom_graph_pass" not in str(exc):
-                    raise
-                print(
-                    "Falling back to ManualAdamW due to broken torch compile runtime "
-                    f"({exc}).",
-                    flush=True,
-                )
+            force_manual = os.environ.get("HYBRID_FORCE_MANUAL_OPTIMIZER", "").strip().lower() in {
+                "1", "true", "yes", "on",
+            }
+            if force_manual:
                 self._optimizer_backend = "manual"
+                print("Using ManualAdamW due to HYBRID_FORCE_MANUAL_OPTIMIZER=1.", flush=True)
                 self.optimizer = _ManualAdamW(
                     trainable_params,
                     lr=self.config.learning_rate,
@@ -145,6 +128,38 @@ if TORCH_AVAILABLE:
                     betas=self.config.betas,
                 )
                 self.scheduler = _NoOpScheduler()
+            else:
+                self._optimizer_backend = "torch"
+                try:
+                    self.optimizer = torch.optim.AdamW(
+                        trainable_params,
+                        lr=self.config.learning_rate,
+                        weight_decay=self.config.weight_decay,
+                        betas=self.config.betas,
+                    )
+                    self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                        self.optimizer,
+                        mode="max",
+                        factor=self.config.scheduler_factor,
+                        patience=self.config.scheduler_patience,
+                        min_lr=1e-6,
+                    )
+                except AttributeError as exc:
+                    if "torch._inductor" not in str(exc) and "custom_graph_pass" not in str(exc):
+                        raise
+                    print(
+                        "Falling back to ManualAdamW due to broken torch compile runtime "
+                        f"({exc}).",
+                        flush=True,
+                    )
+                    self._optimizer_backend = "manual"
+                    self.optimizer = _ManualAdamW(
+                        trainable_params,
+                        lr=self.config.learning_rate,
+                        weight_decay=self.config.weight_decay,
+                        betas=self.config.betas,
+                    )
+                    self.scheduler = _NoOpScheduler()
 
         def _disable_broken_torch_compile_wrappers(self) -> None:
             # Some Colab torch builds hit a circular-import bug the first time
