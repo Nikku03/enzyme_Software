@@ -2538,6 +2538,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                                         transported_mass=float(_result.transported_mass),
                                         transport_support=int(_result.transport_support_size),
                                         retrieval_mechanism_overlap=float(_result.retrieval_mechanism_overlap),
+                                        physics_analogy_agreement=float(_physics_analogy_agreement),
                                         current_epoch=int(self.current_epoch_index),
                                     )
                                     _fusion_loss = self._sanitize_tensor(
@@ -2605,7 +2606,10 @@ class Metabolic_Causal_Trainer(nn.Module):
                                         "ana_morph_loss_ana": self._to_fp32(_fusion_info["loss_ana_morph"]).detach(),
                                         "ana_morph_bootstrap_loss": self._to_fp32(_fusion_info["loss_ana_bootstrap"]).detach(),
                                         "ana_quality": self._to_fp32(_fusion_info["ana_quality"]).detach(),
+                                        "ana_agreement_quality": self._to_fp32(_fusion_info["agreement_quality"]).detach(),
                                         "ana_bridge_loss": self._to_fp32(_fusion_info["bridge_loss"]).detach(),
+                                        "ana_som_alignment_loss": self._to_fp32(_fusion_info["som_alignment_loss"]).detach(),
+                                        "ana_epox_aux_loss": self._to_fp32(_fusion_info["epox_aux_loss"]).detach(),
                                         "ana_has_morphism_label": self._to_fp32(_fusion_info["has_morphism_label"]).detach(),
                                         "ana_label_confidence": self._to_fp32(_fusion_info["label_confidence"]).detach(),
                                         "ana_burn_in_active": self._to_fp32(_fusion_info["burn_in_active"]).detach(),

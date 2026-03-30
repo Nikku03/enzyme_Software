@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 
 DEFAULT_CYP3A4_MORPHISM_ALPHA = torch.tensor(
-    [0.25, 0.40, 0.30, 0.92, 0.80],
+    [0.25, 0.40, 0.30, 0.97, 0.80],
     dtype=torch.float32,
 )
 
@@ -150,6 +150,7 @@ class HomoscedasticArbiterLoss(nn.Module):
         transported_mass: float = 0.0,
         transport_support: int = 0,
         retrieval_mechanism_overlap: float = 0.0,
+        physics_analogy_agreement: float = 0.0,
         current_epoch: int | None = None,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         if y_hat_fp_som.ndim != 2 or y_hat_ana_som.ndim != 2:
@@ -199,15 +200,18 @@ class HomoscedasticArbiterLoss(nn.Module):
         mass_quality = min(max(float(transported_mass) / 0.12, 0.0), 1.0)
         support_quality = min(max(float(transport_support) / 4.0, 0.0), 1.0)
         mechanism_quality = min(max(float(retrieval_mechanism_overlap), 0.0), 1.0)
+        agreement_quality = min(max(0.5 * (float(physics_analogy_agreement) + 1.0), 0.0), 1.0)
         ana_quality = y_hat_fp_som.new_tensor(
             min(
-                0.45 * mass_quality
-                + 0.25 * support_quality
-                + 0.30 * mechanism_quality,
+                0.30 * mass_quality
+                + 0.15 * support_quality
+                + 0.20 * mechanism_quality
+                + 0.35 * agreement_quality,
                 1.0,
             )
         )
-        ana_morph_scale = morph_scale * (0.25 + 0.75 * ana_quality)
+        agreement_t = y_hat_fp_som.new_tensor(agreement_quality)
+        ana_morph_scale = morph_scale * (0.10 + 0.90 * ana_quality) * (0.20 + 0.80 * agreement_t)
         bootstrap_target = torch.sigmoid(y_hat_fp_morph.detach())
         if self.bootstrap_weight > 0.0 and (not in_burn_in):
             raw_bootstrap = F.binary_cross_entropy_with_logits(
@@ -221,13 +225,45 @@ class HomoscedasticArbiterLoss(nn.Module):
             fp_certainty = (
                 ((bootstrap_target - 0.5).abs() * 2.0 * morph_mask).sum() / valid_morph
             ).clamp(0.0, 1.0)
-            bootstrap_scale = morph_scale * fp_certainty * ana_quality * self.bootstrap_weight
+            bootstrap_scale = (
+                morph_scale
+                * fp_certainty
+                * ana_quality
+                * (0.15 + 0.85 * agreement_t)
+                * self.bootstrap_weight
+            )
             if not torch.isfinite(bootstrap_scale):
                 bootstrap_scale = y_hat_fp_som.new_zeros(())
         else:
             bootstrap_loss = y_hat_fp_som.new_zeros(())
             bootstrap_scale = y_hat_fp_som.new_zeros(())
         bootstrap_contrib = bootstrap_loss * bootstrap_scale
+
+        fp_rank_target = F.softmax(y_hat_fp_som.detach(), dim=-1)
+        ana_rank_logprob = F.log_softmax(y_hat_ana_som, dim=-1)
+        som_alignment_loss = F.kl_div(ana_rank_logprob, fp_rank_target, reduction="batchmean")
+        som_alignment_scale = (1.10 - agreement_t).clamp_min(0.15) * (0.20 + 0.80 * ana_quality)
+        som_alignment_contrib = som_alignment_loss * som_alignment_scale
+
+        epox_mask = morph_mask[..., 3].clamp(0.0, 1.0)
+        if bool((epox_mask.sum() > 0).item()):
+            epox_fp_raw = F.binary_cross_entropy_with_logits(
+                y_hat_fp_morph[..., 3],
+                morph_target[..., 3],
+                reduction="none",
+            )
+            epox_ana_raw = F.binary_cross_entropy_with_logits(
+                y_hat_ana_morph[..., 3],
+                morph_target[..., 3],
+                reduction="none",
+            )
+            epox_denom = epox_mask.sum().clamp_min(1.0)
+            epox_fp_loss = (epox_fp_raw * epox_mask).sum() / epox_denom
+            epox_ana_loss = (epox_ana_raw * epox_mask).sum() / epox_denom
+        else:
+            epox_fp_loss = y_hat_fp_som.new_zeros(())
+            epox_ana_loss = y_hat_fp_som.new_zeros(())
+        epox_aux_contrib = (0.25 * epox_fp_loss + 1.10 * epox_ana_loss) * morph_scale * (0.25 + 0.75 * agreement_t)
 
         bridge_term = (
             torch.as_tensor(bridge_loss, dtype=torch.float32, device=device).view(())
@@ -244,12 +280,19 @@ class HomoscedasticArbiterLoss(nn.Module):
                 + (loss_ana_morph * ana_morph_scale)
                 + bootstrap_contrib
                 + bridge_term
+                + som_alignment_contrib
+                + epox_aux_contrib
             )
             precision_fp = torch.ones((), dtype=torch.float32, device=device)
             precision_ana = torch.ones((), dtype=torch.float32, device=device)
             warmup_progress = float(int(current_epoch or 0) + 1) / float(max(self.burn_in_epochs, 1))
             warmup_cap = min(max(warmup_progress, 0.0), 1.0) * 0.25
-            warmup_signal = confidence_t.clamp(0.0, 1.0) * has_morph_t.clamp(0.0, 1.0) * (0.35 + 0.65 * ana_quality)
+            warmup_signal = (
+                confidence_t.clamp(0.0, 1.0)
+                * has_morph_t.clamp(0.0, 1.0)
+                * (0.15 + 0.85 * ana_quality)
+                * (0.05 + 0.95 * agreement_t)
+            )
             weight_ana = torch.as_tensor(warmup_cap, dtype=torch.float32, device=device) * warmup_signal
             weight_fp = 1.0 - weight_ana
         else:
@@ -261,9 +304,17 @@ class HomoscedasticArbiterLoss(nn.Module):
                 (loss_ana_morph * ana_morph_scale)
                 + bootstrap_contrib
                 + bridge_term
+                + som_alignment_contrib
+                + epox_aux_contrib
             ) + 0.5 * self.log_var_ana
             total_loss = loss_fp_som + loss_ana_som + loss_fp_scaled + loss_ana_scaled
-            weight_ana = precision_ana / (precision_fp + precision_ana).clamp_min(1.0e-9)
+            raw_weight_ana = precision_ana / (precision_fp + precision_ana).clamp_min(1.0e-9)
+            quality_gate = (
+                (0.20 + 0.80 * confidence_t.clamp(0.0, 1.0))
+                * (0.15 + 0.85 * ana_quality)
+                * (0.05 + 0.95 * agreement_t)
+            )
+            weight_ana = raw_weight_ana * quality_gate
             weight_fp = 1.0 - weight_ana
 
         return total_loss.squeeze(), {
@@ -279,7 +330,10 @@ class HomoscedasticArbiterLoss(nn.Module):
             "has_morphism_label": has_morph_t.detach(),
             "label_confidence": confidence_t.detach(),
             "ana_quality": ana_quality.detach(),
+            "agreement_quality": agreement_t.detach(),
             "bridge_loss": bridge_term.detach(),
+            "som_alignment_loss": som_alignment_contrib.detach(),
+            "epox_aux_loss": epox_aux_contrib.detach(),
             "burn_in_active": torch.as_tensor(1.0 if in_burn_in else 0.0, dtype=torch.float32, device=device),
         }
 
