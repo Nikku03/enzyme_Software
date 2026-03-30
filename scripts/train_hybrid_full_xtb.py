@@ -186,6 +186,14 @@ def _build_loaders_with_fallback(
         return loaders, False
 
 
+def _resolve_precedent_logbook(path_arg: str, artifact_dir: Path) -> Path | None:
+    if str(path_arg or "").strip():
+        path = Path(path_arg)
+        return path if path.exists() else None
+    candidates = sorted(artifact_dir.glob("hybrid_full_xtb_episode_log_*.jsonl"))
+    return candidates[-1] if candidates else None
+
+
 def _save_training_state(
     *,
     model,
@@ -285,6 +293,7 @@ def main() -> None:
     parser.add_argument("--xenosite-per-file-limit", type=int, default=0)
     parser.add_argument("--episode-log", default="")
     parser.add_argument("--disable-episode-log", action="store_true")
+    parser.add_argument("--precedent-logbook", default="")
     args = parser.parse_args()
     early_stopping_patience = int(args.early_stopping_patience)
     early_stopping_enabled = early_stopping_patience > 0
@@ -402,6 +411,21 @@ def main() -> None:
         )
     else:
         print(f"No warm-start checkpoint found at {checkpoint_path}; starting from current initialization", flush=True)
+
+    precedent_logbook = _resolve_precedent_logbook(args.precedent_logbook, artifact_dir)
+    if precedent_logbook is not None and precedent_logbook.exists():
+        precedent_stats = model.load_nexus_precedent_logbook(
+            str(precedent_logbook),
+            cyp_names=list(getattr(base_config, "cyp_names", ())),
+        )
+        print(
+            f"Loaded precedent logbook: {precedent_logbook} | "
+            f"cases={int(precedent_stats.get('cases', 0.0))} "
+            f"episodes={int(precedent_stats.get('episodes', 0.0))}",
+            flush=True,
+        )
+    else:
+        print("No precedent logbook found; analogical precedent briefs will remain empty for this run", flush=True)
 
     model.to(device)
 

@@ -4,6 +4,7 @@ from typing import Dict, Optional
 
 from enzyme_software.liquid_nn_v2._compat import F, TORCH_AVAILABLE, nn, require_torch, torch
 from enzyme_software.liquid_nn_v2.model.liquid_branch import scatter_mean
+from enzyme_software.liquid_nn_v2.model.precedent_logbook import AuditedEpisodeLogbook
 from enzyme_software.liquid_nn_v2.model.wave_field import WholeMoleculeWaveField
 from nexus.reasoning.metric_learner import HGNNProjection
 from nexus.reasoning_wave.analogical_fusion import NexusDualDecoder, PGWCrossAttention
@@ -173,6 +174,7 @@ if TORCH_AVAILABLE:
             self.wave_aux_weight = float(max(0.0, wave_aux_weight))
             self.analogical_aux_weight = float(max(0.0, analogical_aux_weight))
             self.memory_frozen = False
+            self.precedent_logbook = AuditedEpisodeLogbook(max_cases=max(4096, memory_capacity * 8), topk=max(8, min(32, memory_topk)))
             total_in = self.atom_feature_dim + self.steric_feature_dim + self.xtb_feature_dim
             hidden = max(64, int(wave_hidden_dim))
             self.atom_to_multivector = nn.Sequential(
@@ -210,7 +212,7 @@ if TORCH_AVAILABLE:
             )
             self.continuous_dual_decoder = NexusDualDecoder(hidden_dim=max(16, hidden // 2))
             self.analogical_site_head = nn.Sequential(
-                nn.Linear(16 + 1 + self.num_cyp_classes + 1, hidden),
+                nn.Linear(16 + 1 + self.num_cyp_classes + 1 + AuditedEpisodeLogbook.brief_dim, hidden),
                 nn.SiLU(),
                 nn.Linear(hidden, 1),
             )
@@ -279,6 +281,10 @@ if TORCH_AVAILABLE:
 
         def set_memory_frozen(self, frozen: bool) -> None:
             self.memory_frozen = bool(frozen)
+
+        @torch.no_grad()
+        def load_precedent_logbook(self, path: str, *, cyp_names: Optional[list[str]] = None) -> Dict[str, float]:
+            return self.precedent_logbook.load_jsonl(path, cyp_names=cyp_names)
 
         def _optional_feature(self, value: Optional[torch.Tensor], rows: int, width: int, *, device, dtype) -> torch.Tensor:
             if value is None:
@@ -465,6 +471,23 @@ if TORCH_AVAILABLE:
             graph_embeddings = self._group_graph_embedding(multivectors, batch_index)
             per_atom_graph = graph_embeddings[batch_index] if graph_embeddings.numel() else multivectors.new_zeros((multivectors.size(0), self.memory.graph_dim))
             atom_keys = self.atom_key(torch.cat([multivectors, atom_features], dim=-1))
+            precedent_query = torch.cat(
+                [
+                    multivectors,
+                    wave_preds["predicted_charges"].unsqueeze(-1),
+                    wave_preds["predicted_fukui"].unsqueeze(-1),
+                    wave_field["atom_field_features"],
+                ],
+                dim=-1,
+            )
+            cyp_probs_by_mol = F.softmax(cyp_logits.detach(), dim=-1)
+            cyp_value_lookup = torch.argmax(cyp_probs_by_mol, dim=-1, keepdim=True).float() + 1.0
+            precedent = self.precedent_logbook.lookup(precedent_query, cyp_value_lookup[batch_index])
+            precedent_brief = (
+                precedent["brief"].to(device=multivectors.device, dtype=multivectors.dtype)
+                if precedent is not None
+                else multivectors.new_zeros((multivectors.size(0), AuditedEpisodeLogbook.brief_dim))
+            )
             retrieval = self.memory.lookup(atom_keys, per_atom_graph)
             if retrieval is None:
                 site_prior = torch.full((multivectors.size(0), 1), 0.5, device=multivectors.device, dtype=multivectors.dtype)
@@ -479,7 +502,7 @@ if TORCH_AVAILABLE:
                 cyp_prior = retrieval["cyp_prior"]
                 confidence = retrieval["confidence"]
                 continuous_reasoning = self._continuous_reasoning(query_multivectors=multivectors, retrieval=retrieval)
-                analogical_site_input = torch.cat([multivectors, site_prior, cyp_prior, confidence], dim=-1)
+                analogical_site_input = torch.cat([multivectors, site_prior, cyp_prior, confidence, precedent_brief], dim=-1)
                 analogical_site_bias = self.analogical_site_head(analogical_site_input) + 0.25 * continuous_reasoning["site_bias"]
                 num_molecules = int(cyp_logits.size(0))
                 cyp_prior_by_mol = scatter_mean(cyp_prior, batch_index, num_molecules)
@@ -521,6 +544,9 @@ if TORCH_AVAILABLE:
                 "wave_field_density_mean": float(wave_field["global_density"].detach().mean().item()) if wave_field["global_density"].numel() else 0.0,
                 "wave_field_gap_proxy_mean": float(wave_field["global_gap_proxy"].detach().mean().item()) if wave_field["global_gap_proxy"].numel() else 0.0,
                 "continuous_reasoning_mean": float(continuous_reasoning["site_bias"].detach().mean().item()) if continuous_reasoning["site_bias"].numel() else 0.0,
+                "precedent_logbook_size": float(self.precedent_logbook.size()),
+                "precedent_positive_support_mean": float(precedent_brief[:, :1].detach().mean().item()) if precedent_brief.numel() else 0.0,
+                "precedent_negative_support_mean": float(precedent_brief[:, 1:2].detach().mean().item()) if precedent_brief.numel() else 0.0,
             }
             return {
                 "atom_multivectors": multivectors,
@@ -534,6 +560,7 @@ if TORCH_AVAILABLE:
                 "analogical_site_bias": analogical_site_bias,
                 "analogical_cyp_bias": analogical_cyp_bias,
                 "continuous_reasoning_features": continuous_reasoning["features"],
+                "precedent_brief": precedent_brief,
                 "losses": {
                     "total": total_aux_loss,
                     "wave": wave_aux_loss,

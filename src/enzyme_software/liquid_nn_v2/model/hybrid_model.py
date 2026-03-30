@@ -5,6 +5,7 @@ from typing import Dict, Optional
 from enzyme_software.liquid_nn_v2._compat import TORCH_AVAILABLE, nn, require_torch, torch
 from enzyme_software.liquid_nn_v2.features.route_prior import combine_lnn_with_prior
 from enzyme_software.liquid_nn_v2.model.nexus_bridge import NexusHybridBridge
+from enzyme_software.liquid_nn_v2.model.precedent_logbook import AuditedEpisodeLogbook
 
 
 if TORCH_AVAILABLE:
@@ -43,7 +44,7 @@ if TORCH_AVAILABLE:
                     torch.logit(torch.tensor(float(getattr(self.config, "nexus_analogical_cyp_init", 0.12))))
                 )
                 if bool(getattr(self.config, "use_nexus_site_arbiter", True)):
-                    arbiter_in = atom_dim + 16 + graph_dim + num_cyp + 3 + 2 + num_cyp + steric_dim + xtb_dim + 10 + 1 + 1 + 5 + 6
+                    arbiter_in = atom_dim + 16 + graph_dim + num_cyp + 3 + 2 + num_cyp + steric_dim + xtb_dim + 10 + 1 + 1 + 5 + AuditedEpisodeLogbook.brief_dim + 6
                     arbiter_hidden = int(getattr(self.config, "nexus_site_arbiter_hidden_dim", 128))
                     arbiter_dropout = float(getattr(self.config, "nexus_site_arbiter_dropout", 0.10))
                     council_hidden = max(32, arbiter_hidden // 2)
@@ -58,7 +59,7 @@ if TORCH_AVAILABLE:
                         nn.Linear(council_hidden, 1),
                     )
                     self.analogical_conf_head = nn.Sequential(
-                        nn.Linear(8, council_hidden),
+                        nn.Linear(8 + AuditedEpisodeLogbook.brief_dim, council_hidden),
                         nn.SiLU(),
                         nn.Linear(council_hidden, 1),
                     )
@@ -108,6 +109,9 @@ if TORCH_AVAILABLE:
             confidence = bridge["analogical_confidence"]
             wave_preds = bridge["wave_predictions"]
             wave_field = bridge["wave_field"]
+            precedent_brief = bridge.get("precedent_brief")
+            if precedent_brief is None:
+                precedent_brief = atom_features.new_zeros((rows, AuditedEpisodeLogbook.brief_dim))
             atom_features_b = torch.tanh(atom_features)
             # Keep the LNN encoder live, but stop the main site loss from backpropagating
             # through the heavier wave/analogical sidecar. Those modules still learn via
@@ -156,6 +160,7 @@ if TORCH_AVAILABLE:
                             confidence_b,
                             analogical_site_bias_b,
                             continuous_reasoning_b,
+                            precedent_brief.detach(),
                         ],
                         dim=-1,
                     )
@@ -179,6 +184,7 @@ if TORCH_AVAILABLE:
                     steric_b,
                     xtb_b,
                     wave_field_b,
+                    precedent_brief.detach(),
                     wave_site_bias_b,
                     analogical_site_bias_b,
                     continuous_reasoning_b,
@@ -257,6 +263,12 @@ if TORCH_AVAILABLE:
                 }
             )
             return result
+
+        @torch.no_grad()
+        def load_nexus_precedent_logbook(self, path: str, *, cyp_names: Optional[list[str]] = None) -> Dict[str, float]:
+            if self.nexus_bridge is None:
+                return {"cases": 0.0, "episodes": 0.0}
+            return self.nexus_bridge.load_precedent_logbook(path, cyp_names=cyp_names)
 
         @torch.no_grad()
         def rebuild_nexus_memory(self, loader, *, device=None, max_batches: int | None = None) -> Dict[str, float]:

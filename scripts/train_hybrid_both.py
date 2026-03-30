@@ -45,6 +45,7 @@ def main() -> None:
     parser.add_argument("--no-xenosite", action="store_true")
     parser.add_argument("--xenosite-topk", type=int, default=0)
     parser.add_argument("--early-stopping-patience", type=int, default=-1)
+    parser.add_argument("--precedent-logbook", default="")
     args = parser.parse_args()
 
     bundle_path = ROOT / args.bundle
@@ -112,6 +113,8 @@ def main() -> None:
     if not args.no_xenosite and bool(defaults["include_xenosite"]):
         argv.extend(["--xenosite-manifest", paths["xenosite_manifest"]])
         argv.extend(["--xenosite-topk", str(args.xenosite_topk or defaults["xenosite_topk"])])
+    if args.precedent_logbook:
+        argv.extend(["--precedent-logbook", args.precedent_logbook])
 
     print("Training hybrid+both bundle")
     print(f"bundle={bundle_path.relative_to(ROOT)}")

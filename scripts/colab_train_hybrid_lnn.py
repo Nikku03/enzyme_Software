@@ -202,6 +202,9 @@ def main() -> None:
     if os.environ.get("HYBRID_COLAB_INCLUDE_XENOSITE", "1").strip().lower() in {"1", "true", "yes", "on"}:
         argv.extend(["--xenosite-manifest", xenosite_manifest])
         argv.extend(["--xenosite-topk", os.environ["HYBRID_COLAB_XENOSITE_TOPK"]])
+    precedent_logbook = os.environ.get("HYBRID_COLAB_PRECEDENT_LOGBOOK", "").strip()
+    if precedent_logbook:
+        argv.extend(["--precedent-logbook", precedent_logbook])
 
     print("Hybrid LNN Colab wrapper")
     print(f"preset={preset}")
@@ -210,6 +213,8 @@ def main() -> None:
     print(f"manual_cache_dir={manual_cache_dir}")
     print(f"xtb_cache_dir={xtb_cache_dir}")
     print(f"warm_start={checkpoint}")
+    if precedent_logbook:
+        print(f"precedent_logbook={precedent_logbook}")
     for key in sorted(PRESETS[preset]):
         print(f"{key}={os.environ[key]}")
     print()

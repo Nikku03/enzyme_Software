@@ -146,6 +146,8 @@ class EpisodeLogger:
         analogical_cyp_bias_cpu = analogical_cyp_bias.detach().cpu() if analogical_cyp_bias is not None else None
         continuous_reasoning = bridge.get("continuous_reasoning_features")
         continuous_reasoning_cpu = continuous_reasoning.detach().cpu() if continuous_reasoning is not None else None
+        precedent_brief = bridge.get("precedent_brief")
+        precedent_brief_cpu = precedent_brief.detach().cpu() if precedent_brief is not None else None
         bridge_metrics = _to_serializable(bridge.get("metrics") or {})
 
         offset = 0
@@ -239,6 +241,7 @@ class EpisodeLogger:
                     "site_bias": _to_serializable(analogical_site_bias_cpu[start:end]) if analogical_site_bias_cpu is not None else None,
                     "confidence": _to_serializable(analogical_confidence_cpu[start:end]) if analogical_confidence_cpu is not None else None,
                     "continuous_reasoning_features": _to_serializable(continuous_reasoning_cpu[start:end]) if continuous_reasoning_cpu is not None else None,
+                    "precedent_brief": _to_serializable(precedent_brief_cpu[start:end]) if precedent_brief_cpu is not None else None,
                     "cyp_prior": _to_serializable(analogical_cyp_prior_cpu[graph_idx]) if analogical_cyp_prior_cpu is not None else None,
                     "cyp_bias": _to_serializable(analogical_cyp_bias_cpu[graph_idx]) if analogical_cyp_bias_cpu is not None else None,
                     "bridge_metrics": bridge_metrics,
