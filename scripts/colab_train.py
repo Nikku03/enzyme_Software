@@ -760,6 +760,31 @@ def _write_batch_metrics(
     }
     BATCH_METRICS_PATH.write_text(json.dumps(payload, indent=2))
 
+
+def _load_model_state_compat(module: torch.nn.Module, state_dict: dict, *, label: str) -> None:
+    current_state = module.state_dict()
+    filtered_state = {}
+    skipped = []
+    for key, value in state_dict.items():
+        if key not in current_state:
+            skipped.append((key, "missing"))
+            continue
+        if current_state[key].shape != value.shape:
+            skipped.append((key, f"shape {tuple(value.shape)} -> {tuple(current_state[key].shape)}"))
+            continue
+        filtered_state[key] = value
+    missing, unexpected = module.load_state_dict(filtered_state, strict=False)
+    if skipped:
+        print(f"  Skipped {len(skipped)} incompatible {label} tensor(s).")
+        for key, reason in skipped[:8]:
+            print(f"    - {key}: {reason}")
+        if len(skipped) > 8:
+            print(f"    ... and {len(skipped) - 8} more")
+    if unexpected:
+        print(f"  Ignored {len(unexpected)} unexpected {label} key(s).")
+    if missing:
+        print(f"  Left {len(missing)} {label} tensor(s) at current initialization.")
+
 # ── checkpoint resume ───────────────────────────────────────────────────────
 start_epoch = 0
 resume_batch_in_epoch = 0
@@ -769,7 +794,7 @@ if IGNORE_CHECKPOINTS:
 elif CKPT_PATH.exists():
     print(f"Loading checkpoint from {CKPT_PATH} ...")
     _ckpt = torch.load(CKPT_PATH, map_location=device, weights_only=False)
-    trainer.load_state_dict(_ckpt["model_state_dict"], strict=False)
+    _load_model_state_compat(trainer, _ckpt["model_state_dict"], label="checkpoint")
     if "optimizer_state_dict" in _ckpt and trainer.optimizer is not None:
         try:
             trainer.optimizer.load_state_dict(_ckpt["optimizer_state_dict"])
@@ -798,7 +823,7 @@ if (not IGNORE_CHECKPOINTS) and SAVE_EVERY_BATCH and BATCH_CKPT_PATH.exists():
         _b_epoch = int(_bckpt.get("epoch", 0))
         _b_batch = int(_bckpt.get("batch_in_epoch", 0))
         if _b_epoch < CFG["epochs"] and (_b_epoch > start_epoch or (_b_epoch == start_epoch and _b_batch > 0)):
-            trainer.load_state_dict(_bckpt["model_state_dict"], strict=False)
+            _load_model_state_compat(trainer, _bckpt["model_state_dict"], label="batch checkpoint")
             if "optimizer_state_dict" in _bckpt and trainer.optimizer is not None:
                 try:
                     trainer.optimizer.load_state_dict(_bckpt["optimizer_state_dict"])
