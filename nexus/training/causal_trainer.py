@@ -2601,6 +2601,7 @@ class Metabolic_Causal_Trainer(nn.Module):
                         except Exception as _fusion_err:
                             _fusion_error_message = f"{type(_fusion_err).__name__}: {_fusion_err}"
                             _fusion_available = False
+                            print(f"[ANA-FUSION-ERR] {_fusion_error_message}", flush=True)
                             if self.strict_analogical_debug:
                                 raise
 
