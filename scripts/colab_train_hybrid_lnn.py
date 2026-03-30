@@ -69,6 +69,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
+        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
         "HYBRID_COLAB_SEED": "42",
     },
     "balanced": {
@@ -82,6 +83,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
+        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
         "HYBRID_COLAB_SEED": "42",
     },
     "full": {
@@ -95,6 +97,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "1",
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
+        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
         "HYBRID_COLAB_SEED": "42",
     },
 }
@@ -175,6 +178,8 @@ def main() -> None:
         artifact_dir,
         "--manual-feature-cache-dir",
         manual_cache_dir,
+        "--early-stopping-patience",
+        os.environ["HYBRID_COLAB_EARLY_STOPPING_PATIENCE"],
     ]
 
     limit = int(os.environ.get("HYBRID_COLAB_LIMIT", "0") or "0")

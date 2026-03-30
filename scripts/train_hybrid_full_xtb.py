@@ -200,6 +200,8 @@ def main() -> None:
     parser.add_argument("--site-labeled-only", action="store_true")
     parser.add_argument("--compute-xtb-if-missing", action="store_true")
     args = parser.parse_args()
+    early_stopping_patience = int(args.early_stopping_patience)
+    early_stopping_enabled = early_stopping_patience > 0
 
     dataset_path = Path(args.dataset)
     if not dataset_path.exists():
@@ -290,7 +292,7 @@ def main() -> None:
             batch_size=args.batch_size,
             learning_rate=args.learning_rate,
             weight_decay=args.weight_decay,
-            early_stopping_patience=args.early_stopping_patience,
+            early_stopping_patience=max(0, early_stopping_patience),
         ),
         device=device,
     )
@@ -353,10 +355,10 @@ def main() -> None:
                 status="running",
             )
 
-            if epochs_without_improvement >= args.early_stopping_patience:
+            if early_stopping_enabled and epochs_without_improvement >= early_stopping_patience:
                 print(
                     f"Early stopping after epoch {epoch + 1}: no site_top1 improvement for "
-                    f"{args.early_stopping_patience} epochs.",
+                    f"{early_stopping_patience} epochs.",
                     flush=True,
                 )
                 break
