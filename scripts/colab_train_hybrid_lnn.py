@@ -88,6 +88,22 @@ def main() -> None:
     for key, value in PRESETS[preset].items():
         _setdefault_env(key, value)
 
+    requested_dataset = Path(os.environ["HYBRID_COLAB_DATASET"])
+    if not requested_dataset.exists():
+        fallback_candidates = [
+            REPO_DIR / "data" / "prepared_training" / "main5_site_conservative_singlecyp_clean.json",
+            REPO_DIR / "data" / "combined_drugbank_supercyp_full_xtb_valid_site_labeled.json",
+            REPO_DIR / "data" / "training_dataset_580.json",
+        ]
+        fallback = next((path for path in fallback_candidates if path.exists()), None)
+        if fallback is None:
+            raise FileNotFoundError(
+                f"Requested dataset not found: {requested_dataset}. No tracked fallback dataset found in repo."
+            )
+        print(f"Requested dataset not found: {requested_dataset}")
+        print(f"Falling back to tracked dataset: {fallback.relative_to(REPO_DIR)}")
+        os.environ["HYBRID_COLAB_DATASET"] = str(fallback.relative_to(REPO_DIR))
+
     output_dir = os.environ.get(
         "HYBRID_COLAB_OUTPUT_DIR",
         "/content/drive/MyDrive/enzyme_hybrid_lnn/checkpoints/hybrid_full_xtb",
