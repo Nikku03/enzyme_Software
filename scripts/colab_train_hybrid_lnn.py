@@ -24,6 +24,9 @@ from pathlib import Path
 REPO_DIR = Path("/content/enzyme_Software")
 if str(REPO_DIR) not in sys.path:
     sys.path.insert(0, str(REPO_DIR))
+SRC_DIR = REPO_DIR / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 
 def _setdefault_env(name: str, value: str) -> None:
@@ -75,6 +78,8 @@ PRESETS: dict[str, dict[str, str]] = {
 
 
 def main() -> None:
+    os.chdir(REPO_DIR)
+    os.environ["PYTHONPATH"] = f"{SRC_DIR}:{os.environ.get('PYTHONPATH', '')}".rstrip(":")
     preset = os.environ.get("HYBRID_COLAB_PRESET", "balanced").strip().lower() or "balanced"
     if preset not in PRESETS:
         valid = ", ".join(sorted(PRESETS))
