@@ -790,32 +790,36 @@ else:
 
 if (not IGNORE_CHECKPOINTS) and SAVE_EVERY_BATCH and BATCH_CKPT_PATH.exists():
     print(f"Loading rolling batch checkpoint from {BATCH_CKPT_PATH} ...")
-    _bckpt = torch.load(BATCH_CKPT_PATH, map_location=device, weights_only=False)
-    _b_epoch = int(_bckpt.get("epoch", 0))
-    _b_batch = int(_bckpt.get("batch_in_epoch", 0))
-    if _b_epoch < CFG["epochs"] and (_b_epoch > start_epoch or (_b_epoch == start_epoch and _b_batch > 0)):
-        trainer.load_state_dict(_bckpt["model_state_dict"], strict=False)
-        if "optimizer_state_dict" in _bckpt and trainer.optimizer is not None:
-            try:
-                trainer.optimizer.load_state_dict(_bckpt["optimizer_state_dict"])
-                print("  Optimizer state restored from batch checkpoint.")
-            except Exception as _oe:
-                print(f"  Optimizer state not restored from batch checkpoint: {_oe}")
-        if "scheduler_state_dict" in _bckpt and trainer.scheduler is not None:
-            try:
-                trainer.scheduler.load_state_dict(_bckpt["scheduler_state_dict"])
-                print("  Scheduler state restored from batch checkpoint.")
-            except Exception as _se:
-                print(f"  Scheduler state not restored from batch checkpoint: {_se}")
-        start_epoch = _b_epoch
-        resume_batch_in_epoch = _b_batch
-        history = list(_bckpt.get("metrics_history", history))
-        print(
-            f"  Resuming mid-epoch: epoch {start_epoch + 1}, "
-            f"batch {resume_batch_in_epoch}/{int(_bckpt.get('total_batches', 0))}\n"
-        )
+    try:
+        _bckpt = torch.load(BATCH_CKPT_PATH, map_location=device, weights_only=False)
+    except Exception as _be:
+        print(f"  Rolling batch checkpoint unreadable; ignoring: {_be}\n")
     else:
-        print("  Rolling batch checkpoint is older than epoch checkpoint; ignoring.\n")
+        _b_epoch = int(_bckpt.get("epoch", 0))
+        _b_batch = int(_bckpt.get("batch_in_epoch", 0))
+        if _b_epoch < CFG["epochs"] and (_b_epoch > start_epoch or (_b_epoch == start_epoch and _b_batch > 0)):
+            trainer.load_state_dict(_bckpt["model_state_dict"], strict=False)
+            if "optimizer_state_dict" in _bckpt and trainer.optimizer is not None:
+                try:
+                    trainer.optimizer.load_state_dict(_bckpt["optimizer_state_dict"])
+                    print("  Optimizer state restored from batch checkpoint.")
+                except Exception as _oe:
+                    print(f"  Optimizer state not restored from batch checkpoint: {_oe}")
+            if "scheduler_state_dict" in _bckpt and trainer.scheduler is not None:
+                try:
+                    trainer.scheduler.load_state_dict(_bckpt["scheduler_state_dict"])
+                    print("  Scheduler state restored from batch checkpoint.")
+                except Exception as _se:
+                    print(f"  Scheduler state not restored from batch checkpoint: {_se}")
+            start_epoch = _b_epoch
+            resume_batch_in_epoch = _b_batch
+            history = list(_bckpt.get("metrics_history", history))
+            print(
+                f"  Resuming mid-epoch: epoch {start_epoch + 1}, "
+                f"batch {resume_batch_in_epoch}/{int(_bckpt.get('total_batches', 0))}\n"
+            )
+        else:
+            print("  Rolling batch checkpoint is older than epoch checkpoint; ignoring.\n")
 
 if hasattr(trainer, "current_epoch_index"):
     trainer.current_epoch_index = int(start_epoch)
