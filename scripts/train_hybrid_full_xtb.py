@@ -24,6 +24,7 @@ from enzyme_software.liquid_nn_v2.experiments.hybrid_full_xtb import (
     split_drugs,
 )
 from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM
+from enzyme_software.liquid_nn_v2.training.episode_logger import EpisodeLogger
 from enzyme_software.liquid_nn_v2.training.trainer import Trainer
 
 
@@ -198,6 +199,7 @@ def _save_training_state(
     xtb_cache_dir: Path,
     xtb_valid_count: int,
     xtb_statuses: dict[str, int],
+    episode_log_path: Path | None = None,
     test_metrics=None,
     status: str = "running",
 ):
@@ -242,6 +244,7 @@ def _save_training_state(
                 "xtb_feature_dim": FULL_XTB_FEATURE_DIM,
                 "xtb_valid_molecules": xtb_valid_count,
                 "xtb_statuses": xtb_statuses,
+                "episode_log_path": str(episode_log_path) if episode_log_path is not None else None,
                 "history": history,
             },
             indent=2,
@@ -280,6 +283,8 @@ def main() -> None:
     parser.add_argument("--xenosite-manifest", default="")
     parser.add_argument("--xenosite-topk", type=int, default=1)
     parser.add_argument("--xenosite-per-file-limit", type=int, default=0)
+    parser.add_argument("--episode-log", default="")
+    parser.add_argument("--disable-episode-log", action="store_true")
     args = parser.parse_args()
     early_stopping_patience = int(args.early_stopping_patience)
     early_stopping_enabled = early_stopping_patience > 0
@@ -295,11 +300,20 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     artifact_dir.mkdir(parents=True, exist_ok=True)
     xtb_cache_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    episode_log_path = (
+        None
+        if args.disable_episode_log
+        else Path(args.episode_log) if args.episode_log else artifact_dir / f"hybrid_full_xtb_episode_log_{timestamp}.jsonl"
+    )
+    episode_logger = EpisodeLogger(episode_log_path, run_id=timestamp) if episode_log_path is not None else None
 
     print("=" * 60, flush=True)
     print("HYBRID LNN: FULL XTB MANUAL PRIORS", flush=True)
     print("=" * 60, flush=True)
     print(f"Using device: {device}", flush=True)
+    if episode_log_path is not None:
+        print(f"Episode log: {episode_log_path}", flush=True)
 
     drugs = _load_drugs(dataset_path)
     print(f"Loaded {len(drugs)} drugs", flush=True)
@@ -414,6 +428,7 @@ def main() -> None:
             early_stopping_patience=max(0, early_stopping_patience),
         ),
         device=device,
+        episode_logger=episode_logger,
     )
 
     history = []
@@ -425,7 +440,11 @@ def main() -> None:
     try:
         for epoch in range(args.epochs):
             epoch_start = time.perf_counter()
+            setattr(train_loader, "_current_epoch", epoch)
+            setattr(train_loader, "_split_name", "train")
             train_stats = trainer.train_loader_epoch(train_loader)
+            setattr(val_loader, "_current_epoch", epoch)
+            setattr(val_loader, "_split_name", "val")
             val_metrics = trainer.evaluate_loader(val_loader)
             epoch_seconds = time.perf_counter() - epoch_start
             elapsed_seconds = time.perf_counter() - train_start
@@ -470,6 +489,7 @@ def main() -> None:
                 xtb_cache_dir=xtb_cache_dir,
                 xtb_valid_count=xtb_valid_count,
                 xtb_statuses=xtb_statuses,
+                episode_log_path=episode_log_path,
                 test_metrics=None,
                 status="running",
             )
@@ -495,6 +515,7 @@ def main() -> None:
             xtb_cache_dir=xtb_cache_dir,
             xtb_valid_count=xtb_valid_count,
             xtb_statuses=xtb_statuses,
+            episode_log_path=episode_log_path,
             test_metrics=None,
             status="interrupted",
         )
@@ -509,6 +530,8 @@ def main() -> None:
     print("\n" + "=" * 60, flush=True)
     print("TEST SET EVALUATION", flush=True)
     print("=" * 60, flush=True)
+    setattr(test_loader, "_current_epoch", max(0, len(history) - 1))
+    setattr(test_loader, "_split_name", "test")
     test_metrics = trainer.evaluate_loader(test_loader)
     print(json.dumps(test_metrics, indent=2), flush=True)
 
@@ -524,6 +547,7 @@ def main() -> None:
         xtb_cache_dir=xtb_cache_dir,
         xtb_valid_count=xtb_valid_count,
         xtb_statuses=xtb_statuses,
+        episode_log_path=episode_log_path,
         test_metrics=test_metrics,
         status="completed",
     )

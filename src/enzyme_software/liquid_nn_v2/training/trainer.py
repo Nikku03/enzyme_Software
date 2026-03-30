@@ -7,6 +7,7 @@ import numpy as np
 
 from enzyme_software.liquid_nn_v2._compat import F, TORCH_AVAILABLE, require_torch, torch
 from enzyme_software.liquid_nn_v2.config import TrainingConfig
+from enzyme_software.liquid_nn_v2.training.episode_logger import EpisodeLogger
 from enzyme_software.liquid_nn_v2.training.loss import AdaptiveLossV2
 from enzyme_software.liquid_nn_v2.training.metrics import compute_cyp_metrics, compute_site_metrics_v2
 from enzyme_software.liquid_nn_v2.training.utils import collate_molecule_graphs, move_to_device
@@ -19,6 +20,7 @@ if TORCH_AVAILABLE:
         config: TrainingConfig = field(default_factory=TrainingConfig)
         device: Optional[torch.device] = None
         cyp_class_weights: Optional[object] = None
+        episode_logger: Optional[EpisodeLogger] = None
 
         def __post_init__(self):
             self.device = self.device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -293,6 +295,23 @@ if TORCH_AVAILABLE:
                     raise FloatingPointError(
                         f"Non-finite loss detected during training at batch {batch_idx}: stats={stats}"
                     )
+                if self.episode_logger is not None:
+                    self.episode_logger.log_step(
+                        split="train",
+                        epoch=getattr(loader, "_current_epoch", None),
+                        batch_idx=batch_idx,
+                        batch=batch,
+                        stats=stats,
+                        outputs=outputs,
+                    )
+                    self.episode_logger.log_examples(
+                        split="train",
+                        epoch=getattr(loader, "_current_epoch", None),
+                        batch_idx=batch_idx,
+                        batch=batch,
+                        outputs=outputs,
+                        stats=stats,
+                    )
                 self.optimizer.zero_grad()
                 loss.backward()
                 self._clip_gradients()
@@ -393,6 +412,23 @@ if TORCH_AVAILABLE:
                         continue
                     batch = self._prepare_batch(raw_batch)
                     outputs = self.model(batch)
+                    if self.episode_logger is not None:
+                        self.episode_logger.log_step(
+                            split=str(getattr(loader, "_split_name", "eval")),
+                            epoch=getattr(loader, "_current_epoch", None),
+                            batch_idx=int(len(site_scores)),
+                            batch=batch,
+                            stats=None,
+                            outputs=outputs,
+                        )
+                        self.episode_logger.log_examples(
+                            split=str(getattr(loader, "_split_name", "eval")),
+                            epoch=getattr(loader, "_current_epoch", None),
+                            batch_idx=int(len(site_scores)),
+                            batch=batch,
+                            outputs=outputs,
+                            stats=None,
+                        )
                     site_scores.append(outputs["site_scores"].detach().cpu())
                     site_labels.append(batch["site_labels"].detach().cpu())
                     site_supervision_masks.append(

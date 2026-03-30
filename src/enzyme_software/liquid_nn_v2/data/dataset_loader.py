@@ -190,6 +190,18 @@ class CYPMetabolismDataset(Dataset):
             "name": str(drug.get("name", "")),
             "confidence": confidence_value,
             "confidence_weight": float(CONFIDENCE_WEIGHTS.get(confidence_value, 0.5)),
+            "metadata": {
+                "id": str(drug.get("drug_id", drug.get("id", idx))),
+                "name": str(drug.get("name", "")),
+                "smiles": smiles,
+                "source": str(drug.get("source", "")),
+                "confidence": confidence_value,
+                "primary_cyp": cyp,
+                "all_cyps": [str(v) for v in list(drug.get("all_cyps", []))],
+                "site_atoms": [int(v) for v in site_atoms],
+                "auxiliary_site_only": bool(drug.get("auxiliary_site_only", False)),
+                "site_source": str(drug.get("site_source", "")),
+            },
         }
 
     def _get_dummy(self, *, error_reason: str = "unknown"):
@@ -200,6 +212,7 @@ class CYPMetabolismDataset(Dataset):
             "confidence": "none",
             "confidence_weight": 0.0,
             "error_reason": str(error_reason),
+            "metadata": {},
         }
 
 
@@ -219,6 +232,8 @@ def collate_fn(batch: List[Dict[str, object]]) -> Optional[Dict[str, object]]:
     merged["node_confidence_weights"] = torch.tensor(node_weights, dtype=torch.float32).unsqueeze(-1)
     merged["graph_names"] = [str(b["name"]) for b in batch]
     merged["graph_confidences"] = [str(b["confidence"]) for b in batch]
+    merged["graph_metadata"] = [dict(b.get("metadata") or {}) for b in batch]
+    merged["graph_num_atoms"] = [int(g.num_atoms) for g in graphs]
     merged["num_graphs"] = len(batch)
     return merged
 
