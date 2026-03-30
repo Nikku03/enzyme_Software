@@ -209,18 +209,23 @@ class HomoscedasticArbiterLoss(nn.Module):
         )
         ana_morph_scale = morph_scale * (0.25 + 0.75 * ana_quality)
         bootstrap_target = torch.sigmoid(y_hat_fp_morph.detach())
-        raw_bootstrap = F.binary_cross_entropy_with_logits(
-            y_hat_ana_morph,
-            bootstrap_target,
-            reduction="none",
-        )
-        bootstrap_loss = (raw_bootstrap * morph_mask).sum() / valid_morph
         if self.bootstrap_weight > 0.0 and (not in_burn_in):
+            raw_bootstrap = F.binary_cross_entropy_with_logits(
+                y_hat_ana_morph,
+                bootstrap_target,
+                reduction="none",
+            )
+            bootstrap_loss = (raw_bootstrap * morph_mask).sum() / valid_morph
+            if not torch.isfinite(bootstrap_loss):
+                bootstrap_loss = y_hat_fp_som.new_zeros(())
             fp_certainty = (
                 ((bootstrap_target - 0.5).abs() * 2.0 * morph_mask).sum() / valid_morph
             ).clamp(0.0, 1.0)
             bootstrap_scale = morph_scale * fp_certainty * ana_quality * self.bootstrap_weight
+            if not torch.isfinite(bootstrap_scale):
+                bootstrap_scale = y_hat_fp_som.new_zeros(())
         else:
+            bootstrap_loss = y_hat_fp_som.new_zeros(())
             bootstrap_scale = y_hat_fp_som.new_zeros(())
         bootstrap_contrib = bootstrap_loss * bootstrap_scale
 
