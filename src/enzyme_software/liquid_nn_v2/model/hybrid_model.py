@@ -96,7 +96,7 @@ if TORCH_AVAILABLE:
                         nn.Linear(council_hidden, 1),
                     )
                     self.council_board_head = nn.Sequential(
-                        nn.Linear(board_context_dim + 3, arbiter_hidden),
+                        nn.Linear(board_context_dim + 6, arbiter_hidden),
                         nn.SiLU(),
                         nn.Dropout(arbiter_dropout),
                         nn.Linear(arbiter_hidden, 3),
@@ -150,6 +150,7 @@ if TORCH_AVAILABLE:
             precedent_brief = bridge.get("precedent_brief")
             if precedent_brief is None:
                 precedent_brief = atom_features.new_zeros((rows, AuditedEpisodeLogbook.brief_dim))
+            vote_scale = float(getattr(self.config, "nexus_vote_logit_scale", 2.0))
             atom_features_b = torch.tanh(atom_features)
             # Keep the LNN encoder live, but stop the main site loss from backpropagating
             # through the heavier wave/analogical sidecar. Those modules still learn via
@@ -170,7 +171,7 @@ if TORCH_AVAILABLE:
             steric_b = torch.tanh(steric)
             xtb_b = torch.tanh(xtb)
             wave_field_b = torch.tanh(wave_field["atom_field_features"].detach())
-            lnn_vote = self.lnn_vote_head(
+            lnn_vote_raw = self.lnn_vote_head(
                 torch.cat(
                     [
                         atom_features_b,
@@ -179,9 +180,10 @@ if TORCH_AVAILABLE:
                     dim=-1,
                 )
             )
+            lnn_vote = vote_scale * torch.tanh(lnn_vote_raw)
             lnn_conf = torch.sigmoid(self.lnn_conf_head(atom_features_b))
             wave_site_bias_b = torch.tanh(bridge["wave_site_bias"].detach())
-            wave_vote = self.wave_vote_head(
+            wave_vote_raw = self.wave_vote_head(
                 torch.cat(
                     [
                         wave_field_b,
@@ -191,6 +193,7 @@ if TORCH_AVAILABLE:
                     dim=-1,
                 )
             )
+            wave_vote = vote_scale * torch.tanh(wave_vote_raw)
             wave_conf = torch.sigmoid(
                 self.wave_conf_head(
                     torch.cat(
@@ -208,7 +211,7 @@ if TORCH_AVAILABLE:
             analogical_site_prior = bridge["analogical_site_prior"].detach()
             confidence_b = confidence.detach()
             analogical_cyp_context_b = analogical_cyp_context.detach()
-            analogical_vote = self.analogical_vote_head(
+            analogical_vote_raw = self.analogical_vote_head(
                 torch.cat(
                     [
                         analogical_site_prior,
@@ -220,6 +223,7 @@ if TORCH_AVAILABLE:
                     dim=-1,
                 )
             )
+            analogical_vote = vote_scale * torch.tanh(analogical_vote_raw)
             analogical_conf = torch.sigmoid(
                 self.analogical_conf_head(
                     torch.cat(
@@ -256,8 +260,11 @@ if TORCH_AVAILABLE:
             )
             council_stream_meta = torch.cat(
                 [
+                    lnn_vote,
                     lnn_conf,
+                    wave_vote,
                     wave_conf,
+                    analogical_vote,
                     analogical_conf,
                 ],
                 dim=-1,

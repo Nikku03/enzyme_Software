@@ -109,11 +109,13 @@ class ModelConfig:
     use_nexus_site_arbiter: bool = True
     nexus_site_arbiter_hidden_dim: int = 128
     nexus_site_arbiter_dropout: float = 0.10
-    nexus_lnn_vote_aux_weight: float = 0.00
-    nexus_wave_vote_aux_weight: float = 0.00
-    nexus_analogical_vote_aux_weight: float = 0.00
+    nexus_lnn_vote_aux_weight: float = 0.01
+    nexus_wave_vote_aux_weight: float = 0.04
+    nexus_analogical_vote_aux_weight: float = 0.04
     nexus_wave_vote_consistency_weight: float = 0.00
     nexus_analogical_vote_consistency_weight: float = 0.00
+    nexus_board_entropy_weight: float = 0.01
+    nexus_vote_logit_scale: float = 2.0
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
     cyp_names: Tuple[str, ...] = tuple(MAJOR_CYP_CLASSES)
@@ -193,6 +195,8 @@ class ModelConfig:
         self.nexus_analogical_vote_aux_weight = max(0.0, float(self.nexus_analogical_vote_aux_weight))
         self.nexus_wave_vote_consistency_weight = max(0.0, float(self.nexus_wave_vote_consistency_weight))
         self.nexus_analogical_vote_consistency_weight = max(0.0, float(self.nexus_analogical_vote_consistency_weight))
+        self.nexus_board_entropy_weight = max(0.0, float(self.nexus_board_entropy_weight))
+        self.nexus_vote_logit_scale = max(0.1, float(self.nexus_vote_logit_scale))
 
     @property
     def num_cyp_classes(self) -> int:

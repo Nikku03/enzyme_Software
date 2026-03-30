@@ -312,6 +312,14 @@ if TORCH_AVAILABLE:
                     loss = loss + (weight * cons_loss)
                     stats[f"nexus_{name}_vote_consistency_loss"] = float(cons_loss.detach().item())
                     stats[f"nexus_{name}_vote_consistency_weight"] = float(weight)
+                board_weights = vote_heads.get("board_weights")
+                board_entropy_weight = float(getattr(model_config, "nexus_board_entropy_weight", 0.0))
+                if board_weights is not None and board_entropy_weight > 0.0:
+                    probs = board_weights.clamp_min(1.0e-6)
+                    uniform_kl = (probs * (torch.log(probs) - float(np.log(1.0 / probs.size(-1))))).sum(dim=-1).mean()
+                    loss = loss + (board_entropy_weight * uniform_kl)
+                    stats["nexus_board_uniform_kl"] = float(uniform_kl.detach().item())
+                    stats["nexus_board_entropy_weight"] = float(board_entropy_weight)
             stats.update(self._collect_output_stats(outputs))
             weighted_loss = self._apply_confidence_weights(loss, batch)
             if weighted_loss is not loss:
