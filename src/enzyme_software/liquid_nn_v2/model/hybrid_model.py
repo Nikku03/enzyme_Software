@@ -43,7 +43,7 @@ if TORCH_AVAILABLE:
                     torch.logit(torch.tensor(float(getattr(self.config, "nexus_analogical_cyp_init", 0.12))))
                 )
                 if bool(getattr(self.config, "use_nexus_site_arbiter", True)):
-                    arbiter_in = atom_dim + 16 + graph_dim + num_cyp + 3 + 2 + num_cyp + steric_dim + xtb_dim + 10
+                    arbiter_in = atom_dim + 16 + graph_dim + num_cyp + 3 + 2 + num_cyp + steric_dim + xtb_dim + 10 + 1 + 1 + 5
                     arbiter_hidden = int(getattr(self.config, "nexus_site_arbiter_hidden_dim", 128))
                     arbiter_dropout = float(getattr(self.config, "nexus_site_arbiter_dropout", 0.10))
                     self.site_arbiter_head = nn.Sequential(
@@ -112,6 +112,9 @@ if TORCH_AVAILABLE:
             steric_b = torch.tanh(steric)
             xtb_b = torch.tanh(xtb)
             wave_field_b = torch.tanh(wave_field["atom_field_features"].detach())
+            wave_site_bias_b = torch.tanh(bridge["wave_site_bias"].detach())
+            analogical_site_bias_b = torch.tanh(bridge["analogical_site_bias"].detach())
+            continuous_reasoning_b = torch.tanh(bridge["continuous_reasoning_features"].detach())
             analogical_site_prior = bridge["analogical_site_prior"].detach()
             confidence_b = confidence.detach()
             analogical_cyp_context_b = analogical_cyp_context.detach()
@@ -128,6 +131,9 @@ if TORCH_AVAILABLE:
                     steric_b,
                     xtb_b,
                     wave_field_b,
+                    wave_site_bias_b,
+                    analogical_site_bias_b,
+                    continuous_reasoning_b,
                 ],
                 dim=-1,
             )

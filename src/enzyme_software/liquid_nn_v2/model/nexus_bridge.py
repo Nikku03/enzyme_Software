@@ -6,6 +6,7 @@ from enzyme_software.liquid_nn_v2._compat import F, TORCH_AVAILABLE, nn, require
 from enzyme_software.liquid_nn_v2.model.liquid_branch import scatter_mean
 from enzyme_software.liquid_nn_v2.model.wave_field import WholeMoleculeWaveField
 from nexus.reasoning.metric_learner import HGNNProjection
+from nexus.reasoning_wave.analogical_fusion import NexusDualDecoder, PGWCrossAttention
 from nexus.reasoning_wave.metric_learner import WaveQuantumDistillationHead, quantum_distillation_loss
 
 
@@ -34,6 +35,7 @@ if TORCH_AVAILABLE:
             self.register_buffer("graph", torch.zeros(self.capacity, self.graph_dim))
             self.register_buffer("site", torch.zeros(self.capacity, 1))
             self.register_buffer("cyp", torch.zeros(self.capacity, self.num_cyp_classes))
+            self.register_buffer("multivector", torch.zeros(self.capacity, 16))
             self.register_buffer("valid", torch.zeros(self.capacity, dtype=torch.bool))
             self.register_buffer("ptr", torch.zeros((), dtype=torch.long))
 
@@ -46,6 +48,7 @@ if TORCH_AVAILABLE:
             self.graph.zero_()
             self.site.zero_()
             self.cyp.zero_()
+            self.multivector.zero_()
             self.valid.zero_()
             self.ptr.zero_()
 
@@ -57,6 +60,7 @@ if TORCH_AVAILABLE:
             mem_graph = self.graph[:size]
             mem_site = self.site[:size]
             mem_cyp = self.cyp[:size]
+            mem_mv = self.multivector[:size]
             q_keys = F.normalize(query_keys.float(), p=2, dim=-1)
             q_graph = F.normalize(query_graph.float(), p=2, dim=-1)
             k_keys = F.normalize(mem_keys.float(), p=2, dim=-1)
@@ -75,6 +79,8 @@ if TORCH_AVAILABLE:
                 "cyp_prior": cyp_prior,
                 "confidence": confidence,
                 "top_scores": top_scores,
+                "top_weights": weights,
+                "retrieved_multivectors": mem_mv[top_idx],
             }
 
         @torch.no_grad()
@@ -83,6 +89,7 @@ if TORCH_AVAILABLE:
             *,
             atom_keys: torch.Tensor,
             atom_graph: torch.Tensor,
+            atom_multivectors: torch.Tensor,
             site_labels: torch.Tensor,
             cyp_probs: torch.Tensor,
             supervision_mask: Optional[torch.Tensor] = None,
@@ -96,6 +103,7 @@ if TORCH_AVAILABLE:
                 return
             keys = atom_keys[mask].detach()
             graph = atom_graph[mask].detach()
+            multivector = atom_multivectors[mask].detach()
             site = site_labels[mask].detach().view(-1, 1)
             cyp = cyp_probs[mask].detach()
             count = int(keys.size(0))
@@ -103,6 +111,7 @@ if TORCH_AVAILABLE:
             if count >= self.capacity:
                 keys = keys[-self.capacity :]
                 graph = graph[-self.capacity :]
+                multivector = multivector[-self.capacity :]
                 site = site[-self.capacity :]
                 cyp = cyp[-self.capacity :]
                 count = self.capacity
@@ -112,6 +121,7 @@ if TORCH_AVAILABLE:
                 sl = slice(ptr, end)
                 self.keys[sl] = keys
                 self.graph[sl] = graph
+                self.multivector[sl] = multivector
                 self.site[sl] = site
                 self.cyp[sl] = cyp
                 self.valid[sl] = True
@@ -120,11 +130,13 @@ if TORCH_AVAILABLE:
                 second = count - first
                 self.keys[ptr:] = keys[:first]
                 self.graph[ptr:] = graph[:first]
+                self.multivector[ptr:] = multivector[:first]
                 self.site[ptr:] = site[:first]
                 self.cyp[ptr:] = cyp[:first]
                 self.valid[ptr:] = True
                 self.keys[:second] = keys[first:]
                 self.graph[:second] = graph[first:]
+                self.multivector[:second] = multivector[first:]
                 self.site[:second] = site[first:]
                 self.cyp[:second] = cyp[first:]
                 self.valid[:second] = True
@@ -190,6 +202,13 @@ if TORCH_AVAILABLE:
                 nn.SiLU(),
                 nn.Linear(hidden, key_dim),
             )
+            self.continuous_cross_attention = PGWCrossAttention(hidden_dim=hidden)
+            self.continuous_reason_proj = nn.Sequential(
+                nn.Linear(hidden, hidden),
+                nn.SiLU(),
+                nn.Linear(hidden, 16),
+            )
+            self.continuous_dual_decoder = NexusDualDecoder(hidden_dim=max(16, hidden // 2))
             self.analogical_site_head = nn.Sequential(
                 nn.Linear(16 + 1 + self.num_cyp_classes + 1, hidden),
                 nn.SiLU(),
@@ -207,6 +226,52 @@ if TORCH_AVAILABLE:
                 capacity=memory_capacity,
                 topk=memory_topk,
             )
+
+        def _continuous_reasoning(
+            self,
+            *,
+            query_multivectors: torch.Tensor,
+            retrieval: Optional[Dict[str, torch.Tensor]],
+        ) -> Dict[str, torch.Tensor]:
+            rows = int(query_multivectors.size(0))
+            device = query_multivectors.device
+            dtype = query_multivectors.dtype
+            zero_bias = torch.zeros((rows, 1), device=device, dtype=dtype)
+            zero_features = torch.zeros((rows, 5), device=device, dtype=dtype)
+            if retrieval is None:
+                return {
+                    "site_bias": zero_bias,
+                    "features": zero_features,
+                }
+
+            retrieved_mv = retrieval["retrieved_multivectors"].to(device=device, dtype=dtype)
+            top_weights = retrieval["top_weights"].to(device=device, dtype=dtype)
+            top_scores = retrieval["top_scores"].to(device=device, dtype=dtype)
+            q_fp = query_multivectors.unsqueeze(1)
+            pi_star = top_weights.unsqueeze(1)
+            context = self.continuous_cross_attention(q_fp, retrieved_mv, pi_star).squeeze(1)
+            reason_mv = self.continuous_reason_proj(context)
+            y_fp_som, _y_fp_morph, y_ana_som, _y_ana_morph = self.continuous_dual_decoder(query_multivectors, reason_mv)
+            support_mean = top_scores.mean(dim=-1, keepdim=True)
+            if int(top_scores.size(-1)) > 1:
+                support_margin = (top_scores[:, :1] - top_scores[:, 1:2]).clamp_min(0.0)
+            else:
+                support_margin = top_scores[:, :1]
+            context_norm = context.norm(dim=-1, keepdim=True) / max(1.0, float(context.size(-1)) ** 0.5)
+            reason_features = torch.cat(
+                [
+                    y_ana_som.unsqueeze(-1),
+                    y_fp_som.unsqueeze(-1),
+                    support_mean,
+                    support_margin,
+                    context_norm,
+                ],
+                dim=-1,
+            )
+            return {
+                "site_bias": y_ana_som.unsqueeze(-1),
+                "features": reason_features,
+            }
 
         @torch.no_grad()
         def clear_memory(self) -> None:
@@ -408,16 +473,19 @@ if TORCH_AVAILABLE:
                 analogical_site_bias = multivectors.new_zeros((multivectors.size(0), 1))
                 analogical_cyp_bias = cyp_logits.new_zeros(cyp_logits.shape)
                 cyp_prior_by_mol = F.softmax(cyp_logits.detach(), dim=-1)
+                continuous_reasoning = self._continuous_reasoning(query_multivectors=multivectors, retrieval=None)
             else:
                 site_prior = retrieval["site_prior"]
                 cyp_prior = retrieval["cyp_prior"]
                 confidence = retrieval["confidence"]
+                continuous_reasoning = self._continuous_reasoning(query_multivectors=multivectors, retrieval=retrieval)
                 analogical_site_input = torch.cat([multivectors, site_prior, cyp_prior, confidence], dim=-1)
-                analogical_site_bias = self.analogical_site_head(analogical_site_input)
+                analogical_site_bias = self.analogical_site_head(analogical_site_input) + 0.25 * continuous_reasoning["site_bias"]
                 num_molecules = int(cyp_logits.size(0))
                 cyp_prior_by_mol = scatter_mean(cyp_prior, batch_index, num_molecules)
                 graph_conf = scatter_mean(confidence, batch_index, num_molecules)
                 analogical_cyp_bias = self.analogical_cyp_head(torch.cat([graph_embeddings, cyp_prior_by_mol, graph_conf], dim=-1))
+                site_prior = 0.5 * site_prior + 0.5 * torch.sigmoid(continuous_reasoning["site_bias"])
             wave_aux_loss, wave_metrics = self._wave_aux_loss(
                 wave_preds=wave_preds,
                 xtb_atom_features=xtb_atom_features,
@@ -438,6 +506,7 @@ if TORCH_AVAILABLE:
                 self.memory.update(
                     atom_keys=atom_keys,
                     atom_graph=per_atom_graph,
+                    atom_multivectors=multivectors,
                     site_labels=site_labels.float().view(-1, 1),
                     cyp_probs=cyp_probs_atom,
                     supervision_mask=site_supervision_mask,
@@ -451,6 +520,7 @@ if TORCH_AVAILABLE:
                 "wave_fukui_mean": float(wave_preds["predicted_fukui"].detach().mean().item()) if wave_preds["predicted_fukui"].numel() else 0.0,
                 "wave_field_density_mean": float(wave_field["global_density"].detach().mean().item()) if wave_field["global_density"].numel() else 0.0,
                 "wave_field_gap_proxy_mean": float(wave_field["global_gap_proxy"].detach().mean().item()) if wave_field["global_gap_proxy"].numel() else 0.0,
+                "continuous_reasoning_mean": float(continuous_reasoning["site_bias"].detach().mean().item()) if continuous_reasoning["site_bias"].numel() else 0.0,
             }
             return {
                 "atom_multivectors": multivectors,
@@ -463,6 +533,7 @@ if TORCH_AVAILABLE:
                 "analogical_confidence": confidence,
                 "analogical_site_bias": analogical_site_bias,
                 "analogical_cyp_bias": analogical_cyp_bias,
+                "continuous_reasoning_features": continuous_reasoning["features"],
                 "losses": {
                     "total": total_aux_loss,
                     "wave": wave_aux_loss,
@@ -494,6 +565,7 @@ if TORCH_AVAILABLE:
             self.memory.update(
                 atom_keys=atom_keys,
                 atom_graph=per_atom_graph,
+                atom_multivectors=multivectors,
                 site_labels=site_labels.float().view(-1, 1),
                 cyp_probs=cyp_probs_atom,
                 supervision_mask=site_supervision_mask,
