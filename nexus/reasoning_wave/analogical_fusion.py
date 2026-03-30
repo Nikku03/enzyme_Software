@@ -47,6 +47,16 @@ class _WaveNodeProjection(nn.Module):
         return self.fuse(torch.cat([scalar, vector, bivector, trivector, pseudo], dim=-1))
 
 
+def _canonicalize_pga16(x: torch.Tensor) -> torch.Tensor:
+    mv = torch.as_tensor(x, dtype=torch.float32, device=x.device)
+    if mv.size(-1) == 16:
+        return mv
+    out = mv.new_zeros(mv.shape[:-1] + (16,))
+    take = min(int(mv.size(-1)), 16)
+    out[..., :take] = mv[..., :take]
+    return out
+
+
 class PGWCrossAttention(nn.Module):
     """
     Decoupled wave-native cross attention.
@@ -79,7 +89,7 @@ class PGWCrossAttention(nn.Module):
         self.k_spatial = nn.Linear(self.spatial_dim, self.hidden_dim)
         self.q_wave = nn.Linear(self.wave_dim, self.hidden_dim)
         self.k_wave = nn.Linear(self.wave_dim, self.hidden_dim)
-        self.v_proj = nn.LazyLinear(self.hidden_dim)
+        self.v_proj = nn.Linear(16, self.hidden_dim)
         self.out_proj = nn.Linear(self.hidden_dim, self.hidden_dim)
         self.wave_blend = nn.Parameter(torch.tensor(0.5, dtype=torch.float32))
 
@@ -106,6 +116,8 @@ class PGWCrossAttention(nn.Module):
         v_ret: torch.Tensor,
         pi_star: torch.Tensor,
     ) -> torch.Tensor:
+        q_fp = _canonicalize_pga16(q_fp)
+        v_ret = _canonicalize_pga16(v_ret)
         batch = int(q_fp.size(0))
         q_len = int(q_fp.size(1))
         k_len = int(v_ret.size(1))
@@ -148,25 +160,25 @@ class NexusDualDecoder(nn.Module):
         self.fp_elec_proj = _WaveNodeProjection(hidden_dim=hidden_dim)
         self.ana_struct_proj = _WaveNodeProjection(hidden_dim=hidden_dim)
         self.ana_elec_proj = _WaveNodeProjection(hidden_dim=hidden_dim)
-        self.fp_orient_proj = nn.LazyLinear(3)
-        self.ana_orient_proj = nn.LazyLinear(3)
+        self.fp_orient_proj = nn.Linear(16, 3)
+        self.ana_orient_proj = nn.Linear(16, 3)
 
         self.struct_gate_proj = nn.Sequential(
-            nn.LazyLinear(hidden_dim),
+            nn.Linear(hidden_dim * 3, hidden_dim),
             nn.SiLU(),
             nn.Linear(hidden_dim, hidden_dim),
         )
         self.elec_gate_proj = nn.Sequential(
-            nn.LazyLinear(hidden_dim),
+            nn.Linear(hidden_dim * 3, hidden_dim),
             nn.SiLU(),
             nn.Linear(hidden_dim, hidden_dim),
         )
         self.fp_context_proj = nn.Sequential(
-            nn.LazyLinear(hidden_dim),
+            nn.Linear(hidden_dim * 3 + 4, hidden_dim),
             nn.SiLU(),
         )
         self.ana_context_proj = nn.Sequential(
-            nn.LazyLinear(hidden_dim),
+            nn.Linear(hidden_dim * 4 + 8, hidden_dim),
             nn.SiLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.SiLU(),
@@ -182,6 +194,8 @@ class NexusDualDecoder(nn.Module):
         q_fp: torch.Tensor,
         q_ana: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        q_fp = _canonicalize_pga16(q_fp)
+        q_ana = _canonicalize_pga16(q_ana)
         fp_struct = self.fp_struct_proj(q_fp)
         fp_elec = self.fp_elec_proj(q_fp)
         ana_struct = self.ana_struct_proj(q_ana)
