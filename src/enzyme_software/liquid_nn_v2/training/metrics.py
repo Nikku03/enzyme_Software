@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import io
 from typing import Dict, Iterable, List
 
 import numpy as np
@@ -9,6 +11,15 @@ def _to_numpy(value):
     if hasattr(value, "detach"):
         return value.detach().cpu().numpy()
     return np.asarray(value)
+
+
+def _safe_binary_auc(labels, scores) -> float:
+    try:
+        with contextlib.redirect_stderr(io.StringIO()):
+            from sklearn.metrics import roc_auc_score
+        return float(roc_auc_score(labels, scores))
+    except Exception:
+        return 0.5
 
 
 def compute_topk_accuracy(scores, labels, batch, k: int = 1, supervision_mask=None) -> float:
@@ -78,11 +89,7 @@ def compute_site_metrics_v2(scores, labels, batch, threshold: float = 0.5, super
     precision = tp / (tp + fp + 1e-8)
     recall = tp / (tp + fn + 1e-8)
     f1 = 2.0 * precision * recall / (precision + recall + 1e-8)
-    try:
-        from sklearn.metrics import roc_auc_score
-        auc = float(roc_auc_score(labels_eval, scores_eval))
-    except Exception:
-        auc = 0.5
+    auc = _safe_binary_auc(labels_eval, scores_eval)
     top1_acc = compute_topk_accuracy(scores_flat, labels_flat, batch_flat, k=1, supervision_mask=mask_flat)
     top2_acc = compute_topk_accuracy(scores_flat, labels_flat, batch_flat, k=2, supervision_mask=mask_flat)
     top3_acc = compute_topk_accuracy(scores_flat, labels_flat, batch_flat, k=3, supervision_mask=mask_flat)
@@ -117,11 +124,7 @@ def compute_site_metrics(predictions, labels, batch=None, threshold: float = 0.5
         precision = tp / (tp + fp + 1e-8)
         recall = tp / (tp + fn + 1e-8)
         f1 = 2.0 * precision * recall / (precision + recall + 1e-8)
-        try:
-            from sklearn.metrics import roc_auc_score
-            auc = float(roc_auc_score(refs, preds))
-        except Exception:
-            auc = 0.5
+        auc = _safe_binary_auc(refs, preds)
         return {
             "precision": precision,
             "recall": recall,

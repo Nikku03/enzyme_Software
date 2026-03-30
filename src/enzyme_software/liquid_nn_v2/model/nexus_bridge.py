@@ -4,6 +4,7 @@ from typing import Dict, Optional
 
 from enzyme_software.liquid_nn_v2._compat import F, TORCH_AVAILABLE, nn, require_torch, torch
 from enzyme_software.liquid_nn_v2.model.liquid_branch import scatter_mean
+from enzyme_software.liquid_nn_v2.model.wave_field import WholeMoleculeWaveField
 from nexus.reasoning.metric_learner import HGNNProjection
 from nexus.reasoning_wave.metric_learner import WaveQuantumDistillationHead, quantum_distillation_loss
 
@@ -171,8 +172,9 @@ if TORCH_AVAILABLE:
             self.scalar_proj = nn.Linear(self.xtb_feature_dim or self.atom_feature_dim, 1)
             self.pseudo_proj = nn.Linear(self.xtb_feature_dim or self.atom_feature_dim, 1)
             self.wave_head = WaveQuantumDistillationHead(hidden_dim=hidden, dropout=0.05)
+            self.wave_field = WholeMoleculeWaveField(multivector_dim=16, hidden_dim=hidden)
             self.wave_site_head = nn.Sequential(
-                nn.Linear(16 + 2 + 3, hidden),
+                nn.Linear(16 + 2 + 3 + WholeMoleculeWaveField.field_feature_dim + 2, hidden),
                 nn.SiLU(),
                 nn.Linear(hidden, 1),
             )
@@ -292,6 +294,9 @@ if TORCH_AVAILABLE:
                 zero = wave_preds["predicted_charges"].sum() * 0.0
                 return zero, {"wave_aux_loss": 0.0, "wave_charge_loss": 0.0, "wave_fukui_loss": 0.0, "wave_gap_loss": 0.0}
             xtb = xtb_atom_features.float()
+            if float(xtb.detach().abs().sum().item()) < 1.0e-8:
+                zero = wave_preds["predicted_charges"].sum() * 0.0
+                return zero, {"wave_aux_loss": 0.0, "wave_charge_loss": 0.0, "wave_fukui_loss": 0.0, "wave_gap_loss": 0.0}
             target_charge = xtb[:, 0]
             target_fukui = (0.45 * xtb[:, 1].abs() + 0.35 * xtb[:, 3].clamp_min(0.0) + 0.20 * xtb[:, 5].clamp_min(0.0))
             gap_atom = 0.5 * xtb[:, 4].clamp_min(0.0) + 0.5 * xtb[:, 5].clamp_min(0.0)
@@ -378,12 +383,16 @@ if TORCH_AVAILABLE:
             atom_features = atom_features.float()
             multivectors, coords = self._build_multivectors(atom_features, atom_3d_features, xtb_atom_features)
             wave_preds = self._wave_predictions(multivectors, coords, batch_index)
+            wave_field = self.wave_field(multivectors, coords, batch_index)
             wave_bias_input = torch.cat(
                 [
                     multivectors,
                     wave_preds["predicted_charges"].unsqueeze(-1),
                     wave_preds["predicted_fukui"].unsqueeze(-1),
                     coords,
+                    wave_field["atom_field_features"],
+                    wave_field["global_density"].unsqueeze(-1),
+                    wave_field["global_gap_proxy"][batch_index].unsqueeze(-1),
                 ],
                 dim=-1,
             )
@@ -440,11 +449,14 @@ if TORCH_AVAILABLE:
                 "analogical_confidence_mean": float(confidence.detach().mean().item()) if confidence.numel() else 0.0,
                 "wave_charge_mean": float(wave_preds["predicted_charges"].detach().mean().item()) if wave_preds["predicted_charges"].numel() else 0.0,
                 "wave_fukui_mean": float(wave_preds["predicted_fukui"].detach().mean().item()) if wave_preds["predicted_fukui"].numel() else 0.0,
+                "wave_field_density_mean": float(wave_field["global_density"].detach().mean().item()) if wave_field["global_density"].numel() else 0.0,
+                "wave_field_gap_proxy_mean": float(wave_field["global_gap_proxy"].detach().mean().item()) if wave_field["global_gap_proxy"].numel() else 0.0,
             }
             return {
                 "atom_multivectors": multivectors,
                 "graph_embeddings": graph_embeddings,
                 "wave_predictions": wave_preds,
+                "wave_field": wave_field,
                 "wave_site_bias": wave_site_bias,
                 "analogical_site_prior": site_prior,
                 "analogical_cyp_prior": cyp_prior_by_mol,

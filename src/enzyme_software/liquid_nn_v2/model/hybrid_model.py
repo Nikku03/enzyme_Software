@@ -43,7 +43,7 @@ if TORCH_AVAILABLE:
                     torch.logit(torch.tensor(float(getattr(self.config, "nexus_analogical_cyp_init", 0.12))))
                 )
                 if bool(getattr(self.config, "use_nexus_site_arbiter", True)):
-                    arbiter_in = atom_dim + 16 + graph_dim + num_cyp + 3 + 2 + num_cyp + steric_dim + xtb_dim
+                    arbiter_in = atom_dim + 16 + graph_dim + num_cyp + 3 + 2 + num_cyp + steric_dim + xtb_dim + 10
                     arbiter_hidden = int(getattr(self.config, "nexus_site_arbiter_hidden_dim", 128))
                     arbiter_dropout = float(getattr(self.config, "nexus_site_arbiter_dropout", 0.10))
                     self.site_arbiter_head = nn.Sequential(
@@ -91,6 +91,13 @@ if TORCH_AVAILABLE:
             analogical_cyp_context = bridge["analogical_cyp_prior"][batch_index]
             confidence = bridge["analogical_confidence"]
             wave_preds = bridge["wave_predictions"]
+            wave_field = bridge["wave_field"]
+            atom_features_b = torch.tanh(atom_features)
+            # Keep the LNN encoder live, but stop the main site loss from backpropagating
+            # through the heavier wave/analogical sidecar. Those modules still learn via
+            # their own auxiliary losses.
+            multivectors_b = torch.tanh(bridge["atom_multivectors"].detach())
+            graph_embeddings_b = torch.tanh(graph_embeddings.detach())
             wave_scalar = torch.cat(
                 [
                     wave_preds["predicted_charges"].unsqueeze(-1),
@@ -99,24 +106,35 @@ if TORCH_AVAILABLE:
                 ],
                 dim=-1,
             )
+            wave_scalar_b = torch.tanh(wave_scalar.detach())
             steric = self._optional_feature(batch.get("atom_3d_features"), rows, steric_dim, device=device, dtype=dtype)
             xtb = self._optional_feature(batch.get("xtb_atom_features"), rows, xtb_dim, device=device, dtype=dtype)
+            steric_b = torch.tanh(steric)
+            xtb_b = torch.tanh(xtb)
+            wave_field_b = torch.tanh(wave_field["atom_field_features"].detach())
+            analogical_site_prior = bridge["analogical_site_prior"].detach()
+            confidence_b = confidence.detach()
+            analogical_cyp_context_b = analogical_cyp_context.detach()
             arbiter_in = torch.cat(
                 [
-                    atom_features,
-                    bridge["atom_multivectors"],
-                    graph_embeddings,
+                    atom_features_b,
+                    multivectors_b,
+                    graph_embeddings_b,
                     base_cyp_context,
-                    wave_scalar,
-                    bridge["analogical_site_prior"],
-                    confidence,
-                    analogical_cyp_context,
-                    steric,
-                    xtb,
+                    wave_scalar_b,
+                    analogical_site_prior,
+                    confidence_b,
+                    analogical_cyp_context_b,
+                    steric_b,
+                    xtb_b,
+                    wave_field_b,
                 ],
                 dim=-1,
             )
-            return self.site_arbiter_head(arbiter_in)
+            arbiter_in = torch.nan_to_num(arbiter_in, nan=0.0, posinf=4.0, neginf=-4.0)
+            site_logits = self.site_arbiter_head(arbiter_in)
+            site_logits = torch.nan_to_num(site_logits, nan=0.0, posinf=20.0, neginf=-20.0)
+            return site_logits.clamp(-20.0, 20.0)
 
         def _apply_nexus_bridge(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
             if self.nexus_bridge is None:
@@ -145,7 +163,8 @@ if TORCH_AVAILABLE:
             else:
                 site_logits = outputs["site_logits"]
                 site_mode = "base"
-            cyp_logits = outputs["cyp_logits"] + ana_cyp_weight * bridge["analogical_cyp_bias"]
+            cyp_logits = outputs["cyp_logits"] + ana_cyp_weight * bridge["analogical_cyp_bias"].detach()
+            cyp_logits = torch.nan_to_num(cyp_logits, nan=0.0, posinf=20.0, neginf=-20.0).clamp(-20.0, 20.0)
             diagnostics = dict(result.get("diagnostics") or {})
             diagnostics["nexus_bridge"] = {
                 **bridge["metrics"],
