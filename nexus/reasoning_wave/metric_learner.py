@@ -104,9 +104,9 @@ def quantum_distillation_loss(
     target_fukui: torch.Tensor,
     target_gap: torch.Tensor,
     atom_mask: Optional[torch.Tensor] = None,
-    charge_weight: float = 0.5,
-    fukui_weight: float = 1.0,
-    gap_weight: float = 0.1,
+    charge_weight: float = 0.35,
+    fukui_weight: float = 4.0,
+    gap_weight: float = 0.02,
     huber_beta: float = 0.25,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """
@@ -145,9 +145,20 @@ def quantum_distillation_loss(
 
     norm = mask.sum().clamp_min(1.0)
     charge_raw = F.smooth_l1_loss(pred_charge, tgt_charge, reduction="none", beta=huber_beta)
-    fukui_raw = F.smooth_l1_loss(pred_fukui, tgt_fukui, reduction="none", beta=huber_beta)
     charge_loss = (charge_raw * mask).sum() / norm
-    fukui_loss = (fukui_raw * mask).sum() / norm
+    fukui_raw = F.smooth_l1_loss(pred_fukui, tgt_fukui, reduction="none", beta=huber_beta)
+    fukui_raw_loss = (fukui_raw * mask).sum() / norm
+    tgt_fukui_pos = (tgt_fukui * mask).clamp_min(0.0)
+    tgt_fukui_mass = tgt_fukui_pos.sum(dim=-1, keepdim=True)
+    if bool((tgt_fukui_mass > 0.0).any().item()):
+        tgt_fukui_dist = tgt_fukui_pos / tgt_fukui_mass.clamp_min(1.0e-8)
+        pred_fukui_logprob = F.log_softmax(pred_fukui, dim=-1)
+        fukui_kl = F.kl_div(pred_fukui_logprob, tgt_fukui_dist, reduction="none").sum(dim=-1)
+        valid_rows = (tgt_fukui_mass.view(-1) > 0.0).to(dtype=torch.float32)
+        fukui_dist_loss = (fukui_kl * valid_rows).sum() / valid_rows.sum().clamp_min(1.0)
+        fukui_loss = 0.25 * fukui_raw_loss + 0.75 * fukui_dist_loss
+    else:
+        fukui_loss = fukui_raw_loss
     gap_loss = F.smooth_l1_loss(pred_gap.view(-1), tgt_gap.view(-1), reduction="mean", beta=huber_beta)
     total = (
         float(charge_weight) * charge_loss

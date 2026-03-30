@@ -606,7 +606,17 @@ class HyperbolicMemoryBank:
             used_keys.add(diversity_key)
         selected_scores = scores.index_select(0, torch.tensor(chosen_locals, dtype=torch.long, device=self.device))
         selected_indices = [candidate_indices[i] for i in chosen_locals]
-        diversity_score = float(len(used_keys) / max(len(selected_indices), 1))
+        unique_ratio = float(len(used_keys) / max(len(selected_indices), 1))
+        dominant_fraction = float(max(key_counts.values()) / max(len(candidate_indices), 1))
+        diversity_score = float(
+            min(
+                max(
+                    0.60 * unique_ratio + 0.40 * (1.0 - dominant_fraction),
+                    0.0,
+                ),
+                1.0,
+            )
+        )
         debug = {}
         if chosen_locals:
             best_local = chosen_locals[0]
@@ -652,6 +662,32 @@ class HyperbolicMemoryBank:
             return 0.0
         ramp_pos = epoch_idx - self.projected_retrieval_burn_in_epochs + 1
         return min(float(ramp_pos) / float(self.projected_retrieval_ramp_epochs), 1.0)
+
+    def _projected_shortlist_size(self, candidate_count: int) -> int:
+        return min(max(self.tanimoto_shortlist_k * 3, 48), int(candidate_count))
+
+    def _projected_similarity_from_distance(self, distances: torch.Tensor) -> torch.Tensor:
+        return torch.exp(-distances / 5.0).to(dtype=torch.float32)
+
+    def _retrieval_confidence_from_shortlist(
+        self,
+        blended_similarity: torch.Tensor,
+        shortlist_scores: torch.Tensor,
+        *,
+        best_local_index: int,
+    ) -> float:
+        best_local = int(best_local_index)
+        best_sim = float(blended_similarity[best_local].detach().item())
+        if blended_similarity.numel() > 1:
+            sorted_sim = torch.sort(blended_similarity.detach(), descending=True).values
+            second_sim = float(sorted_sim[1].item())
+        else:
+            second_sim = 0.0
+        margin = max(best_sim - second_sim, 0.0)
+        shortlist_prob = torch.softmax(shortlist_scores.detach(), dim=0)
+        top_prob = float(shortlist_prob[best_local].item()) if shortlist_prob.numel() > best_local else 0.0
+        confidence = 0.55 * best_sim + 0.25 * margin + 0.20 * top_prob
+        return float(min(max(confidence, 0.0), 1.0))
 
     def _mcs_transport(
         self,
@@ -897,7 +933,7 @@ class HyperbolicMemoryBank:
                     prepared_query.view(1, -1)
                 )
                 candidate_tanimoto = tanimoto_scores.index_select(0, candidate_indices)
-                shortlist_k = min(max(self.tanimoto_shortlist_k * 3, 48), int(candidate_indices.numel()))
+                shortlist_k = self._projected_shortlist_size(int(candidate_indices.numel()))
                 shortlist_seed_scores = self._shortlist_scores_from_tanimoto(
                     query_mol,
                     candidate_indices,
@@ -913,12 +949,13 @@ class HyperbolicMemoryBank:
                 top_tanimoto = candidate_tanimoto.index_select(0, top_local)
                 shortlist_embeddings = self.memory_embeddings.index_select(0, shortlist_indices)
                 distances = self._poincare_distance(q_embed_h, shortlist_embeddings).view(-1)
-                projected_similarity = torch.exp(-distances / 5.0).to(dtype=torch.float32)
+                projected_similarity = self._projected_similarity_from_distance(distances)
                 blended_similarity = (
                     projected_weight * projected_similarity
                     + (1.0 - projected_weight) * top_tanimoto.to(dtype=torch.float32)
                 )
                 shortlist_scores = blended_similarity / self.retrieval_mix_temperature
+                retrieval_candidate_count = int(shortlist_k)
                 mix_k = min(max(self.retrieval_mix_top_k, 3), shortlist_k)
                 mix_candidate_indices, mix_logits, retrieval_diversity_score, retrieval_debug = self._select_diverse_candidates(
                     query_mol,
@@ -940,9 +977,10 @@ class HyperbolicMemoryBank:
                 best_rank_local = shortlist_candidate_indices.index(best_idx)
                 retrieval_best_tanimoto = float(top_tanimoto[best_rank_local].item())
                 retrieval_best_projected_similarity = float(projected_similarity[best_rank_local].item())
-                confidence = float(
-                    projected_weight * projected_similarity[best_rank_local].item()
-                    + (1.0 - projected_weight) * top_tanimoto[best_rank_local].item()
+                confidence = self._retrieval_confidence_from_shortlist(
+                    blended_similarity,
+                    shortlist_scores,
+                    best_local_index=best_rank_local,
                 )
                 retrieval_mechanism_overlap = self._candidate_mechanism_overlap(query_morphism_prior, best_idx)
                 retrieval_best_mechanism_bonus = float(retrieval_debug.get("best_mechanism_bonus", 0.0))

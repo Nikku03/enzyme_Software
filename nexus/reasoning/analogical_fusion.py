@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 
 DEFAULT_CYP3A4_MORPHISM_ALPHA = torch.tensor(
-    [0.25, 0.40, 0.25, 0.75, 0.75],
+    [0.25, 0.40, 0.30, 0.92, 0.80],
     dtype=torch.float32,
 )
 
