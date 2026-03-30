@@ -51,6 +51,10 @@ def _resolve_device(name: str | None):
     return torch.device("cpu")
 
 
+def _env_flag(name: str, default: str = "0") -> bool:
+    return os.environ.get(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _load_drugs(path: Path) -> list[dict]:
     payload = json.loads(path.read_text())
     return list(payload.get("drugs", payload))
@@ -382,6 +386,8 @@ def main() -> None:
     # Step 2 appends FULL_XTB_FEATURE_DIM (8) instead of 6, so atom_input_dim = 140 + 8 = 148.
     _BASE_GRAPH_ATOM_DIM = 140
     full_xtb_atom_input_dim = _BASE_GRAPH_ATOM_DIM + FULL_XTB_FEATURE_DIM
+    live_wave_vote_inputs = _env_flag("HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS", "0")
+    live_analogical_vote_inputs = _env_flag("HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS", "0")
     base_config = ModelConfig.light_advanced(
         use_manual_engine_priors=manual_engine_enabled,
         use_3d_branch=True,
@@ -391,6 +397,8 @@ def main() -> None:
         return_intermediate_stats=True,
         manual_atom_feature_dim=manual_atom_feature_dim,
         atom_input_dim=full_xtb_atom_input_dim,
+        nexus_live_wave_vote_inputs=live_wave_vote_inputs,
+        nexus_live_analogical_vote_inputs=live_analogical_vote_inputs,
     )
     base_model = LiquidMetabolismNetV2(base_config)
     model = HybridLNNModel(base_model)
@@ -448,6 +456,11 @@ def main() -> None:
             f"frozen={'yes' if base_config.nexus_memory_frozen else 'no'}",
             flush=True,
         )
+    print(
+        f"Live sidecar vote inputs: wave={'yes' if live_wave_vote_inputs else 'no'} "
+        f"analogical={'yes' if live_analogical_vote_inputs else 'no'}",
+        flush=True,
+    )
 
     trainer = Trainer(
         model=model,

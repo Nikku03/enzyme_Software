@@ -110,6 +110,8 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
+        "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS": "0",
+        "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS": "0",
         "HYBRID_COLAB_SEED": "42",
     },
     "balanced": {
@@ -127,6 +129,8 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
+        "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS": "0",
+        "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS": "0",
         "HYBRID_COLAB_SEED": "42",
     },
     "full": {
@@ -144,6 +148,8 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
+        "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS": "0",
+        "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS": "0",
         "HYBRID_COLAB_SEED": "42",
     },
 }
@@ -262,6 +268,8 @@ def main() -> None:
     print(f"xtb_cache_dir={xtb_cache_dir}")
     print(f"warm_start={checkpoint}")
     print(f"disable_precedent_logbook={os.environ.get('HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK', '1')}")
+    print(f"live_wave_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS', '0')}")
+    print(f"live_analogical_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS', '0')}")
     print(f"TORCHDYNAMO_DISABLE={os.environ.get('TORCHDYNAMO_DISABLE', '')}")
     print(f"TORCH_COMPILE_DISABLE={os.environ.get('TORCH_COMPILE_DISABLE', '')}")
     print(f"HYBRID_FORCE_MANUAL_OPTIMIZER={os.environ.get('HYBRID_FORCE_MANUAL_OPTIMIZER', '')}")
