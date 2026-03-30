@@ -37,6 +37,8 @@ src/enzyme_software/liquid_nn_v2/features/cache/
 data/drugbank/
 *.sdf
 *.sdf.zip
+!3D structures.sdf
+!structures.sdf
 *.xml
 *.xml.zip
 *.csv.zip
