@@ -232,6 +232,28 @@ if TORCH_AVAILABLE:
             if params:
                 torch.nn.utils.clip_grad_norm_(params, self.config.max_grad_norm)
 
+        def _sanitize_trainable_parameters(self) -> int:
+            fixed = 0
+            for param in self._trainable_parameters():
+                if not bool(torch.isfinite(param).all()):
+                    param.data = torch.nan_to_num(param.data, nan=0.0, posinf=1.0, neginf=-1.0)
+                    param.data.clamp_(-20.0, 20.0)
+                    fixed += 1
+            if hasattr(self.loss_fn, "log_var_site") and not bool(torch.isfinite(self.loss_fn.log_var_site).all()):
+                self.loss_fn.log_var_site.data.zero_()
+                fixed += 1
+            if hasattr(self.loss_fn, "log_var_cyp") and not bool(torch.isfinite(self.loss_fn.log_var_cyp).all()):
+                self.loss_fn.log_var_cyp.data.zero_()
+                fixed += 1
+            return fixed
+
+        def _has_nonfinite_gradients(self) -> bool:
+            for param in self._trainable_parameters():
+                grad = param.grad
+                if grad is not None and not bool(torch.isfinite(grad).all()):
+                    return True
+            return False
+
         def _prepare_batch(self, batch_or_graphs):
             if isinstance(batch_or_graphs, dict):
                 return move_to_device(batch_or_graphs, self.device)
@@ -418,6 +440,7 @@ if TORCH_AVAILABLE:
         def train_epoch(self, graphs: Iterable) -> Dict[str, float]:
             self.model.train()
             batch = self._prepare_batch(graphs)
+            self._sanitize_trainable_parameters()
             outputs = self.model(batch)
             loss, stats = self.compute_loss(batch, outputs)
             self._run_finite_checks(outputs, stats)
@@ -425,6 +448,12 @@ if TORCH_AVAILABLE:
                 raise FloatingPointError(f"Non-finite loss detected in train_epoch: stats={stats}")
             self.optimizer.zero_grad()
             loss.backward()
+            if self._has_nonfinite_gradients():
+                self.optimizer.zero_grad(set_to_none=True)
+                fixed = self._sanitize_trainable_parameters()
+                raise FloatingPointError(
+                    f"Non-finite gradients detected in train_epoch; sanitized_params={fixed}"
+                )
             self._clip_gradients()
             self.optimizer.step()
             return stats
@@ -435,6 +464,7 @@ if TORCH_AVAILABLE:
             for batch_idx, raw_batch in enumerate(loader):
                 if raw_batch is None:
                     continue
+                self._sanitize_trainable_parameters()
                 batch = self._prepare_batch(raw_batch)
                 outputs = self.model(batch)
                 loss, stats = self.compute_loss(batch, outputs)
@@ -462,8 +492,18 @@ if TORCH_AVAILABLE:
                     )
                 self.optimizer.zero_grad()
                 loss.backward()
+                if self._has_nonfinite_gradients():
+                    self.optimizer.zero_grad(set_to_none=True)
+                    fixed = self._sanitize_trainable_parameters()
+                    print(
+                        f"Skipping batch {batch_idx} due to non-finite gradients "
+                        f"(sanitized_params={fixed}).",
+                        flush=True,
+                    )
+                    continue
                 self._clip_gradients()
                 self.optimizer.step()
+                self._sanitize_trainable_parameters()
                 history.append(stats)
             if not history:
                 raise RuntimeError(
