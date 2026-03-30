@@ -117,7 +117,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
         "HYBRID_COLAB_EPOCHS": "12",
         "HYBRID_COLAB_BATCH_SIZE": "16",
-        "HYBRID_COLAB_LR": "2e-4",
+        "HYBRID_COLAB_LR": "5e-5",
         "HYBRID_COLAB_WD": "1e-4",
         "HYBRID_COLAB_LIMIT": "0",
         "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",

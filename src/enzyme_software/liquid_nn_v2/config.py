@@ -116,6 +116,9 @@ class ModelConfig:
     nexus_analogical_vote_consistency_weight: float = 0.00
     nexus_board_entropy_weight: float = 0.01
     nexus_vote_logit_scale: float = 2.0
+    nexus_live_wave_vote_inputs: bool = True
+    nexus_live_analogical_vote_inputs: bool = True
+    nexus_analogical_cyp_aux_scale: float = 0.10
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
     cyp_names: Tuple[str, ...] = tuple(MAJOR_CYP_CLASSES)
@@ -197,6 +200,9 @@ class ModelConfig:
         self.nexus_analogical_vote_consistency_weight = max(0.0, float(self.nexus_analogical_vote_consistency_weight))
         self.nexus_board_entropy_weight = max(0.0, float(self.nexus_board_entropy_weight))
         self.nexus_vote_logit_scale = max(0.1, float(self.nexus_vote_logit_scale))
+        self.nexus_live_wave_vote_inputs = bool(self.nexus_live_wave_vote_inputs)
+        self.nexus_live_analogical_vote_inputs = bool(self.nexus_live_analogical_vote_inputs)
+        self.nexus_analogical_cyp_aux_scale = max(0.0, float(self.nexus_analogical_cyp_aux_scale))
 
     @property
     def num_cyp_classes(self) -> int:

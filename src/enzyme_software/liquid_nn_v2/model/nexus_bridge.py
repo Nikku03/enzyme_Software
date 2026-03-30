@@ -166,6 +166,7 @@ if TORCH_AVAILABLE:
             memory_topk: int = 32,
             wave_aux_weight: float = 0.10,
             analogical_aux_weight: float = 0.08,
+            analogical_cyp_aux_scale: float = 0.10,
         ) -> None:
             super().__init__()
             self.atom_feature_dim = int(atom_feature_dim)
@@ -174,6 +175,7 @@ if TORCH_AVAILABLE:
             self.xtb_feature_dim = int(max(0, xtb_feature_dim))
             self.wave_aux_weight = float(max(0.0, wave_aux_weight))
             self.analogical_aux_weight = float(max(0.0, analogical_aux_weight))
+            self.analogical_cyp_aux_scale = float(max(0.0, analogical_cyp_aux_scale))
             self.memory_frozen = False
             self.precedent_logbook = AuditedEpisodeLogbook(max_cases=max(4096, memory_capacity * 8), topk=max(8, min(32, memory_topk)))
             total_in = self.atom_feature_dim + self.steric_feature_dim + self.xtb_feature_dim
@@ -432,7 +434,8 @@ if TORCH_AVAILABLE:
                         torch.log(cyp_prior_by_mol[cyp_mask].clamp_min(1.0e-6)),
                         cyp_labels[cyp_mask].long(),
                     )
-            total = float(self.analogical_aux_weight) * (site_loss + 0.25 * cyp_loss)
+            cyp_scale = float(getattr(self, "analogical_cyp_aux_scale", 0.10))
+            total = float(self.analogical_aux_weight) * (site_loss + cyp_scale * cyp_loss)
             return total, {
                 "analogical_aux_loss": float(total.detach().item()),
                 "analogical_site_loss": float(site_loss.detach().item()),
