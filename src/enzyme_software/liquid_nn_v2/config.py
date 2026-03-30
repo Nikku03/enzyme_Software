@@ -106,6 +106,9 @@ class ModelConfig:
     nexus_wave_site_init: float = 0.18
     nexus_analogical_site_init: float = 0.20
     nexus_analogical_cyp_init: float = 0.12
+    use_nexus_site_arbiter: bool = True
+    nexus_site_arbiter_hidden_dim: int = 128
+    nexus_site_arbiter_dropout: float = 0.10
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
     cyp_names: Tuple[str, ...] = tuple(MAJOR_CYP_CLASSES)
@@ -178,6 +181,8 @@ class ModelConfig:
         self.nexus_wave_site_init = min(max(float(self.nexus_wave_site_init), 1.0e-3), 1.0 - 1.0e-3)
         self.nexus_analogical_site_init = min(max(float(self.nexus_analogical_site_init), 1.0e-3), 1.0 - 1.0e-3)
         self.nexus_analogical_cyp_init = min(max(float(self.nexus_analogical_cyp_init), 1.0e-3), 1.0 - 1.0e-3)
+        self.nexus_site_arbiter_hidden_dim = max(32, int(self.nexus_site_arbiter_hidden_dim))
+        self.nexus_site_arbiter_dropout = min(max(float(self.nexus_site_arbiter_dropout), 0.0), 0.5)
 
     @property
     def num_cyp_classes(self) -> int:

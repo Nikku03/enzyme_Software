@@ -18,29 +18,105 @@ if TORCH_AVAILABLE:
             prior_weight_init = min(max(float(prior_weight_init), 1.0e-3), 1.0 - 1.0e-3)
             self.prior_weight_logit = nn.Parameter(torch.logit(torch.tensor(prior_weight_init)))
             self.nexus_bridge = None
+            self.site_arbiter_head = None
+            self.site_arbiter_uses_bridge = False
             if bool(getattr(self.config, "use_nexus_bridge", True)):
+                atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
+                num_cyp = int(getattr(self.config, "num_cyp_classes", 9))
+                steric_dim = int(getattr(self.config, "steric_feature_dim", 8))
+                xtb_dim = 6
+                graph_dim = int(max(16, int(getattr(self.config, "nexus_graph_dim", 48))))
                 self.nexus_bridge = NexusHybridBridge(
-                    atom_feature_dim=int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128))),
-                    num_cyp_classes=int(getattr(self.config, "num_cyp_classes", 9)),
-                    steric_feature_dim=int(getattr(self.config, "steric_feature_dim", 8)),
-                    xtb_feature_dim=6,
+                    atom_feature_dim=atom_dim,
+                    num_cyp_classes=num_cyp,
+                    steric_feature_dim=steric_dim,
+                    xtb_feature_dim=xtb_dim,
                     wave_hidden_dim=int(getattr(self.config, "nexus_wave_hidden_dim", 64)),
-                    graph_dim=int(getattr(self.config, "nexus_graph_dim", 48)),
+                    graph_dim=graph_dim,
                     memory_capacity=int(getattr(self.config, "nexus_memory_capacity", 4096)),
                     memory_topk=int(getattr(self.config, "nexus_memory_topk", 32)),
                     wave_aux_weight=float(getattr(self.config, "nexus_wave_aux_weight", 0.10)),
                     analogical_aux_weight=float(getattr(self.config, "nexus_analogical_aux_weight", 0.08)),
                 )
                 self.nexus_bridge.set_memory_frozen(bool(getattr(self.config, "nexus_memory_frozen", False)))
-                self.wave_site_weight_logit = nn.Parameter(
-                    torch.logit(torch.tensor(float(getattr(self.config, "nexus_wave_site_init", 0.18))))
-                )
-                self.ana_site_weight_logit = nn.Parameter(
-                    torch.logit(torch.tensor(float(getattr(self.config, "nexus_analogical_site_init", 0.20))))
-                )
                 self.ana_cyp_weight_logit = nn.Parameter(
                     torch.logit(torch.tensor(float(getattr(self.config, "nexus_analogical_cyp_init", 0.12))))
                 )
+                if bool(getattr(self.config, "use_nexus_site_arbiter", True)):
+                    arbiter_in = atom_dim + 16 + graph_dim + num_cyp + 3 + 2 + num_cyp + steric_dim + xtb_dim
+                    arbiter_hidden = int(getattr(self.config, "nexus_site_arbiter_hidden_dim", 128))
+                    arbiter_dropout = float(getattr(self.config, "nexus_site_arbiter_dropout", 0.10))
+                    self.site_arbiter_head = nn.Sequential(
+                        nn.Linear(arbiter_in, arbiter_hidden),
+                        nn.SiLU(),
+                        nn.Dropout(arbiter_dropout),
+                        nn.Linear(arbiter_hidden, max(32, arbiter_hidden // 2)),
+                        nn.SiLU(),
+                        nn.Dropout(arbiter_dropout),
+                        nn.Linear(max(32, arbiter_hidden // 2), 1),
+                    )
+                    self.site_arbiter_uses_bridge = True
+
+        def _optional_feature(self, value, rows: int, width: int, *, device, dtype) -> torch.Tensor:
+            if width <= 0:
+                return torch.zeros(rows, 0, device=device, dtype=dtype)
+            if value is None:
+                return torch.zeros(rows, width, device=device, dtype=dtype)
+            out = value.to(device=device, dtype=dtype)
+            if out.ndim == 1:
+                out = out.unsqueeze(-1)
+            if out.size(-1) == width:
+                return out
+            if out.size(-1) > width:
+                return out[..., :width]
+            return torch.nn.functional.pad(out, (0, width - int(out.size(-1))))
+
+        def _site_logits_from_arbiter(
+            self,
+            outputs: Dict[str, object],
+            bridge: Dict[str, object],
+            batch: Dict[str, object],
+        ) -> torch.Tensor:
+            atom_features = outputs["atom_features"]
+            batch_index = batch["batch"]
+            rows = int(atom_features.size(0))
+            device = atom_features.device
+            dtype = atom_features.dtype
+            num_cyp = int(getattr(self.config, "num_cyp_classes", 9))
+            steric_dim = int(getattr(self.config, "steric_feature_dim", 8))
+            xtb_dim = 6
+
+            graph_embeddings = bridge["graph_embeddings"][batch_index]
+            base_cyp_context = torch.softmax(outputs["cyp_logits"], dim=-1)[batch_index]
+            analogical_cyp_context = bridge["analogical_cyp_prior"][batch_index]
+            confidence = bridge["analogical_confidence"]
+            wave_preds = bridge["wave_predictions"]
+            wave_scalar = torch.cat(
+                [
+                    wave_preds["predicted_charges"].unsqueeze(-1),
+                    wave_preds["predicted_fukui"].unsqueeze(-1),
+                    wave_preds["predicted_gap"][batch_index].unsqueeze(-1),
+                ],
+                dim=-1,
+            )
+            steric = self._optional_feature(batch.get("atom_3d_features"), rows, steric_dim, device=device, dtype=dtype)
+            xtb = self._optional_feature(batch.get("xtb_atom_features"), rows, xtb_dim, device=device, dtype=dtype)
+            arbiter_in = torch.cat(
+                [
+                    atom_features,
+                    bridge["atom_multivectors"],
+                    graph_embeddings,
+                    base_cyp_context,
+                    wave_scalar,
+                    bridge["analogical_site_prior"],
+                    confidence,
+                    analogical_cyp_context,
+                    steric,
+                    xtb,
+                ],
+                dim=-1,
+            )
+            return self.site_arbiter_head(arbiter_in)
 
         def _apply_nexus_bridge(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
             if self.nexus_bridge is None:
@@ -62,21 +138,21 @@ if TORCH_AVAILABLE:
             result = dict(outputs)
             result["site_logits_base"] = outputs["site_logits"]
             result["cyp_logits_base"] = outputs["cyp_logits"]
-            wave_weight = torch.sigmoid(self.wave_site_weight_logit)
-            ana_site_weight = torch.sigmoid(self.ana_site_weight_logit)
             ana_cyp_weight = torch.sigmoid(self.ana_cyp_weight_logit)
-            site_logits = (
-                outputs["site_logits"]
-                + wave_weight * bridge["wave_site_bias"]
-                + ana_site_weight * bridge["analogical_site_bias"]
-            )
+            if self.site_arbiter_head is not None and self.site_arbiter_uses_bridge:
+                site_logits = self._site_logits_from_arbiter(outputs, bridge, batch)
+                site_mode = "nexus_arbiter"
+            else:
+                site_logits = outputs["site_logits"]
+                site_mode = "base"
             cyp_logits = outputs["cyp_logits"] + ana_cyp_weight * bridge["analogical_cyp_bias"]
             diagnostics = dict(result.get("diagnostics") or {})
             diagnostics["nexus_bridge"] = {
                 **bridge["metrics"],
-                "wave_site_weight": float(wave_weight.detach().item()),
-                "analogical_site_weight": float(ana_site_weight.detach().item()),
                 "analogical_cyp_weight": float(ana_cyp_weight.detach().item()),
+                "site_mode": site_mode,
+                "site_logits_base_mean": float(outputs["site_logits"].detach().mean().item()),
+                "site_logits_final_mean": float(site_logits.detach().mean().item()),
             }
             result.update(
                 {
