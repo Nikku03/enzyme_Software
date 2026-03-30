@@ -6,6 +6,7 @@ from .hybrid_model import HybridLNNModel
 from .hybrid_modules import LocalTunnelingBias, OutputRefinementHead
 from .liquid_branch import AtomLiquidLayer, ContextAwareTauPredictor, ContextualLTCLayer, EdgeAwareMessagePassing, LiquidBranch, SharedMetabolismEncoder
 from .model import AdvancedLiquidMetabolismPredictor, BaselineLiquidMetabolismPredictor, LiquidMetabolismNetV2, SelectiveHybridLiquidMetabolismPredictor
+from .nexus_bridge import NexusHybridBridge
 from .physics_branch import PhysicsBranch
 from .pooling import ChemistryHierarchicalPooling, ExplicitGroupPooling, MoleculePooling
 from .priors import ManualEnginePriorEncoder, ResidualFusionHead
@@ -34,6 +35,7 @@ __all__ = [
     "LocalTunnelingBias",
     "ManualEnginePriorEncoder",
     "MoleculePooling",
+    "NexusHybridBridge",
     "OutputRefinementHead",
     "PhaseAugmentedState",
     "PhysicsBranch",

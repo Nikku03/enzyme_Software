@@ -130,6 +130,17 @@ if TORCH_AVAILABLE:
                 outputs.get("deliberation_outputs"),
             )
             stats = dict(stats)
+            bridge_losses = outputs.get("nexus_bridge_losses") or {}
+            if isinstance(bridge_losses, dict):
+                bridge_total = bridge_losses.get("total")
+                if bridge_total is not None:
+                    loss = loss + bridge_total
+                    stats["nexus_bridge_loss"] = float(bridge_total.detach().item())
+                for key, value in bridge_losses.items():
+                    if key == "total" or value is None:
+                        continue
+                    if hasattr(value, "detach"):
+                        stats[f"nexus_{key}_loss"] = float(value.detach().item())
             stats.update(self._collect_output_stats(outputs))
             weighted_loss = self._apply_confidence_weights(loss, batch)
             if weighted_loss is not loss:
@@ -194,6 +205,13 @@ if TORCH_AVAILABLE:
                     atom_stats = physics_stats.get("atom")
                     if isinstance(atom_stats, dict):
                         metrics["physics_gate_mean"] = float(atom_stats.get("gate_mean", 0.0))
+                nexus_stats = diagnostics.get("nexus_bridge")
+                if isinstance(nexus_stats, dict):
+                    for key, value in nexus_stats.items():
+                        try:
+                            metrics[f"nexus_{key}"] = float(value)
+                        except Exception:
+                            continue
                 hidden_norms = diagnostics.get("hidden_norms")
                 if isinstance(hidden_norms, dict):
                     metrics["som_hidden_norm_mean"] = float(hidden_norms.get("som_features_mean", 0.0))

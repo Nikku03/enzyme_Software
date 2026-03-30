@@ -94,6 +94,16 @@ class ModelConfig:
     use_cross_atom_attention: bool = True    # 2-layer self-attention on SoM atom features before site head
     use_bde_prior: bool = True               # learnable BDE→logit residual on top of site head
     bde_feature_index: int = 44             # index of normalized BDE in atom feature vector (stable; XTB appended at end)
+    use_nexus_bridge: bool = True
+    nexus_wave_hidden_dim: int = 64
+    nexus_graph_dim: int = 48
+    nexus_memory_capacity: int = 4096
+    nexus_memory_topk: int = 32
+    nexus_wave_aux_weight: float = 0.10
+    nexus_analogical_aux_weight: float = 0.08
+    nexus_wave_site_init: float = 0.18
+    nexus_analogical_site_init: float = 0.20
+    nexus_analogical_cyp_init: float = 0.12
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
     cyp_names: Tuple[str, ...] = tuple(MAJOR_CYP_CLASSES)
@@ -157,6 +167,15 @@ class ModelConfig:
         self.deliberation_max_state_norm = max(1.0, float(self.deliberation_max_state_norm))
         self.instability_hidden_norm_warn = max(1.0, float(self.instability_hidden_norm_warn))
         self.instability_energy_warn = max(0.5, float(self.instability_energy_warn))
+        self.nexus_wave_hidden_dim = max(16, int(self.nexus_wave_hidden_dim))
+        self.nexus_graph_dim = max(16, int(self.nexus_graph_dim))
+        self.nexus_memory_capacity = max(128, int(self.nexus_memory_capacity))
+        self.nexus_memory_topk = max(1, int(self.nexus_memory_topk))
+        self.nexus_wave_aux_weight = max(0.0, float(self.nexus_wave_aux_weight))
+        self.nexus_analogical_aux_weight = max(0.0, float(self.nexus_analogical_aux_weight))
+        self.nexus_wave_site_init = min(max(float(self.nexus_wave_site_init), 1.0e-3), 1.0 - 1.0e-3)
+        self.nexus_analogical_site_init = min(max(float(self.nexus_analogical_site_init), 1.0e-3), 1.0 - 1.0e-3)
+        self.nexus_analogical_cyp_init = min(max(float(self.nexus_analogical_cyp_init), 1.0e-3), 1.0 - 1.0e-3)
 
     @property
     def num_cyp_classes(self) -> int:

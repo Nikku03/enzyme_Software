@@ -164,7 +164,19 @@ if TORCH_AVAILABLE:
             bde_raw = raw_x[:, self.config.bde_feature_index].unsqueeze(-1)  # (N, 1)
             return site_logits + self.bde_prior(bde_raw)
 
-        def _build_common_outputs(self, encoded, som_payload, cyp_payload, site_logits, cyp_logits, site_residual, cyp_residual, extra=None):
+        def _build_common_outputs(
+            self,
+            encoded,
+            som_payload,
+            cyp_payload,
+            site_logits,
+            cyp_logits,
+            site_residual,
+            cyp_residual,
+            *,
+            final_atom_features=None,
+            extra=None,
+        ):
             tau_history = [*encoded["shared_tau_history"], *som_payload["tau_history"], *cyp_payload["tau_history"]]
             tau_stats = {
                 "shared": encoded["shared_tau_stats"],
@@ -191,6 +203,9 @@ if TORCH_AVAILABLE:
                 "site_logits": site_logits,
                 "site_scores": torch.sigmoid(site_logits),
                 "cyp_logits": cyp_logits,
+                "atom_features": final_atom_features if final_atom_features is not None else som_payload["atom_features"],
+                "som_atom_features": som_payload["atom_features"],
+                "shared_atom_features": encoded["shared_atoms"],
                 "gate_values": encoded["gate_values"],
                 "tau_history": tau_history,
                 "tau_stats": tau_stats,
@@ -258,6 +273,7 @@ if TORCH_AVAILABLE:
                 cyp_logits,
                 site_residual,
                 cyp_residual,
+                final_atom_features=som_features,
                 extra={"model_variant": "baseline"},
             )
 
@@ -471,6 +487,7 @@ if TORCH_AVAILABLE:
                 cyp_logits,
                 site_residual,
                 cyp_residual,
+                final_atom_features=conditioned_atom_features,
                 extra=extra,
             )
             outputs.update(
@@ -597,6 +614,7 @@ if TORCH_AVAILABLE:
                 cyp_logits,
                 site_residual,
                 cyp_residual,
+                final_atom_features=som_features,
                 extra={
                     "model_variant": "hybrid_selective",
                     "hybrid_selective": {
