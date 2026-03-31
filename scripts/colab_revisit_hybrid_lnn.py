@@ -914,7 +914,6 @@ def _all_bundles(baseline_log: str) -> dict[str, list[Strategy]]:
                 "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":          "0.12",
                 "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":      "0.04",
                 "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":     "0.06",
-                "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS":           "1",
             },
         ),
         Strategy(
@@ -1855,7 +1854,23 @@ def main() -> None:
             artifact_dir    = attempt_artifact_dir,
             settings        = settings,
         )
-        subprocess.check_call(cmd, cwd=str(ROOT), env=env)
+        try:
+            subprocess.check_call(cmd, cwd=str(ROOT), env=env)
+        except subprocess.CalledProcessError as _train_err:
+            print(
+                f"\n⚠ Attempt {attempt_idx} ({strategy.name}) training subprocess failed "
+                f"(exit code {_train_err.returncode}). Skipping to next strategy.",
+                flush=True,
+            )
+            consecutive_no_improve += 1
+            summary.setdefault("attempts", []).append({
+                "attempt": attempt_idx,
+                "name": strategy.name,
+                "score": 0.0,
+                "improved": False,
+                "error": f"subprocess_exit_{_train_err.returncode}",
+            })
+            continue
 
         # ── analyse result ─────────────────────────────────────────────────────
         report_path, log_path, produced_ckpt = _resolve_attempt_artifacts(
