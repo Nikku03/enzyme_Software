@@ -155,7 +155,8 @@ def _clear_repo_python_caches() -> None:
 
 PRESETS: dict[str, dict[str, str]] = {
     "fast": {
-        "HYBRID_COLAB_DATASET": "data/prepared_training/main5_site_conservative_singlecyp_clean.json",
+        # main6 = symmetry-expanded labels (+89 atoms vs main5); fixes symmetric-atom errors
+        "HYBRID_COLAB_DATASET": "data/prepared_training/main6_site_conservative_singlecyp_clean_symm.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
         "HYBRID_COLAB_EPOCHS": "3",
         "HYBRID_COLAB_BATCH_SIZE": "12",
@@ -167,7 +168,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
         "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "1",
-        "HYBRID_COLAB_EARLY_STOPPING_METRIC": "site_top3",
+        "HYBRID_COLAB_EARLY_STOPPING_METRIC": "site_top1",
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
@@ -176,9 +177,10 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_SEED": "42",
     },
     "balanced": {
-        "HYBRID_COLAB_DATASET": "data/prepared_training/main5_site_conservative_singlecyp_clean.json",
+        # main6 = symmetry-expanded labels (+89 atoms vs main5); fixes symmetric-atom errors
+        "HYBRID_COLAB_DATASET": "data/prepared_training/main6_site_conservative_singlecyp_clean_symm.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
-        "HYBRID_COLAB_EPOCHS": "12",
+        "HYBRID_COLAB_EPOCHS": "20",
         "HYBRID_COLAB_BATCH_SIZE": "16",
         "HYBRID_COLAB_LR": "5e-5",
         "HYBRID_COLAB_WD": "1e-4",
@@ -187,8 +189,8 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
-        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "3",
-        "HYBRID_COLAB_EARLY_STOPPING_METRIC": "site_top3",
+        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "5",
+        "HYBRID_COLAB_EARLY_STOPPING_METRIC": "site_top1",
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
@@ -238,6 +240,7 @@ def main() -> None:
     requested_dataset = Path(os.environ["HYBRID_COLAB_DATASET"])
     if not requested_dataset.exists():
         fallback_candidates = [
+            REPO_DIR / "data" / "prepared_training" / "main6_site_conservative_singlecyp_clean_symm.json",
             REPO_DIR / "data" / "prepared_training" / "main5_site_conservative_singlecyp_clean.json",
             REPO_DIR / "data" / "combined_drugbank_supercyp_full_xtb_valid_site_labeled.json",
             REPO_DIR / "data" / "training_dataset_580.json",

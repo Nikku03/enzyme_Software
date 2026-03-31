@@ -112,6 +112,9 @@ if TORCH_AVAILABLE:
                 deliberation_loss_weight=float(getattr(model_config, "deliberation_loss_weight", 0.0)),
                 energy_margin=float(getattr(model_config, "energy_margin", 0.15)),
                 energy_loss_clip=float(getattr(model_config, "energy_loss_clip", 2.0)),
+                site_label_smoothing=float(getattr(model_config, "nexus_site_label_smoothing", 0.05)),
+                site_top1_margin_weight=float(getattr(model_config, "nexus_top1_margin_weight", 0.5)),
+                site_top1_margin_value=float(getattr(model_config, "nexus_top1_margin_value", 0.5)),
             )
             self.loss_fn.to(self.device)
             trainable_params = self._trainable_parameters()
@@ -293,6 +296,21 @@ if TORCH_AVAILABLE:
             return loss_value
 
         def compute_loss(self, batch: Dict[str, object], outputs: Dict[str, object]):
+            # Fix 5: inject size-aware per-graph/per-atom weights when none are set.
+            # Large molecules get proportionally more gradient signal so the model
+            # learns to rank sites in 26-40 and 41+ atom molecules.
+            if batch.get("graph_confidence_weights") is None and "batch" in batch:
+                batch_idx = batch["batch"]
+                if batch_idx.numel() > 0:
+                    num_mol = int(batch_idx.max().item()) + 1
+                    mol_counts = torch.zeros(num_mol, dtype=torch.float32, device=batch_idx.device)
+                    mol_counts.scatter_add_(0, batch_idx.long(), torch.ones(batch_idx.shape[0], dtype=torch.float32, device=batch_idx.device))
+                    # weight = log(n_atoms) / log(16), clamped ≥ 1; normalised so mean = 1
+                    raw_w = (torch.log(mol_counts.clamp(min=1.0)) / float(np.log(16.0))).clamp(min=1.0)
+                    gcw = raw_w / raw_w.mean().clamp(min=1.0e-6)
+                    batch["graph_confidence_weights"] = gcw
+                    if batch.get("node_confidence_weights") is None:
+                        batch["node_confidence_weights"] = gcw[batch_idx.long()].unsqueeze(-1)
             loss, stats = self.loss_fn(
                 outputs["site_logits"],
                 outputs["cyp_logits"],

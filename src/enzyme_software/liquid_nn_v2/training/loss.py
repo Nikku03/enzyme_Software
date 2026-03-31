@@ -119,15 +119,21 @@ if TORCH_AVAILABLE:
     class FocalLoss(nn.Module):
         """Focal loss for imbalanced site prediction."""
 
-        def __init__(self, gamma: float = 2.0, pos_weight: float = 10.0):
+        def __init__(self, gamma: float = 2.0, pos_weight: float = 10.0, label_smoothing: float = 0.0):
             super().__init__()
             self.gamma = float(gamma)
             self.pos_weight = float(pos_weight)
+            self.label_smoothing = float(label_smoothing)
 
         def forward(self, logits, labels, supervision_mask=None, node_weights=None, batch=None):
             probs = torch.sigmoid(logits)
             p_t = torch.where(labels == 1, probs, 1 - probs)
             focal_weight = (1 - p_t) ** self.gamma
+            # Smooth binary targets: positive → (1-ε), negative → ε/2
+            if self.label_smoothing > 0.0:
+                smooth_labels = labels * (1.0 - self.label_smoothing) + 0.5 * self.label_smoothing
+            else:
+                smooth_labels = labels
             # Adaptive pos_weight: per-molecule (n_neg / n_pos), clamped to [3, 30]
             if batch is not None and batch.numel():
                 pos_weight_per_atom = torch.full_like(logits, self.pos_weight)
@@ -147,7 +153,7 @@ if TORCH_AVAILABLE:
                     torch.full_like(logits, self.pos_weight),
                     torch.ones_like(logits),
                 )
-            bce = F.binary_cross_entropy_with_logits(logits, labels, reduction="none")
+            bce = F.binary_cross_entropy_with_logits(logits, smooth_labels, reduction="none")
             loss = focal_weight * class_weight * bce
             if node_weights is not None:
                 node_weights = node_weights.to(dtype=loss.dtype, device=loss.device)
@@ -291,15 +297,55 @@ if TORCH_AVAILABLE:
             hard_negative_fraction: Optional[float] = 0.5,
             softap_weight: float = 0.3,
             softap_temperature: float = 0.1,
+            label_smoothing: float = 0.0,
+            top1_margin_weight: float = 0.0,
+            top1_margin_value: float = 0.5,
         ):
             super().__init__()
-            self.focal = FocalLoss(gamma=focal_gamma, pos_weight=pos_weight)
+            self.focal = FocalLoss(gamma=focal_gamma, pos_weight=pos_weight, label_smoothing=label_smoothing)
+            self.top1_margin_weight = float(top1_margin_weight)
+            self.top1_margin_value = float(top1_margin_value)
             self.ranking = RankingLoss(margin=ranking_margin, hard_negative_fraction=hard_negative_fraction)
             self.listmle = ListwiseRankingLoss()
             self.softap = SoftAPLoss(temperature=softap_temperature)
             self.ranking_weight = float(ranking_weight)
             self.listmle_weight = float(listmle_weight)
             self.softap_weight = float(softap_weight)
+
+        def _top1_margin_loss(self, logits, labels, batch, supervision_mask=None):
+            """Penalise each molecule where the top-scored atom is not a true site.
+
+            For every molecule: loss = max(0, margin - (best_pos_logit - best_neg_logit)).
+            This directly targets the rank-1 error case that top1 accuracy measures.
+            """
+            logits_flat = logits.view(-1)
+            labels_flat = labels.view(-1)
+            sup_flat = supervision_mask.view(-1) if supervision_mask is not None else None
+            num_mol = int(batch.max().item()) + 1 if batch.numel() else 0
+            losses = []
+            for mol_idx in range(num_mol):
+                mol_mask = batch == mol_idx
+                if not bool(mol_mask.any()):
+                    continue
+                if sup_flat is not None:
+                    supervised = sup_flat[mol_mask] > 0.5
+                    if not bool(supervised.any()):
+                        continue
+                    mol_logits = logits_flat[mol_mask][supervised]
+                    mol_labels = labels_flat[mol_mask][supervised]
+                else:
+                    mol_logits = logits_flat[mol_mask]
+                    mol_labels = labels_flat[mol_mask]
+                pos_mask = mol_labels > 0.5
+                neg_mask = ~pos_mask
+                if not bool(pos_mask.any()) or not bool(neg_mask.any()):
+                    continue
+                best_pos = mol_logits[pos_mask].max()
+                best_neg = mol_logits[neg_mask].max()
+                losses.append(torch.relu(self.top1_margin_value - (best_pos - best_neg)))
+            if not losses:
+                return logits.sum() * 0.0
+            return torch.stack(losses).mean()
 
         def forward(self, logits, labels, batch, supervision_mask=None, node_weights=None, graph_weights=None):
             focal_loss = self.focal(logits, labels, supervision_mask=supervision_mask, node_weights=node_weights, batch=batch)
@@ -331,17 +377,22 @@ if TORCH_AVAILABLE:
                     per_mol_softap.append(self.softap(mol_scores, pos_idx))
                 if per_mol_softap:
                     softap_loss = torch.stack(per_mol_softap).mean()
+            top1_margin_loss = logits.sum() * 0.0
+            if self.top1_margin_weight > 0.0:
+                top1_margin_loss = self._top1_margin_loss(logits, labels, batch, supervision_mask=supervision_mask)
             total = (
                 focal_loss
                 + self.ranking_weight * ranking_loss
                 + self.listmle_weight * listmle_loss
                 + self.softap_weight * softap_loss
+                + self.top1_margin_weight * top1_margin_loss
             )
             return total, {
                 "focal_loss": float(focal_loss.item()),
                 "ranking_loss": float(ranking_loss.item()),
                 "listmle_loss": float(listmle_loss.item()),
                 "softap_loss": float(softap_loss.item()),
+                "top1_margin_loss": float(top1_margin_loss.item()),
                 "site_loss": float(total.item()),
             }
 
@@ -361,6 +412,9 @@ if TORCH_AVAILABLE:
             cyp_focal_gamma: float = 2.0,
             cyp_max_weight: float = 10.0,
             cyp_label_smoothing: float = 0.1,
+            site_label_smoothing: float = 0.0,
+            site_top1_margin_weight: float = 0.0,
+            site_top1_margin_value: float = 0.5,
         ):
             super().__init__()
             self.site_loss = SiteOfMetabolismLoss(
@@ -368,6 +422,9 @@ if TORCH_AVAILABLE:
                 pos_weight=15.0,
                 ranking_margin=1.0,
                 ranking_weight=0.5,
+                label_smoothing=float(site_label_smoothing),
+                top1_margin_weight=float(site_top1_margin_weight),
+                top1_margin_value=float(site_top1_margin_value),
             )
             self.log_var_site = nn.Parameter(torch.tensor(0.0))
             self.log_var_cyp = nn.Parameter(torch.tensor(0.0))

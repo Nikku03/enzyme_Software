@@ -108,7 +108,10 @@ class ModelConfig:
     nexus_analogical_cyp_init: float = 0.12
     use_nexus_site_arbiter: bool = True
     nexus_site_arbiter_hidden_dim: int = 128
-    nexus_site_arbiter_dropout: float = 0.10
+    nexus_site_arbiter_dropout: float = 0.20
+    nexus_site_label_smoothing: float = 0.05
+    nexus_top1_margin_weight: float = 0.5
+    nexus_top1_margin_value: float = 0.5
     nexus_lnn_vote_aux_weight: float = 0.01
     nexus_wave_vote_aux_weight: float = 0.04
     nexus_analogical_vote_aux_weight: float = 0.04
@@ -121,6 +124,7 @@ class ModelConfig:
     nexus_live_wave_vote_grad_scale: float = 0.05
     nexus_live_analogical_vote_grad_scale: float = 0.05
     nexus_analogical_cyp_aux_scale: float = 0.10
+    nexus_topology_feature_dim: int = 5   # per-atom global topology features (scaffold/centrality/carbonyl/size)
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
     cyp_names: Tuple[str, ...] = tuple(MAJOR_CYP_CLASSES)

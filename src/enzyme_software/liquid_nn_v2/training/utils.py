@@ -46,6 +46,7 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
     xtb_mol_valid_parts: List[object] = []
     xtb_statuses: List[str] = []
     atom_3d_parts: List[object] = []
+    topology_atom_parts: List[object] = []
     parsing_statuses: List[str] = []
     canonical_smiles: List[str] = []
     repaired_flags: List[bool] = []
@@ -83,6 +84,7 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
         xtb_mol_valid_parts.append(_tensor(graph.xtb_mol_valid, dtype=torch.float32) if getattr(graph, "xtb_mol_valid", None) is not None else None)
         xtb_statuses.append(str(getattr(graph, "xtb_feature_status", "missing")))
         atom_3d_parts.append(_tensor(graph.atom_3d_features, dtype=torch.float32) if getattr(graph, "atom_3d_features", None) is not None else None)
+        topology_atom_parts.append(_tensor(graph.topology_atom_features, dtype=torch.float32) if getattr(graph, "topology_atom_features", None) is not None else None)
         parsing_statuses.append(str(getattr(graph, "parsing_status", "unknown")))
         canonical_smiles.append(str(getattr(graph, "canonical_smiles", graph.smiles)))
         repaired_flags.append(bool(getattr(graph, "repaired", False)))
@@ -145,6 +147,7 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
     xtb_atom_valid = _stack_optional(xtb_atom_valid_parts, atom_counts)
     xtb_mol_valid = _stack_optional(xtb_mol_valid_parts, mol_counts)
     atom_3d = _stack_optional(atom_3d_parts, atom_counts)
+    topology_atom = _stack_optional(topology_atom_parts, atom_counts)
     if manual_atom is not None:
         batch["manual_engine_atom_features"] = manual_atom
     if manual_mol is not None:
@@ -163,6 +166,8 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
         batch["xtb_mol_valid"] = xtb_mol_valid
     if atom_3d is not None:
         batch["atom_3d_features"] = atom_3d
+    if topology_atom is not None:
+        batch["topology_atom_features"] = topology_atom
     if os.environ.get("LNN_DEBUG_COLLATE", "").strip().lower() in {"1", "true", "yes", "on"} and "site_labels" in batch:
         print(f"DEBUG collate: site_labels sum = {batch['site_labels'].sum().item()}")
     return batch

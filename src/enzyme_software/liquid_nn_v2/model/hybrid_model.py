@@ -27,6 +27,7 @@ if TORCH_AVAILABLE:
                 num_cyp = int(getattr(self.config, "num_cyp_classes", 9))
                 steric_dim = int(getattr(self.config, "steric_feature_dim", 8))
                 xtb_dim = FULL_XTB_FEATURE_DIM
+                topology_dim = int(getattr(self.config, "nexus_topology_feature_dim", 5))
                 graph_dim = int(max(16, int(getattr(self.config, "nexus_graph_dim", 48))))
                 self.nexus_bridge = NexusHybridBridge(
                     atom_feature_dim=atom_dim,
@@ -59,6 +60,7 @@ if TORCH_AVAILABLE:
                         + num_cyp
                         + steric_dim
                         + xtb_dim
+                        + topology_dim
                         + 10
                         + AuditedEpisodeLogbook.brief_dim
                         + 1
@@ -155,6 +157,7 @@ if TORCH_AVAILABLE:
             num_cyp = int(getattr(self.config, "num_cyp_classes", 9))
             steric_dim = int(getattr(self.config, "steric_feature_dim", 8))
             xtb_dim = FULL_XTB_FEATURE_DIM
+            topology_dim = int(getattr(self.config, "nexus_topology_feature_dim", 5))
 
             graph_embeddings = bridge["graph_embeddings"][batch_index]
             base_cyp_context = torch.softmax(outputs["cyp_logits"], dim=-1)[batch_index]
@@ -187,8 +190,10 @@ if TORCH_AVAILABLE:
             wave_scalar_b = torch.tanh(wave_scalar.detach())
             steric = self._optional_feature(batch.get("atom_3d_features"), rows, steric_dim, device=device, dtype=dtype)
             xtb = self._optional_feature(batch.get("xtb_atom_features"), rows, xtb_dim, device=device, dtype=dtype)
+            topology = self._optional_feature(batch.get("topology_atom_features"), rows, topology_dim, device=device, dtype=dtype)
             steric_b = torch.tanh(steric)
             xtb_b = torch.tanh(xtb)
+            topology_b = topology  # features are already in [0, 1]; no tanh needed
             wave_field_b = torch.tanh(wave_field["atom_field_features"].detach())
             wave_scalar_vote = torch.tanh(
                 self._safe_vote_tensor(
@@ -335,6 +340,7 @@ if TORCH_AVAILABLE:
                     analogical_cyp_context_b,
                     steric_b,
                     xtb_b,
+                    topology_b,
                     wave_field_b,
                     precedent_brief.detach(),
                     wave_site_bias_b,
@@ -385,6 +391,20 @@ if TORCH_AVAILABLE:
             arbiter_in = torch.nan_to_num(arbiter_in, nan=0.0, posinf=4.0, neginf=-4.0)
             base_site_logits = outputs["site_logits"]
             arbiter_residual = self.site_arbiter_head(arbiter_in)
+            # Per-molecule zero-centering: force the arbiter to only change
+            # *relative* rankings within a molecule, not the global logit
+            # magnitude. Without this the arbiter learns a persistent negative
+            # bias (mean ≈ -2.5) that suppresses all predictions uniformly
+            # instead of pushing the true site above wrong atoms.
+            if batch_index.numel() > 0:
+                num_mol_arb = int(batch_index.max().item()) + 1
+                arb_sums = torch.zeros(num_mol_arb, 1, device=device, dtype=dtype)
+                arb_cnts = torch.zeros(num_mol_arb, 1, device=device, dtype=dtype)
+                idx_exp = batch_index.unsqueeze(-1)
+                arb_sums.scatter_add_(0, idx_exp, arbiter_residual)
+                arb_cnts.scatter_add_(0, idx_exp, torch.ones_like(arbiter_residual))
+                arb_means = arb_sums / arb_cnts.clamp(min=1.0)
+                arbiter_residual = arbiter_residual - arb_means[batch_index]
             # Treat the council and arbiter as residual corrections on top of the
             # base site logits so they cannot bury the base model from step 1.
             site_logits = base_site_logits + council_logit + arbiter_residual
