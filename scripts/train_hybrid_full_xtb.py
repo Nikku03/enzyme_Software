@@ -644,7 +644,15 @@ def main() -> None:
             new_backbone = [p for p in backbone_params if id(p) not in existing_ids]
             if new_backbone:
                 backbone_lr = args.learning_rate * 0.1
-                trainer.optimizer.param_groups.append({"params": new_backbone, "lr": backbone_lr, "weight_decay": args.weight_decay})
+                # Copy betas/eps from first group so _ManualAdamW.step() doesn't KeyError
+                ref_group = trainer.optimizer.param_groups[0]
+                trainer.optimizer.param_groups.append({
+                    "params": new_backbone,
+                    "lr": backbone_lr,
+                    "weight_decay": args.weight_decay,
+                    "betas": ref_group.get("betas", (0.9, 0.999)),
+                    "eps": ref_group.get("eps", 1e-8),
+                })
                 print(f"Backbone unfrozen: added {len(new_backbone)} params at lr={backbone_lr:.2e}", flush=True)
 
     if backbone_freeze_epochs > 0:
