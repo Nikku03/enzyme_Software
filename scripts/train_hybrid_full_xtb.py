@@ -62,21 +62,38 @@ def _env_float(name: str) -> float | None:
     return float(raw)
 
 
-def _collect_model_overrides() -> dict[str, float]:
+def _env_int(name: str) -> int | None:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return None
+    return int(raw)
+
+
+def _collect_model_overrides() -> dict[str, int | float]:
     mapping = {
-        "HYBRID_COLAB_NEXUS_WAVE_AUX_WEIGHT": "nexus_wave_aux_weight",
-        "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT": "nexus_analogical_aux_weight",
-        "HYBRID_COLAB_NEXUS_LNN_VOTE_AUX_WEIGHT": "nexus_lnn_vote_aux_weight",
-        "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT": "nexus_wave_vote_aux_weight",
-        "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT": "nexus_analogical_vote_aux_weight",
-        "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT": "nexus_board_entropy_weight",
-        "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE": "nexus_vote_logit_scale",
-        "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE": "nexus_analogical_cyp_aux_scale",
-        "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT": "nexus_site_arbiter_dropout",
+        "HYBRID_COLAB_NEXUS_WAVE_HIDDEN_DIM": (_env_int, "nexus_wave_hidden_dim"),
+        "HYBRID_COLAB_NEXUS_GRAPH_DIM": (_env_int, "nexus_graph_dim"),
+        "HYBRID_COLAB_NEXUS_MEMORY_CAPACITY": (_env_int, "nexus_memory_capacity"),
+        "HYBRID_COLAB_NEXUS_MEMORY_TOPK": (_env_int, "nexus_memory_topk"),
+        "HYBRID_COLAB_NEXUS_WAVE_AUX_WEIGHT": (_env_float, "nexus_wave_aux_weight"),
+        "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT": (_env_float, "nexus_analogical_aux_weight"),
+        "HYBRID_COLAB_NEXUS_WAVE_SITE_INIT": (_env_float, "nexus_wave_site_init"),
+        "HYBRID_COLAB_NEXUS_ANALOGICAL_SITE_INIT": (_env_float, "nexus_analogical_site_init"),
+        "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_INIT": (_env_float, "nexus_analogical_cyp_init"),
+        "HYBRID_COLAB_NEXUS_SITE_ARBITER_HIDDEN_DIM": (_env_int, "nexus_site_arbiter_hidden_dim"),
+        "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT": (_env_float, "nexus_site_arbiter_dropout"),
+        "HYBRID_COLAB_NEXUS_LNN_VOTE_AUX_WEIGHT": (_env_float, "nexus_lnn_vote_aux_weight"),
+        "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT": (_env_float, "nexus_wave_vote_aux_weight"),
+        "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT": (_env_float, "nexus_analogical_vote_aux_weight"),
+        "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT": (_env_float, "nexus_board_entropy_weight"),
+        "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE": (_env_float, "nexus_vote_logit_scale"),
+        "HYBRID_COLAB_NEXUS_LIVE_WAVE_VOTE_GRAD_SCALE": (_env_float, "nexus_live_wave_vote_grad_scale"),
+        "HYBRID_COLAB_NEXUS_LIVE_ANALOGICAL_VOTE_GRAD_SCALE": (_env_float, "nexus_live_analogical_vote_grad_scale"),
+        "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE": (_env_float, "nexus_analogical_cyp_aux_scale"),
     }
-    overrides: dict[str, float] = {}
-    for env_name, field_name in mapping.items():
-        value = _env_float(env_name)
+    overrides: dict[str, int | float] = {}
+    for env_name, (parser, field_name) in mapping.items():
+        value = parser(env_name)
         if value is not None:
             overrides[field_name] = value
     return overrides

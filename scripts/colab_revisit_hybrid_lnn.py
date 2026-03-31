@@ -520,10 +520,814 @@ class ReviewedRun:
 
 @dataclass
 class Strategy:
+    family:           str            # one of the FAMILY_* constants below
     name:             str
     rationale:        str
-    train_overrides:  dict[str, str]
-    model_env:        dict[str, str]
+    train_overrides:  dict[str, str]   # → merged into settings, passed as CLI args
+    model_env:        dict[str, str]   # → merged into subprocess env for model knobs
+
+
+# ── family constants ──────────────────────────────────────────────────────────
+# Each family is a coherent area of the search space.  The selector picks one
+# bundle per triggered family, then fills remaining slots from a priority list.
+
+FAMILY_TRAINING      = "training_policy"    # LR, WD, batch, epochs, patience, metric
+FAMILY_DATA          = "data_policy"        # xenosite, site-label, precedent, memory
+FAMILY_COUNCIL       = "council_balance"    # vote aux weights, entropy, logit scale
+FAMILY_ANALOGICAL    = "analogical_system"  # CYP scale, aux, live inputs, precedent
+FAMILY_WAVE          = "wave_system"        # wave aux, vote aux, live inputs
+FAMILY_ARCHITECTURE  = "architecture"       # structural: live both, full unlock, etc.
+
+
+# ── bundle catalogue ──────────────────────────────────────────────────────────
+
+def _all_bundles(baseline_log: str) -> dict[str, list[Strategy]]:
+    """
+    Return ALL available strategy bundles organised by family.
+
+    Design rules
+    ------------
+    * Every bundle sets the FULL coherent picture for its family — training
+      schedules, data flags, council weights, model knobs — not just 1-2 vars.
+    * `train_overrides` keys must exist in `_default_train_settings()` or be
+      handled by `_build_train_command()`.
+    * `model_env` keys are passed directly into the subprocess environment;
+      `train_hybrid_full_xtb.py` reads them via `_collect_model_overrides()` and
+      the explicit flag checks in `_build_train_command()`.
+    """
+
+    # ── A. training_policy ────────────────────────────────────────────────────
+    # Covers: LR, WD, batch size, epochs, patience, early-stop metric, dropout.
+    training = [
+        Strategy(
+            family = FAMILY_TRAINING,
+            name   = "training.slow_patient_heavy_reg",
+            rationale = (
+                "Very low LR (2e-5), high WD (3e-4), long patience (10), "
+                "heavy arbiter dropout (0.25). For severe overfitting: slows "
+                "memorisation and regularises the site arbiter strongly."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "2e-5",
+                "HYBRID_COLAB_WD":                        "3e-4",
+                "HYBRID_COLAB_BATCH_SIZE":                "16",
+                "HYBRID_COLAB_EPOCHS":                    "60",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "10",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":  "0.25",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":   "0.008",
+            },
+        ),
+        Strategy(
+            family = FAMILY_TRAINING,
+            name   = "training.aggressive_medium",
+            rationale = (
+                "Higher LR (1.5e-4), low WD, shorter run (40 epochs, patience 5, "
+                "top1 metric). Tests whether fast convergence reveals a better "
+                "optimum before the model memorises training SMILES."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "1.5e-4",
+                "HYBRID_COLAB_WD":                        "5e-5",
+                "HYBRID_COLAB_BATCH_SIZE":                "16",
+                "HYBRID_COLAB_EPOCHS":                    "40",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "5",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top1",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":  "0.10",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":   "0.005",
+            },
+        ),
+        Strategy(
+            family = FAMILY_TRAINING,
+            name   = "training.large_batch_moderate",
+            rationale = (
+                "Larger batch (32), LR=8e-5, WD=2e-4. Larger batches give a "
+                "more stable gradient estimate for the council head; may help "
+                "board weights learn a consistent voter preference."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "8e-5",
+                "HYBRID_COLAB_WD":                        "2e-4",
+                "HYBRID_COLAB_BATCH_SIZE":                "32",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":  "0.15",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":   "0.005",
+            },
+        ),
+        Strategy(
+            family = FAMILY_TRAINING,
+            name   = "training.very_slow_search",
+            rationale = (
+                "Minimal LR (1e-5), very high WD (5e-4), long patience (12). "
+                "Last-resort training policy: escapes local optima extremely "
+                "slowly but with the heaviest regularisation possible."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "1e-5",
+                "HYBRID_COLAB_WD":                        "5e-4",
+                "HYBRID_COLAB_BATCH_SIZE":                "16",
+                "HYBRID_COLAB_EPOCHS":                    "60",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "12",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":  "0.30",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":   "0.010",
+            },
+        ),
+    ]
+
+    # ── B. data_policy ────────────────────────────────────────────────────────
+    # Covers: xenosite on/off/topk, site-labeled-only, precedent logbook,
+    #         nexus memory freeze, compute-xtb-if-missing.
+    data = [
+        Strategy(
+            family = FAMILY_DATA,
+            name   = "data.xenosite_off_strict",
+            rationale = (
+                "Disable XenoSite auxiliary training entries. XenoSite labels "
+                "are noisy (top-1 predictions, not experimental); removing them "
+                "may sharpen the site supervision signal."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_INCLUDE_XENOSITE":          "0",
+                "HYBRID_COLAB_SITE_LABELED_ONLY":         "1",
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":  "0.15",
+            },
+        ),
+        Strategy(
+            family = FAMILY_DATA,
+            name   = "data.xenosite_topk3_rich",
+            rationale = (
+                "Use top-3 XenoSite predictions per molecule (XENOSITE_TOPK=3) "
+                "to give the model softer multi-site supervision from the "
+                "XenoSite ensemble."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_INCLUDE_XENOSITE":          "1",
+                "HYBRID_COLAB_XENOSITE_TOPK":             "3",
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "6",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {},
+        ),
+        Strategy(
+            family = FAMILY_DATA,
+            name   = "data.memory_unlock_active_learning",
+            rationale = (
+                "Unfreeze nexus memory (FREEZE_NEXUS_MEMORY=0) so the analogical "
+                "encoder can write new cases during training. Also raise analogical "
+                "aux weight to strengthen the write signal."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_FREEZE_NEXUS_MEMORY":       "0",
+                "HYBRID_COLAB_LR":                        "4e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":       "0.12",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":  "0.05",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":   "0.05",
+            },
+        ),
+        Strategy(
+            family = FAMILY_DATA,
+            name   = "data.precedent_warm_start",
+            rationale = (
+                "Enable precedent logbook seeded from the best episode log "
+                "(DISABLE_PRECEDENT_LOGBOOK=0, PRECEDENT_LOGBOOK=baseline_log). "
+                "Gives analogical engine prior cases to retrieve from epoch 1."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "0",
+                "HYBRID_COLAB_PRECEDENT_LOGBOOK":         baseline_log,
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":       "0.06",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":      "0.04",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":           "0.09",
+            },
+        ),
+    ]
+    # Remove precedent bundle if we have no baseline log to seed from
+    if not baseline_log:
+        data = [b for b in data if b.name != "data.precedent_warm_start"]
+
+    # ── C. council_balance ────────────────────────────────────────────────────
+    # Covers: lnn/wave/ana vote aux weights, board entropy, vote logit scale,
+    #         arbiter dropout.  These change who the council listens to.
+    council = [
+        Strategy(
+            family = FAMILY_COUNCIL,
+            name   = "council.diversity_entropy",
+            rationale = (
+                "High board entropy (0.020) + low logit scale (1.5) to force "
+                "the council to explore voter balance instead of defaulting to "
+                "LNN. All three vote aux weights set equal."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_LNN_VOTE_AUX_WEIGHT":          "0.03",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":         "0.03",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":   "0.03",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":          "0.020",
+                "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":              "1.5",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":          "0.15",
+            },
+        ),
+        Strategy(
+            family = FAMILY_COUNCIL,
+            name   = "council.lnn_focused",
+            rationale = (
+                "Maximise LNN voter signal: high LNN vote aux (0.05), suppress "
+                "wave and analogical vote aux (0.01 each), high logit scale (3.0). "
+                "Tests whether pure LNN is the performance ceiling."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "6",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_LNN_VOTE_AUX_WEIGHT":          "0.05",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":         "0.01",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":   "0.01",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":          "0.003",
+                "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":              "3.0",
+            },
+        ),
+        Strategy(
+            family = FAMILY_COUNCIL,
+            name   = "council.wave_heavy",
+            rationale = (
+                "Push wave to be the dominant voter: live wave inputs, high wave "
+                "vote aux (0.08) and bridge aux (0.15), moderate board entropy. "
+                "Tests whether wave physics can outperform LNN SMILES memorisation."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS":               "1",
+                "HYBRID_COLAB_NEXUS_WAVE_AUX_WEIGHT":               "0.15",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":          "0.08",
+                "HYBRID_COLAB_NEXUS_LNN_VOTE_AUX_WEIGHT":           "0.01",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":    "0.02",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":           "0.008",
+                "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":               "2.0",
+            },
+        ),
+        Strategy(
+            family = FAMILY_COUNCIL,
+            name   = "council.analogical_heavy",
+            rationale = (
+                "Push analogical to be the dominant voter: live analogical inputs, "
+                "high analogical vote aux (0.08) and bridge aux (0.12), suppressed "
+                "CYP scale (0.04), moderate board entropy."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS":          "1",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":          "0.12",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":     "0.08",
+                "HYBRID_COLAB_NEXUS_LNN_VOTE_AUX_WEIGHT":            "0.01",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":           "0.02",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":      "0.04",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":            "0.008",
+                "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":                "2.0",
+            },
+        ),
+    ]
+
+    # ── D. analogical_system ─────────────────────────────────────────────────
+    # Covers: CYP aux scale, analogical aux, live analogical vote inputs,
+    #         precedent logbook, memory freeze.
+    analogical = [
+        Strategy(
+            family = FAMILY_ANALOGICAL,
+            name   = "analogical.cyp_suppressed_site_focus",
+            rationale = (
+                "Heavily suppress CYP aux scale (0.02) so analogical encoder "
+                "cannot trade SoM accuracy for the easier CYP task. Raise site "
+                "vote aux (0.06) and bridge aux (0.10) to compensate."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":      "0.02",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":          "0.10",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":     "0.06",
+            },
+        ),
+        Strategy(
+            family = FAMILY_ANALOGICAL,
+            name   = "analogical.precedent_frozen_mem",
+            rationale = (
+                "Enable precedent logbook (seeded from baseline log) with memory "
+                "still frozen. Gives analogical prior cases to retrieve from "
+                "epoch 1 without destabilising the memory bank."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "0",
+                "HYBRID_COLAB_PRECEDENT_LOGBOOK":         baseline_log,
+                "HYBRID_COLAB_FREEZE_NEXUS_MEMORY":       "1",
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":          "0.08",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":      "0.06",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":     "0.04",
+            },
+        ),
+        Strategy(
+            family = FAMILY_ANALOGICAL,
+            name   = "analogical.precedent_memory_unlock",
+            rationale = (
+                "Both precedent logbook AND memory unfrozen. Analogical can "
+                "actively write new cases and retrieve from them. High aux (0.12) "
+                "to push the encoder to learn useful representations."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "0",
+                "HYBRID_COLAB_PRECEDENT_LOGBOOK":         baseline_log,
+                "HYBRID_COLAB_FREEZE_NEXUS_MEMORY":       "0",
+                "HYBRID_COLAB_LR":                        "4e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "55",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "8",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":          "0.12",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":      "0.04",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":     "0.06",
+                "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS":           "1",
+            },
+        ),
+        Strategy(
+            family = FAMILY_ANALOGICAL,
+            name   = "analogical.live_calibrate",
+            rationale = (
+                "Un-detach analogical encoder for the vote head (LIVE_ANALOGICAL "
+                "=1). Vote head now sees up-to-date analogical features; breaks "
+                "the stale-mapping dead-confidence cycle."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "6",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS":           "1",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":      "0.06",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":       "0.04",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":           "0.09",
+            },
+        ),
+    ]
+    # Remove precedent bundles if no baseline log
+    if not baseline_log:
+        analogical = [b for b in analogical if "precedent" not in b.name]
+
+    # ── E. wave_system ────────────────────────────────────────────────────────
+    # Covers: wave bridge aux, wave vote aux, live wave vote inputs.
+    wave = [
+        Strategy(
+            family = FAMILY_WAVE,
+            name   = "wave.live_vote_full",
+            rationale = (
+                "Un-detach wave encoder for vote head (LIVE_WAVE=1) + high wave "
+                "vote aux (0.07). Fixes the stale-mapping problem: vote head sees "
+                "current wave features instead of a frozen snapshot."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS":               "1",
+                "HYBRID_COLAB_NEXUS_WAVE_AUX_WEIGHT":               "0.12",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":          "0.07",
+                "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":               "2.0",
+            },
+        ),
+        Strategy(
+            family = FAMILY_WAVE,
+            name   = "wave.evidence_only_strong",
+            rationale = (
+                "Wave as evidence provider, not a direct voter: detached inputs "
+                "(LIVE_WAVE=0), very low vote aux (0.01), high bridge aux (0.15). "
+                "Tests whether wave improves LNN via board_context without "
+                "being a noisy voter."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "6",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS":               "0",
+                "HYBRID_COLAB_NEXUS_WAVE_AUX_WEIGHT":               "0.15",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":          "0.01",
+            },
+        ),
+        Strategy(
+            family = FAMILY_WAVE,
+            name   = "wave.vote_dominant",
+            rationale = (
+                "Make wave the dominant voter: live wave inputs, maximum wave "
+                "vote aux (0.10), suppressed LNN/analogical vote aux (0.01 each). "
+                "Tests the raw quality of the wave physics predictions."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS":               "1",
+                "HYBRID_COLAB_NEXUS_WAVE_AUX_WEIGHT":               "0.12",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":          "0.10",
+                "HYBRID_COLAB_NEXUS_LNN_VOTE_AUX_WEIGHT":           "0.01",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":    "0.01",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":           "0.010",
+                "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":               "2.5",
+            },
+        ),
+    ]
+
+    # ── F. architecture ───────────────────────────────────────────────────────
+    # Structural changes: live both voters, full system unlock, etc.
+    # Used primarily in stuck mode but also available as fallback.
+    architecture = [
+        Strategy(
+            family = FAMILY_ARCHITECTURE,
+            name   = "arch.compact_context_selective",
+            rationale = (
+                "Shrink the sidecar context: smaller wave hidden dim (48), graph "
+                "dim (32), arbiter hidden dim (96), and retrieval top-k (12). "
+                "Tests whether the current council is over-parameterised and "
+                "memorising instead of learning selective analogies."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "2e-4",
+                "HYBRID_COLAB_BATCH_SIZE":                "16",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_WAVE_HIDDEN_DIM":             "48",
+                "HYBRID_COLAB_NEXUS_GRAPH_DIM":                   "32",
+                "HYBRID_COLAB_NEXUS_MEMORY_TOPK":                 "12",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_HIDDEN_DIM":     "96",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":        "0.18",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":        "0.008",
+            },
+        ),
+        Strategy(
+            family = FAMILY_ARCHITECTURE,
+            name   = "arch.wide_context_memory_rich",
+            rationale = (
+                "Expand the sidecar context: larger wave hidden dim (96), graph "
+                "dim (64), memory capacity (6144), retrieval top-k (48), and "
+                "arbiter hidden dim (192). Tests whether the council is currently "
+                "capacity-limited rather than calibration-limited."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "3e-5",
+                "HYBRID_COLAB_WD":                        "2e-4",
+                "HYBRID_COLAB_BATCH_SIZE":                "16",
+                "HYBRID_COLAB_EPOCHS":                    "60",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "9",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_WAVE_HIDDEN_DIM":             "96",
+                "HYBRID_COLAB_NEXUS_GRAPH_DIM":                   "64",
+                "HYBRID_COLAB_NEXUS_MEMORY_CAPACITY":             "6144",
+                "HYBRID_COLAB_NEXUS_MEMORY_TOPK":                 "48",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_HIDDEN_DIM":     "192",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":        "0.15",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":        "0.006",
+            },
+        ),
+        Strategy(
+            family = FAMILY_ARCHITECTURE,
+            name   = "arch.memory_small_sharp_neighbors",
+            rationale = (
+                "Force sharper analogical retrieval with a smaller memory bank "
+                "(2048) and smaller top-k (8). Reduces precedent dilution and "
+                "pushes the analogical branch to commit to fewer neighbors."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "4e-5",
+                "HYBRID_COLAB_WD":                        "2e-4",
+                "HYBRID_COLAB_BATCH_SIZE":                "16",
+                "HYBRID_COLAB_EPOCHS":                    "55",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "8",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_MEMORY_CAPACITY":             "2048",
+                "HYBRID_COLAB_NEXUS_MEMORY_TOPK":                 "8",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":       "0.10",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":  "0.05",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":    "0.04",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":        "0.18",
+            },
+        ),
+        Strategy(
+            family = FAMILY_ARCHITECTURE,
+            name   = "arch.prior_biased_bridge",
+            rationale = (
+                "Change the bridge priors directly: stronger initial wave site "
+                "bias (0.24) and analogical site bias (0.30), but lower initial "
+                "analogical CYP gate (0.08). Tests whether the current council "
+                "starts too CYP-biased and too weak on site proposals."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_BATCH_SIZE":                "16",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_WAVE_SITE_INIT":              "0.24",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_SITE_INIT":        "0.30",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_INIT":         "0.08",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":    "0.04",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_HIDDEN_DIM":     "160",
+            },
+        ),
+        Strategy(
+            family = FAMILY_ARCHITECTURE,
+            name   = "arch.live_grad_gentle",
+            rationale = (
+                "Use live wave and analogical vote inputs with very gentle gradient "
+                "leak (0.02 each). Lets the voters adapt to current sidecar "
+                "features without reopening the batch-1 NaN instability."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "3e-5",
+                "HYBRID_COLAB_WD":                        "2e-4",
+                "HYBRID_COLAB_BATCH_SIZE":                "16",
+                "HYBRID_COLAB_EPOCHS":                    "55",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "8",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS":                 "1",
+                "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS":            "1",
+                "HYBRID_COLAB_NEXUS_LIVE_WAVE_VOTE_GRAD_SCALE":        "0.02",
+                "HYBRID_COLAB_NEXUS_LIVE_ANALOGICAL_VOTE_GRAD_SCALE":  "0.02",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":            "0.05",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":      "0.05",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":            "0.18",
+            },
+        ),
+        Strategy(
+            family = FAMILY_ARCHITECTURE,
+            name   = "arch.live_grad_stronger",
+            rationale = (
+                "Use live wave and analogical vote inputs with stronger gradient "
+                "leak (wave 0.10, analogical 0.08) plus a wider arbiter. Tests "
+                "whether the council is underfitting because the sidecar vote "
+                "heads learn too slowly from detached features."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "2e-5",
+                "HYBRID_COLAB_WD":                        "3e-4",
+                "HYBRID_COLAB_BATCH_SIZE":                "16",
+                "HYBRID_COLAB_EPOCHS":                    "60",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "9",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS":                 "1",
+                "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS":            "1",
+                "HYBRID_COLAB_NEXUS_LIVE_WAVE_VOTE_GRAD_SCALE":        "0.10",
+                "HYBRID_COLAB_NEXUS_LIVE_ANALOGICAL_VOTE_GRAD_SCALE":  "0.08",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":            "0.06",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":      "0.06",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_HIDDEN_DIM":         "192",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":            "0.20",
+            },
+        ),
+        Strategy(
+            family = FAMILY_ARCHITECTURE,
+            name   = "arch.both_live_voters",
+            rationale = (
+                "Un-detach BOTH wave and analogical encoders for their vote heads "
+                "(LIVE_WAVE=1, LIVE_ANALOGICAL=1). All three voters receive "
+                "up-to-date features; board weights must learn a real preference."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "3e-5",
+                "HYBRID_COLAB_WD":                        "2e-4",
+                "HYBRID_COLAB_EPOCHS":                    "55",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "8",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS":               "1",
+                "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS":          "1",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":          "0.06",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":    "0.05",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":     "0.04",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":           "0.012",
+                "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":               "2.0",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":           "0.15",
+            },
+        ),
+        Strategy(
+            family = FAMILY_ARCHITECTURE,
+            name   = "arch.full_system_unlock",
+            rationale = (
+                "Full system unlock: live both voters, memory unfrozen, precedent "
+                "logbook enabled, CYP suppressed, high board entropy. Maximum "
+                "freedom for all three voters to learn useful representations."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "3e-5",
+                "HYBRID_COLAB_WD":                        "2e-4",
+                "HYBRID_COLAB_EPOCHS":                    "60",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "9",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+                "HYBRID_COLAB_FREEZE_NEXUS_MEMORY":       "0",
+                "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "0",
+                "HYBRID_COLAB_PRECEDENT_LOGBOOK":         baseline_log,
+            },
+            model_env = {
+                "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS":               "1",
+                "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS":          "1",
+                "HYBRID_COLAB_NEXUS_WAVE_AUX_WEIGHT":               "0.12",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":          "0.12",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":          "0.06",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":    "0.06",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":     "0.03",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":           "0.015",
+                "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":               "2.0",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":           "0.20",
+            },
+        ),
+        Strategy(
+            family = FAMILY_ARCHITECTURE,
+            name   = "arch.lnn_dominant_ceiling",
+            rationale = (
+                "Suppress wave and analogical vote aux to near-zero (0.005) and "
+                "give LNN full control (lnn_vote_aux=0.05, logit_scale=3.5). "
+                "Measures the LNN-alone performance ceiling."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "1e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_NEXUS_LNN_VOTE_AUX_WEIGHT":          "0.05",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":         "0.005",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":   "0.005",
+                "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":              "3.5",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":          "0.003",
+            },
+        ),
+        Strategy(
+            family = FAMILY_ARCHITECTURE,
+            name   = "arch.slow_full_regularized",
+            rationale = (
+                "Slow deep search: very low LR (1e-5), high WD (5e-4), long "
+                "patience (12), live both voters, memory frozen, high dropout "
+                "(0.30) and entropy (0.020). Maximum regularisation + maximum "
+                "information from all voters."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "1e-5",
+                "HYBRID_COLAB_WD":                        "5e-4",
+                "HYBRID_COLAB_BATCH_SIZE":                "16",
+                "HYBRID_COLAB_EPOCHS":                    "60",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "12",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS":               "1",
+                "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS":          "1",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":          "0.06",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":    "0.05",
+                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":           "0.020",
+                "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":               "1.5",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":           "0.30",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":     "0.04",
+            },
+        ),
+        Strategy(
+            family = FAMILY_ARCHITECTURE,
+            name   = "arch.wave_ana_evidence_lnn_vote",
+            rationale = (
+                "Hybrid evidence mode: wave and analogical as evidence-only "
+                "(very low vote aux), LNN as sole voter (high vote aux + logit "
+                "scale), but all bridge aux weights kept high so the arbiter "
+                "still benefits from wave/analogical context."
+            ),
+            train_overrides = {
+                "HYBRID_COLAB_LR":                        "5e-5",
+                "HYBRID_COLAB_WD":                        "2e-4",
+                "HYBRID_COLAB_EPOCHS":                    "50",
+                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
+                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
+            },
+            model_env = {
+                "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS":               "0",
+                "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS":          "0",
+                "HYBRID_COLAB_NEXUS_WAVE_AUX_WEIGHT":               "0.15",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":          "0.12",
+                "HYBRID_COLAB_NEXUS_LNN_VOTE_AUX_WEIGHT":           "0.05",
+                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":          "0.005",
+                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":    "0.005",
+                "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":               "3.0",
+                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":           "0.15",
+            },
+        ),
+    ]
+    # Remove bundles that reference baseline_log if none exists
+    if not baseline_log:
+        architecture = [b for b in architecture if "precedent" not in b.name and b.name != "arch.full_system_unlock"]
+
+    return {
+        FAMILY_TRAINING:     training,
+        FAMILY_DATA:         data,
+        FAMILY_COUNCIL:      council,
+        FAMILY_ANALOGICAL:   analogical,
+        FAMILY_WAVE:         wave,
+        FAMILY_ARCHITECTURE: architecture,
+    }
 
 
 # ── run loader ────────────────────────────────────────────────────────────────
@@ -570,291 +1374,153 @@ def _build_strategies(
     baseline_log: str,
     iterations:   int,
     stuck:        bool = False,
+    tried_names:  set[str] | None = None,
 ) -> list[Strategy]:
     """
-    Build a priority-ordered list of training strategies from the aggregated
-    diagnostics of the last N episode logs.
+    Return an ordered list of Strategy bundles to try next.
 
-    If `stuck=True` the function returns alternate exploration paths that
-    specifically target structural dead-ends not solved by normal strategies.
+    Normal mode (stuck=False)
+    -------------------------
+    Evidence-driven selection across all families.  Each triggered condition
+    picks the highest-priority untried bundle from its family.  After filling
+    triggered slots, the remaining quota is filled from the full catalogue in
+    priority order.
+
+    Stuck mode (stuck=True)
+    -----------------------
+    Skip normal-mode families and go directly to FAMILY_ARCHITECTURE bundles,
+    then fill any remaining slots with data_policy and training_policy bundles
+    not yet tried.  Architecture bundles make structural changes (live inputs,
+    full unlock, evidence-only modes) that normal bundles don't touch.
+
+    Family priority within normal mode (higher = tried earlier):
+        1. analogical_system    (if ana dead / CYP dominant / comp frozen)
+        2. data_policy          (if precedent never used / memory frozen)
+        3. training_policy      (if severe overfitting)
+        4. wave_system          (if wave degrading or wave voter weak)
+        5. council_balance      (if board frozen / voter imbalance)
+        6. architecture         (always included as fallback)
     """
+    tried = tried_names or set()
+    bundles = _all_bundles(baseline_log)
 
-    def _ef(fn) -> float:          # fraction of valid logs where condition is True
+    def _pick(family: str, index: int = 0) -> Strategy | None:
+        """Return the `index`-th untried bundle from `family`."""
+        avail = [b for b in bundles[family] if b.name not in tried]
+        return avail[index] if index < len(avail) else None
+
+    def _all_untried(family: str) -> list[Strategy]:
+        return [b for b in bundles[family] if b.name not in tried]
+
+    def _ef(fn) -> float:
         return _frac_positive(all_diags, fn)
 
-    # ── alternate (stuck) paths ───────────────────────────────────────────────
+    valid_diags = [d for d in all_diags if d.get("valid")]
+
+    # ── stuck mode: architecture family first ─────────────────────────────────
     if stuck:
-        return [
-            Strategy(
-                name      = "live_wave_vote_inputs",
-                rationale = (
-                    "Stuck. Un-detach wave encoder for vote head (HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS=1). "
-                    "Removes stale-mapping problem: vote head now sees up-to-date wave features."
-                ),
-                train_overrides = {
-                    "HYBRID_COLAB_EPOCHS":                    "50",
-                    "HYBRID_COLAB_LR":                        "3e-5",
-                    "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
-                    "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
-                },
-                model_env = {
-                    "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS":              "1",
-                    "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":         "0.06",
-                    "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":             "2.0",
-                },
-            ),
-            Strategy(
-                name      = "live_analogical_vote_inputs",
-                rationale = (
-                    "Stuck. Un-detach analogical encoder for vote head "
-                    "(HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS=1). "
-                    "Breaks the confidence deadlock where analogical always outputs ≈0."
-                ),
-                train_overrides = {
-                    "HYBRID_COLAB_EPOCHS":                    "50",
-                    "HYBRID_COLAB_LR":                        "3e-5",
-                    "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
-                    "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
-                },
-                model_env = {
-                    "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS":            "1",
-                    "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":       "0.05",
-                    "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":        "0.04",
-                },
-            ),
-            Strategy(
-                name      = "high_entropy_board_reset",
-                rationale = (
-                    "Stuck. Push board weights toward uniform with high entropy "
-                    "penalty (board_entropy=0.02) to force re-exploration of voter balance."
-                ),
-                train_overrides = {
-                    "HYBRID_COLAB_EPOCHS":                    "60",
-                    "HYBRID_COLAB_LR":                        "2e-5",
-                    "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "8",
-                    "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
-                },
-                model_env = {
-                    "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":  "0.02",
-                    "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":      "1.5",
-                    "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS":       "1",
-                    "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS": "1",
-                },
-            ),
-            Strategy(
-                name      = "memory_unlock_precedent_fresh",
-                rationale = (
-                    "Stuck. Unfreeze nexus memory + enable precedent logbook "
-                    "so analogical can actively learn from new cases."
-                ),
-                train_overrides = {
-                    "HYBRID_COLAB_EPOCHS":                      "60",
-                    "HYBRID_COLAB_LR":                          "4e-5",
-                    "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":     "8",
-                    "HYBRID_COLAB_EARLY_STOPPING_METRIC":       "site_top3",
-                    "HYBRID_COLAB_FREEZE_NEXUS_MEMORY":         "0",
-                    "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK":   "0",
-                },
-                model_env = {
-                    "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":       "0.10",
-                    "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":  "0.05",
-                    "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":   "0.04",
-                },
-            ),
-            Strategy(
-                name      = "low_lr_high_regularization",
-                rationale = (
-                    "Stuck. Very low LR (1e-5) with strong regularisation "
-                    "to escape the current local optimum gradually."
-                ),
-                train_overrides = {
-                    "HYBRID_COLAB_EPOCHS":                    "60",
-                    "HYBRID_COLAB_LR":                        "1e-5",
-                    "HYBRID_COLAB_WD":                        "4e-4",
-                    "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "10",
-                    "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
-                },
-                model_env = {
-                    "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":  "0.20",
-                    "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":  "0.012",
-                },
-            ),
-        ][:iterations]
+        selected: list[Strategy] = []
+        # Architecture bundles: structural changes not yet tried
+        selected.extend(_all_untried(FAMILY_ARCHITECTURE))
+        # Then data policy (xenosite off, memory unlock, precedent)
+        selected.extend(_all_untried(FAMILY_DATA))
+        # Then training policy extremes
+        selected.extend(_all_untried(FAMILY_TRAINING))
+        # Then wave and council
+        selected.extend(_all_untried(FAMILY_WAVE))
+        selected.extend(_all_untried(FAMILY_COUNCIL))
+        selected.extend(_all_untried(FAMILY_ANALOGICAL))
+        # Deduplicate preserving order
+        seen: set[str] = set()
+        result: list[Strategy] = []
+        for s in selected:
+            if s.name not in seen:
+                seen.add(s.name)
+                result.append(s)
+        return result[:iterations]
 
-    # ── normal mode: evidence-driven priority ordering ────────────────────────
+    # ── normal mode: evidence-driven slot allocation ──────────────────────────
 
+    # Compute evidence fractions
     overfitting_frac  = _ef(lambda d: d.get("overfitting_gap", 0.0) > 0.50)
+    severe_overfit    = _ef(lambda d: d.get("overfitting_gap", 0.0) > 0.65)
     ana_dead_frac     = _ef(lambda d: d.get("ana_dead", False))
     comp_frozen_frac  = _ef(lambda d: d.get("comp_wt_frozen", False))
     wave_degrade_frac = _ef(lambda d: d.get("wave_vote_degrading", False))
     ana_cyp_frac      = _ef(lambda d: d.get("ana_cyp_dominant", False))
     board_frozen_frac = _ef(lambda d: d.get("board_lnn_var", 1.0) < 0.005)
-    precedent_never   = all(
-        not d.get("precedent_nonzero", False) for d in all_diags if d.get("valid")
-    )
+    precedent_never   = not any(d.get("precedent_nonzero", False) for d in valid_diags)
 
-    # Build ordered candidate list; worst problems first
-    candidates: list[Strategy] = []
+    # Average voter accs across valid logs
+    def _avg_voter(key: str) -> float:
+        vals = [d.get("voter_accs", {}).get(key, 0.0) for d in valid_diags]
+        return mean(vals) if vals else 0.0
 
-    # ① Analogical dead + no precedent → enable logbook (highest impact)
+    lnn_acc  = _avg_voter("lnn")
+    wave_acc = _avg_voter("wave")
+    ana_acc  = _avg_voter("ana")
+
+    # Ordered trigger → (family, bundle_index) pairs
+    # The trigger conditions are checked in priority order; each adds one bundle.
+    triggered: list[tuple[str, int]] = []  # (family, index)
+
+    # ① Analogical dead and precedent never used → highest priority fix
     if ana_dead_frac > 0.4 and precedent_never:
-        candidates.append(Strategy(
-            name      = "enable_precedent_logbook",
-            rationale = (
-                f"Analogical confidence dead in {ana_dead_frac:.0%} of runs "
-                f"and precedent logbook never active. "
-                "Enable logbook so analogical builds case memory and gains selectivity."
-            ),
-            train_overrides = {
-                "HYBRID_COLAB_EPOCHS":                    "50",
-                "HYBRID_COLAB_LR":                        "5e-5",
-                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "6",
-                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
-                "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "0",
-                "HYBRID_COLAB_PRECEDENT_LOGBOOK":         baseline_log,
-            },
-            model_env = {
-                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":       "0.06",
-                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":      "0.03",
-            },
-        ))
-
-    # ② Severe overfitting
-    if overfitting_frac > 0.4:
-        candidates.append(Strategy(
-            name      = "anti_overfit_regularize",
-            rationale = (
-                f"Severe overfitting (train-val gap > 0.5) in {overfitting_frac:.0%} of runs. "
-                "Increase arbiter dropout, weight decay, and board entropy."
-            ),
-            train_overrides = {
-                "HYBRID_COLAB_EPOCHS":                    "60",
-                "HYBRID_COLAB_LR":                        "3e-5",
-                "HYBRID_COLAB_WD":                        "3e-4",
-                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
-                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
-            },
-            model_env = {
-                "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT":  "0.20",
-                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":  "0.010",
-            },
-        ))
-
-    # ③ Wave voter degrading
-    if wave_degrade_frac > 0.3:
-        candidates.append(Strategy(
-            name      = "wave_voter_recovery",
-            rationale = (
-                f"Wave vote loss rising in {wave_degrade_frac:.0%} of runs — "
-                "vote head mapping goes stale as encoder evolves. "
-                "Un-detach wave inputs and increase wave vote supervision."
-            ),
-            train_overrides = {
-                "HYBRID_COLAB_EPOCHS":                    "50",
-                "HYBRID_COLAB_LR":                        "5e-5",
-                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "6",
-                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
-            },
-            model_env = {
-                "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS":       "1",
-                "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT":  "0.06",
-                "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":      "2.0",
-            },
-        ))
-
-    # ④ Analogical CYP loss dominating site loss
+        triggered.append((FAMILY_ANALOGICAL, 1))   # analogical.precedent_frozen_mem
+    # ② Analogical CYP domination → suppress CYP, raise site
     if ana_cyp_frac > 0.4:
-        candidates.append(Strategy(
-            name      = "analogical_cyp_rebalance",
-            rationale = (
-                f"Analogical CYP loss dominant (>0.5) in {ana_cyp_frac:.0%} of runs — "
-                "analogical trades SoM accuracy for easier CYP task. "
-                "Reduce CYP aux scale and strengthen site vote supervision."
-            ),
-            train_overrides = {
-                "HYBRID_COLAB_EPOCHS":                    "50",
-                "HYBRID_COLAB_LR":                        "5e-5",
-                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "6",
-                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
-            },
-            model_env = {
-                "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE":       "0.04",
-                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":      "0.05",
-                "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":           "0.07",
-            },
-        ))
-
-    # ⑤ Competition weight frozen (analogical not differentiating atoms)
+        triggered.append((FAMILY_ANALOGICAL, 0))   # analogical.cyp_suppressed_site_focus
+    # ③ Competition weight frozen → unlock memory
     if comp_frozen_frac > 0.4:
-        candidates.append(Strategy(
-            name      = "competition_weight_unlock",
-            rationale = (
-                f"Competition weight ≈ 1/N in {comp_frozen_frac:.0%} of runs — "
-                "analogical assigns equal weight to all atoms. "
-                "Unfreeze nexus memory to allow active learning."
-            ),
-            train_overrides = {
-                "HYBRID_COLAB_EPOCHS":                    "50",
-                "HYBRID_COLAB_LR":                        "4e-5",
-                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "6",
-                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
-                "HYBRID_COLAB_FREEZE_NEXUS_MEMORY":       "0",
-            },
-            model_env = {
-                "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT":       "0.10",
-                "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT":  "0.05",
-            },
-        ))
-
-    # ⑥ Board weights frozen
+        triggered.append((FAMILY_DATA, 2))          # data.memory_unlock_active_learning
+    # ④ Severe overfitting → heavy regularisation training bundle
+    if severe_overfit > 0.4:
+        triggered.append((FAMILY_TRAINING, 0))      # training.slow_patient_heavy_reg
+    elif overfitting_frac > 0.4:
+        triggered.append((FAMILY_TRAINING, 0))      # same, less severe condition
+    # ⑤ Wave voter degrading or much weaker than LNN
+    if wave_degrade_frac > 0.3 or (lnn_acc > 0 and wave_acc < lnn_acc * 0.6):
+        triggered.append((FAMILY_WAVE, 0))          # wave.live_vote_full
+    # ⑥ Board weights frozen → entropy exploration
     if board_frozen_frac > 0.4:
-        candidates.append(Strategy(
-            name      = "board_entropy_push",
-            rationale = (
-                f"Board weights frozen (LNN weight variance < 0.005) in "
-                f"{board_frozen_frac:.0%} of runs. "
-                "Add entropy regularisation to force the council to explore voter balance."
-            ),
-            train_overrides = {
-                "HYBRID_COLAB_EPOCHS":                    "50",
-                "HYBRID_COLAB_LR":                        "5e-5",
-                "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "6",
-                "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
-            },
-            model_env = {
-                "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":  "0.015",
-                "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE":      "1.8",
-            },
-        ))
+        triggered.append((FAMILY_COUNCIL, 0))       # council.diversity_entropy
+    # ⑦ Analogical competitive with LNN → give it more weight
+    if ana_acc > 0 and lnn_acc > 0 and ana_acc > lnn_acc * 0.85:
+        triggered.append((FAMILY_COUNCIL, 3))       # council.analogical_heavy
+    # ⑧ No precedent ever used but analogical not dead yet → warm-start logbook
+    if precedent_never and ana_dead_frac < 0.4:
+        triggered.append((FAMILY_DATA, 3))          # data.precedent_warm_start
 
-    # Always include a conservative long-run fallback
-    candidates.append(Strategy(
-        name      = "conservative_longer",
-        rationale = (
-            "Conservative: lower LR, 60 epochs, mild regularisation, "
-            "let existing configuration improve with more training."
-        ),
-        train_overrides = {
-            "HYBRID_COLAB_EPOCHS":                    "60",
-            "HYBRID_COLAB_LR":                        "4e-5",
-            "HYBRID_COLAB_WD":                        "2e-4",
-            "HYBRID_COLAB_EARLY_STOPPING_PATIENCE":   "7",
-            "HYBRID_COLAB_EARLY_STOPPING_METRIC":     "site_top3",
-        },
-        model_env = {
-            "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT":  "0.005",
-        },
-    ))
+    # Resolve triggered slots to actual bundles, deduplicate
+    candidates: list[Strategy] = []
+    seen_names: set[str] = set()
 
-    # Deduplicate by name while preserving order
-    seen: set[str] = set()
-    unique: list[Strategy] = []
-    for s in candidates:
-        if s.name not in seen:
-            seen.add(s.name)
-            unique.append(s)
+    for family, idx in triggered:
+        bundle = _pick(family, idx)
+        if bundle is not None and bundle.name not in seen_names:
+            seen_names.add(bundle.name)
+            candidates.append(bundle)
 
-    return unique[:iterations]
+    # Fill remaining quota from all families in priority order
+    fill_order = [
+        FAMILY_ANALOGICAL,
+        FAMILY_DATA,
+        FAMILY_TRAINING,
+        FAMILY_WAVE,
+        FAMILY_COUNCIL,
+        FAMILY_ARCHITECTURE,
+    ]
+    for family in fill_order:
+        for bundle in bundles[family]:
+            if len(candidates) >= iterations:
+                break
+            if bundle.name not in seen_names:
+                seen_names.add(bundle.name)
+                candidates.append(bundle)
+        if len(candidates) >= iterations:
+            break
+
+    return candidates[:iterations]
 
 
 # ── training command builder ──────────────────────────────────────────────────
@@ -1141,6 +1807,7 @@ def main() -> None:
             baseline_log=current_baseline_log,
             iterations=max(args.iterations * 2, 10),
             stuck=used_alt_strategies,
+            tried_names=tried_strategy_names,
         )
         strategy = next((s for s in strategies if s.name not in tried_strategy_names), None)
         if strategy is None:
@@ -1260,5 +1927,5 @@ def main() -> None:
     print(f"  Best report: {summary['baseline_report']}", flush=True)
     print(f"  Best ckpt:   {summary['baseline_checkpoint']}", flush=True)
 
-
-main()
+if __name__ == "__main__":
+    main()
