@@ -418,6 +418,9 @@ def main() -> None:
     parser.add_argument("--disable-nexus-bridge", action="store_true")
     parser.add_argument("--freeze-nexus-memory", action="store_true")
     parser.add_argument("--skip-nexus-memory-rebuild", action="store_true")
+    parser.add_argument("--backbone-freeze-epochs", type=int, default=0,
+                        help="Freeze base_lnn backbone for this many epochs; only train hybrid heads."
+                             " After thaw, backbone trains at 0.1x LR via a separate param group.")
     parser.add_argument("--xenosite-manifest", default="")
     parser.add_argument("--xenosite-topk", type=int, default=1)
     parser.add_argument("--xenosite-per-file-limit", type=int, default=0)
@@ -620,13 +623,60 @@ def main() -> None:
     best_state = None
     epochs_without_improvement = 0
     train_start = time.perf_counter()
+    backbone_freeze_epochs = max(0, int(args.backbone_freeze_epochs))
+    _backbone_frozen = False
+
+    def _set_backbone_frozen(frozen: bool) -> None:
+        """Freeze or unfreeze base_lnn backbone. When unfreezing, add a low-LR param group."""
+        base = getattr(model, "base_lnn", None) or getattr(model, "_base_lnn", None)
+        if base is None:
+            # HybridLNNModel wraps NexusHybridWrapper which wraps base_lnn
+            wrapper = getattr(model, "nexus_wrapper", None) or model
+            base = getattr(wrapper, "base_lnn", None)
+        if base is None:
+            return
+        for param in base.parameters():
+            param.requires_grad = not frozen
+        if not frozen:
+            # Add backbone params as a separate lower-LR group if not already added
+            backbone_params = [p for p in base.parameters() if p.requires_grad]
+            existing_ids = {id(p) for group in trainer.optimizer.param_groups for p in group["params"]}
+            new_backbone = [p for p in backbone_params if id(p) not in existing_ids]
+            if new_backbone:
+                backbone_lr = args.learning_rate * 0.1
+                trainer.optimizer.param_groups.append({"params": new_backbone, "lr": backbone_lr, "weight_decay": args.weight_decay})
+                print(f"Backbone unfrozen: added {len(new_backbone)} params at lr={backbone_lr:.2e}", flush=True)
+
+    if backbone_freeze_epochs > 0:
+        _set_backbone_frozen(True)
+        _backbone_frozen = True
+        print(f"Backbone frozen for first {backbone_freeze_epochs} epochs.", flush=True)
 
     try:
         for epoch in range(args.epochs):
+            if _backbone_frozen and epoch >= backbone_freeze_epochs:
+                _set_backbone_frozen(False)
+                _backbone_frozen = False
+                print(f"Epoch {epoch + 1}: backbone unfrozen (thaw at 0.1x LR).", flush=True)
             epoch_start = time.perf_counter()
             setattr(train_loader, "_current_epoch", epoch)
             setattr(train_loader, "_split_name", "train")
             train_stats = trainer.train_loader_epoch(train_loader)
+
+            # Refresh analogical memory after each epoch so it encodes the updated backbone.
+            # Only runs if nexus bridge is active and not memory-frozen.
+            _nexus_wrapper = getattr(model, "nexus_wrapper", None) or model
+            _nexus_bridge = getattr(_nexus_wrapper, "nexus_bridge", None)
+            if (
+                _nexus_bridge is not None
+                and not getattr(base_config, "nexus_memory_frozen", True)
+                and getattr(_nexus_bridge, "refresh_memory", None) is not None
+            ):
+                try:
+                    _nexus_bridge.refresh_memory(train_loader, device=device)
+                except Exception as _mem_err:
+                    print(f"  [memory refresh skipped: {_mem_err}]", flush=True)
+
             setattr(val_loader, "_current_epoch", epoch)
             setattr(val_loader, "_split_name", "val")
             val_metrics = trainer.evaluate_loader(val_loader)

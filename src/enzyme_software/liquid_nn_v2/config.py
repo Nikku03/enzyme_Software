@@ -110,7 +110,7 @@ class ModelConfig:
     nexus_site_arbiter_hidden_dim: int = 128
     nexus_site_arbiter_dropout: float = 0.20
     nexus_site_label_smoothing: float = 0.05
-    nexus_top1_margin_weight: float = 0.5
+    nexus_top1_margin_weight: float = 0.25
     nexus_top1_margin_value: float = 0.5
     nexus_lnn_vote_aux_weight: float = 0.01
     nexus_wave_vote_aux_weight: float = 0.04

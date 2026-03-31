@@ -1560,6 +1560,9 @@ def _build_train_command(
         cmd.append("--compute-xtb-if-missing")
     if settings.get("HYBRID_COLAB_FREEZE_NEXUS_MEMORY", "1") == "1":
         cmd.append("--freeze-nexus-memory")
+    _bb_freeze = int(settings.get("HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS", "0") or "0")
+    if _bb_freeze > 0:
+        cmd.extend(["--backbone-freeze-epochs", str(_bb_freeze)])
     if settings.get("HYBRID_COLAB_INCLUDE_XENOSITE", "1") == "1":
         manifest = settings.get("HYBRID_COLAB_XENOSITE_MANIFEST", "")
         if manifest:
@@ -1598,20 +1601,23 @@ def _default_train_settings() -> dict[str, str]:
         "HYBRID_COLAB_MANUAL_CACHE_DIR":  os.environ.get("HYBRID_COLAB_MANUAL_CACHE_DIR",  "/content/drive/MyDrive/enzyme_hybrid_lnn/cache/manual_engine_full"),
         "HYBRID_COLAB_XENOSITE_MANIFEST": os.environ.get("HYBRID_COLAB_XENOSITE_MANIFEST", "data/xenosite_suppl/manifest.json"),
         "HYBRID_COLAB_XENOSITE_TOPK":     os.environ.get("HYBRID_COLAB_XENOSITE_TOPK",     "1"),
-        "HYBRID_COLAB_EPOCHS":            os.environ.get("HYBRID_COLAB_EPOCHS",            "50"),
+        "HYBRID_COLAB_EPOCHS":            os.environ.get("HYBRID_COLAB_EPOCHS",            "60"),
         "HYBRID_COLAB_BATCH_SIZE":        os.environ.get("HYBRID_COLAB_BATCH_SIZE",        "16"),
         "HYBRID_COLAB_LR":                os.environ.get("HYBRID_COLAB_LR",                "5e-5"),
         "HYBRID_COLAB_WD":                os.environ.get("HYBRID_COLAB_WD",                "1e-4"),
         "HYBRID_COLAB_SPLIT_MODE":        os.environ.get("HYBRID_COLAB_SPLIT_MODE",        "scaffold_source_size"),
         "HYBRID_COLAB_SEED":              os.environ.get("HYBRID_COLAB_SEED",              "42"),
         "HYBRID_COLAB_LIMIT":             os.environ.get("HYBRID_COLAB_LIMIT",             "0"),
-        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": os.environ.get("HYBRID_COLAB_EARLY_STOPPING_PATIENCE", "6"),
-        "HYBRID_COLAB_EARLY_STOPPING_METRIC":   os.environ.get("HYBRID_COLAB_EARLY_STOPPING_METRIC",   "site_top3"),
+        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": os.environ.get("HYBRID_COLAB_EARLY_STOPPING_PATIENCE", "8"),
+        "HYBRID_COLAB_EARLY_STOPPING_METRIC":   os.environ.get("HYBRID_COLAB_EARLY_STOPPING_METRIC",   "site_top1"),
         "HYBRID_COLAB_SITE_LABELED_ONLY":       os.environ.get("HYBRID_COLAB_SITE_LABELED_ONLY",       "1"),
         "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING":  os.environ.get("HYBRID_COLAB_COMPUTE_XTB_IF_MISSING",  "0"),
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY":     os.environ.get("HYBRID_COLAB_FREEZE_NEXUS_MEMORY",     "1"),
         "HYBRID_COLAB_INCLUDE_XENOSITE":        os.environ.get("HYBRID_COLAB_INCLUDE_XENOSITE",        "1"),
         "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": os.environ.get("HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK", "1"),
+        # Backbone freeze: protect warm-start GNN for first N epochs; fine-tune heads only.
+        # Strategies may override to 0 when doing a full-retrain from scratch.
+        "HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS":  os.environ.get("HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS",  "5"),
     }
 
 

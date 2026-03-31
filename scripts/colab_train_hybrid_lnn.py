@@ -63,6 +63,7 @@ LOCKED_PRESET_KEYS = {
     "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS",
     "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS",
     "HYBRID_COLAB_SEED",
+    "HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS",
 }
 
 
@@ -180,7 +181,7 @@ PRESETS: dict[str, dict[str, str]] = {
         # main6 = symmetry-expanded labels (+89 atoms vs main5); fixes symmetric-atom errors
         "HYBRID_COLAB_DATASET": "data/prepared_training/main6_site_conservative_singlecyp_clean_symm.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
-        "HYBRID_COLAB_EPOCHS": "20",
+        "HYBRID_COLAB_EPOCHS": "25",
         "HYBRID_COLAB_BATCH_SIZE": "16",
         "HYBRID_COLAB_LR": "5e-5",
         "HYBRID_COLAB_WD": "1e-4",
@@ -189,8 +190,9 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
-        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "5",
+        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "8",
         "HYBRID_COLAB_EARLY_STOPPING_METRIC": "site_top1",
+        "HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS": "5",
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
@@ -319,6 +321,9 @@ def main() -> None:
         argv.append("--compute-xtb-if-missing")
     if os.environ.get("HYBRID_COLAB_FREEZE_NEXUS_MEMORY", "0").strip().lower() in {"1", "true", "yes", "on"}:
         argv.append("--freeze-nexus-memory")
+    backbone_freeze = int(os.environ.get("HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS", "0") or "0")
+    if backbone_freeze > 0:
+        argv.extend(["--backbone-freeze-epochs", str(backbone_freeze)])
     if os.environ.get("HYBRID_COLAB_INCLUDE_XENOSITE", "1").strip().lower() in {"1", "true", "yes", "on"}:
         argv.extend(["--xenosite-manifest", xenosite_manifest])
         argv.extend(["--xenosite-topk", os.environ["HYBRID_COLAB_XENOSITE_TOPK"]])
