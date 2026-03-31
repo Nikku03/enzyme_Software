@@ -55,6 +55,33 @@ def _env_flag(name: str, default: str = "0") -> bool:
     return os.environ.get(name, default).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _env_float(name: str) -> float | None:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return None
+    return float(raw)
+
+
+def _collect_model_overrides() -> dict[str, float]:
+    mapping = {
+        "HYBRID_COLAB_NEXUS_WAVE_AUX_WEIGHT": "nexus_wave_aux_weight",
+        "HYBRID_COLAB_NEXUS_ANALOGICAL_AUX_WEIGHT": "nexus_analogical_aux_weight",
+        "HYBRID_COLAB_NEXUS_LNN_VOTE_AUX_WEIGHT": "nexus_lnn_vote_aux_weight",
+        "HYBRID_COLAB_NEXUS_WAVE_VOTE_AUX_WEIGHT": "nexus_wave_vote_aux_weight",
+        "HYBRID_COLAB_NEXUS_ANALOGICAL_VOTE_AUX_WEIGHT": "nexus_analogical_vote_aux_weight",
+        "HYBRID_COLAB_NEXUS_BOARD_ENTROPY_WEIGHT": "nexus_board_entropy_weight",
+        "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE": "nexus_vote_logit_scale",
+        "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE": "nexus_analogical_cyp_aux_scale",
+        "HYBRID_COLAB_NEXUS_SITE_ARBITER_DROPOUT": "nexus_site_arbiter_dropout",
+    }
+    overrides: dict[str, float] = {}
+    for env_name, field_name in mapping.items():
+        value = _env_float(env_name)
+        if value is not None:
+            overrides[field_name] = value
+    return overrides
+
+
 def _load_drugs(path: Path) -> list[dict]:
     payload = json.loads(path.read_text())
     return list(payload.get("drugs", payload))
@@ -394,6 +421,7 @@ def main() -> None:
     full_xtb_atom_input_dim = _BASE_GRAPH_ATOM_DIM + FULL_XTB_FEATURE_DIM
     live_wave_vote_inputs = _env_flag("HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS", "0")
     live_analogical_vote_inputs = _env_flag("HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS", "0")
+    model_overrides = _collect_model_overrides()
     base_config = ModelConfig.light_advanced(
         use_manual_engine_priors=manual_engine_enabled,
         use_3d_branch=True,
@@ -405,6 +433,7 @@ def main() -> None:
         atom_input_dim=full_xtb_atom_input_dim,
         nexus_live_wave_vote_inputs=live_wave_vote_inputs,
         nexus_live_analogical_vote_inputs=live_analogical_vote_inputs,
+        **model_overrides,
     )
     base_model = LiquidMetabolismNetV2(base_config)
     model = HybridLNNModel(base_model)
@@ -467,6 +496,8 @@ def main() -> None:
         f"analogical={'yes' if live_analogical_vote_inputs else 'no'}",
         flush=True,
     )
+    if model_overrides:
+        print(f"Model overrides: {model_overrides}", flush=True)
 
     trainer = Trainer(
         model=model,
