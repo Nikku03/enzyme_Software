@@ -36,6 +36,48 @@ def _setdefault_env(name: str, value: str) -> None:
         os.environ[name] = value
 
 
+def _env_flag(name: str, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+LOCKED_PRESET_KEYS = {
+    "HYBRID_COLAB_DATASET",
+    "HYBRID_COLAB_STRUCTURE_SDF",
+    "HYBRID_COLAB_EPOCHS",
+    "HYBRID_COLAB_BATCH_SIZE",
+    "HYBRID_COLAB_LR",
+    "HYBRID_COLAB_WD",
+    "HYBRID_COLAB_LIMIT",
+    "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING",
+    "HYBRID_COLAB_SITE_LABELED_ONLY",
+    "HYBRID_COLAB_FREEZE_NEXUS_MEMORY",
+    "HYBRID_COLAB_EARLY_STOPPING_PATIENCE",
+    "HYBRID_COLAB_INCLUDE_XENOSITE",
+    "HYBRID_COLAB_XENOSITE_TOPK",
+    "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK",
+    "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS",
+    "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS",
+    "HYBRID_COLAB_SEED",
+}
+
+
+def _apply_preset(preset_values: dict[str, str]) -> list[str]:
+    locked = _env_flag("HYBRID_COLAB_LOCK_PRESET_POLICY", True)
+    overridden: list[str] = []
+    for key, value in preset_values.items():
+        if locked and key in LOCKED_PRESET_KEYS:
+            previous = os.environ.get(key)
+            os.environ[key] = value
+            if previous not in {None, "", value}:
+                overridden.append(key)
+            continue
+        _setdefault_env(key, value)
+    return overridden
+
+
 def _resolve_warm_start(output_dir: str) -> str:
     explicit = os.environ.get("HYBRID_COLAB_WARM_START", "").strip()
     if explicit:
@@ -183,8 +225,7 @@ def main() -> None:
         valid = ", ".join(sorted(PRESETS))
         raise ValueError(f"Unknown HYBRID_COLAB_PRESET={preset!r}. Valid presets: {valid}")
 
-    for key, value in PRESETS[preset].items():
-        _setdefault_env(key, value)
+    overridden_keys = _apply_preset(PRESETS[preset])
 
     requested_dataset = Path(os.environ["HYBRID_COLAB_DATASET"])
     if not requested_dataset.exists():
@@ -280,12 +321,15 @@ def main() -> None:
     print(f"xtb_cache_dir={xtb_cache_dir}")
     print(f"warm_start={checkpoint}")
     print(f"warm_start_mode={os.environ.get('HYBRID_COLAB_WARM_START_MODE', 'best')}")
+    print(f"lock_preset_policy={int(_env_flag('HYBRID_COLAB_LOCK_PRESET_POLICY', True))}")
     print(f"disable_precedent_logbook={os.environ.get('HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK', '1')}")
     print(f"live_wave_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS', '0')}")
     print(f"live_analogical_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS', '0')}")
     print(f"TORCHDYNAMO_DISABLE={os.environ.get('TORCHDYNAMO_DISABLE', '')}")
     print(f"TORCH_COMPILE_DISABLE={os.environ.get('TORCH_COMPILE_DISABLE', '')}")
     print(f"HYBRID_FORCE_MANUAL_OPTIMIZER={os.environ.get('HYBRID_FORCE_MANUAL_OPTIMIZER', '')}")
+    if overridden_keys:
+        print("preset_policy_overrode=" + ",".join(sorted(overridden_keys)))
     if precedent_logbook:
         print(f"precedent_logbook={precedent_logbook}")
     for key in sorted(PRESETS[preset]):
