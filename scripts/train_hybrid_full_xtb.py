@@ -209,6 +209,7 @@ def _save_training_state(
     args,
     history,
     best_val_top1: float,
+    best_val_monitor: float,
     best_state,
     base_config,
     xtb_cache_dir: Path,
@@ -237,6 +238,8 @@ def _save_training_state(
             early_stopping_patience=args.early_stopping_patience,
         ).__dict__,
         "best_val_top1": best_val_top1,
+        "best_val_monitor": best_val_monitor,
+        "early_stopping_metric": args.early_stopping_metric,
         "test_metrics": test_metrics,
         "history": history,
         "xtb_feature_dim": FULL_XTB_FEATURE_DIM,
@@ -255,6 +258,8 @@ def _save_training_state(
             {
                 "status": status,
                 "best_val_top1": best_val_top1,
+                "best_val_monitor": best_val_monitor,
+                "early_stopping_metric": args.early_stopping_metric,
                 "test_metrics": test_metrics,
                 "xtb_feature_dim": FULL_XTB_FEATURE_DIM,
                 "xtb_valid_molecules": xtb_valid_count,
@@ -285,6 +290,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--log-every", type=int, default=1)
     parser.add_argument("--early-stopping-patience", type=int, default=10)
+    parser.add_argument("--early-stopping-metric", choices=("site_top1", "site_top3"), default="site_top3")
     parser.add_argument("--output-dir", default="checkpoints/hybrid_full_xtb")
     parser.add_argument("--artifact-dir", default="artifacts/hybrid_full_xtb")
     parser.add_argument("--limit", type=int, default=None)
@@ -477,6 +483,7 @@ def main() -> None:
 
     history = []
     best_val_top1 = -1.0
+    best_val_monitor = -1.0
     best_state = None
     epochs_without_improvement = 0
     train_start = time.perf_counter()
@@ -495,9 +502,14 @@ def main() -> None:
             history.append({"epoch": epoch + 1, "train": train_stats, "val": val_metrics})
 
             val_top1 = float(val_metrics.get("site_top1_acc", 0.0))
-            trainer.step_scheduler(val_top1)
+            val_top3 = float(val_metrics.get("site_top3_acc", 0.0))
+            monitor_name = args.early_stopping_metric
+            monitor_value = val_top1 if monitor_name == "site_top1" else val_top3
+            trainer.step_scheduler(monitor_value)
             if val_top1 > best_val_top1:
                 best_val_top1 = val_top1
+            if monitor_value > best_val_monitor:
+                best_val_monitor = monitor_value
                 best_state = _initialized_state_dict(model)
                 epochs_without_improvement = 0
             else:
@@ -528,6 +540,7 @@ def main() -> None:
                 args=args,
                 history=history,
                 best_val_top1=best_val_top1,
+                best_val_monitor=best_val_monitor,
                 best_state=best_state,
                 base_config=base_config,
                 xtb_cache_dir=xtb_cache_dir,
@@ -540,7 +553,7 @@ def main() -> None:
 
             if early_stopping_enabled and epochs_without_improvement >= early_stopping_patience:
                 print(
-                    f"Early stopping after epoch {epoch + 1}: no site_top1 improvement for "
+                    f"Early stopping after epoch {epoch + 1}: no {monitor_name} improvement for "
                     f"{early_stopping_patience} epochs.",
                     flush=True,
                 )
@@ -554,6 +567,7 @@ def main() -> None:
             args=args,
             history=history,
             best_val_top1=best_val_top1,
+            best_val_monitor=best_val_monitor,
             best_state=best_state,
             base_config=base_config,
             xtb_cache_dir=xtb_cache_dir,
@@ -586,6 +600,7 @@ def main() -> None:
         args=args,
         history=history,
         best_val_top1=best_val_top1,
+        best_val_monitor=best_val_monitor,
         best_state=best_state,
         base_config=base_config,
         xtb_cache_dir=xtb_cache_dir,
