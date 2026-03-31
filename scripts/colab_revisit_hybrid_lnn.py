@@ -31,7 +31,35 @@ from pathlib import Path
 from statistics import mean, variance
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+def _resolve_repo_root() -> Path:
+    file_value = globals().get("__file__")
+    if file_value:
+        return Path(file_value).resolve().parents[1]
+
+    env_root = os.environ.get("HYBRID_COLAB_REPO_DIR", "").strip()
+    if env_root:
+        candidate = Path(env_root).resolve()
+        if (candidate / "scripts" / "colab_revisit_hybrid_lnn.py").exists() and (candidate / "src").exists():
+            return candidate
+
+    cwd = Path.cwd().resolve()
+    candidates = [
+        cwd,
+        cwd.parent,
+        Path("/content/enzyme_Software"),
+        Path("/content/enzyme_software"),
+    ]
+    for candidate in candidates:
+        if (candidate / "scripts" / "colab_revisit_hybrid_lnn.py").exists() and (candidate / "src").exists():
+            return candidate
+
+    raise RuntimeError(
+        "Unable to resolve repo root for colab_revisit_hybrid_lnn.py. "
+        "Set HYBRID_COLAB_REPO_DIR or run from the repository root."
+    )
+
+
+ROOT = _resolve_repo_root()
 SRC  = ROOT / "src"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
