@@ -111,6 +111,10 @@ if TORCH_AVAILABLE:
                         nn.Dropout(arbiter_dropout),
                         nn.Linear(max(32, arbiter_hidden // 2), 1),
                     )
+                    # Start the arbiter as a no-op residual so training begins from
+                    # the base site signal instead of a random council suppression.
+                    nn.init.zeros_(self.site_arbiter_head[-1].weight)
+                    nn.init.zeros_(self.site_arbiter_head[-1].bias)
                     self.site_arbiter_uses_bridge = True
 
         def _optional_feature(self, value, rows: int, width: int, *, device, dtype) -> torch.Tensor:
@@ -379,9 +383,14 @@ if TORCH_AVAILABLE:
                 dim=-1,
             )
             arbiter_in = torch.nan_to_num(arbiter_in, nan=0.0, posinf=4.0, neginf=-4.0)
-            site_logits = council_logit + self.site_arbiter_head(arbiter_in)
+            base_site_logits = outputs["site_logits"]
+            arbiter_residual = self.site_arbiter_head(arbiter_in)
+            # Treat the council and arbiter as residual corrections on top of the
+            # base site logits so they cannot bury the base model from step 1.
+            site_logits = base_site_logits + council_logit + arbiter_residual
             site_logits = torch.nan_to_num(site_logits, nan=0.0, posinf=20.0, neginf=-20.0)
             council = {
+                "base_site_logits": base_site_logits,
                 "lnn_vote": lnn_vote,
                 "lnn_conf": lnn_conf,
                 "wave_vote": wave_vote,
@@ -389,6 +398,7 @@ if TORCH_AVAILABLE:
                 "analogical_vote": analogical_vote,
                 "analogical_conf": analogical_conf,
                 "council_logit": council_logit,
+                "arbiter_residual": arbiter_residual,
                 "board_weights": board_weights,
             }
             return site_logits.clamp(-20.0, 20.0), council
@@ -429,6 +439,8 @@ if TORCH_AVAILABLE:
                 "analogical_cyp_weight": float(ana_cyp_weight.detach().item()),
                 "site_mode": site_mode,
                 "site_logits_base_mean": float(outputs["site_logits"].detach().mean().item()),
+                "site_logits_council_mean": float(council["council_logit"].detach().mean().item()) if council else 0.0,
+                "site_logits_arbiter_residual_mean": float(council["arbiter_residual"].detach().mean().item()) if council else 0.0,
                 "site_logits_final_mean": float(site_logits.detach().mean().item()),
             }
             result.update(
