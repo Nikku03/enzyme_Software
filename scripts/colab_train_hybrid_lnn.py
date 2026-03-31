@@ -50,6 +50,7 @@ LOCKED_PRESET_KEYS = {
     "HYBRID_COLAB_BATCH_SIZE",
     "HYBRID_COLAB_LR",
     "HYBRID_COLAB_WD",
+    "HYBRID_COLAB_SPLIT_MODE",
     "HYBRID_COLAB_LIMIT",
     "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING",
     "HYBRID_COLAB_SITE_LABELED_ONLY",
@@ -160,6 +161,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_BATCH_SIZE": "12",
         "HYBRID_COLAB_LR": "2e-4",
         "HYBRID_COLAB_WD": "1e-4",
+        "HYBRID_COLAB_SPLIT_MODE": "scaffold_source_size",
         "HYBRID_COLAB_LIMIT": "128",
         "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
@@ -180,6 +182,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_BATCH_SIZE": "16",
         "HYBRID_COLAB_LR": "5e-5",
         "HYBRID_COLAB_WD": "1e-4",
+        "HYBRID_COLAB_SPLIT_MODE": "scaffold_source_size",
         "HYBRID_COLAB_LIMIT": "0",
         "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
@@ -200,6 +203,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_BATCH_SIZE": "24",
         "HYBRID_COLAB_LR": "2e-4",
         "HYBRID_COLAB_WD": "1e-4",
+        "HYBRID_COLAB_SPLIT_MODE": "scaffold_source_size",
         "HYBRID_COLAB_LIMIT": "0",
         "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "1",
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
@@ -287,6 +291,8 @@ def main() -> None:
         os.environ["HYBRID_COLAB_LR"],
         "--weight-decay",
         os.environ["HYBRID_COLAB_WD"],
+        "--split-mode",
+        os.environ["HYBRID_COLAB_SPLIT_MODE"],
         "--seed",
         os.environ["HYBRID_COLAB_SEED"],
         "--output-dir",
@@ -327,6 +333,7 @@ def main() -> None:
     print(f"xtb_cache_dir={xtb_cache_dir}")
     print(f"warm_start={checkpoint}")
     print(f"warm_start_mode={os.environ.get('HYBRID_COLAB_WARM_START_MODE', 'best')}")
+    print(f"split_mode={os.environ.get('HYBRID_COLAB_SPLIT_MODE', 'scaffold_source_size')}")
     print(f"lock_preset_policy={int(_env_flag('HYBRID_COLAB_LOCK_PRESET_POLICY', True))}")
     print(f"disable_precedent_logbook={os.environ.get('HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK', '1')}")
     print(f"live_wave_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS', '0')}")

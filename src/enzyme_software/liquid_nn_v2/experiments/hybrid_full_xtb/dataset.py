@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import random
+from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -14,16 +15,148 @@ from enzyme_software.liquid_nn_v2.features.steric_features import StructureLibra
 from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM, load_or_compute_full_xtb_features
 
 
-def split_drugs(drugs: List[Dict[str, object]], seed: int, train_ratio: float, val_ratio: float):
+def _canonical_smiles(drug: Dict[str, object]) -> str:
+    return " ".join(str(drug.get("smiles", "") or "").split())
+
+
+def _safe_num_atoms(drug: Dict[str, object]) -> int:
+    value = drug.get("num_atoms")
+    if isinstance(value, int) and value > 0:
+        return int(value)
+    try:
+        from rdkit import Chem
+
+        mol = Chem.MolFromSmiles(_canonical_smiles(drug))
+        if mol is not None:
+            return int(mol.GetNumAtoms())
+    except Exception:
+        pass
+    return 0
+
+
+def _size_bucket(num_atoms: int) -> str:
+    if num_atoms <= 0:
+        return "unknown"
+    if num_atoms <= 15:
+        return "<=15"
+    if num_atoms <= 25:
+        return "16-25"
+    if num_atoms <= 40:
+        return "26-40"
+    if num_atoms <= 60:
+        return "41-60"
+    return "61+"
+
+
+def _scaffold_key(drug: Dict[str, object]) -> str:
+    smiles = _canonical_smiles(drug)
+    if not smiles:
+        return f"missing::{drug.get('id', '')}"
+    try:
+        from rdkit import Chem
+        from rdkit.Chem.Scaffolds import MurckoScaffold
+
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            return f"invalid::{smiles}"
+        scaffold = MurckoScaffold.MurckoScaffoldSmiles(mol=mol)
+        return scaffold or f"acyclic::{smiles}"
+    except Exception:
+        return f"fallback::{smiles}"
+
+
+def _target_counts(total: int, train_ratio: float, val_ratio: float) -> dict[str, int]:
+    n_train = int(total * train_ratio)
+    n_val = int(total * val_ratio)
+    n_test = max(0, total - n_train - n_val)
+    return {"train": n_train, "val": n_val, "test": n_test}
+
+
+def _assign_groups_greedily(
+    groups: List[List[Dict[str, object]]],
+    *,
+    seed: int,
+    targets: dict[str, int],
+) -> dict[str, List[Dict[str, object]]]:
+    rng = random.Random(seed)
+    shuffled = list(groups)
+    rng.shuffle(shuffled)
+    shuffled.sort(key=len, reverse=True)
+    splits: dict[str, List[Dict[str, object]]] = {"train": [], "val": [], "test": []}
+    for group in shuffled:
+        split_name = min(
+            ("train", "val", "test"),
+            key=lambda name: (len(splits[name]) - targets[name], len(splits[name])),
+        )
+        splits[split_name].extend(group)
+    return splits
+
+
+def _split_by_scaffold_groups(
+    drugs: List[Dict[str, object]],
+    *,
+    seed: int,
+    train_ratio: float,
+    val_ratio: float,
+    stratify_size: bool,
+) -> Tuple[List[Dict[str, object]], List[Dict[str, object]], List[Dict[str, object]]]:
+    strata: dict[tuple[str, str], dict[str, List[Dict[str, object]]]] = defaultdict(lambda: defaultdict(list))
+    for drug in drugs:
+        source = str(drug.get("source", "DrugBank"))
+        bucket = _size_bucket(_safe_num_atoms(drug)) if stratify_size else "all"
+        strata[(source, bucket)][_scaffold_key(drug)].append(drug)
+
+    targets = _target_counts(len(drugs), train_ratio, val_ratio)
+    splits: dict[str, List[Dict[str, object]]] = {"train": [], "val": [], "test": []}
+    for idx, ((_source, _bucket), scaffold_groups) in enumerate(sorted(strata.items())):
+        stratum_groups = list(scaffold_groups.values())
+        stratum_targets = _target_counts(sum(len(g) for g in stratum_groups), train_ratio, val_ratio)
+        assigned = _assign_groups_greedily(stratum_groups, seed=seed + idx, targets=stratum_targets)
+        for split_name in splits:
+            splits[split_name].extend(assigned[split_name])
+
+    # Coarse rebalance to keep ratios roughly aligned after grouped assignment.
+    for donor, receiver in (("train", "val"), ("train", "test"), ("val", "test")):
+        while len(splits[donor]) > targets[donor] + 1 and len(splits[receiver]) < targets[receiver]:
+            splits[receiver].append(splits[donor].pop())
+    return splits["train"], splits["val"], splits["test"]
+
+
+def split_drugs(
+    drugs: List[Dict[str, object]],
+    seed: int,
+    train_ratio: float,
+    val_ratio: float,
+    *,
+    mode: str = "random",
+):
     shuffled = list(drugs)
-    random.Random(seed).shuffle(shuffled)
-    n_train = int(len(shuffled) * train_ratio)
-    n_val = int(len(shuffled) * val_ratio)
-    return (
-        shuffled[:n_train],
-        shuffled[n_train : n_train + n_val],
-        shuffled[n_train + n_val :],
-    )
+    if mode == "random":
+        random.Random(seed).shuffle(shuffled)
+        n_train = int(len(shuffled) * train_ratio)
+        n_val = int(len(shuffled) * val_ratio)
+        return (
+            shuffled[:n_train],
+            shuffled[n_train : n_train + n_val],
+            shuffled[n_train + n_val :],
+        )
+    if mode == "scaffold_source":
+        return _split_by_scaffold_groups(
+            shuffled,
+            seed=seed,
+            train_ratio=train_ratio,
+            val_ratio=val_ratio,
+            stratify_size=False,
+        )
+    if mode == "scaffold_source_size":
+        return _split_by_scaffold_groups(
+            shuffled,
+            seed=seed,
+            train_ratio=train_ratio,
+            val_ratio=val_ratio,
+            stratify_size=True,
+        )
+    raise ValueError(f"Unsupported split mode: {mode}")
 
 
 class FullXTBHybridDataset(CYPMetabolismDataset):

@@ -112,6 +112,68 @@ def _canonical_smiles_key(smiles: str) -> str:
     return " ".join(str(smiles or "").strip().split())
 
 
+def _safe_num_atoms(drug: dict) -> int:
+    value = drug.get("num_atoms")
+    if isinstance(value, int) and value > 0:
+        return int(value)
+    smiles = _canonical_smiles_key(drug.get("smiles", ""))
+    if smiles:
+        try:
+            from rdkit import Chem
+
+            mol = Chem.MolFromSmiles(smiles)
+            if mol is not None:
+                return int(mol.GetNumAtoms())
+        except Exception:
+            pass
+    return 0
+
+
+def _atom_bucket(drug: dict) -> str:
+    num_atoms = _safe_num_atoms(drug)
+    if num_atoms <= 0:
+        return "unknown"
+    if num_atoms <= 15:
+        return "<=15"
+    if num_atoms <= 25:
+        return "16-25"
+    if num_atoms <= 40:
+        return "26-40"
+    if num_atoms <= 60:
+        return "41-60"
+    return "61+"
+
+
+def _site_count_bucket(drug: dict) -> str:
+    count = len(list(drug.get("site_atoms") or []))
+    if count <= 0:
+        return "none"
+    if count == 1:
+        return "single"
+    return "multi"
+
+
+def _near_duplicate_summary(items: list[dict]) -> dict[str, int]:
+    smiles_counts = Counter(_canonical_smiles_key(d.get("smiles", "")) for d in items)
+    nonempty = {key: value for key, value in smiles_counts.items() if key}
+    return {
+        "duplicate_rows": int(sum(value - 1 for value in nonempty.values() if value > 1)),
+        "duplicate_keys": int(sum(1 for value in nonempty.values() if value > 1)),
+        "unique_smiles": int(len(nonempty)),
+    }
+
+
+def _split_summary(items: list[dict]) -> dict[str, object]:
+    return {
+        "total": int(len(items)),
+        "site_supervised": int(sum(1 for d in items if _has_site_labels(d))),
+        "sources": dict(Counter(str(d.get("source", "DrugBank")) for d in items)),
+        "atom_buckets": dict(Counter(_atom_bucket(d) for d in items)),
+        "site_count_buckets": dict(Counter(_site_count_bucket(d) for d in items)),
+        "near_duplicates": _near_duplicate_summary(items),
+    }
+
+
 def _load_xenosite_aux_entries(manifest_path: Path, *, topk: int = 1, per_file_limit: int = 0) -> list[dict]:
     from rdkit import Chem
 
@@ -259,6 +321,8 @@ def _save_training_state(
     xtb_cache_dir: Path,
     xtb_valid_count: int,
     xtb_statuses: dict[str, int],
+    split_mode: str,
+    split_summary: dict[str, object],
     episode_log_path: Path | None = None,
     test_metrics=None,
     status: str = "running",
@@ -289,6 +353,8 @@ def _save_training_state(
         "xtb_feature_dim": FULL_XTB_FEATURE_DIM,
         "xtb_cache_dir": str(xtb_cache_dir),
         "status": status,
+        "split_mode": split_mode,
+        "split_summary": split_summary,
     }
     torch.save(checkpoint, latest_path)
     torch.save(checkpoint, archive_path)
@@ -308,6 +374,8 @@ def _save_training_state(
                 "xtb_feature_dim": FULL_XTB_FEATURE_DIM,
                 "xtb_valid_molecules": xtb_valid_count,
                 "xtb_statuses": xtb_statuses,
+                "split_mode": split_mode,
+                "split_summary": split_summary,
                 "episode_log_path": str(episode_log_path) if episode_log_path is not None else None,
                 "history": history,
             },
@@ -340,6 +408,11 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--train-ratio", type=float, default=0.7)
     parser.add_argument("--val-ratio", type=float, default=0.15)
+    parser.add_argument(
+        "--split-mode",
+        choices=("random", "scaffold_source", "scaffold_source_size"),
+        default="scaffold_source_size",
+    )
     parser.add_argument("--site-labeled-only", action="store_true")
     parser.add_argument("--compute-xtb-if-missing", action="store_true")
     parser.add_argument("--disable-nexus-bridge", action="store_true")
@@ -387,12 +460,18 @@ def main() -> None:
     if args.site_labeled_only:
         drugs = [drug for drug in drugs if _has_site_labels(drug)]
         print(f"Site-labeled: {len(drugs)}", flush=True)
-    random.Random(args.seed).shuffle(drugs)
     if args.limit is not None:
         drugs = drugs[: int(args.limit)]
         print(f"Limited to: {len(drugs)}", flush=True)
 
-    train_drugs, val_drugs, test_drugs = split_drugs(drugs, seed=args.seed, train_ratio=args.train_ratio, val_ratio=args.val_ratio)
+    train_drugs, val_drugs, test_drugs = split_drugs(
+        drugs,
+        seed=args.seed,
+        train_ratio=args.train_ratio,
+        val_ratio=args.val_ratio,
+        mode=args.split_mode,
+    )
+    print(f"Split mode: {args.split_mode}", flush=True)
     xenosite_added = 0
     if args.xenosite_manifest:
         manifest_path = Path(args.xenosite_manifest)
@@ -413,11 +492,17 @@ def main() -> None:
                 f"(topk={max(1, int(args.xenosite_topk))})",
                 flush=True,
             )
+    split_summary = {
+        "train": _split_summary(train_drugs),
+        "val": _split_summary(val_drugs),
+        "test": _split_summary(test_drugs),
+    }
     for split_name, split_items in (("train", train_drugs), ("val", val_drugs), ("test", test_drugs)):
-        source_counts = Counter(str(d.get("source", "DrugBank")) for d in split_items)
-        site_count = sum(1 for d in split_items if _has_site_labels(d))
+        summary = split_summary[split_name]
         print(
-            f"{split_name}: total={len(split_items)} | site_supervised={site_count} | sources={dict(source_counts)}",
+            f"{split_name}: total={summary['total']} | site_supervised={summary['site_supervised']} | "
+            f"sources={summary['sources']} | atom_buckets={summary['atom_buckets']} | "
+            f"site_count_buckets={summary['site_count_buckets']} | near_duplicates={summary['near_duplicates']}",
             flush=True,
         )
 
@@ -594,6 +679,8 @@ def main() -> None:
                 xtb_cache_dir=xtb_cache_dir,
                 xtb_valid_count=xtb_valid_count,
                 xtb_statuses=xtb_statuses,
+                split_mode=args.split_mode,
+                split_summary=split_summary,
                 episode_log_path=episode_log_path,
                 test_metrics=None,
                 status="running",
@@ -621,6 +708,8 @@ def main() -> None:
             xtb_cache_dir=xtb_cache_dir,
             xtb_valid_count=xtb_valid_count,
             xtb_statuses=xtb_statuses,
+            split_mode=args.split_mode,
+            split_summary=split_summary,
             episode_log_path=episode_log_path,
             test_metrics=None,
             status="interrupted",
@@ -654,6 +743,8 @@ def main() -> None:
         xtb_cache_dir=xtb_cache_dir,
         xtb_valid_count=xtb_valid_count,
         xtb_statuses=xtb_statuses,
+        split_mode=args.split_mode,
+        split_summary=split_summary,
         episode_log_path=episode_log_path,
         test_metrics=test_metrics,
         status="completed",
