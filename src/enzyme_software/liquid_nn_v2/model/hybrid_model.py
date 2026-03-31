@@ -375,6 +375,18 @@ if TORCH_AVAILABLE:
                 + board_weights[:, 1:2] * wave_vote
                 + board_weights[:, 2:3] * analogical_vote
             )
+            # Per-molecule zero-centering of council_logit: same fix as arbiter.
+            # Without this the council learns a global negative bias (mean ≈ -0.86)
+            # that suppresses all atom logits uniformly instead of re-ranking.
+            if batch_index.numel() > 0:
+                num_mol_cncl = int(batch_index.max().item()) + 1
+                cncl_sums = torch.zeros(num_mol_cncl, 1, device=device, dtype=dtype)
+                cncl_cnts = torch.zeros(num_mol_cncl, 1, device=device, dtype=dtype)
+                idx_exp_c = batch_index.unsqueeze(-1)
+                cncl_sums.scatter_add_(0, idx_exp_c, council_logit)
+                cncl_cnts.scatter_add_(0, idx_exp_c, torch.ones_like(council_logit))
+                cncl_means = cncl_sums / cncl_cnts.clamp(min=1.0)
+                council_logit = council_logit - cncl_means[batch_index]
             arbiter_in = torch.cat(
                 [
                     board_context,
