@@ -64,6 +64,8 @@ LOCKED_PRESET_KEYS = {
     "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS",
     "HYBRID_COLAB_SEED",
     "HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS",
+    "HYBRID_COLAB_TRAIN_RATIO",
+    "HYBRID_COLAB_VAL_RATIO",
 }
 
 
@@ -176,6 +178,8 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS": "0",
         "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS": "0",
         "HYBRID_COLAB_SEED": "42",
+        "HYBRID_COLAB_TRAIN_RATIO": "0.80",
+        "HYBRID_COLAB_VAL_RATIO": "0.10",
     },
     "balanced": {
         # main8 = 933 molecules (main7 703 + CYP_DBs novel 230)
@@ -203,6 +207,8 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS": "0",
         "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS": "0",
         "HYBRID_COLAB_SEED": "42",
+        "HYBRID_COLAB_TRAIN_RATIO": "0.80",
+        "HYBRID_COLAB_VAL_RATIO": "0.10",
     },
     "full": {
         "HYBRID_COLAB_DATASET": "data/combined_drugbank_supercyp_full_xtb_valid_site_labeled.json",
@@ -224,6 +230,8 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS": "0",
         "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS": "0",
         "HYBRID_COLAB_SEED": "42",
+        "HYBRID_COLAB_TRAIN_RATIO": "0.80",
+        "HYBRID_COLAB_VAL_RATIO": "0.10",
     },
 }
 
@@ -315,6 +323,10 @@ def main() -> None:
         os.environ["HYBRID_COLAB_EARLY_STOPPING_PATIENCE"],
         "--early-stopping-metric",
         os.environ["HYBRID_COLAB_EARLY_STOPPING_METRIC"],
+        "--train-ratio",
+        os.environ.get("HYBRID_COLAB_TRAIN_RATIO", "0.80"),
+        "--val-ratio",
+        os.environ.get("HYBRID_COLAB_VAL_RATIO", "0.10"),
     ]
 
     limit = int(os.environ.get("HYBRID_COLAB_LIMIT", "0") or "0")

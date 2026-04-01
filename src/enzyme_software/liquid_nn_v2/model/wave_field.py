@@ -93,7 +93,7 @@ if TORCH_AVAILABLE:
             alpha = torch.nn.functional.softplus(params[:, 0:1]) + 0.25
             scalar_amp = mv[:, 0:1]
             vector_amp = mv[:, 1:4]
-            bivec_amp = mv[:, 5:11].norm(dim=-1, keepdim=True)
+            bivec_amp = (mv[:, 5:11].pow(2).sum(dim=-1, keepdim=True) + 1.0e-12).sqrt()
             pseudo_amp = mv[:, 15:16]
 
             rel = probes.unsqueeze(2) - coords.view(1, 1, num_atoms, 3)
@@ -104,7 +104,7 @@ if TORCH_AVAILABLE:
 
             scalar_density = (kernel * scalar_amp.view(1, 1, num_atoms, 1)).sum(dim=2).squeeze(-1)
             vector_flow = (kernel * (rel_unit * vector_amp.view(1, 1, num_atoms, 3))).sum(dim=2)
-            vector_align = vector_flow.norm(dim=-1)
+            vector_align = (vector_flow.pow(2).sum(dim=-1) + 1.0e-12).sqrt()
             bivector_density = (kernel * bivec_amp.view(1, 1, num_atoms, 1)).sum(dim=2).squeeze(-1)
             pseudo_density = (kernel * pseudo_amp.view(1, 1, num_atoms, 1)).sum(dim=2).squeeze(-1)
 
