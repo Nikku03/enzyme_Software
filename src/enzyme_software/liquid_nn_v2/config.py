@@ -98,7 +98,7 @@ class ModelConfig:
     nexus_wave_hidden_dim: int = 64
     nexus_graph_dim: int = 48
     nexus_memory_capacity: int = 4096
-    nexus_memory_topk: int = 32
+    nexus_memory_topk: int = 16
     nexus_memory_frozen: bool = False
     nexus_rebuild_memory_before_train: bool = True
     nexus_wave_aux_weight: float = 0.10

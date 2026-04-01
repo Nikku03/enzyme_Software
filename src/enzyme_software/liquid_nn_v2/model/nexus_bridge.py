@@ -91,11 +91,26 @@ if TORCH_AVAILABLE:
             weights = weights / weights.sum(dim=-1, keepdim=True).clamp_min(1.0e-8)
             site_prior = (weights.unsqueeze(-1) * mem_site[top_idx]).sum(dim=1)
             cyp_prior = (weights.unsqueeze(-1) * mem_cyp[top_idx]).sum(dim=1)
-            confidence = weights.max(dim=-1, keepdim=True).values
+            best_score = top_scores[:, :1]
+            if int(top_scores.size(-1)) > 1:
+                support_margin = (top_scores[:, :1] - top_scores[:, 1:2]).clamp_min(0.0)
+            else:
+                support_margin = top_scores[:, :1].clamp_min(0.0)
+            concentration = weights.pow(2).sum(dim=-1, keepdim=True)
+            if k > 1:
+                concentration = (concentration - (1.0 / float(k))) / (1.0 - (1.0 / float(k)))
+            concentration = concentration.clamp(0.0, 1.0)
+            score_conf = torch.sigmoid((best_score - 0.30) / 0.12)
+            margin_conf = torch.sigmoid((support_margin - 0.04) / 0.04)
+            confidence = (0.50 * score_conf) + (0.30 * margin_conf) + (0.20 * concentration)
+            confidence = confidence * valid_rows.unsqueeze(-1).to(dtype=confidence.dtype)
             return {
                 "site_prior": site_prior,
                 "cyp_prior": cyp_prior,
                 "confidence": confidence,
+                "best_score": best_score,
+                "support_margin": support_margin,
+                "concentration": concentration,
                 "top_scores": top_scores,
                 "top_weights": weights,
                 "retrieved_multivectors": mem_mv[top_idx],
@@ -570,6 +585,9 @@ if TORCH_AVAILABLE:
                 else multivectors.new_zeros((multivectors.size(0), AuditedEpisodeLogbook.brief_dim))
             )
             retrieval = self.memory.lookup(atom_keys, per_atom_graph, query_molecule_keys=atom_molecule_keys)
+            best_score = None
+            support_margin = None
+            concentration = None
             if retrieval is None:
                 site_prior = torch.full((multivectors.size(0), 1), 0.5, device=multivectors.device, dtype=multivectors.dtype)
                 cyp_prior = F.softmax(cyp_logits.detach(), dim=-1)[batch_index]
@@ -582,6 +600,9 @@ if TORCH_AVAILABLE:
                 site_prior = retrieval["site_prior"]
                 cyp_prior = retrieval["cyp_prior"]
                 confidence = retrieval["confidence"]
+                best_score = retrieval.get("best_score")
+                support_margin = retrieval.get("support_margin")
+                concentration = retrieval.get("concentration")
                 valid_rows = retrieval.get("valid_rows")
                 if valid_rows is not None:
                     valid_rows_f = valid_rows.to(device=multivectors.device, dtype=multivectors.dtype)
@@ -591,13 +612,20 @@ if TORCH_AVAILABLE:
                     cyp_prior = torch.where(valid_rows_f > 0.5, cyp_prior, fallback_cyp_prior)
                     confidence = confidence * valid_rows_f
                 continuous_reasoning = self._continuous_reasoning(query_multivectors=multivectors, retrieval=retrieval)
+                retrieval_gate = confidence.clamp(0.0, 1.0)
+                neutral_site_prior = torch.full_like(site_prior, 0.5)
+                site_prior = retrieval_gate * site_prior + (1.0 - retrieval_gate) * neutral_site_prior
                 analogical_site_input = torch.cat([multivectors, site_prior, cyp_prior, confidence, precedent_brief], dim=-1)
-                analogical_site_bias = self.analogical_site_head(analogical_site_input) + 0.25 * continuous_reasoning["site_bias"]
+                analogical_site_bias = retrieval_gate * (
+                    self.analogical_site_head(analogical_site_input) + 0.25 * continuous_reasoning["site_bias"]
+                )
                 num_molecules = int(cyp_logits.size(0))
                 cyp_prior_by_mol = scatter_mean(cyp_prior, batch_index, num_molecules)
                 graph_conf = scatter_mean(confidence, batch_index, num_molecules)
-                analogical_cyp_bias = self.analogical_cyp_head(torch.cat([graph_embeddings, cyp_prior_by_mol, graph_conf], dim=-1))
-                site_prior = 0.5 * site_prior + 0.5 * torch.sigmoid(continuous_reasoning["site_bias"])
+                analogical_cyp_bias = graph_conf * self.analogical_cyp_head(
+                    torch.cat([graph_embeddings, cyp_prior_by_mol, graph_conf], dim=-1)
+                )
+                site_prior = (0.70 * site_prior) + (0.30 * torch.sigmoid(continuous_reasoning["site_bias"]))
             wave_aux_loss, wave_metrics = self._wave_aux_loss(
                 wave_preds=wave_preds,
                 xtb_atom_features=xtb_atom_features,
@@ -629,6 +657,9 @@ if TORCH_AVAILABLE:
                 **analogical_metrics,
                 "memory_size": float(self.memory.size()),
                 "analogical_confidence_mean": float(confidence.detach().mean().item()) if confidence.numel() else 0.0,
+                "analogical_best_score_mean": float(best_score.detach().mean().item()) if retrieval is not None and best_score is not None and best_score.numel() else 0.0,
+                "analogical_margin_mean": float(support_margin.detach().mean().item()) if retrieval is not None and support_margin is not None and support_margin.numel() else 0.0,
+                "analogical_concentration_mean": float(concentration.detach().mean().item()) if retrieval is not None and concentration is not None and concentration.numel() else 0.0,
                 "wave_charge_mean": float(wave_preds["predicted_charges"].detach().mean().item()) if wave_preds["predicted_charges"].numel() else 0.0,
                 "wave_fukui_mean": float(wave_preds["predicted_fukui"].detach().mean().item()) if wave_preds["predicted_fukui"].numel() else 0.0,
                 "wave_field_density_mean": float(wave_field["global_density"].detach().mean().item()) if wave_field["global_density"].numel() else 0.0,
