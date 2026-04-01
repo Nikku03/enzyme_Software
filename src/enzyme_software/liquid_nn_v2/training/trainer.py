@@ -263,6 +263,20 @@ if TORCH_AVAILABLE:
                     return True
             return False
 
+        def _nonfinite_gradient_names(self) -> List[str]:
+            names: List[str] = []
+            _uninit_cls = getattr(torch.nn.parameter, "UninitializedParameter", None)
+            for module_name, module in (("model", self.model), ("loss_fn", self.loss_fn)):
+                for param_name, param in module.named_parameters():
+                    if not param.requires_grad:
+                        continue
+                    if _uninit_cls is not None and isinstance(param, _uninit_cls):
+                        continue
+                    grad = param.grad
+                    if grad is not None and not bool(torch.isfinite(grad).all()):
+                        names.append(f"{module_name}.{param_name}")
+            return names
+
         def _sanitize_gradients(self) -> int:
             """Zero-out NaN/inf gradients in-place; return count of affected params."""
             _uninit_cls = getattr(torch.nn.parameter, "UninitializedParameter", None)
@@ -283,6 +297,14 @@ if TORCH_AVAILABLE:
         def _apply_confidence_weights(self, loss, batch):
             return loss
 
+        def _sanitize_aux_logits(self, logits, clamp_value: float = 20.0):
+            return torch.nan_to_num(
+                logits,
+                nan=0.0,
+                posinf=clamp_value,
+                neginf=-clamp_value,
+            ).clamp(min=-clamp_value, max=clamp_value)
+
         def _masked_bce_with_logits(self, logits, labels, supervision_mask):
             labels = labels.float().view_as(logits)
             raw = F.binary_cross_entropy_with_logits(logits, labels, reduction="none")
@@ -297,6 +319,7 @@ if TORCH_AVAILABLE:
             node_weights = batch.get("node_confidence_weights")
             graph_weights = batch.get("graph_confidence_weights")
             site_batch = batch["batch"]
+            logits = self._sanitize_aux_logits(logits)
             loss_value, _ = self.loss_fn.site_loss(
                 logits,
                 site_labels,
@@ -377,7 +400,8 @@ if TORCH_AVAILABLE:
                     tensor = vote_heads.get(key)
                     if tensor is None or weight <= 0.0:
                         continue
-                    raw = F.binary_cross_entropy_with_logits(tensor, final_probs, reduction="none")
+                    safe_tensor = self._sanitize_aux_logits(tensor)
+                    raw = F.binary_cross_entropy_with_logits(safe_tensor, final_probs, reduction="none")
                     if site_mask is not None:
                         mask = site_mask.float().view_as(raw)
                         cons_loss = (raw * mask).sum() / mask.sum().clamp_min(1.0)
@@ -485,9 +509,17 @@ if TORCH_AVAILABLE:
             self.optimizer.zero_grad()
             loss.backward()
             if self._has_nonfinite_gradients():
+                bad_names = self._nonfinite_gradient_names()
                 fixed_grads = self._sanitize_gradients()
                 fixed_params = self._sanitize_trainable_parameters()
-                print(f"train_epoch: zeroed NaN/inf in {fixed_grads} grad(s) (sanitized_params={fixed_params}). Continuing.", flush=True)
+                self.optimizer.zero_grad(set_to_none=True)
+                sample = ", ".join(bad_names[:3]) if bad_names else "unknown"
+                print(
+                    "train_epoch: skipped optimizer step after zeroing NaN/inf gradients "
+                    f"in {fixed_grads} grad(s) (sanitized_params={fixed_params}; examples={sample}).",
+                    flush=True,
+                )
+                return stats
             self._clip_gradients()
             self.optimizer.step()
             return stats
@@ -527,13 +559,18 @@ if TORCH_AVAILABLE:
                 self.optimizer.zero_grad()
                 loss.backward()
                 if self._has_nonfinite_gradients():
+                    bad_names = self._nonfinite_gradient_names()
                     fixed_grads = self._sanitize_gradients()
                     fixed_params = self._sanitize_trainable_parameters()
+                    self.optimizer.zero_grad(set_to_none=True)
+                    sample = ", ".join(bad_names[:3]) if bad_names else "unknown"
                     print(
-                        f"Batch {batch_idx}: zeroed NaN/inf in {fixed_grads} grad(s) "
-                        f"(sanitized_params={fixed_params}). Continuing with zeroed gradients.",
+                        f"Batch {batch_idx}: skipped optimizer step after zeroing NaN/inf in {fixed_grads} grad(s) "
+                        f"(sanitized_params={fixed_params}; examples={sample}).",
                         flush=True,
                     )
+                    history.append(stats)
+                    continue
                 self._clip_gradients()
                 self.optimizer.step()
                 self._sanitize_trainable_parameters()
