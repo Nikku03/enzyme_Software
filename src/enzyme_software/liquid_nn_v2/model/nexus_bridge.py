@@ -202,8 +202,14 @@ if TORCH_AVAILABLE:
                 dropout=0.05,
             )
             key_dim = hidden // 2
+            # Key encoder uses only bridge-trainable features (multivectors + wave field).
+            # Backbone atom_features are deliberately excluded: when the backbone is frozen
+            # they are static warm-start embeddings that make all keys near-identical,
+            # causing uniform softmax → confidence = 1/topk ≈ 0.031 regardless of training.
+            # WholeMoleculeWaveField.field_feature_dim = 10 (always trainable).
+            _key_in_dim = 16 + WholeMoleculeWaveField.field_feature_dim  # 26D, fully trainable
             self.atom_key = nn.Sequential(
-                nn.Linear(16 + self.atom_feature_dim, hidden),
+                nn.Linear(_key_in_dim, hidden),
                 nn.SiLU(),
                 nn.Linear(hidden, key_dim),
             )
@@ -474,7 +480,9 @@ if TORCH_AVAILABLE:
             wave_site_bias = self.wave_site_head(wave_bias_input)
             graph_embeddings = self._group_graph_embedding(multivectors, batch_index)
             per_atom_graph = graph_embeddings[batch_index] if graph_embeddings.numel() else multivectors.new_zeros((multivectors.size(0), self.memory.graph_dim))
-            atom_keys = self.atom_key(torch.cat([multivectors, atom_features], dim=-1))
+            # Keys use only trainable bridge features — backbone atom_features excluded
+            # to prevent frozen-backbone keys from being static (uniform similarity → conf=1/topk)
+            atom_keys = self.atom_key(torch.cat([multivectors, wave_field["atom_field_features"]], dim=-1))
             precedent_query = torch.cat(
                 [
                     multivectors,
@@ -591,7 +599,9 @@ if TORCH_AVAILABLE:
             multivectors, _coords = self._build_multivectors(atom_features, atom_3d_features, xtb_atom_features)
             graph_embeddings = self._group_graph_embedding(multivectors, batch_index)
             per_atom_graph = graph_embeddings[batch_index] if graph_embeddings.numel() else multivectors.new_zeros((multivectors.size(0), self.memory.graph_dim))
-            atom_keys = self.atom_key(torch.cat([multivectors, atom_features], dim=-1))
+            # Compute wave field features for trainable keys (mirrors forward() key computation)
+            _wf = self.wave_field(multivectors, _coords, batch_index)
+            atom_keys = self.atom_key(torch.cat([multivectors, _wf["atom_field_features"]], dim=-1))
             cyp_probs_atom = F.softmax(cyp_logits.detach(), dim=-1)[batch_index]
             self.memory.update(
                 atom_keys=atom_keys,

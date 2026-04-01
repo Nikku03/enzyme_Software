@@ -191,7 +191,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_WD": "2e-4",
         "HYBRID_COLAB_SPLIT_MODE": "scaffold_source_size",
         "HYBRID_COLAB_LIMIT": "0",
-        "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
+        "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "1",
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "0",
         "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
