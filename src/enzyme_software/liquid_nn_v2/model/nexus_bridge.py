@@ -104,10 +104,22 @@ if TORCH_AVAILABLE:
             margin_conf = torch.sigmoid((support_margin - 0.04) / 0.04)
             confidence = (0.50 * score_conf) + (0.30 * margin_conf) + (0.20 * concentration)
             confidence = confidence * valid_rows.unsqueeze(-1).to(dtype=confidence.dtype)
+            # Separate "there is some memory support" from "the retrieval is
+            # selective enough to trust".  The benchmark failures showed that the
+            # analogical branch is often active but diffuse (tiny margin /
+            # concentration), which should cause abstention rather than a vote.
+            selectivity = (
+                torch.sigmoid((support_margin - 0.025) / 0.025)
+                * torch.sigmoid((concentration - 0.10) / 0.08)
+            )
+            selectivity = selectivity * valid_rows.unsqueeze(-1).to(dtype=confidence.dtype)
+            trust_gate = (confidence * selectivity).clamp(0.0, 1.0)
             return {
                 "site_prior": site_prior,
                 "cyp_prior": cyp_prior,
                 "confidence": confidence,
+                "selectivity": selectivity,
+                "trust_gate": trust_gate,
                 "best_score": best_score,
                 "support_margin": support_margin,
                 "concentration": concentration,
@@ -614,10 +626,12 @@ if TORCH_AVAILABLE:
             best_score = None
             support_margin = None
             concentration = None
+            selectivity = None
             if retrieval is None:
                 site_prior = torch.full((multivectors.size(0), 1), 0.5, device=multivectors.device, dtype=multivectors.dtype)
                 cyp_prior = F.softmax(cyp_logits.detach(), dim=-1)[batch_index]
                 confidence = multivectors.new_zeros((multivectors.size(0), 1))
+                analogical_gate = multivectors.new_zeros((multivectors.size(0), 1))
                 analogical_site_bias = multivectors.new_zeros((multivectors.size(0), 1))
                 analogical_cyp_bias = cyp_logits.new_zeros(cyp_logits.shape)
                 cyp_prior_by_mol = F.softmax(cyp_logits.detach(), dim=-1)
@@ -629,6 +643,7 @@ if TORCH_AVAILABLE:
                 best_score = retrieval.get("best_score")
                 support_margin = retrieval.get("support_margin")
                 concentration = retrieval.get("concentration")
+                selectivity = retrieval.get("selectivity")
                 valid_rows = retrieval.get("valid_rows")
                 if valid_rows is not None:
                     valid_rows_f = valid_rows.to(device=multivectors.device, dtype=multivectors.dtype)
@@ -638,20 +653,24 @@ if TORCH_AVAILABLE:
                     cyp_prior = torch.where(valid_rows_f > 0.5, cyp_prior, fallback_cyp_prior)
                     confidence = confidence * valid_rows_f
                 continuous_reasoning = self._continuous_reasoning(query_multivectors=multivectors, retrieval=retrieval)
-                retrieval_gate = confidence.clamp(0.0, 1.0)
+                analogical_gate = retrieval.get("trust_gate")
+                if analogical_gate is None:
+                    analogical_gate = confidence.clamp(0.0, 1.0)
                 neutral_site_prior = torch.full_like(site_prior, 0.5)
-                site_prior = retrieval_gate * site_prior + (1.0 - retrieval_gate) * neutral_site_prior
+                site_prior = analogical_gate * site_prior + (1.0 - analogical_gate) * neutral_site_prior
                 analogical_site_input = torch.cat([multivectors, site_prior, cyp_prior, confidence, precedent_brief], dim=-1)
-                analogical_site_bias = retrieval_gate * (
+                analogical_site_bias = analogical_gate * (
                     self.analogical_site_head(analogical_site_input) + 0.25 * continuous_reasoning["site_bias"]
                 )
                 num_molecules = int(cyp_logits.size(0))
                 cyp_prior_by_mol = scatter_mean(cyp_prior, batch_index, num_molecules)
-                graph_conf = scatter_mean(confidence, batch_index, num_molecules)
+                graph_conf = scatter_mean(analogical_gate, batch_index, num_molecules)
                 analogical_cyp_bias = graph_conf * self.analogical_cyp_head(
                     torch.cat([graph_embeddings, cyp_prior_by_mol, graph_conf], dim=-1)
                 )
-                site_prior = (0.70 * site_prior) + (0.30 * torch.sigmoid(continuous_reasoning["site_bias"]))
+                site_prior = analogical_gate * ((0.70 * site_prior) + (0.30 * torch.sigmoid(continuous_reasoning["site_bias"]))) + (1.0 - analogical_gate) * neutral_site_prior
+            if retrieval is None:
+                analogical_gate = multivectors.new_zeros((multivectors.size(0), 1))
             wave_aux_loss, wave_metrics = self._wave_aux_loss(
                 wave_preds=wave_preds,
                 xtb_atom_features=xtb_atom_features,
@@ -688,6 +707,8 @@ if TORCH_AVAILABLE:
                 "analogical_best_score_mean": float(best_score.detach().mean().item()) if retrieval is not None and best_score is not None and best_score.numel() else 0.0,
                 "analogical_margin_mean": float(support_margin.detach().mean().item()) if retrieval is not None and support_margin is not None and support_margin.numel() else 0.0,
                 "analogical_concentration_mean": float(concentration.detach().mean().item()) if retrieval is not None and concentration is not None and concentration.numel() else 0.0,
+                "analogical_selectivity_mean": float(selectivity.detach().mean().item()) if retrieval is not None and selectivity is not None and selectivity.numel() else 0.0,
+                "analogical_gate_mean": float(analogical_gate.detach().mean().item()) if analogical_gate.numel() else 0.0,
                 "wave_charge_mean": float(wave_preds["predicted_charges"].detach().mean().item()) if wave_preds["predicted_charges"].numel() else 0.0,
                 "wave_fukui_mean": float(wave_preds["predicted_fukui"].detach().mean().item()) if wave_preds["predicted_fukui"].numel() else 0.0,
                 "wave_reliability_mean": float(wave_reliability.detach().mean().item()) if wave_reliability.numel() else 0.0,
@@ -710,6 +731,7 @@ if TORCH_AVAILABLE:
                 "analogical_site_prior": site_prior,
                 "analogical_cyp_prior": cyp_prior_by_mol,
                 "analogical_confidence": confidence,
+                "analogical_gate": analogical_gate,
                 "analogical_site_bias": analogical_site_bias,
                 "analogical_cyp_bias": analogical_cyp_bias,
                 "continuous_reasoning_features": continuous_reasoning["features"],

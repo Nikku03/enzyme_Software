@@ -177,9 +177,15 @@ if TORCH_AVAILABLE:
                 wave_reliability = atom_features.new_ones((rows, 1))
             else:
                 wave_reliability = wave_reliability.detach()
+            wave_context_gate = torch.sigmoid((wave_reliability - 0.20) / 0.08)
+            wave_vote_gate = torch.sigmoid((wave_reliability - 0.35) / 0.08)
             precedent_brief = bridge.get("precedent_brief")
             if precedent_brief is None:
                 precedent_brief = atom_features.new_zeros((rows, AuditedEpisodeLogbook.brief_dim))
+            analogical_gate = bridge.get("analogical_gate")
+            if analogical_gate is None:
+                analogical_gate = bridge["analogical_confidence"]
+            analogical_gate = analogical_gate.detach().clamp(0.0, 1.0)
             vote_scale = float(getattr(self.config, "nexus_vote_logit_scale", 2.0))
             live_wave_vote_inputs = bool(getattr(self.config, "nexus_live_wave_vote_inputs", True))
             live_analogical_vote_inputs = bool(getattr(self.config, "nexus_live_analogical_vote_inputs", True))
@@ -199,14 +205,14 @@ if TORCH_AVAILABLE:
                 ],
                 dim=-1,
             )
-            wave_scalar_b = wave_reliability * torch.tanh(wave_scalar.detach())
+            wave_scalar_b = wave_context_gate * torch.tanh(wave_scalar.detach())
             steric = self._optional_feature(batch.get("atom_3d_features"), rows, steric_dim, device=device, dtype=dtype)
             xtb = self._optional_feature(batch.get("xtb_atom_features"), rows, xtb_dim, device=device, dtype=dtype)
             topology = self._optional_feature(batch.get("topology_atom_features"), rows, topology_dim, device=device, dtype=dtype)
             steric_b = torch.tanh(steric)
             xtb_b = torch.tanh(xtb)
             topology_b = topology  # features are already in [0, 1]; no tanh needed
-            wave_field_b = wave_reliability * torch.tanh(wave_field["atom_field_features"].detach())
+            wave_field_b = wave_context_gate * torch.tanh(wave_field["atom_field_features"].detach())
             wave_scalar_vote = torch.tanh(
                 self._safe_vote_tensor(
                     self._scaled_live(
@@ -236,7 +242,7 @@ if TORCH_AVAILABLE:
             )
             lnn_vote = vote_scale * torch.tanh(lnn_vote_raw)
             lnn_conf = torch.sigmoid(self.lnn_conf_head(atom_features_b))
-            wave_site_bias_b = wave_reliability * torch.tanh(bridge["wave_site_bias"].detach())
+            wave_site_bias_b = wave_context_gate * torch.tanh(bridge["wave_site_bias"].detach())
             wave_site_bias_vote = torch.tanh(
                 self._safe_vote_tensor(
                     self._scaled_live(
@@ -256,8 +262,8 @@ if TORCH_AVAILABLE:
                     dim=-1,
                 )
             )
-            wave_vote = wave_reliability * (vote_scale * torch.tanh(wave_vote_raw))
-            wave_conf = wave_reliability * torch.sigmoid(
+            wave_vote = wave_vote_gate * (vote_scale * torch.tanh(wave_vote_raw))
+            wave_conf = wave_vote_gate * torch.sigmoid(
                 self.wave_conf_head(
                     torch.cat(
                         [
@@ -269,11 +275,11 @@ if TORCH_AVAILABLE:
                     )
                 )
             )
-            analogical_site_bias_b = torch.tanh(bridge["analogical_site_bias"].detach())
-            continuous_reasoning_b = torch.tanh(bridge["continuous_reasoning_features"].detach())
-            analogical_site_prior = bridge["analogical_site_prior"].detach()
-            confidence_b = confidence.detach()
-            analogical_cyp_context_b = analogical_cyp_context.detach()
+            analogical_site_bias_b = analogical_gate * torch.tanh(bridge["analogical_site_bias"].detach())
+            continuous_reasoning_b = analogical_gate * torch.tanh(bridge["continuous_reasoning_features"].detach())
+            analogical_site_prior = analogical_gate * bridge["analogical_site_prior"].detach()
+            confidence_b = analogical_gate * confidence.detach()
+            analogical_cyp_context_b = analogical_gate * analogical_cyp_context.detach()
             analogical_site_prior_vote = self._safe_vote_tensor(
                 self._scaled_live(
                     bridge["analogical_site_prior"],
@@ -306,7 +312,7 @@ if TORCH_AVAILABLE:
                     )
                 )
             )
-            precedent_brief_vote = self._safe_vote_tensor(
+            precedent_brief_vote = analogical_gate * self._safe_vote_tensor(
                 self._scaled_live(
                     precedent_brief,
                     enabled=live_analogical_vote_inputs,
@@ -325,8 +331,8 @@ if TORCH_AVAILABLE:
                     dim=-1,
                 )
             )
-            analogical_vote = vote_scale * torch.tanh(analogical_vote_raw)
-            analogical_conf = torch.sigmoid(
+            analogical_vote = analogical_gate * (vote_scale * torch.tanh(analogical_vote_raw))
+            analogical_conf = analogical_gate * torch.sigmoid(
                 self.analogical_conf_head(
                     torch.cat(
                         [
@@ -354,7 +360,7 @@ if TORCH_AVAILABLE:
                     xtb_b,
                     topology_b,
                     wave_field_b,
-                    precedent_brief.detach(),
+                    analogical_gate * precedent_brief.detach(),
                     wave_site_bias_b,
                     analogical_site_bias_b,
                     continuous_reasoning_b,
@@ -485,6 +491,8 @@ if TORCH_AVAILABLE:
                 **bridge["metrics"],
                 "analogical_cyp_weight": float(ana_cyp_weight.detach().item()),
                 "site_mode": site_mode,
+                "wave_vote_gate_mean": float(torch.sigmoid((bridge["wave_reliability"].detach() - 0.35) / 0.08).mean().item()) if bridge.get("wave_reliability") is not None else 0.0,
+                "analogical_gate_mean": float(bridge["analogical_gate"].detach().mean().item()) if bridge.get("analogical_gate") is not None else 0.0,
                 "site_logits_base_mean": float(outputs["site_logits"].detach().mean().item()),
                 "site_logits_council_mean": float(council["council_logit"].detach().mean().item()) if council else 0.0,
                 "site_logits_arbiter_residual_mean": float(council["arbiter_residual"].detach().mean().item()) if council else 0.0,
