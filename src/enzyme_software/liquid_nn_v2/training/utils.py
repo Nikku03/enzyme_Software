@@ -100,13 +100,16 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
                 group_membership[mol_idx, : membership.shape[0], : membership.shape[1]] = membership
     else:
         group_membership = torch.zeros((num_molecules, max_atoms, num_groups), dtype=torch.float32)
+    x_cat = torch.cat(x_parts, dim=0)
+    if not bool(torch.isfinite(x_cat).all()):
+        x_cat = torch.nan_to_num(x_cat, nan=0.0, posinf=0.0, neginf=0.0)
     batch = {
-        "x": torch.cat(x_parts, dim=0),
+        "x": x_cat,
         "edge_index": torch.cat(edge_parts, dim=1) if edge_parts else torch.zeros((2, 0), dtype=torch.long),
-        "edge_attr": torch.cat(edge_attr_parts, dim=0) if edge_attr_parts else torch.zeros((0, 10), dtype=torch.float32),
-        "tau_init": torch.cat(tau_parts, dim=0),
+        "edge_attr": torch.nan_to_num(torch.cat(edge_attr_parts, dim=0), nan=0.0, posinf=0.0, neginf=0.0) if edge_attr_parts else torch.zeros((0, 10), dtype=torch.float32),
+        "tau_init": torch.nan_to_num(torch.cat(tau_parts, dim=0), nan=0.1, posinf=1.5, neginf=0.1),
         "batch": torch.cat(batch_parts, dim=0),
-        "physics_features": {key: torch.cat(parts, dim=0) for key, parts in physics_parts.items()},
+        "physics_features": {key: torch.nan_to_num(torch.cat(parts, dim=0), nan=0.0, posinf=0.0, neginf=0.0) for key, parts in physics_parts.items()},
         "group_assignments": group_assignments,
         "group_membership": group_membership,
         "parsing_status": parsing_statuses,
