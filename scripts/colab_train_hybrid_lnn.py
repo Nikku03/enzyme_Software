@@ -20,6 +20,7 @@ import runpy
 import subprocess
 import sys
 import importlib
+import json
 from pathlib import Path
 
 
@@ -83,10 +84,72 @@ def _apply_preset(preset_values: dict[str, str]) -> list[str]:
     return overridden
 
 
+def _resolve_warm_start_from_report(report_path: str, output_dir: str) -> str:
+    report_file = Path(report_path)
+    if not report_file.exists():
+        return ""
+    try:
+        with report_file.open() as handle:
+            report = json.load(handle)
+    except Exception:
+        return ""
+
+    explicit_keys = (
+        "best_checkpoint_path",
+        "latest_checkpoint_path",
+        "checkpoint_path",
+    )
+    for key in explicit_keys:
+        value = (report.get(key) or "").strip()
+        if value and Path(value).exists():
+            return value
+
+    candidates: list[Path] = []
+    report_parent = report_file.parent
+    if report_parent.name:
+        attempt_name = report_parent.name
+        candidates.extend(
+            [
+                Path("/content/drive/MyDrive/enzyme_hybrid_lnn/revisit/checkpoints") / attempt_name / "hybrid_full_xtb_best.pt",
+                Path("/content/drive/MyDrive/enzyme_hybrid_lnn/revisit/checkpoints") / attempt_name / "hybrid_full_xtb_latest.pt",
+                report_parent / "hybrid_full_xtb_best.pt",
+                report_parent / "hybrid_full_xtb_latest.pt",
+            ]
+        )
+
+    episode_log_path = (report.get("episode_log_path") or "").strip()
+    if episode_log_path:
+        episode_parent = Path(episode_log_path).parent
+        attempt_name = episode_parent.name
+        candidates.extend(
+            [
+                Path("/content/drive/MyDrive/enzyme_hybrid_lnn/revisit/checkpoints") / attempt_name / "hybrid_full_xtb_best.pt",
+                Path("/content/drive/MyDrive/enzyme_hybrid_lnn/revisit/checkpoints") / attempt_name / "hybrid_full_xtb_latest.pt",
+            ]
+        )
+
+    out = Path(output_dir)
+    candidates.extend(
+        [
+            out / "hybrid_full_xtb_best.pt",
+            out / "hybrid_full_xtb_latest.pt",
+        ]
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+    return ""
+
+
 def _resolve_warm_start(output_dir: str) -> str:
     explicit = os.environ.get("HYBRID_COLAB_WARM_START", "").strip()
     if explicit:
         return explicit
+    report_path = os.environ.get("HYBRID_COLAB_WARM_START_REPORT", "").strip()
+    if report_path:
+        resolved = _resolve_warm_start_from_report(report_path, output_dir)
+        if resolved:
+            return resolved
     mode = os.environ.get("HYBRID_COLAB_WARM_START_MODE", "best").strip().lower() or "best"
     out = Path(output_dir)
     best = out / "hybrid_full_xtb_best.pt"
@@ -356,6 +419,8 @@ def main() -> None:
     print(f"manual_cache_dir={manual_cache_dir}")
     print(f"xtb_cache_dir={xtb_cache_dir}")
     print(f"warm_start={checkpoint}")
+    if os.environ.get("HYBRID_COLAB_WARM_START_REPORT", "").strip():
+        print(f"warm_start_report={os.environ['HYBRID_COLAB_WARM_START_REPORT']}")
     print(f"warm_start_mode={os.environ.get('HYBRID_COLAB_WARM_START_MODE', 'best')}")
     print(f"split_mode={os.environ.get('HYBRID_COLAB_SPLIT_MODE', 'scaffold_source_size')}")
     print(f"lock_preset_policy={int(_env_flag('HYBRID_COLAB_LOCK_PRESET_POLICY', True))}")
@@ -377,4 +442,5 @@ def main() -> None:
     runpy.run_path(str(REPO_DIR / "scripts" / "train_hybrid_full_xtb.py"), run_name="__main__")
 
 
-main()
+if __name__ == "__main__":
+    main()
