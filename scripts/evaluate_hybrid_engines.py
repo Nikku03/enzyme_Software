@@ -28,6 +28,16 @@ from enzyme_software.liquid_nn_v2.training.utils import move_to_device
 DEFAULT_MODES = ("final", "base_lnn", "lnn_vote", "wave_vote", "analogical_vote")
 
 
+def _require_rdkit() -> None:
+    try:
+        from rdkit import Chem  # noqa: F401
+    except Exception as exc:
+        raise RuntimeError(
+            "RDKit is required for engine benchmark evaluation. In Colab, install it before running "
+            "the notebook, e.g. `pip install rdkit-pypi`."
+        ) from exc
+
+
 def _load_rows(path: Path) -> List[dict]:
     payload = json.loads(path.read_text())
     if isinstance(payload, dict):
@@ -258,6 +268,7 @@ def main() -> None:
     parser.add_argument("--output-json", default="")
     args = parser.parse_args()
 
+    _require_rdkit()
     device = _resolve_device(args.device)
     checkpoint_path = Path(args.checkpoint)
     if not checkpoint_path.exists():
