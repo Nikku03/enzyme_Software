@@ -65,7 +65,7 @@ class PGWTransporter(ClassicPGWTransporter):
         mv = self._canonicalize_multivectors(multivectors).to(dtype=torch.float64)
         mv_centered = mv - mv.mean(dim=0, keepdim=True)
         mv_norm = F.normalize(mv_centered, p=2, dim=-1)
-        magnitude = mv.norm(p=2, dim=-1, keepdim=True)
+        magnitude = (mv.pow(2).sum(dim=-1, keepdim=True) + 1.0e-12).sqrt()
         signed_scalar = mv[:, : min(4, mv.size(-1))]
         abs_signature = torch.abs(mv[:, : min(4, mv.size(-1))])
         return torch.cat([mv_norm, magnitude, signed_scalar, abs_signature], dim=-1)

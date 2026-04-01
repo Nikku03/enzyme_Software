@@ -68,22 +68,27 @@ class PoincareMath:
     def _sqrt_c(self, ref: torch.Tensor) -> torch.Tensor:
         return ref.new_tensor(math.sqrt(self.c))
 
+    @staticmethod
+    def _safe_norm(x: torch.Tensor, eps: float = 1.0e-15) -> torch.Tensor:
+        """||x|| with defined gradient at x=0: sqrt(sum(x^2) + eps^2)."""
+        return (x.pow(2).sum(dim=-1, keepdim=True) + eps * eps).sqrt()
+
     def _project(self, x: torch.Tensor) -> torch.Tensor:
         max_norm = (1.0 - 1.0e-5) / math.sqrt(self.c)
-        norm = x.norm(p=2, dim=-1, keepdim=True).clamp_min(self.eps)
+        norm = self._safe_norm(x, self.eps)
         safe = torch.where(norm > max_norm, x * (max_norm / norm), x)
         return torch.nan_to_num(safe, nan=0.0, posinf=max_norm, neginf=-max_norm)
 
     def exp_map_0(self, v: torch.Tensor) -> torch.Tensor:
         v = v.float()
-        v_norm = v.norm(p=2, dim=-1, keepdim=True).clamp_min(self.eps)
+        v_norm = self._safe_norm(v, self.eps)
         sqrt_c = self._sqrt_c(v)
         scale = torch.tanh(sqrt_c * v_norm) / (sqrt_c * v_norm)
         return self._project(scale * v)
 
     def log_map_0(self, y: torch.Tensor) -> torch.Tensor:
         y = self._project(y.float())
-        y_norm = y.norm(p=2, dim=-1, keepdim=True).clamp_min(self.eps)
+        y_norm = self._safe_norm(y, self.eps)
         sqrt_c = self._sqrt_c(y)
         clipped = (sqrt_c * y_norm).clamp_max(1.0 - 1.0e-6)
         scale = torch.atanh(clipped) / (sqrt_c * y_norm)

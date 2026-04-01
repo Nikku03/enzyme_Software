@@ -202,13 +202,12 @@ if TORCH_AVAILABLE:
                 dropout=0.05,
             )
             key_dim = hidden // 2
-            # Key encoder uses only bridge-trainable features (multivectors + wave field).
-            # Backbone atom_features are deliberately excluded: when the backbone is frozen
-            # they are static warm-start embeddings that make all keys near-identical,
-            # causing uniform softmax → confidence = 1/topk ≈ 0.031 regardless of training.
-            # WholeMoleculeWaveField.field_feature_dim = 10 (always trainable).
+            # Key encoder: multivectors + wave field, with LayerNorm on input so
+            # keys are well-distributed from epoch 1 (not dependent on bridge weights
+            # escaping near-zero initialization before the memory becomes useful).
             _key_in_dim = 16 + WholeMoleculeWaveField.field_feature_dim  # 26D, fully trainable
             self.atom_key = nn.Sequential(
+                nn.LayerNorm(_key_in_dim),
                 nn.Linear(_key_in_dim, hidden),
                 nn.SiLU(),
                 nn.Linear(hidden, key_dim),
@@ -268,7 +267,7 @@ if TORCH_AVAILABLE:
                 support_margin = (top_scores[:, :1] - top_scores[:, 1:2]).clamp_min(0.0)
             else:
                 support_margin = top_scores[:, :1]
-            context_norm = context.norm(dim=-1, keepdim=True) / max(1.0, float(context.size(-1)) ** 0.5)
+            context_norm = (context.pow(2).sum(dim=-1, keepdim=True) + 1.0e-12).sqrt() / max(1.0, float(context.size(-1)) ** 0.5)
             reason_features = torch.cat(
                 [
                     y_ana_som.unsqueeze(-1),

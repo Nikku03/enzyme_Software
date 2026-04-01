@@ -68,34 +68,41 @@ if TORCH_AVAILABLE:
                         + 5
                     )
                     arbiter_in = board_context_dim + 9
+                    vote_dropout = min(float(arbiter_dropout) + 0.10, 0.40)
                     self.lnn_vote_head = nn.Sequential(
                         nn.Linear(atom_dim + 1, council_hidden),
                         nn.SiLU(),
+                        nn.Dropout(vote_dropout),
                         nn.Linear(council_hidden, 1),
                     )
                     self.wave_vote_head = nn.Sequential(
                         nn.Linear(14, council_hidden),
                         nn.SiLU(),
+                        nn.Dropout(vote_dropout),
                         nn.Linear(council_hidden, 1),
                     )
                     self.analogical_vote_head = nn.Sequential(
                         nn.Linear(8 + AuditedEpisodeLogbook.brief_dim, council_hidden),
                         nn.SiLU(),
+                        nn.Dropout(vote_dropout),
                         nn.Linear(council_hidden, 1),
                     )
                     self.lnn_conf_head = nn.Sequential(
                         nn.Linear(atom_dim, council_hidden),
                         nn.SiLU(),
+                        nn.Dropout(vote_dropout),
                         nn.Linear(council_hidden, 1),
                     )
                     self.wave_conf_head = nn.Sequential(
                         nn.Linear(14, council_hidden),
                         nn.SiLU(),
+                        nn.Dropout(vote_dropout),
                         nn.Linear(council_hidden, 1),
                     )
                     self.analogical_conf_head = nn.Sequential(
                         nn.Linear(8 + AuditedEpisodeLogbook.brief_dim, council_hidden),
                         nn.SiLU(),
+                        nn.Dropout(vote_dropout),
                         nn.Linear(council_hidden, 1),
                     )
                     self.council_board_head = nn.Sequential(

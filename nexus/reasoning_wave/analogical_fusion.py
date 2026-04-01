@@ -202,7 +202,8 @@ class NexusDualDecoder(nn.Module):
         ana_elec = self.ana_elec_proj(q_ana)
         fp_orient = F.normalize(self.fp_orient_proj(q_fp), p=2, dim=-1)
         ana_orient = F.normalize(self.ana_orient_proj(q_ana), p=2, dim=-1)
-        orient_cross = torch.linalg.norm(torch.cross(fp_orient, ana_orient, dim=-1), dim=-1, keepdim=True)
+        _cross = torch.cross(fp_orient, ana_orient, dim=-1)
+        orient_cross = (_cross.pow(2).sum(dim=-1, keepdim=True) + 1.0e-12).sqrt()
         orient_dot = (fp_orient * ana_orient).sum(dim=-1, keepdim=True)
 
         fp_hidden = self.fp_context_proj(torch.cat([fp_struct, fp_elec, fp_struct * fp_elec, fp_orient, orient_dot], dim=-1))

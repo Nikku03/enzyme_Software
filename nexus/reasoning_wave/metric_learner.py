@@ -124,7 +124,7 @@ def real_spherical_harmonics(atom_coords: torch.Tensor, eps: float = 1.0e-8) -> 
     if coords.ndim != 3 or coords.size(-1) != 3:
         raise ValueError("real_spherical_harmonics expects [N,3] or [B,N,3] coordinates")
     centered = coords - coords.mean(dim=-2, keepdim=True)
-    radius = centered.norm(dim=-1, keepdim=True).clamp_min(eps)
+    radius = (centered.pow(2).sum(dim=-1, keepdim=True) + eps * eps).sqrt()
     xyz = centered / radius
     x = xyz[..., 0:1]
     y = xyz[..., 1:2]
