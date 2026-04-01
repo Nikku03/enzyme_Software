@@ -401,7 +401,7 @@ def main() -> None:
     parser.add_argument("--manual-feature-cache-dir", default=None)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--log-every", type=int, default=1)
-    parser.add_argument("--early-stopping-patience", type=int, default=10)
+    parser.add_argument("--early-stopping-patience", type=int, default=0)
     parser.add_argument("--early-stopping-metric", choices=("site_top1", "site_top3"), default="site_top3")
     parser.add_argument("--output-dir", default="checkpoints/hybrid_full_xtb")
     parser.add_argument("--artifact-dir", default="artifacts/hybrid_full_xtb")
