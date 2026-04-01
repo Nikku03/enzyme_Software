@@ -1734,12 +1734,18 @@ def main() -> None:
     )
 
     # ── bootstrap from revisit_best.json if it beat the scan results ──────────
+    # IMPORTANT: must reload the full run from the saved report so that
+    # current_baseline.diagnostics reflects the best run's actual metrics.
+    # Without this, _selection_metrics_for_run(current_baseline) reads the
+    # old scanned report's (possibly missing) metrics → _compare_key returns
+    # -inf → every attempt score beats it → spurious promotions.
     _revisit_best_path = artifact_root / "revisit_best.json"
     if _revisit_best_path.exists():
         try:
             _rb = json.loads(_revisit_best_path.read_text(encoding="utf-8"))
-            _rb_score = float(_rb.get("baseline_score", -1.0))
-            _rb_ckpt  = Path(_rb.get("baseline_checkpoint", ""))
+            _rb_score  = float(_rb.get("baseline_score", -1.0))
+            _rb_ckpt   = Path(_rb.get("baseline_checkpoint", ""))
+            _rb_report = Path(_rb.get("baseline_report", ""))
             if _rb_score > baseline.score and _rb_ckpt.exists():
                 print(
                     f"\n  [revisit_best] Overriding scan baseline "
@@ -1747,8 +1753,27 @@ def main() -> None:
                     f"({_rb_score:.4f}) from {_revisit_best_path.name}",
                     flush=True,
                 )
-                baseline.score = _rb_score
                 _revisit_best_override_ckpt = _rb_ckpt
+                # Reload the run from the saved report to get correct diagnostics
+                # for the _compare_key comparison used in promotion logic.
+                if _rb_report.exists():
+                    try:
+                        _rb_run = _load_run(_rb_report, analysis_dir, search_dirs)
+                        _rb_run.score = _rb_score
+                        baseline = _rb_run
+                        print(
+                            f"  [revisit_best] Report reloaded: {_rb_report.name}",
+                            flush=True,
+                        )
+                    except Exception as _reload_err:
+                        print(
+                            f"  [revisit_best] Could not reload report ({_reload_err}); "
+                            "using score only.",
+                            flush=True,
+                        )
+                        baseline.score = _rb_score
+                else:
+                    baseline.score = _rb_score
             else:
                 _revisit_best_override_ckpt = None
         except Exception as _e:
