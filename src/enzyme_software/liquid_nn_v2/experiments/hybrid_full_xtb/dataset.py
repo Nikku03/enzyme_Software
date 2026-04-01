@@ -248,6 +248,10 @@ class FullXTBHybridDataset(CYPMetabolismDataset):
                 fixed[:rows] = base_manual[:rows]
             base_manual = fixed
 
+        # Guard: xtb failures can produce NaN/inf — zero them out so gradients stay finite
+        raw_features = np.nan_to_num(raw_features, nan=0.0, posinf=0.0, neginf=0.0)
+        base_manual  = np.nan_to_num(base_manual,  nan=0.0, posinf=0.0, neginf=0.0)
+
         graph.manual_engine_atom_features = np.concatenate([base_manual, raw_features], axis=1).astype(np.float32)
         graph.xtb_atom_features = raw_features.astype(np.float32)
         graph.xtb_atom_valid_mask = raw_valid.astype(np.float32)
