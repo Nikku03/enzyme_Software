@@ -1,0 +1,5453 @@
+{
+  "drugs": [
+    {
+      "id": "cyp_dbs:1A2:1_nitropyrene",
+      "name": "1_nitropyrene",
+      "smiles": "O=[N+]([O-])c1ccc2ccc3cccc4ccc1c2c34",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        6,
+        7,
+        12,
+        13,
+        16
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Chae, Y.-H.; Thomas, T.; Guengerich, F.P.; Fu, P.P.; El-Bayoumy, K. Comparative Metabolism of 1-, 2-, and 4-Nitropyrene by Human Hepatic and Pulmonary Microsomes. Cancer. Res. 1999, 59, 1473\u00961480.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:2-acetylaminofluorene",
+      "name": "2-acetylaminofluorene",
+      "smiles": "CC(=O)Nc1ccc2c(c1)Cc1ccccc1-2",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        5,
+        0,
+        14,
+        16
+      ],
+      "som": [
+        {
+          "atom_idx": 5,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 14,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "tertiary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "McManus ME. et al.,Cancer Research, 50, 3367-3376, 1990",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:2-naphthylamine",
+      "name": "2-naphthylamine",
+      "smiles": "Nc1ccc2ccccc2c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        0
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Butler, M.N.; Iwasaki, M.; Guengerich, F.P.; Kadlubar, F.K. Human Cytochrome P-450PIA (P450IA2), the Phenacetin O-deethylase, Is Primarily Responsible for the Hepatic 3-Demethylation of Caffeine and N-Oxidation of Carcinogenic Arylamines. Proc. Natl Acad. Sci. USA 1989, 86, 7696\u00967700.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:2_nitropyrene",
+      "name": "2_nitropyrene",
+      "smiles": "O=[N+]([O-])c1cc2ccc3cccc4ccc(c1)c2c34",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        7,
+        4,
+        5,
+        16
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Chae, Y.-H.; Thomas, T.; Guengerich, F.P.; Fu, P.P.; El-Bayoumy, K. Comparative Metabolism of 1-, 2-, and 4-Nitropyrene by Human Hepatic and Pulmonary Microsomes. Cancer. Res. 1999, 59, 1473\u00961480.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:3-cyano-7-ethoxycoumarin",
+      "name": "3-cyano-7-ethoxycoumarin",
+      "smiles": "CCOc1ccc2cc(C#N)c(=O)oc2c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Ghosal et al.,Biopharm. Drug Disp.,24,375,2003",
+      "doi": "10.1002/bdd.374"
+    },
+    {
+      "id": "cyp_dbs:1A2:3-cyano-7-methoxycoumarin",
+      "name": "3-cyano-7-methoxycoumarin",
+      "smiles": "COc1ccc2cc(C#N)c(=O)oc2c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Stresser et al.,Drug Metab. Disp.,30,845,2002",
+      "doi": "10.1124/dmd.30.7.845"
+    },
+    {
+      "id": "cyp_dbs:1A2:3-methylindole",
+      "name": "3-methylindole",
+      "smiles": "Cc1c[nH]c2ccccc12",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        1,
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Thornton-Manning, J.; Appleton, J.L.; Gonzalez, F.J.; Yost, G.S. Metabolism of 3-Methylindole by Vaccinia-Expressed P450 Enzymes: Correlation of 3-Methyleneindolenine Formation and Protein-, Binding. J. Pharmacol. Exp. Ther. 1999, 276, 21\u009629.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:4-aminobiphenyl",
+      "name": "4-aminobiphenyl",
+      "smiles": "Nc1ccc(-c2ccccc2)cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        12
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Hammons et al. Carcinogenesis vol.18 no.4 pp.851\u0096854, 1997",
+      "doi": "10.1093/carcin/18.4.851"
+    },
+    {
+      "id": "cyp_dbs:1A2:4-chloromethyl-7-ethoxycoumarin",
+      "name": "4-chloromethyl-7-ethoxycoumarin",
+      "smiles": "CCOc1ccc2c(CCl)cc(=O)oc2c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Ekins et al.,J. Pharmacol. Exp. Ther.,286,1253,1998",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:4-nitroanisole",
+      "name": "4-nitroanisole",
+      "smiles": "COc1ccc([N+](=O)[O-])cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        6
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "B.C. Jones et al., Xenobiotica, 1997, 27, 1025-1037",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:4_nitropyrene",
+      "name": "4_nitropyrene",
+      "smiles": "O=[N+]([O-])c1cc2cccc3ccc4cccc1c4c32",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        16,
+        8,
+        10
+      ],
+      "som": [
+        {
+          "atom_idx": 16,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Chae, Y.-H.; Thomas, T.; Guengerich, F.P.; Fu, P.P.; El-Bayoumy, K. Comparative Metabolism of 1-, 2-, and 4-Nitropyrene by Human Hepatic and Pulmonary Microsomes. Cancer. Res. 1999, 59, 1473\u00961480.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:5_methylchrysene",
+      "name": "5_methylchrysene",
+      "smiles": "Cc1cc2ccccc2c2ccc3ccccc3c12",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        14,
+        17,
+        16,
+        12
+      ],
+      "som": [
+        {
+          "atom_idx": 14,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 17,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 12,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 12,
+          "bond_class": "tertiary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Koehl et al.,Cancer Res.,56,316,1996",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:6-aminochrysene",
+      "name": "6-aminochrysene",
+      "smiles": "Nc1cc2c3ccccc3ccc2c2ccccc12",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        12,
+        16,
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Yamazaki et al.,Carcinogenesis,14,1271,1993",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:6-nitrochrysene",
+      "name": "6-nitrochrysene",
+      "smiles": "O=[N+]([O-])c1cc2c3ccccc3ccc2c2ccccc12",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        0,
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Chae, Y.H.; Yun, C.H.; Guengerich, F.P.; Kadlubar, F.F.; El-Bayoumy, K. Roles of Human Hepatic and Pulmonary Cytochrome P450 Enzymes in the Metabolism of the Environmental Carcinogen 6-Nitrochrysene. Cancer Res. 1993, 53, 2028\u00962034.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:7-benzyloxyquinoline",
+      "name": "7-benzyloxyquinoline",
+      "smiles": "c1ccc(COc2ccc3cccnc3c2)cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        10
+      ],
+      "som": [
+        {
+          "atom_idx": 10,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Stresser et al.,Drug Metab. Disp.,30,845,2002",
+      "doi": "10.1124/dmd.30.7.845"
+    },
+    {
+      "id": "cyp_dbs:1A2:7-benzyloxyresorufin",
+      "name": "7-benzyloxyresorufin",
+      "smiles": "O=c1ccc2nc3ccc(OCc4ccccc4)cc3oc-2c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        16
+      ],
+      "som": [
+        {
+          "atom_idx": 16,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Niwa et al.,Xenobiotica,33,717,2003",
+      "doi": "10.1080/0049825031000121617"
+    },
+    {
+      "id": "cyp_dbs:1A2:7-ethoxycoumarin",
+      "name": "7-ethoxycoumarin",
+      "smiles": "CCOc1ccc2ccc(=O)oc2c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        4,
+        10
+      ],
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "K. H. Kim, E. M. Isin, C. H. Yun, D. H. Kim, F. P. Guengerich, FEBS J. 2006, 273, 2223-2231.",
+      "doi": "10.111/j.1742-4658.2006.05235.x"
+    },
+    {
+      "id": "cyp_dbs:1A2:7-ethoxyresorufin",
+      "name": "7-ethoxyresorufin",
+      "smiles": "CCOc1ccc2nc3ccc(=O)cc-3oc2c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        16
+      ],
+      "som": [
+        {
+          "atom_idx": 16,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Qwihee P. Lee, Alan G. Fantel and Mont R. Juchau Biochemical Pharmacology Volume 42, Issue 12, 27 November 1991, Pages 2377-2385",
+      "doi": "10.1016/0006-2952(91)90244-Y"
+    },
+    {
+      "id": "cyp_dbs:1A2:7-hydroxy-delta_8_tetrahydrocannabinol",
+      "name": "7-hydroxy-delta_8_tetrahydrocannabinol",
+      "smiles": "CCCCCc1cc(O)c2c(c1)OC(C)(C)[C@@H]1[C@@H](O)C=C(C)C[C@@H]21",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        13
+      ],
+      "som": [
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Matsunaga, T.; Kishi, N.; Higuchi, S.; Watanabe, K.; Ohshima, T.; Yamamoto, I. CYP3A4 is a Major Isoform Responsible for Oxidation of 7-Hydroxy-Delta(8)-Tetrahydrocannabinol to 7-Oxo-Delta(8)-Tetrahydrocannabinol in Human Liver Microsomes. Drug Metab. Dispos. 2000, 28, 1291\u00961296.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:7-methoxyresorufin",
+      "name": "7-methoxyresorufin",
+      "smiles": "COc1ccc2nc3ccc(=O)cc-3oc2c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        16
+      ],
+      "som": [
+        {
+          "atom_idx": 16,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Qwihee P. Lee, Alan G. Fantel and Mont R. Juchau Biochemical Pharmacology Volume 42, Issue 12, 27 November 1991, Pages 2377-2385",
+      "doi": "10.1016/0006-2952(91)90244-Y"
+    },
+    {
+      "id": "cyp_dbs:1A2:7-pentoxyresorufin",
+      "name": "7-pentoxyresorufin",
+      "smiles": "CCCCCOc1ccc2nc3ccc(=O)cc-3oc2c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        16
+      ],
+      "som": [
+        {
+          "atom_idx": 16,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Qwihee P. Lee, Alan G. Fantel and Mont R. Juchau Biochemical Pharmacology Volume 42, Issue 12, 27 November 1991, Pages 2377-2385",
+      "doi": "10.1016/0006-2952(91)90244-Y"
+    },
+    {
+      "id": "cyp_dbs:1A2:7MBAC",
+      "name": "7MBAC",
+      "smiles": "Cc1c2ccccc2nc2c1ccc1ccccc12",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        9,
+        10,
+        0,
+        1,
+        16,
+        17,
+        18
+      ],
+      "som": [
+        {
+          "atom_idx": 9,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 17,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 18,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Roberts-Thompson, S.J.; McManus, M.E.; Tukey, R.H.; Gonzales, F.J.; Holder, G.M.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:AMMC",
+      "name": "AMMC",
+      "smiles": "CC[N+](C)(CC)CCc1c(C)c2ccc(OC)cc2oc1=O",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Chauret et al.,Drug Metab. Disp.,29,1196,2001",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:BFC",
+      "name": "BFC",
+      "smiles": "O=c1cc(C(F)(F)F)c2ccc(OCc3ccccc3)cc2o1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        16
+      ],
+      "som": [
+        {
+          "atom_idx": 16,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Renwick et al.,Xenobiotica,30,955,2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:CP_125_611",
+      "name": "CP_125_611",
+      "smiles": "Oc1ccc(OC(F)(F)F)cc1CN[C@@H]1CCCN[C@H]1c1ccccc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        7,
+        16
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Obach et al.,Drug Metab. Pharma.,22,336,2007",
+      "doi": "10.2133/dmpk.22.336"
+    },
+    {
+      "id": "cyp_dbs:1A2:DBAJAC",
+      "name": "DBAJAC",
+      "smiles": "c1ccc2c(c1)ccc1nc3ccc4ccccc4c3cc12",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        2,
+        3,
+        7,
+        8,
+        14,
+        15,
+        20,
+        21,
+        5,
+        12,
+        16,
+        17,
+        18,
+        19
+      ],
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 14,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 20,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 21,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 12,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 17,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 18,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 19,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Roberts-Thompson, S.J.; McManus, M.E.; Tukey, R.H.; Gonzales, F.J.; Holder, G.M.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:DMXAA",
+      "name": "DMXAA",
+      "smiles": "Cc1ccc2c(=O)c3cccc(CC(=O)O)c3oc2c1C",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        19
+      ],
+      "som": [
+        {
+          "atom_idx": 19,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "S. F. Zhou, J. W. Paxton, M. D. Tingle, P. Kestell, Drug Metab. Dispos. 2000, 28, 1449-1456.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:GTS-21",
+      "name": "GTS-21",
+      "smiles": "COc1ccc(/C=C2\\CCCN=C2c2cccnc2)c(OC)c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        22,
+        21
+      ],
+      "som": [
+        {
+          "atom_idx": 22,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 21,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "R. Azuma, M. Komuro, B. H. Korsch, J. C. Andre, O. Onnagawa, S. R. Black, J. M. Mathews, Xenobiotica 1999, 29, 747-762.",
+      "doi": "10.1080/004982599238362"
+    },
+    {
+      "id": "cyp_dbs:1A2:Genistein",
+      "name": "Genistein",
+      "smiles": "O=c1c(-c2ccc(O)cc2)coc2cc(O)cc(O)c12",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        13,
+        15,
+        6,
+        8
+      ],
+      "som": [
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Roberts-Kirchhoff, E.S.; Crowley, J.R.; Hollenberg, P.F.; Kim, H. Metabolism of Genistein by Rat and Human Cytochrome P450s. Chem. Res. Toxicol. 1999, 12, 610\u0096616.",
+      "doi": "10.1021/tx9802320"
+    },
+    {
+      "id": "cyp_dbs:1A2:IQ",
+      "name": "IQ",
+      "smiles": "Cn1c(N)nc2c3cccnc3ccc21",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        14
+      ],
+      "som": [
+        {
+          "atom_idx": 14,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Hammons et al. Carcinogenesis vol.18 no.4 pp.851\u0096854, 1997",
+      "doi": "10.1093/carcin/18.4.851"
+    },
+    {
+      "id": "cyp_dbs:1A2:MeIQx",
+      "name": "MeIQx",
+      "smiles": "Cc1cnc2ccc3c(nc(N)n3C)c2n1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        15
+      ],
+      "som": [
+        {
+          "atom_idx": 15,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Hammons et al. Carcinogenesis vol.18 no.4 pp.851\u0096854, 1997",
+      "doi": "10.1093/carcin/18.4.851"
+    },
+    {
+      "id": "cyp_dbs:1A2:N7-methylcyclohexylline",
+      "name": "N7-methylcyclohexylline",
+      "smiles": "Cc1nc2c(c(=O)n(C)c(=O)n2CC2CCCCC2)n1C",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        20
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 14,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 17,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 18,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 20,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Jagdish K. Racha, Allan E. Rettie, and Kent L. Kunze, Biochemistry 1998, 37, 7407-7419",
+      "doi": "10.1021/bi973011m"
+    },
+    {
+      "id": "cyp_dbs:1A2:N_desacetyl_indiplon",
+      "name": "N_desacetyl_indiplon",
+      "smiles": "CNc1cccc(-c2ccnc3c(C(=O)c4cccs4)cnn23)c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        20
+      ],
+      "som": [
+        {
+          "atom_idx": 20,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Madan et al.,Xenobiotica,37,736,2007",
+      "doi": "10.1080/00498250701433054"
+    },
+    {
+      "id": "cyp_dbs:1A2:O6-benzylguanine",
+      "name": "O6-benzylguanine",
+      "smiles": "Nc1nc(OCc2ccccc2)c2[nH]cnc2n1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Roy, S.K.; Korzekwa, K.R.; Gonzalez, F.J.; Moschel, R.C.; Dolan, M.E. Human Liver Oxidative Metabolism of O6-Benzylguanine. Biochem. Pharmacol. 1995, 50, 1385\u00961389.",
+      "doi": "10.1016/0006-2952(95)02019-5"
+    },
+    {
+      "id": "cyp_dbs:1A2:RHP+",
+      "name": "RHP+",
+      "smiles": "OC(CCC[n+]1ccc(-c2ccc(Cl)cc2)cc1)c1ccc(F)cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 9,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Fang et al.,Drug Metab. Disp.,29,1638,2001",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:abt_438",
+      "name": "abt_438",
+      "smiles": "C[C@@H](C#Cc1ccc(Cc2ccccc2)s1)NC(N)=O",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        6
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Machinist et al.,Drug Metab. Disp.,26,970,1998",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:abt_761",
+      "name": "abt_761",
+      "smiles": "C[C@@H](C#Cc1ccc(Cc2ccccc2)s1)N(O)C(N)=O",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        6
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Machinist et al.,Drug Metab. Disp.,26,970,1998",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:acenocoumarol",
+      "name": "acenocoumarol",
+      "smiles": "CC(=O)C[C@@H](c1ccc([N+](=O)[O-])cc1)c1c(O)c2ccccc2oc1=O",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        23
+      ],
+      "som": [
+        {
+          "atom_idx": 23,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "H. H. Thijssen, J. P. Flinois, P. H. Beaune, Drug Metab. Dispos. 2000, 28, 1284-1290",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:acetaminophen",
+      "name": "acetaminophen",
+      "smiles": "CC(=O)Nc1ccc(O)cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        0,
+        2
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Patten et al.,Chem. Res. Toxicol.,6,511,1993",
+      "doi": "10.1021/tx0034a019"
+    },
+    {
+      "id": "cyp_dbs:1A2:all_trans_retinol",
+      "name": "all_trans_retinol",
+      "smiles": "CC1=C(/C=C/C(C)=C/C=C/C(C)=C/CO)C(C)(C)CCC1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        19
+      ],
+      "som": [
+        {
+          "atom_idx": 19,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Chen et al.,Drug Metab. Disp.,28,315,2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:almotriptan",
+      "name": "almotriptan",
+      "smiles": "CN(C)CCc1c[nH]c2ccc(CS(=O)(=O)N3CCCC3)cc12",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        20,
+        19
+      ],
+      "som": [
+        {
+          "atom_idx": 20,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 19,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Salva et al.,Drug Metab. Disp.,31,404,2003",
+      "doi": "10.1124/dmd.31.4.404"
+    },
+    {
+      "id": "cyp_dbs:1A2:antipyrine",
+      "name": "antipyrine",
+      "smiles": "Cc1cc(=O)n(-c2ccccc2)n1C",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        8,
+        6,
+        7
+      ],
+      "som": [
+        {
+          "atom_idx": 8,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "tertiary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "G. Engel, U. Hofmann, H. Heidemann, J. Cosme, M. Eichelbaum, Clin. Pharmacol. Ther. 1996, 59, 613-623.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:benzo_a_pyrene",
+      "name": "benzo_a_pyrene",
+      "smiles": "c1ccc2c(c1)cc1ccc3cccc4ccc2c1c34",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        14,
+        8,
+        10,
+        11,
+        12,
+        13,
+        15,
+        16,
+        18,
+        19
+      ],
+      "som": [
+        {
+          "atom_idx": 14,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 11,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 12,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 18,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 19,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Bauer et al.,Chem. Res. Toxicol.,8,136,1995",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:benzo_a_pyrene-7_8-diol",
+      "name": "benzo_a_pyrene-7_8-diol",
+      "smiles": "Oc1ccc2c(cc3ccc4cccc5ccc2c3c45)c1O",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        18,
+        19
+      ],
+      "som": [
+        {
+          "atom_idx": 18,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 19,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kim, J.H.; Stansbury, K.H.; Walker, N.J.; Trush, M.A.; Strickland, P.T.; Sutter, T.R. Metabolism of Benzo[a]Pyrene and Benzo[a]Pyrene-7, 8-Diol by Human Cytochrome P450 1B1. Carcinogenesis 1998, 19, 1847\u00961853.",
+      "doi": "10.1093/carcin/19.10.1847"
+    },
+    {
+      "id": "cyp_dbs:1A2:bortezomib",
+      "name": "bortezomib",
+      "smiles": "CC(C)C[C@H](NC(=O)[C@H](Cc1ccccc1)NC(=O)c1cnccn1)B(O)O",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        3
+      ],
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Pekol et al.,Drug Metab. Disp.,33,771,2005",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:bromodichloromethane",
+      "name": "bromodichloromethane",
+      "smiles": "ClC(Cl)Br",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        0,
+        3
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "John W. Allis and Guangyu Zhao, Chemico-Biological Interactions 140 (2002) 137\u0096153",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:celecoxib",
+      "name": "celecoxib",
+      "smiles": "Cc1ccc(-c2cc(C(F)(F)F)nn2-c2ccc(S(N)(=O)=O)cc2)cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        25
+      ],
+      "som": [
+        {
+          "atom_idx": 25,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Tang et al.,J. Pharmacol. Exp. Ther.,293,453,2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:chlorpropamide",
+      "name": "chlorpropamide",
+      "smiles": "CCCNC(=O)NS(=O)(=O)c1ccc(Cl)cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        3,
+        2
+      ],
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Shon et al.,Brit. J. Clin. Pharma.,59,552,2005",
+      "doi": "10.1111/j.1365-2125.2005.02364.x"
+    },
+    {
+      "id": "cyp_dbs:1A2:chlorpyrifos",
+      "name": "chlorpyrifos",
+      "smiles": "CCOP(=S)(OCC)Oc1nc(Cl)c(Cl)cc1Cl",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        0,
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Tang et al.,Drug Metab. Disp.,29,1201,2001",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:chlorzoxazone",
+      "name": "chlorzoxazone",
+      "smiles": "O=c1[nH]c2cc(Cl)ccc2o1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        2
+      ],
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "T. Shimada, F. Tsumura, H. Yamazaki, Drug Metab. Dispos. 1999, 27, 1274-1280.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:coumarin",
+      "name": "coumarin",
+      "smiles": "O=c1ccc2ccccc2o1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        6,
+        7
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Lewis et al.,Toxic.,20,256,2006",
+      "doi": "10.1016/.tiv.2005.08.001"
+    },
+    {
+      "id": "cyp_dbs:1A2:cyclohexylline",
+      "name": "cyclohexylline",
+      "smiles": "Cc1nc2c([nH]1)c(=O)n(C)c(=O)n2CC1CCCCC1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        18
+      ],
+      "som": [
+        {
+          "atom_idx": 18,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Jagdish K. Racha, Allan E. Rettie, and Kent L. Kunze, Biochemistry 1998, 37, 7407-7419",
+      "doi": "10.1021/bi973011m"
+    },
+    {
+      "id": "cyp_dbs:1A2:dehydropranidipine",
+      "name": "dehydropranidipine",
+      "smiles": "COC(=O)c1c(C)nc(C)c(C(=O)OC/C=C/c2ccccc2)c1-c1cccc([N+](=O)[O-])c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        21
+      ],
+      "som": [
+        {
+          "atom_idx": 21,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kudo et al.,Drug Metab. Disp.,27,303,1999",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:dexfenfluramine",
+      "name": "dexfenfluramine",
+      "smiles": "CCN[C@@H](C)Cc1cccc(C(F)(F)F)c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 9,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Haritos et al.,Pharmaco.,8,423,1998",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:diazinon",
+      "name": "diazinon",
+      "smiles": "CCOP(=S)(OCC)Oc1cc(C)nc(C(C)C)n1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        0,
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Mutch et al.,Toxicology,224,22,2006",
+      "doi": "10.1016/j.tox.2006.04.024"
+    },
+    {
+      "id": "cyp_dbs:1A2:dibenzo_a_h_anthracene",
+      "name": "dibenzo_a_h_anthracene",
+      "smiles": "c1ccc2c(c1)ccc1cc3c(ccc4ccccc43)cc12",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        16,
+        17,
+        20,
+        21,
+        14,
+        15,
+        18,
+        19
+      ],
+      "som": [
+        {
+          "atom_idx": 16,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 17,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 20,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 21,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 14,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 18,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 19,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Shou, M.G.; Krausz, K.W.; Gonzalez, F.J.; Gelboin, H.V. Metabolic Activation of the Potent Carcinogen Dibenzo[a,h]Anthracene by cDNA-Expresed Human Cytochromes P450. Arch. Biochem. Biophys. 1996, 328, 201\u0096207.",
+      "doi": "10.1006/abbi.1996.0161"
+    },
+    {
+      "id": "cyp_dbs:1A2:dibenzo_a_l_pyrene",
+      "name": "dibenzo_a_l_pyrene",
+      "smiles": "c1ccc2c(c1)cc1ccc3cccc4c5ccccc5c2c1c34",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        7,
+        16,
+        17,
+        4,
+        5,
+        18,
+        19
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 17,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 18,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 19,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Shou, M.; Krausz, K.W.; Gonzalez, F.J.; Gelboin, H.V. Metabolic Activation of the Potent Carcinogen Dibenzo[a,l ]pyrene by Human Recombinant Cytochromes P450, Lung and Liver Microsomes. Carcinogenesis 1996, 17, 2429\u00962433.",
+      "doi": "10.1093/carcin/17.11.2429"
+    },
+    {
+      "id": "cyp_dbs:1A2:ethanol",
+      "name": "ethanol",
+      "smiles": "CCO",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Salmela et al.,Alcohol Clin. Exp. Res.,22,2125,1998",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:eugenol",
+      "name": "eugenol",
+      "smiles": "C=CCc1ccc(O)c(OC)c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        7
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Sakano et al.,Mutation Res.,565,35,2004",
+      "doi": "10.1016/j.mrgentox.2004.08.009"
+    },
+    {
+      "id": "cyp_dbs:1A2:eupatilin",
+      "name": "eupatilin",
+      "smiles": "COc1ccc(-c2cc(=O)c3c(O)c(OC)c(O)cc3o2)cc1OC",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        6
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "H. S. LEE, H. Y. JI, E. J. PARK, & S. Y. KIM, Xenobiotica, August 2007; 37(8): 803\u0096817",
+      "doi": "10.1080/00498250701534877"
+    },
+    {
+      "id": "cyp_dbs:1A2:fenproporex",
+      "name": "fenproporex",
+      "smiles": "C[C@@H](Cc1ccccc1)NCCC#N",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        10
+      ],
+      "som": [
+        {
+          "atom_idx": 10,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kraemer et al.,Biochem Pharm.,68,947,2004",
+      "doi": "10.1016/j.bcp.2004.05.009"
+    },
+    {
+      "id": "cyp_dbs:1A2:flutamide",
+      "name": "flutamide",
+      "smiles": "CC(C)C(=O)Nc1ccc([N+](=O)[O-])c(C(F)(F)F)c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        8
+      ],
+      "som": [
+        {
+          "atom_idx": 8,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "M. S. Shet, M. Mcphaul, C. W. Fisher, N. R. Stallings, R. W. Estabrook, Drug Metab. Dispos. 1997, 25, 1298-1303.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:foxy",
+      "name": "foxy",
+      "smiles": "COc1ccc2[nH]cc(CCN(C(C)C)C(C)C)c2c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        12,
+        13
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Narimatsu et al.,Biochem. Pharmacol.,71,1377,2006",
+      "doi": "10.1016/j.bcp.2006.01.015"
+    },
+    {
+      "id": "cyp_dbs:1A2:furafylline",
+      "name": "furafylline",
+      "smiles": "Cc1nc2c([nH]1)c(=O)n(C)c(=O)n2Cc1ccco1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        11
+      ],
+      "som": [
+        {
+          "atom_idx": 11,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Jagdish K. Racha, Allan E. Rettie, and Kent L. Kunze, Biochemistry 1998, 37, 7407-7419",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:guanabenz",
+      "name": "guanabenz",
+      "smiles": "NC(N)=N/N=C/c1c(Cl)cccc1Cl",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        2,
+        3
+      ],
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Bernd Clement and Mark Demesmaeker Formation of Guanoxabenz from Guanabenz in Human Liver A new metabolic marker for CYP1A2 Drug Metab. Dispos. 1997   vol. 25  no. 11  1266-1271",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:kaempferide",
+      "name": "kaempferide",
+      "smiles": "COc1ccc(-c2oc3cc(O)cc(O)c3c(=O)c2O)cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        21
+      ],
+      "som": [
+        {
+          "atom_idx": 21,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Y. Otake, T. Walle, Drug Metab. Dispos. 2002, 30, 103-105.",
+      "doi": "10.1124/dmd.30.2.103"
+    },
+    {
+      "id": "cyp_dbs:1A2:kr_60436",
+      "name": "kr_60436",
+      "smiles": "COc1ccc(N2CCc3c(NCCO)nc4c(OC(F)(F)F)cccc4c32)c(C)c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        18,
+        7,
+        9,
+        30
+      ],
+      "som": [
+        {
+          "atom_idx": 18,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 30,
+          "bond_class": "tertiary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Ji et al.,Toxicology Lett.,155,103,2005",
+      "doi": "10.1016/j.toxlet.2004.9.001"
+    },
+    {
+      "id": "cyp_dbs:1A2:m-xylene",
+      "name": "m-xylene",
+      "smiles": "Cc1cccc(C)c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        0,
+        2
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Tassaneeyakul et al., J. Pharm. Exp. Ther., 1996, 276, 101-108",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:malathion",
+      "name": "malathion",
+      "smiles": "CCOC(=O)C[C@H](SP(=S)(OC)OC)C(=O)OCC",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        4,
+        10
+      ],
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Buratti et al.,Drug Metab. Disp.,33,295,2005",
+      "doi": "10.1124/dmd.104.001693"
+    },
+    {
+      "id": "cyp_dbs:1A2:mephenytoin",
+      "name": "mephenytoin",
+      "smiles": "CC[C@]1(c2ccccc2)NC(=O)N(C)C1=O",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        6
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "J. K. Coller, A. A. Somogyi, F. Bochner, Br. J. Clin. Pharmacol. 1999, 48, 158-167.",
+      "doi": "10.1046/j.1365-2125.1999.00005.x"
+    },
+    {
+      "id": "cyp_dbs:1A2:mesoridazine",
+      "name": "mesoridazine",
+      "smiles": "CN1CCCC[C@@H]1CCN1c2ccccc2Sc2ccc([S@@](C)=O)cc21",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        13
+      ],
+      "som": [
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Wojcikowski et al.,Drug Metab. Disp.,34,471,2006",
+      "doi": "10.1124/dmd.105.006445"
+    },
+    {
+      "id": "cyp_dbs:1A2:methoxychlor_catechol",
+      "name": "methoxychlor_catechol",
+      "smiles": "COc1ccc([C@@H](c2ccc(O)c(O)c2)C(Cl)(Cl)Cl)cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        20
+      ],
+      "som": [
+        {
+          "atom_idx": 20,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Hu et al.,Drug Metab. Disp.,30,1035,2002",
+      "doi": "10.1124/dmd.30.9.1035"
+    },
+    {
+      "id": "cyp_dbs:1A2:ml_3403",
+      "name": "ml_3403",
+      "smiles": "CSc1nc(-c2ccnc(N[C@H](C)c3ccccc3)c2)c(-c2ccc(F)cc2)[nH]1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        0
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kammerer et al.,Drug Metab. Disp.,35,875,2007",
+      "doi": "10.1124/dmd.106.013409"
+    },
+    {
+      "id": "cyp_dbs:1A2:montelukast",
+      "name": "montelukast",
+      "smiles": "CC(C)(O)c1ccccc1CC[C@@H](SCC1(CC(=O)O)CC1)c1cccc(/C=C/c2ccc3ccc(Cl)cc3n2)c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        5
+      ],
+      "som": [
+        {
+          "atom_idx": 5,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Chiba et al.,Drug Metab. Dispos.,25,1022,1997",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:o-phenylphenol",
+      "name": "o-phenylphenol",
+      "smiles": "Oc1ccccc1-c1ccccc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        8
+      ],
+      "som": [
+        {
+          "atom_idx": 8,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "S. Ozawa, K. Ohta, A. Miyajima, H. Kurebayashi, M. Sunouchi, M. Shimizu, N. Murayama, Y. Matsumoto, M. Fukuoka, Y. Ohno, Xenobiotica 2000, 30, 1005-1017.",
+      "doi": "10.1080/00498250050200159"
+    },
+    {
+      "id": "cyp_dbs:1A2:ortho_dichlorobenzene",
+      "name": "ortho_dichlorobenzene",
+      "smiles": "Clc1ccccc1Cl",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        0,
+        1,
+        5,
+        2
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Bogaards, J.J.P.; Omen, B.V.; Wolf, C.R.; Van Bladeren, P.J. Human Cytochrome P450 Enzyme Selectivities in the Oxidation of Chlorinated Benzenes. Toxicol. Appl. Pharamcol. 1995, 132, 44\u009652.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:para_cresol",
+      "name": "para_cresol",
+      "smiles": "Cc1ccc(O)cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        6
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Yan et al.,Drug Metab. Disp.,33,1867,2005",
+      "doi": "10.1124/dmd.105.006387"
+    },
+    {
+      "id": "cyp_dbs:1A2:parathion",
+      "name": "parathion",
+      "smiles": "CCOP(=S)(OCC)Oc1ccc([N+](=O)[O-])cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        0,
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Mutch et al.,Toxicology,224,22,2006",
+      "doi": "10.1016/j.tox.2006.04.024"
+    },
+    {
+      "id": "cyp_dbs:1A2:phenacetin",
+      "name": "phenacetin",
+      "smiles": "CCOc1ccc(NC(C)=O)cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        9,
+        12
+      ],
+      "som": [
+        {
+          "atom_idx": 9,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 12,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "F. P. Guengerich, A. Parikh, C. H. Yun, D. Kim, K. Nakamura, L. M. Notley, E. M. J. Gillam, Drug Metab. Rev. 2000, 32, 267-281.",
+      "doi": "10.1081/DMR-100102334"
+    },
+    {
+      "id": "cyp_dbs:1A2:phenanthrene",
+      "name": "phenanthrene",
+      "smiles": "c1ccc2c(c1)ccc1ccccc12",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        6,
+        7,
+        12,
+        13,
+        8,
+        9,
+        10,
+        11,
+        3,
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 11,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "tertiary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "tertiary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Shou et al., Canc. Lett. 1994, 83, 305-313",
+      "doi": "10.1016/0304-3835(94)90334-4"
+    },
+    {
+      "id": "cyp_dbs:1A2:phenytoin",
+      "name": "phenytoin",
+      "smiles": "O=C1NC(=O)C(c2ccccc2)(c2ccccc2)N1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        13,
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "som": [
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 14,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 17,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 18,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Komatsu et al.,Drug Metab. Disp.,28,1361,2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:prostaglandin_H2",
+      "name": "prostaglandin_H2",
+      "smiles": "CCCCC[C@H](O)/C=C/[C@@H]1[C@@H](C/C=C\\CCCC(=O)O)[C@@H]2C[C@H]1OO2",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        7,
+        8
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Plastaras, J.P.; Guengerich, F.P.; Nebert, D.W.; Marnett, L.J. Xenobiotic Metabolizing Cytochromes P450 Convert Prostaglandin Endoperoxide to Hydroxyheptadecatrienoic Acid and Mutagen, Malondialdehyde. J. Biol. Chem. 2000, 275, 11784\u009611790.",
+      "doi": "10.1074/jbc.275.16.11784"
+    },
+    {
+      "id": "cyp_dbs:1A2:quinoline",
+      "name": "quinoline",
+      "smiles": "c1ccc2ncccc2c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        3,
+        7,
+        6,
+        5
+      ],
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "tertiary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Reigh et al., Carcinogenesis, 1996, 17, 1989-1996",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:reduced_diclofenac",
+      "name": "reduced_diclofenac",
+      "smiles": "OCCc1ccccc1Nc1c(Cl)cccc1Cl",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        12
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Mancy, A.; Antignac, M.; Minoletti, C.; Dijols, S.; Mouries, V.; Ha Duong, N.T.; Battioni, P.; Dansette, P.M.; Mansuy, D. Diclofenac and Its Derivatives as Tools for Studying Human Cytochromes P450 Active Sites: Particular Efficiency and Regioselectivity of P450 2Cs. Biochemistry 1999, 38, 14264\u009614270.",
+      "doi": "10.1021/bi991195u"
+    },
+    {
+      "id": "cyp_dbs:1A2:riluzole",
+      "name": "riluzole",
+      "smiles": "Nc1nc2ccc(OC(F)(F)F)cc2s1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        6
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Sanderink, G.J.; Bournique, B.; Stevens, J.; Petry, M.; Martinet, M. Involvement of Human CYP1A Isoenzymes in the Metabolism and Drug Interactions of Riluzole In Vitro. J. Pharmacol. Exp. Ther. 1997, 282, 1465\u00961472.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:styrene",
+      "name": "styrene",
+      "smiles": "C=Cc1ccccc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        2,
+        3
+      ],
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Nakajima et al.,Chem. Res. Toxicol.,7,891,1994",
+      "doi": "10.1021/tx00042a026"
+    },
+    {
+      "id": "cyp_dbs:1A2:tamarixetin",
+      "name": "tamarixetin",
+      "smiles": "COc1ccc(-c2oc3cc(O)cc(O)c3c(=O)c2O)cc1O",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        22
+      ],
+      "som": [
+        {
+          "atom_idx": 22,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Breinholt et al.,Food and Chem. Tox.,40,609,2002",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:theobromine",
+      "name": "theobromine",
+      "smiles": "Cn1cnc2c1c(=O)[nH]c(=O)n2C",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        11
+      ],
+      "som": [
+        {
+          "atom_idx": 11,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Gates, S.; Miners, J.O. Cytochrome P450 Isoform Selectivity in Human Hepatic Theobromine Metabolism. Br. J. Clin. Pharmacol. 1999, 47, 299\u0096305.",
+      "doi": "10.1046/j.1365-2125.1999.00890.x"
+    },
+    {
+      "id": "cyp_dbs:1A2:thiabendazole",
+      "name": "thiabendazole",
+      "smiles": "c1ccc2[nH]c(-c3cscn3)nc2c1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        11
+      ],
+      "som": [
+        {
+          "atom_idx": 11,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "M. Coulet, M. Dacasto, C. Eeckhoutte, G. Larrieu, J. F. Sutra, M. Alvinerie, K. Mace, A. M. A. Pfeifer, P. Galtier, Fundam. Clin. Pharmacol. 1998, 12, 225-235.",
+      "doi": "10.1111/j.1472-8206.1998.tb00946.x"
+    },
+    {
+      "id": "cyp_dbs:1A2:ticlopidine",
+      "name": "ticlopidine",
+      "smiles": "Clc1ccccc1CN1CCc2sccc2C1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        3
+      ],
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Dansette et al.,Chem. Res. Toxicol.,22,369,2009",
+      "doi": "10.1021/tx8004828"
+    },
+    {
+      "id": "cyp_dbs:1A2:tolperisone",
+      "name": "tolperisone",
+      "smiles": "Cc1ccc(C(=O)[C@H](C)CN2CCCCC2)cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        12
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Dalmadi et al.,Drug Metab. Disp.,31,631,2003",
+      "doi": "10.1124/dmd.31.5.631"
+    },
+    {
+      "id": "cyp_dbs:1A2:toremifene",
+      "name": "toremifene",
+      "smiles": "CN(C)CCOc1ccc(/C(=C(/CCCl)c2ccccc2)c2ccccc2)cc1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        19,
+        18,
+        16
+      ],
+      "som": [
+        {
+          "atom_idx": 19,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 18,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 16,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "F. Berthou, Y. Dreano, C. Belloc, L. Kangas, J. C. Gautier, P. Beaune, Biochem. Pharmacol. 1994, 47, 1883-1895.",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:triamterene",
+      "name": "triamterene",
+      "smiles": "Nc1nc(N)c2nc(-c3ccccc3)c(N)nc2n1",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        0
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Fuhr et al., Int. J. Clin. Pharmacol. Ther., 2005, 43, 327-334",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:troglitazone",
+      "name": "troglitazone",
+      "smiles": "Cc1c(C)c2c(c(C)c1O)CC[C@@](C)(COc1ccc(C[C@@H]3SC(=O)NC3=O)cc1)O2",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        15,
+        24,
+        26
+      ],
+      "som": [
+        {
+          "atom_idx": 15,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 24,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 26,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Yamazaki et al., Drug Metab. Dispos.,27,1260,1999; He et al., Drug Metab. Dispos., 2004, 32, 442-446; He et al., Drug Metab. Dispos., 2004, 32, 639-646",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:1A2:voreloxin",
+      "name": "voreloxin",
+      "smiles": "CN[C@@H]1CN(c2ccc3c(=O)c(C(=O)O)cn(-c4nccs4)c3n2)C[C@H]1OC",
+      "primary_cyp": "CYP1A2",
+      "site_atoms": [
+        7,
+        8,
+        25,
+        27
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 25,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 27,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Evanchik et al.,Drug Metab. Disp.,37,594,2009",
+      "doi": "10.1124/dmd.108.023432"
+    },
+    {
+      "id": "cyp_dbs:2A6:1_2-dibromoethane",
+      "name": "1_2-dibromoethane",
+      "smiles": "BrCCBr",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Wormhoudt et al., Chemico-Biological Interactions, 1996, 101,175-192",
+      "doi": "10.1016/0009-2797(96)03723-4"
+    },
+    {
+      "id": "cyp_dbs:2A6:2-2prime-4-5-5prime-pentachlorobiphenyl",
+      "name": "2-2prime-4-5-5prime-pentachlorobiphenyl",
+      "smiles": "Clc1ccc(Cl)c(-c2cc(Cl)c(Cl)cc2Cl)c1",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        13
+      ],
+      "som": [
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "McGraw and Waller,Biochem. Biophys. Res. Comm.,344,129,2006",
+      "doi": "10.1016/j.bbrc.2006.03.122"
+    },
+    {
+      "id": "cyp_dbs:2A6:2-methoxyacetophenone",
+      "name": "2-methoxyacetophenone",
+      "smiles": "COc1ccccc1C(C)=O",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        10
+      ],
+      "som": [
+        {
+          "atom_idx": 10,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "T. Su et al., Cancer Res., 2000, 60, 5074-5079",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:2_6-dichlorobenzonitrilie",
+      "name": "2_6-dichlorobenzonitrilie",
+      "smiles": "N#Cc1c(Cl)cccc1Cl",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        5,
+        6,
+        7
+      ],
+      "som": [
+        {
+          "atom_idx": 5,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "X. Ding et al., Mol. Pharmacol., 1996, 49, 1113-1121",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:5-MOP",
+      "name": "5-MOP",
+      "smiles": "COc1c2ccoc2cc2oc(=O)ccc12",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        12,
+        13
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "L.L. Koenigs and W.F. Trager, Biochemistry, 37, 10047-10061",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:8-MOP",
+      "name": "8-MOP",
+      "smiles": "COc1c2occc2cc2ccc(=O)oc12",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        14,
+        15
+      ],
+      "som": [
+        {
+          "atom_idx": 14,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "L.L. Koenigs and W.F. Trager, Biochemistry, 37, 10047-10061",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:8-OH-efavirenz",
+      "name": "8-OH-efavirenz",
+      "smiles": "O=C1Nc2c(O)cc(Cl)cc2[C@@](C#CC2CC2)(C(F)(F)F)O1",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        7
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Ward et al., J. Pharm. Exp. Ther., 2003, 306, 287-300",
+      "doi": "10.1124/jpet.103.049601"
+    },
+    {
+      "id": "cyp_dbs:2A6:9_anthraldehyde",
+      "name": "9_anthraldehyde",
+      "smiles": "O=Cc1c2ccccc2cc2ccccc12",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        14
+      ],
+      "som": [
+        {
+          "atom_idx": 14,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Watanabe et al.,Drug Metab. Pharmacokin.,17,516,2002",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:ETBE",
+      "name": "ETBE",
+      "smiles": "CCOC(C)(C)C",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        5
+      ],
+      "som": [
+        {
+          "atom_idx": 5,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "J-Y. Hong et al., Arch. Toxicol., 1997, 71, 266-269",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:MNAN",
+      "name": "MNAN",
+      "smiles": "CCCCCN(C)N=O",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "S.C. Chen et al., Cancer Res., 1999, 59, 91-98",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:MOCA",
+      "name": "MOCA",
+      "smiles": "Nc1ccc(Cc2ccc(N)c(Cl)c2)cc1Cl",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        7,
+        13
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Yun et al.,Carcinogenesis 13,217,1992",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:MTBE",
+      "name": "MTBE",
+      "smiles": "COC(C)(C)C",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        5
+      ],
+      "som": [
+        {
+          "atom_idx": 5,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "J-Y. Hong et al., Arch. Toxicol., 1997, 71, 266-269",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:NDBA",
+      "name": "NDBA",
+      "smiles": "CCCCN(CCCC)N=O",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        3,
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Hirotaka Kushida et al., Carcinogenesis, 21, 1227-1232, 2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:NMPhA",
+      "name": "NMPhA",
+      "smiles": "CN(N=O)c1ccccc1",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Hirotaka Kushida et al., Carcinogenesis, 21, 1227-1232, 2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:NPYR",
+      "name": "NPYR",
+      "smiles": "O=NN1CCCC1",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        3,
+        6
+      ],
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Teiber et al., Carcinogenesis, 2000, 21, 1559-1566",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:ROX_M-4",
+      "name": "ROX_M-4",
+      "smiles": "NCCCOc1cccc(CN2CCCCC2)c1",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        15
+      ],
+      "som": [
+        {
+          "atom_idx": 15,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "M. Sasaki et al., Arzneim.-Forsch/Drug Res., 2001, 51, 651-658",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:SM-12502",
+      "name": "SM-12502",
+      "smiles": "C[C@H]1S[C@H](c2cccnc2)N(C)C1=O",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        6
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "K-I. Nunoya et al., J. Pharm. Exp. Ther., 1996, 277, 768-774",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:TAME",
+      "name": "TAME",
+      "smiles": "CCC(C)(C)OC",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        6
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "J-Y. Hong et al., Arch. Toxicol., 1997, 71, 266-269",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:butadiene",
+      "name": "butadiene",
+      "smiles": "C=CC=C",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "R.J. Deuscher and A.A. Elfarra, Arch. Biochem. Biophys., 1994, 311, 342-349",
+      "doi": "10.1006/abbi.1994.1246"
+    },
+    {
+      "id": "cyp_dbs:2A6:butadiene_monoxide",
+      "name": "butadiene_monoxide",
+      "smiles": "C=CC1CO1",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        0,
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Krause and Elfarra,Arch. Biochem. Biophys.,337,176,1997",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:clomethiazole",
+      "name": "clomethiazole",
+      "smiles": "Cc1ncsc1CCCl",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        6
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "C. Centerholt et al., Pharmacokin. Dispos., 2003, 59, 117-122",
+      "doi": "10.1007/s00228-003-0598-y"
+    },
+    {
+      "id": "cyp_dbs:2A6:cotinine",
+      "name": "cotinine",
+      "smiles": "CN1C(=O)CC[C@H]1c1cccnc1",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        3,
+        8,
+        11
+      ],
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 11,
+          "bond_class": "tertiary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Murphy et al.,Chem. Res. Toxicol.12,639,1999",
+      "doi": "10.1021/tx990015e"
+    },
+    {
+      "id": "cyp_dbs:2A6:decursinol_angelate",
+      "name": "decursinol_angelate",
+      "smiles": "C/C=C(/C)C(=O)O[C@H]1Cc2cc3ccc(=O)oc3cc2OC1(C)C",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        19,
+        20
+      ],
+      "som": [
+        {
+          "atom_idx": 19,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 20,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Yoo et al.,Drug Metab. Disp.,35,1759,2007",
+      "doi": "10.1124/dmd.107.016584"
+    },
+    {
+      "id": "cyp_dbs:2A6:flunarizine",
+      "name": "flunarizine",
+      "smiles": "Fc1ccc(C(c2ccc(F)cc2)N2CCN(C/C=C/c3ccccc3)CC2)cc1",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        3
+      ],
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kariya et al.,Bio. Pharm. Bull.,19,1511,1996",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:hexamethylphosphoramide",
+      "name": "hexamethylphosphoramide",
+      "smiles": "CN(C)P(=O)(N(C)C)N(C)C",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        0,
+        2,
+        6,
+        7,
+        9,
+        10
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "T. Su et al., Cancer Res., 2000, 60, 5074-5079",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:indole",
+      "name": "indole",
+      "smiles": "c1ccc2[nH]ccc2c1",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        7,
+        6,
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "tertiary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Gillam et al., Biochemistry, 2000, 39, 13817-13824",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:omeprazole",
+      "name": "omeprazole",
+      "smiles": "COc1ccc2[nH]c([S@@](=O)Cc3ncc(C)c(OC)c3C)nc2c1",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 9,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Abelo et al.,Drug Metab. Disp.,28,966,2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2A6:pilocarpine",
+      "name": "pilocarpine",
+      "smiles": "CC[C@@H]1C(=O)OC[C@@H]1Cc1cncn1C",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        2
+      ],
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "T. Endo et al., Drug Metab. Dispos., 2007, 35, 476-483",
+      "doi": "10.1124/dmd.106.012425"
+    },
+    {
+      "id": "cyp_dbs:2A6:psoralen",
+      "name": "psoralen",
+      "smiles": "O=c1ccc2cc3ccoc3cc2o1",
+      "primary_cyp": "CYP2A6",
+      "site_atoms": [
+        12,
+        13
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "L.L. Koenigs and W.F. Trager, Biochemistry, 37, 10047-10061",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2B6:2_2_4_4_5_5-hexachlorobiphenyl",
+      "name": "2_2_4_4_5_5-hexachlorobiphenyl",
+      "smiles": "Clc1cc(Cl)c(-c2cc(Cl)c(Cl)cc2Cl)cc1Cl",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        3,
+        13
+      ],
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Ariyoshi et al., Biochem. Biophys. Res. Commun., 1995, 212, 455-460",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2B6:2-oxo-clopidogrel",
+      "name": "2-oxo-clopidogrel",
+      "smiles": "COC(=O)[C@H](c1ccccc1Cl)N1CCC2=C(CC(=O)S2)C1",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kazui et al., Drug Metab. Dispos.,2010, 38, 92-99",
+      "doi": "10.1124/dmd.109.029132"
+    },
+    {
+      "id": "cyp_dbs:2B6:4-vinylcyclohexene",
+      "name": "4-vinylcyclohexene",
+      "smiles": "C=C[C@@H]1CC=CCC1",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        1,
+        2,
+        4,
+        5
+      ],
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Fontaine et al.,Drug Metab. Disp.,29,179,2001",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2B6:RP73401",
+      "name": "RP73401",
+      "smiles": "COc1ccc(C(=O)Nc2c(Cl)cncc2Cl)cc1OC1CCCC1",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        22,
+        23
+      ],
+      "som": [
+        {
+          "atom_idx": 22,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 23,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Stevens et al.,J. Pharma. Exp. Thera.,282,1389,1997",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2B6:R_95913",
+      "name": "R_95913",
+      "smiles": "O=C1C=C2CN([C@@H](C(=O)C3CC3)c3ccccc3F)CC[C@H]2S1",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        20
+      ],
+      "som": [
+        {
+          "atom_idx": 20,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Rehmel et al.,Drug Metab. Dispos.,34,600,2006",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2B6:alachlor",
+      "name": "alachlor",
+      "smiles": "CCc1cccc(CC)c1N(COC)C(=O)CCl",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        17
+      ],
+      "som": [
+        {
+          "atom_idx": 17,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Coleman et al.,Env. Health Perspec.,108,1151,2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2B6:benzphetamine",
+      "name": "benzphetamine",
+      "smiles": "C[C@H](Cc1ccccc1)N(C)Cc1ccccc1",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        5
+      ],
+      "som": [
+        {
+          "atom_idx": 5,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Ekins et al.,Drug Metab. Rev.,31,719,1999",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2B6:butachlor",
+      "name": "butachlor",
+      "smiles": "CCCCOCN(C(=O)CCl)c1c(CC)cccc1CC",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        17
+      ],
+      "som": [
+        {
+          "atom_idx": 17,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Coleman et al.,Env. Health Perspec.,108,1151,2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2B6:demethyl-sibutramine",
+      "name": "demethyl-sibutramine",
+      "smiles": "CN[C@@H](CC(C)C)C1(c2ccc(Cl)cc2)CCC1",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        12
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Bae et al.,Drug Metab. Disp.,36,1679,2008",
+      "doi": "10.1124/dmd.108.020727"
+    },
+    {
+      "id": "cyp_dbs:2B6:dexloxiglumide",
+      "name": "dexloxiglumide",
+      "smiles": "CCCCCN(CCCOC)C(=O)[C@@H](CCC(=O)O)NC(=O)c1ccc(Cl)c(Cl)c1",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        28
+      ],
+      "som": [
+        {
+          "atom_idx": 28,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Hall et al.,Biopharm Drug Disp.,25,163,2004",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2B6:endosulfan",
+      "name": "endosulfan",
+      "smiles": "O=[S@]1OC[C@H]2[C@H](CO1)[C@@]1(Cl)C(Cl)=C(Cl)[C@]2(Cl)C1(Cl)Cl",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        17
+      ],
+      "som": [
+        {
+          "atom_idx": 17,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Casabar et al.,Drug Metab. Disp.,34,1779,2006",
+      "doi": "10.1124/dmd.106.010199"
+    },
+    {
+      "id": "cyp_dbs:2B6:hexane",
+      "name": "hexane",
+      "smiles": "CCCCCC",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        1,
+        4,
+        0,
+        2,
+        3,
+        5
+      ],
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Crosbie et al., Hum. Exp. Toxicol., 1997, 16, 131-137",
+      "doi": "10.1177/096032719701600301"
+    },
+    {
+      "id": "cyp_dbs:2B6:ketamine",
+      "name": "ketamine",
+      "smiles": "CN[C@@]1(c2ccccc2Cl)CCCCC1=O",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        15
+      ],
+      "som": [
+        {
+          "atom_idx": 15,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Hijazi et al.,Drug Metab. Dispos.,30,853,2002",
+      "doi": "10.1124/dmd.30.7.853"
+    },
+    {
+      "id": "cyp_dbs:2B6:loperamide",
+      "name": "loperamide",
+      "smiles": "CN(C)C(=O)C(CCN1CCC(O)(c2ccc(Cl)cc2)CC1)(c1ccccc1)c1ccccc1",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        18,
+        17
+      ],
+      "som": [
+        {
+          "atom_idx": 18,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 17,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kim et al.,Eur. J. Clin. Pharm.,60,575,2004",
+      "doi": "10.1007/s00228-004-0815-3"
+    },
+    {
+      "id": "cyp_dbs:2B6:mephobarbital",
+      "name": "mephobarbital",
+      "smiles": "CC[C@]1(c2ccccc2)C(=O)NC(=O)N(C)C1=O",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        11
+      ],
+      "som": [
+        {
+          "atom_idx": 11,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kobayashi et al., Drug Metab. Disp., 1999, 27, 1429-1433",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2B6:metolachlor",
+      "name": "metolachlor",
+      "smiles": "CCc1cccc(C)c1N(C(=O)CCl)[C@@H](C)COC",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        18
+      ],
+      "som": [
+        {
+          "atom_idx": 18,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Coleman et al.,Env. Health Perspec.,108,1151,2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2B6:sulfadiazine",
+      "name": "sulfadiazine",
+      "smiles": "Nc1ccc(S(=O)(=O)Nc2ncccn2)cc1",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        13
+      ],
+      "som": [
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Winter and Unadkat,Drug Metab. Disp.,33,969,2005",
+      "doi": "10.1124/dmd.104.002998"
+    },
+    {
+      "id": "cyp_dbs:2B6:temazepam",
+      "name": "temazepam",
+      "smiles": "CN1C(=O)[C@H](O)N=C(c2ccccc2)c2cc(Cl)ccc21",
+      "primary_cyp": "CYP2B6",
+      "site_atoms": [
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 9,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Yang et al.,Biochem. Pharmacol.,55,889,1998",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2C19:18_methoxycoronaridine",
+      "name": "18_methoxycoronaridine",
+      "smiles": "COCC[C@@H]1C[C@@H]2CN3CCc4c([nH]c5ccccc45)[C@@](C(=O)OC)(C2)[C@@H]13",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        22
+      ],
+      "som": [
+        {
+          "atom_idx": 22,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Zhang et al.,Drug Metab. Disp.,30,663,2002",
+      "doi": "10.1124/dmd.30.6.663"
+    },
+    {
+      "id": "cyp_dbs:2C19:2prime_hydroxy_indomethacin_phenethylamide",
+      "name": "2prime_hydroxy_indomethacin_phenethylamide",
+      "smiles": "COc1ccc2c(c1)c(CC(=O)NC[C@@H](O)c1ccccc1)c(C)n2C(=O)c1ccc(Cl)cc1",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        19
+      ],
+      "som": [
+        {
+          "atom_idx": 19,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Remmel et al.,Drug Metab. Disp.,32,113,2004",
+      "doi": "10.1124/dmd.32.1.113"
+    },
+    {
+      "id": "cyp_dbs:2C19:DRF_4367",
+      "name": "DRF_4367",
+      "smiles": "COc1ccc(-c2cc(C(F)(F)F)nn2-c2ccc(S(N)(=O)=O)c(CO)c2)cc1",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        7
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Muzeeb et al.,Eur. J. Drug Metab. Pharma.,31,299,2006",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2C19:MDPPP",
+      "name": "MDPPP",
+      "smiles": "C[C@H](C(=O)c1ccc2c(c1)OCO2)N1CCCC1",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        17
+      ],
+      "som": [
+        {
+          "atom_idx": 17,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Springer et al.,Xeno.,35,227,2005",
+      "doi": "10.1080/00498250400028239"
+    },
+    {
+      "id": "cyp_dbs:2C19:MOP-13031",
+      "name": "MOP-13031",
+      "smiles": "COC(=O)C1=C(C)NC(C)=C(C(=O)O)[C@H]1c1cccc([N+](=O)[O-])c1",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        12,
+        0
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kudo et al.,Drug Metab. Disp.,27,303,1999",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2C19:adinazolam",
+      "name": "adinazolam",
+      "smiles": "CN(C)Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1)=NC2",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        22,
+        23
+      ],
+      "som": [
+        {
+          "atom_idx": 22,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 23,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Venkatakrishnan et al.,J. Pharm. Pharmacol.,50,265,1998",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2C19:compound_4",
+      "name": "compound_4",
+      "smiles": "Cc1ccc(S(=O)(=O)Nc2ccnn2-c2ccccc2)cc1",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        21,
+        15
+      ],
+      "som": [
+        {
+          "atom_idx": 21,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Marques-Soares et al.,Biochemistry,42,6363,2003",
+      "doi": "10.1021/bi027391+"
+    },
+    {
+      "id": "cyp_dbs:2C19:dibenzylfluorescein",
+      "name": "dibenzylfluorescein",
+      "smiles": "O=C(OCc1ccccc1)c1ccccc1-c1c2ccc(=O)cc-2oc2cc(OCc3ccccc3)ccc12",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        15,
+        32
+      ],
+      "som": [
+        {
+          "atom_idx": 15,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 32,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Stresser et al.,Drug Metab. Disp.,30,845,2002",
+      "doi": "10.1124/dmd.30.7.845"
+    },
+    {
+      "id": "cyp_dbs:2C19:fluticasone",
+      "name": "fluticasone",
+      "smiles": "C[C@@H]1C[C@H]2[C@@H]3C[C@H](F)C4=CC(=O)C=C[C@]4(C)[C@@]3(F)[C@@H](O)C[C@]2(C)[C@@]1(O)C(=O)SCF",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        22
+      ],
+      "som": [
+        {
+          "atom_idx": 22,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Pearce et al.,Drug Metab. Disp.,34,1035,2006",
+      "doi": "10.1124/dmd.105.009043"
+    },
+    {
+      "id": "cyp_dbs:2C19:indomethacin",
+      "name": "indomethacin",
+      "smiles": "COc1ccc2c(c1)c(CC(=O)O)c(C)n2C(=O)c1ccc(Cl)cc1",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        24
+      ],
+      "som": [
+        {
+          "atom_idx": 24,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Nakajima et al.,Drug Metab. Disp.,26,261,1998",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2C19:indomethacin_phenethylamide",
+      "name": "indomethacin_phenethylamide",
+      "smiles": "COc1ccc2c(c1)c(CC(=O)NCCc1ccccc1)c(C)n2C(=O)c1ccc(Cl)cc1",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        19,
+        26
+      ],
+      "som": [
+        {
+          "atom_idx": 19,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 26,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Remmel et al.,Drug Metab. Disp.,32,113,2004",
+      "doi": "10.1124/dmd.32.1.113"
+    },
+    {
+      "id": "cyp_dbs:2C19:zonisamide",
+      "name": "zonisamide",
+      "smiles": "NS(=O)(=O)Cc1noc2ccccc12",
+      "primary_cyp": "CYP2C19",
+      "site_atoms": [
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Nakasa et al., Eur. J. Clin. Pharmacol., 1998, 54, 177-183",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2C8:eicosapentaenoic_acid",
+      "name": "eicosapentaenoic_acid",
+      "smiles": "CC/C=C\\C/C=C\\C/C=C\\C/C=C\\C/C=C\\CCCC(=O)O",
+      "primary_cyp": "CYP2C8",
+      "site_atoms": [
+        18,
+        19,
+        5,
+        7,
+        11,
+        13,
+        20,
+        21
+      ],
+      "som": [
+        {
+          "atom_idx": 18,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 19,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 11,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 20,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 21,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Barbosa-Sicard et al.,Biochem. Biophys. Res. Comm.,329,1275,2005",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2C8:tienilic_acid",
+      "name": "tienilic_acid",
+      "smiles": "O=C(O)COc1ccc(C(=O)c2cccs2)c(Cl)c1Cl",
+      "primary_cyp": "CYP2C8",
+      "site_atoms": [
+        12
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Jean et al., Eur. J. Biochem., 1996, 241, 797-804",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2C8:torasemide",
+      "name": "torasemide",
+      "smiles": "Cc1cccc(Nc2ccncc2S(=O)(=O)NC(=O)NC(C)C)c1",
+      "primary_cyp": "CYP2C8",
+      "site_atoms": [
+        21
+      ],
+      "som": [
+        {
+          "atom_idx": 21,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "J.O. Miners et al.,Pharmacogenetics, 2000, 10, 267-270",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2C9:bosentan",
+      "name": "bosentan",
+      "smiles": "COc1ccccc1Oc1c(NS(=O)(=O)c2ccc(C(C)(C)C)cc2)nc(-c2ncccn2)nc1OCCO",
+      "primary_cyp": "CYP2C9",
+      "site_atoms": [
+        38,
+        37,
+        36
+      ],
+      "som": [
+        {
+          "atom_idx": 38,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 37,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 36,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "van Giersbergen et al.,Clinical Pharm. Ther.,71,253,2002",
+      "doi": "10.1067/mcp.2002.122473"
+    },
+    {
+      "id": "cyp_dbs:2C9:flurbiprofen",
+      "name": "flurbiprofen",
+      "smiles": "C[C@H](C(=O)O)c1ccc(-c2ccccc2)c(F)c1",
+      "primary_cyp": "CYP2C9",
+      "site_atoms": [
+        12
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Yamazaki et al.,Biochem. Pharm.,56,243,1998",
+      "doi": "10.1016/S0006-2952(98)00133-6"
+    },
+    {
+      "id": "cyp_dbs:2C9:piroxicam",
+      "name": "piroxicam",
+      "smiles": "CN1C(C(=O)Nc2ccccn2)=C(O)c2ccccc2S1(=O)=O",
+      "primary_cyp": "CYP2C9",
+      "site_atoms": [
+        22
+      ],
+      "som": [
+        {
+          "atom_idx": 22,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "J.M. Hutzler et al., Drug Metab. Dispos., 2001, 29, 1029-1034",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2C9:tr_14035",
+      "name": "tr_14035",
+      "smiles": "COc1cccc(OC)c1-c1ccc(C[C@H](NC(=O)c2c(Cl)cccc2Cl)C(=O)O)cc1",
+      "primary_cyp": "CYP2C9",
+      "site_atoms": [
+        14,
+        13
+      ],
+      "som": [
+        {
+          "atom_idx": 14,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Tsuda-Tsukimoto et al.,Drug Metab. Pharmacokin.,20,127,2005",
+      "doi": "10.2133/dmpk.20.127"
+    },
+    {
+      "id": "cyp_dbs:2C9:valdecoxib",
+      "name": "valdecoxib",
+      "smiles": "Cc1onc(-c2ccccc2)c1-c1ccc(S(N)(=O)=O)cc1",
+      "primary_cyp": "CYP2C9",
+      "site_atoms": [
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 9,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Ibrahim et al.,Anesthesiology,96,88,2002",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2C9:vivid_red",
+      "name": "vivid_red",
+      "smiles": "O=c1ccc2nc3ccc(OCOCc4ccccc4)cc3oc-2c1",
+      "primary_cyp": "CYP2C9",
+      "site_atoms": [
+        8
+      ],
+      "som": [
+        {
+          "atom_idx": 8,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Marks et al.,J. Biomolec. Screening,9,439,2004",
+      "doi": "10.1177/1087057104263440"
+    },
+    {
+      "id": "cyp_dbs:2C9:5-OH-diclofenac",
+      "name": "5-OH-diclofenac",
+      "smiles": "O=C(O)Cc1cc(O)ccc1Nc1c(Cl)cccc1Cl",
+      "primary_cyp": "CYP2C9",
+      "site_atoms": [
+        3
+      ],
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "R. Bort et al., Biochem. Pharmacol., 1999, 58, 787-796",
+      "doi": "10.1016/S0006-2952(99)00167-7"
+    },
+    {
+      "id": "cyp_dbs:2C9:E3179",
+      "name": "E3179",
+      "smiles": "CCCCc1nc(Cl)c(C=O)n1Cc1ccc(-c2ccccc2-c2nnn[nH]2)cc1",
+      "primary_cyp": "CYP2C9",
+      "site_atoms": [
+        28
+      ],
+      "som": [
+        {
+          "atom_idx": 28,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Stearns et al.,Drug Metab. Disp.,23,207,1995",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2C9:suprofen",
+      "name": "suprofen",
+      "smiles": "C[C@@H](C(=O)O)c1ccc(C(=O)c2cccs2)cc1",
+      "primary_cyp": "CYP2C9",
+      "site_atoms": [
+        2
+      ],
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "A. Mancy et al., Biochemistry, 1995, 34, 10365-10375",
+      "doi": "10.1021/bi00033a007"
+    },
+    {
+      "id": "cyp_dbs:2D6:bisoprolol",
+      "name": "bisoprolol",
+      "smiles": "CC(C)NC[C@@H](O)COc1ccc(COCCOC(C)C)cc1",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        20
+      ],
+      "som": [
+        {
+          "atom_idx": 20,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Horikiri et al.,Life Sciences,63,1097,1998",
+      "doi": "10.1016/S0024-3205(98)0037-3"
+    },
+    {
+      "id": "cyp_dbs:2D6:brofaromine",
+      "name": "brofaromine",
+      "smiles": "COc1cc(Br)c2oc(C3CCNCC3)cc2c1",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        14
+      ],
+      "som": [
+        {
+          "atom_idx": 14,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Fiefel et al.,Eur. J. Clin. Pharmacol.,45,265,1993",
+      "doi": "10.1007/BF00315394"
+    },
+    {
+      "id": "cyp_dbs:2D6:compound_A",
+      "name": "compound_A",
+      "smiles": "COc1ccc([C@H](CC(=O)O)N2CCN(CCCc3ccc4c(n3)NCCC4)C2=O)cn1",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        31,
+        3,
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 31,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Cui et al.,Drug Metab. Disp.,32,848,2004",
+      "doi": "10.1124/dmd.32.8.848"
+    },
+    {
+      "id": "cyp_dbs:2D6:debrisoquine",
+      "name": "debrisoquine",
+      "smiles": "N=C(N)N1CCc2ccccc2C1",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        8,
+        4,
+        2,
+        3,
+        5,
+        7,
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 8,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Bapiro et al.,Biochem. Pharm.,64,1387,2002",
+      "doi": "10.1016/S0006-2952(02)01351-5"
+    },
+    {
+      "id": "cyp_dbs:2D6:gefitinib",
+      "name": "gefitinib",
+      "smiles": "COc1cc2ncnc(Nc3ccc(F)c(Cl)c3)c2cc1OCCCN1CCOCC1",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        30
+      ],
+      "som": [
+        {
+          "atom_idx": 30,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "McKillop et al.,Xenobiotica,35,39,2005",
+      "doi": "10.1080/00498250400026464"
+    },
+    {
+      "id": "cyp_dbs:2D6:mequitazine",
+      "name": "mequitazine",
+      "smiles": "c1ccc2c(c1)Sc1ccccc1N2CC12CCN(CC1)CC2",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        17,
+        18,
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 17,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 18,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 9,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Nakamura et al.,J. Pharm. Exp. Ther.,284,437,1998",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2D6:meta_chlorophenylpiperazine",
+      "name": "meta_chlorophenylpiperazine",
+      "smiles": "Clc1cccc(N2CCNCC2)c1",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        10
+      ],
+      "som": [
+        {
+          "atom_idx": 10,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Rotzinger et al.,Biol. Psychiatry,44,1185,1998",
+      "doi": "10.1016/S0006-3223(97)00483-6"
+    },
+    {
+      "id": "cyp_dbs:2D6:methamphetamine",
+      "name": "methamphetamine",
+      "smiles": "CN[C@@H](C)Cc1ccccc1",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        7,
+        10
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 10,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Lin et al.,Drug Metab. Disp.,25,1059,1997",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2D6:minaprine",
+      "name": "minaprine",
+      "smiles": "Cc1cc(-c2ccccc2)nnc1NCCN1CCOCC1",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        12
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Marre et al.,Drug Metab. Disp.,20,316,1992",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2D6:pinoline",
+      "name": "pinoline",
+      "smiles": "COc1ccc2[nH]c3c(c2c1)CCNC3",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        14
+      ],
+      "som": [
+        {
+          "atom_idx": 14,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Ye et al.,Pharmacogenetics,13,307,2003",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2D6:r_568",
+      "name": "r_568",
+      "smiles": "COc1cccc([C@@H](C)NCCCc2ccccc2Cl)c1",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        11
+      ],
+      "som": [
+        {
+          "atom_idx": 11,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "McConnachie et al.,Clin. Pharm. Ther.,75,282,2004",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2D6:9_OH_risperidone",
+      "name": "9_OH_risperidone",
+      "smiles": "Cc1nc2n(c(=O)c1CCN1CCC(c3noc4cc(F)ccc34)CC1)CCC[C@@H]2O",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        29
+      ],
+      "som": [
+        {
+          "atom_idx": 29,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Shen W.,Ann. Clin. Pschia.,11,145,1999",
+      "doi": "10.1023/A:1022312111429"
+    },
+    {
+      "id": "cyp_dbs:2D6:MDA",
+      "name": "MDA",
+      "smiles": "C[C@@H](N)Cc1ccc2c(c1)OCO2",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        11
+      ],
+      "som": [
+        {
+          "atom_idx": 11,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Maurer et al.,Toxicol. Lett.,112'96113,133,2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2D6:ROX_M_5",
+      "name": "ROX_M_5",
+      "smiles": "OCCCOc1cccc(CN2CCCCC2)c1",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        13,
+        15
+      ],
+      "som": [
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "M. Sasaki et al., Arzneim.-Forsch/Drug Res., 2001, 51, 651-658",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2D6:cj_12_458",
+      "name": "cj_12_458",
+      "smiles": "C=C(C)c1ccc(OC)c(CN[C@H]2C3CCN(CC3)[C@@H]2C(c2ccccc2)c2ccccc2)c1",
+      "primary_cyp": "CYP2D6",
+      "site_atoms": [
+        31,
+        33
+      ],
+      "som": [
+        {
+          "atom_idx": 31,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 33,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Obach,Drug Metab. Disp.,29,1057,2001",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:1_1-dichloro-2_2_2-trifluoroethane",
+      "name": "1_1-dichloro-2_2_2-trifluoroethane",
+      "smiles": "FC(F)(F)C(Cl)Cl",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        0
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "G. Urban et al., Chem. Res. Toxicol., 1994, 7, 170-176",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:4_nitro_phenol",
+      "name": "4_nitro_phenol",
+      "smiles": "O=[N+]([O-])c1ccc(O)cc1",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        5,
+        8
+      ],
+      "som": [
+        {
+          "atom_idx": 5,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Tassaneeyakul et al., Biochem. Pharmacol., 1993, 46, 1975-1981",
+      "doi": "10.1016/0006-2952(93)90639-E"
+    },
+    {
+      "id": "cyp_dbs:2E1:acetaldehyde",
+      "name": "acetaldehyde",
+      "smiles": "CC=O",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Bell-Parikh and Guengerich, J. Biol. Chem., 1999, 274, 23833-23840",
+      "doi": "10.1074/jbc.274.34.23833"
+    },
+    {
+      "id": "cyp_dbs:2E1:acrylonitrile",
+      "name": "acrylonitrile",
+      "smiles": "C=CC#N",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        0,
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kedderis et al., Chem. Res. Toxicol., 1993, 6, 866-871",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:aniline",
+      "name": "aniline",
+      "smiles": "Nc1ccccc1",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "H. Yamazaki et al., Biochemical Pharmacology, 1996, 52, 301",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:benzene",
+      "name": "benzene",
+      "smiles": "c1ccccc1",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 5,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "R. Snyder et al., Toxicology and Applied Pharmacology, 1993, 122, 172-181",
+      "doi": "10.1006/taap.1993.1185"
+    },
+    {
+      "id": "cyp_dbs:2E1:dichloromethane",
+      "name": "dichloromethane",
+      "smiles": "ClCCl",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        0
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "D. Pankow, S. Jagielki, Hum. Exp. Toxicol., 1993, 12, 227-231",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:dimethylformamide",
+      "name": "dimethylformamide",
+      "smiles": "CN(C)C=O",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        0,
+        2
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "J. Mraz et al., Chem. Res. Toxicol., 1993, 6, 197-207",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:enflurane",
+      "name": "enflurane",
+      "smiles": "FC(F)OC(F)(F)[C@H](F)Cl",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        7
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Garton et al., Drug Metab. Dispos., 1995, 23, 1426-1430",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:furan",
+      "name": "furan",
+      "smiles": "c1ccoc1",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        2,
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "G.L. Kedderis et al., Toxicology and Applied Pharmacology, 1993, 123, 274-282",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:methylformamide",
+      "name": "methylformamide",
+      "smiles": "CNC=O",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        1,
+        2
+      ],
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "R. Hyland et al., Molecular Pharmacology, 1992, 41, 259-266",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:myristic_acid",
+      "name": "myristic_acid",
+      "smiles": "CCCCCCCCCCCCCC(=O)O",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Adas et al., J. Lip. Res., 1999, 40, 1990-1997",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:o-xylene",
+      "name": "o-xylene",
+      "smiles": "Cc1ccccc1C",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        5,
+        7
+      ],
+      "som": [
+        {
+          "atom_idx": 5,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Tassaneeyakul et al., J. Pharm. Exp. Ther., 1996, 276, 101-108",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:oleic_acid",
+      "name": "oleic_acid",
+      "smiles": "CCCCCCCC/C=C\\CCCCCCCC(=O)O",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        1,
+        0
+      ],
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Adas et al., J. Lip. Res., 1999, 40, 1990-1997",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:p-xylene",
+      "name": "p-xylene",
+      "smiles": "Cc1ccc(C)cc1",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        3,
+        7
+      ],
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Tassaneeyakul et al., J. Pharm. Exp. Ther., 1996, 276, 101-108",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:palmitic_acid",
+      "name": "palmitic_acid",
+      "smiles": "CCCCCCCCCCCCCCCC(=O)O",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Adas et al., J. Lip. Res., 1999, 40, 1990-1997",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:phenol",
+      "name": "phenol",
+      "smiles": "Oc1ccccc1",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        2,
+        0,
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 0,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Seaton et al., Carcinogenesis, 1994, 15, 1799-1806",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:salicylate",
+      "name": "salicylate",
+      "smiles": "O=C(O)c1ccccc1O",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Dupont et al., Drug Metab. Dispos., 1999, 27, 322-326",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:stearic_acid",
+      "name": "stearic_acid",
+      "smiles": "CCCCCCCCCCCCCCCCCC(=O)O",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Adas et al., J. Lip. Res., 1999, 40, 1990-1997",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:2E1:trichloroethane",
+      "name": "trichloroethane",
+      "smiles": "CC(Cl)(Cl)Cl",
+      "primary_cyp": "CYP2E1",
+      "site_atoms": [
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Guengerich et al., Chem. Res. Toxicol., 1991, 4, 168-179",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:3_hpph",
+      "name": "3_hpph",
+      "smiles": "O=C1NC(=O)[C@](c2ccccc2)(c2cccc(O)c2)N1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        2
+      ],
+      "som": [
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Komatsu et al.,Drug Metab. Disp.,28,1361,2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:4_hpph",
+      "name": "4_hpph",
+      "smiles": "O=C1NC(=O)[C@](c2ccccc2)(c2ccc(O)cc2)N1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        3,
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 1,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Komatsu et al.,Drug Metab. Disp.,28,1361,2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:4_hydroxytamoxifen",
+      "name": "4_hydroxytamoxifen",
+      "smiles": "CC/C(=C(\\c1ccc(O)cc1)c1ccc(OCCN(C)C)cc1)c1ccccc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        16,
+        15
+      ],
+      "som": [
+        {
+          "atom_idx": 16,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Dehal and Kupfer,Drug Metab. Disp.,27,681,1999",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:alfentanil",
+      "name": "alfentanil",
+      "smiles": "CCC(=O)N(c1ccccc1)C1(COC)CCN(CCn2nnn(CC)c2=O)CC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        9,
+        17
+      ],
+      "som": [
+        {
+          "atom_idx": 9,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 17,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Klees et al.,Drug Metab. Dispos.,33,303,2005",
+      "doi": "10.1124/dmb.104.0020790"
+    },
+    {
+      "id": "cyp_dbs:3A4:cocaine",
+      "name": "cocaine",
+      "smiles": "COC(=O)[C@H]1[C@H](OC(=O)c2ccccc2)C[C@H]2CC[C@@H]1N2C",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        3
+      ],
+      "som": [
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "LeDuc et al.,Pharmacology,46,293,1993",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:cp_199331",
+      "name": "cp_199331",
+      "smiles": "COc1ccc(NS(=O)(=O)C(F)(F)F)cc1C[C@@H]1COc2ccc(OCc3nc4cc(F)c(F)cc4s3)cc2[C@@H]1O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        24
+      ],
+      "som": [
+        {
+          "atom_idx": 24,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kuperman et al.,Drug Metab. Disp.,29,1403,2001",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:digitoxin",
+      "name": "digitoxin",
+      "smiles": "C[C@H]1O[C@H](O[C@H]2[C@@H](O)C[C@H](O[C@H]3[C@@H](O)C[C@H](O[C@H]4CC[C@@]5(C)[C@H](CC[C@@H]6[C@@H]5CC[C@]5(C)[C@@H](C7=CC(=O)OC7)CC[C@]65O)C4)O[C@@H]3C)O[C@@H]2C)C[C@H](O)[C@@H]1O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        45
+      ],
+      "som": [
+        {
+          "atom_idx": 45,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Eberhart et al.,Molec. Pharm.,40,859,1992",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:estazolam",
+      "name": "estazolam",
+      "smiles": "Clc1ccc2c(c1)C(c1ccccc1)=NCc1nncn1-2",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        12
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Miura et al.,Xenobiotica,35,455,2005",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:ethiprole",
+      "name": "ethiprole",
+      "smiles": "CC[S@](=O)c1c(C#N)nn(-c2c(Cl)cc(C(F)(F)F)cc2Cl)c1N",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        13,
+        17
+      ],
+      "som": [
+        {
+          "atom_idx": 13,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 17,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Caboni et al.,J. Agric. Food Chem.,51,7055,2003",
+      "doi": "10.1021/jf0304391"
+    },
+    {
+      "id": "cyp_dbs:3A4:etoricoxib",
+      "name": "etoricoxib",
+      "smiles": "Cc1ccc(-c2ncc(Cl)cc2-c2ccc(S(C)(=O)=O)cc2)cn1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        18
+      ],
+      "som": [
+        {
+          "atom_idx": 18,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kassahun et al.,Drug Metab. Disp.,29,813,2001",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:fentanyl",
+      "name": "fentanyl",
+      "smiles": "CCC(=O)N(c1ccccc1)C1CCN(CCc2ccccc2)CC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        7
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Labroo et al.,Drug Metab. Disp.,25,1072,1997",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:flosequinan",
+      "name": "flosequinan",
+      "smiles": "Cn1cc(S(C)=O)c(=O)c2ccc(F)cc21",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        12,
+        15
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 15,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kashiyama et al.,Drug Metab. Disp.,25,716,1997",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:isoquinoline",
+      "name": "isoquinoline",
+      "smiles": "c1ccc2cnccc2c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 9,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Dowers et al.,Drug Metab. Disp.,32,328,2004",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:lithocholic_acid",
+      "name": "lithocholic_acid",
+      "smiles": "C[C@H](CCC(=O)O)[C@H]1CC[C@H]2[C@@H]3CC[C@H]4C[C@H](O)CC[C@]4(C)[C@H]3CC[C@]12C",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        12
+      ],
+      "som": [
+        {
+          "atom_idx": 12,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Araya and Wikvall,Biochim. Biophys. Acta,1438,47,1999",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:ly_333531",
+      "name": "ly_333531",
+      "smiles": "CN(C)C[C@@H]1CCn2cc(c3ccccc32)C2=C(C(=O)NC2=O)c2cn(c3ccccc23)CCO1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        30,
+        29
+      ],
+      "som": [
+        {
+          "atom_idx": 30,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 29,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Hyland et al.,Drug Metab. Disp.,30,957,2002",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:methaqualone",
+      "name": "methaqualone",
+      "smiles": "Cc1ccccc1-n1c(C)nc2ccccc2c1=O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        8
+      ],
+      "som": [
+        {
+          "atom_idx": 8,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Prost and Thormann,Electrophoresis,24,2593,2003",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:mexazolam",
+      "name": "mexazolam",
+      "smiles": "C[C@@H]1CO[C@@]2(c3ccccc3Cl)c3cc(Cl)ccc3NC(=O)CN12",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        7
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Ishigami et al.,Drug Metab. Disp.,29,282,2001",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:miocamycin",
+      "name": "miocamycin",
+      "smiles": "CCC(=O)O[C@@H]1CC(=O)O[C@H](C)C/C=C/C=C/[C@H](OC(C)=O)[C@H](C)C[C@H](CC=O)[C@H](O[C@H]2O[C@H](C)[C@@H](O[C@H]3C[C@@](C)(OC(C)=O)[C@@H](OC(=O)CC)[C@@H](C)O3)[C@@H](N(C)C)[C@H]2O)[C@H]1OC",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        51
+      ],
+      "som": [
+        {
+          "atom_idx": 51,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Kashahara et al.,Drug Metab. Disp.,28,409,2000",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:naphthalene",
+      "name": "naphthalene",
+      "smiles": "c1ccc2ccccc2c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        9,
+        8,
+        2,
+        3
+      ],
+      "som": [
+        {
+          "atom_idx": 9,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 8,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 2,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 3,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Cho et al.,Drug Metab. Disp.,34,176,2006",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:pradefovir",
+      "name": "pradefovir",
+      "smiles": "Nc1ncnc2c1ncn2CCOC[P@]1(=O)OCC[C@@H](c2cccc(Cl)c2)O1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        19,
+        18
+      ],
+      "som": [
+        {
+          "atom_idx": 19,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 18,
+          "bond_class": "secondary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Lin et al.,Antimicrob. Agents Chemother.,50,2926,2006",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:py74",
+      "name": "py74",
+      "smiles": "COc1cc([N+](=O)[O-])ccc1N/N=C(\\C(C)=O)C(=O)Nc1ccccc1OC",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Cui et al.,Drug Metab. Disp.,33,1459,2005",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:quinacrine",
+      "name": "quinacrine",
+      "smiles": "CCN(CC)CCC[C@@H](C)Nc1c2ccc(Cl)cc2nc2ccc(OC)cc12",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        23,
+        22
+      ],
+      "som": [
+        {
+          "atom_idx": 23,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 22,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Huang et al.,Drug Metab. Disp.,34,1136,2006",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:tazofelone",
+      "name": "tazofelone",
+      "smiles": "CC(C)(C)c1cc(C[C@@H]2SCNC2=O)cc(C(C)(C)C)c1O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        7
+      ],
+      "som": [
+        {
+          "atom_idx": 7,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Surapaneni et al.,Drug Metab. Disp.,25,1383,1997",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:tentoxin",
+      "name": "tentoxin",
+      "smiles": "CC(C)C[C@@H]1NC(=O)[C@H](C)N(C)C(=O)CNC(=O)/C(=C\\c2ccccc2)N(C)C1=O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        28
+      ],
+      "som": [
+        {
+          "atom_idx": 28,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Delaforge et al.,Eur. J. Biochem.,250,150,1997",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:trans_phenylpropene",
+      "name": "trans_phenylpropene",
+      "smiles": "C/C=C/c1ccccc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        8,
+        7,
+        6
+      ],
+      "som": [
+        {
+          "atom_idx": 8,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 7,
+          "bond_class": "secondary"
+        },
+        {
+          "atom_idx": 6,
+          "bond_class": "tertiary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Sanga et al.,Tox. Appl. Pharmacol.,211,148,2006",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:uk_343664",
+      "name": "uk_343664",
+      "smiles": "CCCOc1ccc(S(=O)(=O)N2CCN(CC)CC2)cc1-c1nc2c(CC)n(Cc3ccccn3)nc2c(=O)[nH]1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        30
+      ],
+      "som": [
+        {
+          "atom_idx": 30,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Abel et al.,Xenobiotica,31,665,2001",
+      "doi": ""
+    },
+    {
+      "id": "cyp_dbs:3A4:aprepitant_M1",
+      "name": "aprepitant_M1",
+      "smiles": "C[C@@H](O[C@H]1OCCN[C@H]1c1ccc(F)cc1)c1cc(C(F)(F)F)cc(C(F)(F)F)c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 0,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 4,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Sanchez et al.,Drug Metab. Disp.,32,1287,2004",
+      "doi": "10.1124/dmd.104.000216"
+    },
+    {
+      "id": "cyp_dbs:3A4:cholic_acid",
+      "name": "cholic_acid",
+      "smiles": "C[C@H](CCC(=O)O)[C@H]1CC[C@H]2[C@@H]3[C@@H](O)C[C@H]4C[C@H](O)CC[C@]4(C)[C@H]3C[C@@H](O)[C@]12C",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        27,
+        28
+      ],
+      "som": [
+        {
+          "atom_idx": 27,
+          "bond_class": "primary"
+        },
+        {
+          "atom_idx": 28,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Deo and Bandiera,Drug Metab. Disp.,36,1983,2008",
+      "doi": "10.1124/dmd.108.022194"
+    },
+    {
+      "id": "cyp_dbs:3A4:quetiapine",
+      "name": "quetiapine",
+      "smiles": "OCCOCCN1CCN(C2=Nc3ccccc3Sc3ccccc32)CC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        6
+      ],
+      "som": [
+        {
+          "atom_idx": 6,
+          "bond_class": "primary"
+        }
+      ],
+      "source": "CYP_DBs_external",
+      "confidence": "validated",
+      "citation": "Shen W.,Ann. Clin. Pschia.,11,145,1999",
+      "doi": "10.1023/A:1022312111429"
+    }
+  ]
+}

@@ -1594,7 +1594,7 @@ def _resolve_attempt_artifacts(
 
 def _default_train_settings() -> dict[str, str]:
     return {
-        "HYBRID_COLAB_DATASET":           os.environ.get("HYBRID_COLAB_DATASET",           "data/prepared_training/main7_site_conservative_singlecyp_clean_symm.json"),
+        "HYBRID_COLAB_DATASET":           os.environ.get("HYBRID_COLAB_DATASET",           "data/prepared_training/main8_site_conservative_singlecyp_clean_symm.json"),
         "HYBRID_COLAB_STRUCTURE_SDF":     os.environ.get("HYBRID_COLAB_STRUCTURE_SDF",     "3D structures.sdf"),
         "HYBRID_COLAB_XTB_CACHE_DIR":     os.environ.get("HYBRID_COLAB_XTB_CACHE_DIR",     "/content/drive/MyDrive/enzyme_hybrid_lnn/cache/full_xtb"),
         "HYBRID_COLAB_MANUAL_CACHE_DIR":  os.environ.get("HYBRID_COLAB_MANUAL_CACHE_DIR",  "/content/drive/MyDrive/enzyme_hybrid_lnn/cache/manual_engine_full"),

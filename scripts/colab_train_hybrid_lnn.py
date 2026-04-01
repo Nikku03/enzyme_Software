@@ -178,11 +178,12 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_SEED": "42",
     },
     "balanced": {
-        # main7 = 703 molecules (2.5x main6); adds expanded_metx_test + multi-CYP primary rows + AZ120
+        # main8 = 933 molecules (main7 703 + CYP_DBs novel 230)
+        # CYP_DBs adds verified experimental SoM labels across 9 isoforms (esp. 2A6, 2B6, 2E1 barely in main7)
         # Strategy: backbone frozen ALL 50 epochs to prevent scaffold memorisation / overfitting.
         # Only hybrid heads (council, arbiter, wave, analogical) train.
         # Head LR raised to 2e-4 (was 5e-5) since backbone param group never exists.
-        "HYBRID_COLAB_DATASET": "data/prepared_training/main7_site_conservative_singlecyp_clean_symm.json",
+        "HYBRID_COLAB_DATASET": "data/prepared_training/main8_site_conservative_singlecyp_clean_symm.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
         "HYBRID_COLAB_EPOCHS": "50",
         "HYBRID_COLAB_BATCH_SIZE": "16",
