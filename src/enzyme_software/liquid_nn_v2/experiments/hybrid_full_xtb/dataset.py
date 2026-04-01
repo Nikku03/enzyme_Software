@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import random
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -93,6 +93,131 @@ def _assign_groups_greedily(
     return splits
 
 
+def _group_signature(
+    group: List[Dict[str, object]],
+    *,
+    stratify_size: bool,
+) -> dict[str, object]:
+    source_counts: dict[str, int] = defaultdict(int)
+    size_counts: dict[str, int] = defaultdict(int)
+    for drug in group:
+        source_counts[str(drug.get("source", "DrugBank"))] += 1
+        if stratify_size:
+            size_counts[_size_bucket(_safe_num_atoms(drug))] += 1
+    return {
+        "size": int(len(group)),
+        "source_counts": dict(source_counts),
+        "size_counts": dict(size_counts),
+    }
+
+
+def _global_targets(
+    drugs: List[Dict[str, object]],
+    *,
+    train_ratio: float,
+    val_ratio: float,
+    stratify_size: bool,
+) -> dict[str, dict[str, object]]:
+    split_names = ("train", "val", "test")
+    total = float(len(drugs))
+    base_ratios = {
+        "train": float(train_ratio),
+        "val": float(val_ratio),
+        "test": max(0.0, 1.0 - float(train_ratio) - float(val_ratio)),
+    }
+    sources = sorted({str(drug.get("source", "DrugBank")) for drug in drugs})
+    size_buckets = sorted({_size_bucket(_safe_num_atoms(drug)) for drug in drugs}) if stratify_size else []
+    source_totals = Counter(str(drug.get("source", "DrugBank")) for drug in drugs)
+    size_totals = Counter(_size_bucket(_safe_num_atoms(drug)) for drug in drugs) if stratify_size else Counter()
+    return {
+        split: {
+            "total": total * base_ratios[split],
+            "sources": {source: float(source_totals[source]) * base_ratios[split] for source in sources},
+            "sizes": {bucket: float(size_totals[bucket]) * base_ratios[split] for bucket in size_buckets},
+        }
+        for split in split_names
+    }
+
+
+def _assignment_cost(
+    *,
+    split_name: str,
+    current: dict[str, dict[str, object]],
+    group_sig: dict[str, object],
+    targets: dict[str, dict[str, object]],
+    stratify_size: bool,
+) -> float:
+    projected_total = float(current[split_name]["total"]) + float(group_sig["size"])
+    total_target = float(targets[split_name]["total"])
+    total_error = abs(projected_total - total_target) / max(1.0, total_target)
+    total_overflow = max(0.0, projected_total - total_target) / max(1.0, total_target)
+
+    source_cost = 0.0
+    for source, add_count in dict(group_sig["source_counts"]).items():
+        projected = float(current[split_name]["sources"].get(source, 0.0)) + float(add_count)
+        target = float(targets[split_name]["sources"].get(source, 0.0))
+        source_cost += abs(projected - target) / max(1.0, target)
+
+    size_cost = 0.0
+    if stratify_size:
+        for bucket, add_count in dict(group_sig["size_counts"]).items():
+            projected = float(current[split_name]["sizes"].get(bucket, 0.0)) + float(add_count)
+            target = float(targets[split_name]["sizes"].get(bucket, 0.0))
+            size_cost += abs(projected - target) / max(1.0, target)
+
+    return (100.0 * total_overflow) + (12.0 * total_error) + (1.5 * source_cost) + (1.0 * size_cost)
+
+
+def _split_by_global_scaffold_groups(
+    drugs: List[Dict[str, object]],
+    *,
+    seed: int,
+    train_ratio: float,
+    val_ratio: float,
+    stratify_size: bool,
+) -> Tuple[List[Dict[str, object]], List[Dict[str, object]], List[Dict[str, object]]]:
+    scaffold_groups: dict[str, List[Dict[str, object]]] = defaultdict(list)
+    for drug in drugs:
+        scaffold_groups[_scaffold_key(drug)].append(drug)
+
+    rng = random.Random(seed)
+    groups = list(scaffold_groups.values())
+    rng.shuffle(groups)
+    groups.sort(key=lambda group: len(group), reverse=True)
+
+    targets = _global_targets(drugs, train_ratio=train_ratio, val_ratio=val_ratio, stratify_size=stratify_size)
+    current = {
+        "train": {"total": 0.0, "sources": defaultdict(float), "sizes": defaultdict(float)},
+        "val": {"total": 0.0, "sources": defaultdict(float), "sizes": defaultdict(float)},
+        "test": {"total": 0.0, "sources": defaultdict(float), "sizes": defaultdict(float)},
+    }
+    splits: dict[str, List[Dict[str, object]]] = {"train": [], "val": [], "test": []}
+
+    for group in groups:
+        sig = _group_signature(group, stratify_size=stratify_size)
+        split_name = min(
+            ("train", "val", "test"),
+            key=lambda name: (
+                _assignment_cost(
+                    split_name=name,
+                    current=current,
+                    group_sig=sig,
+                    targets=targets,
+                    stratify_size=stratify_size,
+                ),
+                current[name]["total"],
+            ),
+        )
+        splits[split_name].extend(group)
+        current[split_name]["total"] += float(sig["size"])
+        for source, count in dict(sig["source_counts"]).items():
+            current[split_name]["sources"][source] += float(count)
+        for bucket, count in dict(sig["size_counts"]).items():
+            current[split_name]["sizes"][bucket] += float(count)
+
+    return splits["train"], splits["val"], splits["test"]
+
+
 def _split_by_scaffold_groups(
     drugs: List[Dict[str, object]],
     *,
@@ -142,7 +267,7 @@ def split_drugs(
             shuffled[n_train + n_val :],
         )
     if mode == "scaffold_source":
-        return _split_by_scaffold_groups(
+        return _split_by_global_scaffold_groups(
             shuffled,
             seed=seed,
             train_ratio=train_ratio,
@@ -150,7 +275,7 @@ def split_drugs(
             stratify_size=False,
         )
     if mode == "scaffold_source_size":
-        return _split_by_scaffold_groups(
+        return _split_by_global_scaffold_groups(
             shuffled,
             seed=seed,
             train_ratio=train_ratio,

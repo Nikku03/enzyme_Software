@@ -597,7 +597,11 @@ if TORCH_AVAILABLE:
                 batch["batch"],
                 supervision_mask=batch.get("site_supervision_mask"),
             )
-            cyp_metrics = compute_cyp_metrics(outputs["cyp_logits"], batch["cyp_labels"])
+            cyp_metrics = compute_cyp_metrics(
+                outputs["cyp_logits"],
+                batch["cyp_labels"],
+                supervision_mask=batch.get("cyp_supervision_mask"),
+            )
             return {**site_metrics, **cyp_metrics}
 
         def analyze_tau(self, loader=None) -> Dict[str, float]:
@@ -663,6 +667,7 @@ if TORCH_AVAILABLE:
             site_batch = []
             cyp_logits = []
             cyp_labels = []
+            cyp_supervision_masks = []
             batch_offset = 0
             with torch.no_grad():
                 for raw_batch in loader:
@@ -695,6 +700,9 @@ if TORCH_AVAILABLE:
                     site_batch.append(batch["batch"].detach().cpu() + batch_offset)
                     cyp_logits.append(outputs["cyp_logits"].detach().cpu())
                     cyp_labels.append(batch["cyp_labels"].detach().cpu())
+                    cyp_supervision_masks.append(
+                        batch.get("cyp_supervision_mask", torch.ones_like(batch["cyp_labels"])).detach().cpu()
+                    )
                     batch_offset += int(batch["cyp_labels"].shape[0])
             if not site_scores:
                 return {}
@@ -704,13 +712,18 @@ if TORCH_AVAILABLE:
             merged_site_batch = torch.cat(site_batch, dim=0)
             merged_cyp_logits = torch.cat(cyp_logits, dim=0)
             merged_cyp_labels = torch.cat(cyp_labels, dim=0)
+            merged_cyp_supervision_mask = torch.cat(cyp_supervision_masks, dim=0)
             site_metrics = compute_site_metrics_v2(
                 merged_site_scores,
                 merged_site_labels,
                 merged_site_batch,
                 supervision_mask=merged_site_supervision_mask,
             )
-            cyp_metrics = compute_cyp_metrics(merged_cyp_logits, merged_cyp_labels)
+            cyp_metrics = compute_cyp_metrics(
+                merged_cyp_logits,
+                merged_cyp_labels,
+                supervision_mask=merged_cyp_supervision_mask,
+            )
             return {**site_metrics, **cyp_metrics}
 else:  # pragma: no cover
     @dataclass

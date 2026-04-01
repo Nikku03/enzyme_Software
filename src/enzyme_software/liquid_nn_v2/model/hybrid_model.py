@@ -458,6 +458,7 @@ if TORCH_AVAILABLE:
                 site_supervision_mask=batch.get("site_supervision_mask"),
                 cyp_labels=batch.get("cyp_labels"),
                 cyp_supervision_mask=batch.get("cyp_supervision_mask"),
+                graph_molecule_keys=batch.get("graph_molecule_keys"),
             )
             result = dict(outputs)
             result["site_logits_base"] = outputs["site_logits"]
@@ -531,6 +532,7 @@ if TORCH_AVAILABLE:
                         xtb_atom_features=batch.get("xtb_atom_features"),
                         site_labels=batch.get("site_labels"),
                         site_supervision_mask=batch.get("site_supervision_mask"),
+                        graph_molecule_keys=batch.get("graph_molecule_keys"),
                     )
                     total_batches += 1
                     total_used += float(stats.get("used", 0.0))
@@ -592,7 +594,7 @@ if TORCH_AVAILABLE:
             try:
                 for raw_batch in loader:
                     batch = move_to_device(raw_batch, device) if device is not None else raw_batch
-                    outputs = self.forward(batch)
+                    outputs = self.base_lnn(batch)
                     cyp_logits = outputs.get("cyp_logits")
                     if cyp_logits is None or not cyp_logits.numel():
                         continue
@@ -607,8 +609,9 @@ if TORCH_AVAILABLE:
                         xtb_atom_features=batch.get("xtb_atom_features"),
                         site_labels=batch.get("site_labels"),
                         site_supervision_mask=batch.get("site_supervision_mask"),
+                        graph_molecule_keys=batch.get("graph_molecule_keys"),
                     )
-                    ingested += int(stats.get("memory_size", 0))
+                    ingested += int(stats.get("added_atoms", 0))
             finally:
                 if was_training:
                     self.train()

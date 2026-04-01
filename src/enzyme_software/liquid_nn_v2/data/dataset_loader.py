@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import random
+import hashlib
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -27,6 +28,17 @@ CONFIDENCE_WEIGHTS = {
     "bde_predicted": 0.7,
     "unknown": 0.5,
 }
+
+
+def stable_molecule_key(
+    smiles: str,
+    *,
+    primary_cyp: str = "",
+) -> int:
+    canonical = " ".join(str(smiles or "").split())
+    payload = canonical.encode("utf-8")
+    digest = hashlib.blake2b(payload, digest_size=8).digest()
+    return int.from_bytes(digest, byteorder="big", signed=False) & ((1 << 63) - 1)
 
 
 class CYPMetabolismDataset(Dataset):
@@ -201,6 +213,7 @@ class CYPMetabolismDataset(Dataset):
                 "site_atoms": [int(v) for v in site_atoms],
                 "auxiliary_site_only": bool(drug.get("auxiliary_site_only", False)),
                 "site_source": str(drug.get("site_source", "")),
+                "molecule_key": int(stable_molecule_key(smiles, primary_cyp=cyp)),
             },
         }
 
@@ -234,6 +247,10 @@ def collate_fn(batch: List[Dict[str, object]]) -> Optional[Dict[str, object]]:
     merged["graph_confidences"] = [str(b["confidence"]) for b in batch]
     merged["graph_metadata"] = [dict(b.get("metadata") or {}) for b in batch]
     merged["graph_num_atoms"] = [int(g.num_atoms) for g in graphs]
+    merged["graph_molecule_keys"] = torch.tensor(
+        [int((b.get("metadata") or {}).get("molecule_key", 0)) for b in batch],
+        dtype=torch.long,
+    )
     merged["num_graphs"] = len(batch)
     return merged
 

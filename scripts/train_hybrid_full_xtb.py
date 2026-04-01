@@ -303,8 +303,24 @@ def _resolve_precedent_logbook(path_arg: str, artifact_dir: Path) -> Path | None
     if str(path_arg or "").strip():
         path = Path(path_arg)
         return path if path.exists() else None
-    candidates = sorted(artifact_dir.glob("hybrid_full_xtb_episode_log_*.jsonl"))
-    return candidates[-1] if candidates else None
+    return None
+
+
+def _attach_effective_split_summary(split_summary: dict[str, object], loaders: dict[str, object]) -> dict[str, object]:
+    updated = {name: dict(summary) for name, summary in split_summary.items()}
+    for split_name, loader in loaders.items():
+        dataset = getattr(loader, "dataset", None)
+        if dataset is None:
+            continue
+        summary = updated.get(split_name, {})
+        valid_count = int(getattr(dataset, "_valid_count", 0))
+        invalid_reasons = dict(getattr(dataset, "_invalid_reasons", {}) or {})
+        total = int(summary.get("total", valid_count))
+        summary["effective_total"] = valid_count
+        summary["invalid_count"] = max(0, total - valid_count)
+        summary["invalid_reasons"] = invalid_reasons
+        updated[split_name] = summary
+    return updated
 
 
 def _save_training_state(
@@ -518,6 +534,17 @@ def main() -> None:
         test_drugs,
         args=args,
     )
+    split_summary = _attach_effective_split_summary(
+        split_summary,
+        {"train": train_loader, "val": val_loader, "test": test_loader},
+    )
+    for split_name in ("train", "val", "test"):
+        summary = split_summary[split_name]
+        print(
+            f"{split_name} effective: total={summary.get('effective_total', summary.get('total'))} | "
+            f"invalid={summary.get('invalid_count', 0)} | invalid_reasons={summary.get('invalid_reasons', {})}",
+            flush=True,
+        )
 
     manual_atom_feature_dim = (32 if manual_engine_enabled else 0) + FULL_XTB_FEATURE_DIM
     # Step 1 atom_input_dim = 146 = 140 base graph features + 6 standard XTB dims.
@@ -580,7 +607,10 @@ def main() -> None:
         if args.disable_precedent_logbook:
             print("Precedent logbook loading disabled; analogical precedent briefs will remain empty for this run", flush=True)
         else:
-            print("No precedent logbook found; analogical precedent briefs will remain empty for this run", flush=True)
+            print(
+                "No explicit precedent logbook provided; analogical precedent briefs will remain empty for this run",
+                flush=True,
+            )
 
     model.to(device)
 

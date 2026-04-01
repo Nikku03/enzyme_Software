@@ -38,6 +38,7 @@ if TORCH_AVAILABLE:
             self.register_buffer("site", torch.zeros(self.capacity, 1))
             self.register_buffer("cyp", torch.zeros(self.capacity, self.num_cyp_classes))
             self.register_buffer("multivector", torch.zeros(self.capacity, 16))
+            self.register_buffer("molecule_key", torch.zeros(self.capacity, dtype=torch.long))
             self.register_buffer("valid", torch.zeros(self.capacity, dtype=torch.bool))
             self.register_buffer("ptr", torch.zeros((), dtype=torch.long))
 
@@ -51,10 +52,16 @@ if TORCH_AVAILABLE:
             self.site.zero_()
             self.cyp.zero_()
             self.multivector.zero_()
+            self.molecule_key.zero_()
             self.valid.zero_()
             self.ptr.zero_()
 
-        def lookup(self, query_keys: torch.Tensor, query_graph: torch.Tensor) -> Optional[Dict[str, torch.Tensor]]:
+        def lookup(
+            self,
+            query_keys: torch.Tensor,
+            query_graph: torch.Tensor,
+            query_molecule_keys: Optional[torch.Tensor] = None,
+        ) -> Optional[Dict[str, torch.Tensor]]:
             size = self.size()
             if size <= 0:
                 return None
@@ -63,6 +70,7 @@ if TORCH_AVAILABLE:
             mem_site = self.site[:size]
             mem_cyp = self.cyp[:size]
             mem_mv = self.multivector[:size]
+            mem_molecule_key = self.molecule_key[:size]
             q_keys = F.normalize(query_keys.float(), p=2, dim=-1)
             q_graph = F.normalize(query_graph.float(), p=2, dim=-1)
             k_keys = F.normalize(mem_keys.float(), p=2, dim=-1)
@@ -70,9 +78,17 @@ if TORCH_AVAILABLE:
             atom_scores = torch.matmul(q_keys, k_keys.transpose(0, 1))
             graph_scores = torch.matmul(q_graph, k_graph.transpose(0, 1))
             scores = atom_scores + self.graph_weight * graph_scores
+            if query_molecule_keys is not None:
+                qm = query_molecule_keys.to(device=scores.device, dtype=torch.long).view(-1, 1)
+                same_molecule = qm == mem_molecule_key.view(1, -1)
+                scores = scores.masked_fill(same_molecule, -1.0e9)
             k = min(self.topk, size)
             top_scores, top_idx = torch.topk(scores, k=k, dim=-1)
-            weights = F.softmax(top_scores / self.temperature, dim=-1)
+            valid_rows = top_scores[:, 0] > -1.0e8
+            valid_top = top_scores > -1.0e8
+            scaled_scores = (top_scores / self.temperature).masked_fill(~valid_top, -1.0e9)
+            weights = F.softmax(scaled_scores, dim=-1) * valid_top.float()
+            weights = weights / weights.sum(dim=-1, keepdim=True).clamp_min(1.0e-8)
             site_prior = (weights.unsqueeze(-1) * mem_site[top_idx]).sum(dim=1)
             cyp_prior = (weights.unsqueeze(-1) * mem_cyp[top_idx]).sum(dim=1)
             confidence = weights.max(dim=-1, keepdim=True).values
@@ -83,6 +99,7 @@ if TORCH_AVAILABLE:
                 "top_scores": top_scores,
                 "top_weights": weights,
                 "retrieved_multivectors": mem_mv[top_idx],
+                "valid_rows": valid_rows.unsqueeze(-1),
             }
 
         @torch.no_grad()
@@ -94,6 +111,7 @@ if TORCH_AVAILABLE:
             atom_multivectors: torch.Tensor,
             site_labels: torch.Tensor,
             cyp_probs: torch.Tensor,
+            molecule_keys: torch.Tensor,
             supervision_mask: Optional[torch.Tensor] = None,
         ) -> None:
             if atom_keys.numel() == 0:
@@ -108,6 +126,7 @@ if TORCH_AVAILABLE:
             multivector = atom_multivectors[mask].detach()
             site = site_labels[mask].detach().view(-1, 1)
             cyp = cyp_probs[mask].detach()
+            mol_keys = molecule_keys[mask].detach().view(-1)
             count = int(keys.size(0))
             ptr = int(self.ptr.item())
             if count >= self.capacity:
@@ -116,6 +135,7 @@ if TORCH_AVAILABLE:
                 multivector = multivector[-self.capacity :]
                 site = site[-self.capacity :]
                 cyp = cyp[-self.capacity :]
+                mol_keys = mol_keys[-self.capacity :]
                 count = self.capacity
                 ptr = 0
             end = ptr + count
@@ -126,6 +146,7 @@ if TORCH_AVAILABLE:
                 self.multivector[sl] = multivector
                 self.site[sl] = site
                 self.cyp[sl] = cyp
+                self.molecule_key[sl] = mol_keys
                 self.valid[sl] = True
             else:
                 first = self.capacity - ptr
@@ -135,12 +156,14 @@ if TORCH_AVAILABLE:
                 self.multivector[ptr:] = multivector[:first]
                 self.site[ptr:] = site[:first]
                 self.cyp[ptr:] = cyp[:first]
+                self.molecule_key[ptr:] = mol_keys[:first]
                 self.valid[ptr:] = True
                 self.keys[:second] = keys[first:]
                 self.graph[:second] = graph[first:]
                 self.multivector[:second] = multivector[first:]
                 self.site[:second] = site[first:]
                 self.cyp[:second] = cyp[first:]
+                self.molecule_key[:second] = mol_keys[first:]
                 self.valid[:second] = True
             self.ptr.fill_(end % self.capacity)
 
@@ -268,6 +291,13 @@ if TORCH_AVAILABLE:
             else:
                 support_margin = top_scores[:, :1]
             context_norm = (context.pow(2).sum(dim=-1, keepdim=True) + 1.0e-12).sqrt() / max(1.0, float(context.size(-1)) ** 0.5)
+            valid_rows = retrieval.get("valid_rows")
+            if valid_rows is not None:
+                valid_rows_f = valid_rows.to(device=device, dtype=dtype)
+                top_scores = top_scores * valid_rows_f
+                support_mean = support_mean * valid_rows_f
+                support_margin = support_margin * valid_rows_f
+                context_norm = context_norm * valid_rows_f
             reason_features = torch.cat(
                 [
                     y_ana_som.unsqueeze(-1),
@@ -278,8 +308,14 @@ if TORCH_AVAILABLE:
                 ],
                 dim=-1,
             )
+            if valid_rows is not None:
+                valid_rows_f = valid_rows.to(device=device, dtype=dtype)
+                reason_features = reason_features * valid_rows_f
+                site_bias = y_ana_som.unsqueeze(-1) * valid_rows_f
+            else:
+                site_bias = y_ana_som.unsqueeze(-1)
             return {
-                "site_bias": y_ana_som.unsqueeze(-1),
+                "site_bias": site_bias,
                 "features": reason_features,
             }
 
@@ -292,7 +328,7 @@ if TORCH_AVAILABLE:
 
         @torch.no_grad()
         def load_precedent_logbook(self, path: str, *, cyp_names: Optional[list[str]] = None) -> Dict[str, float]:
-            return self.precedent_logbook.load_jsonl(path, cyp_names=cyp_names)
+            return self.precedent_logbook.load_jsonl(path, cyp_names=cyp_names, allowed_splits=("train",))
 
         def _optional_feature(self, value: Optional[torch.Tensor], rows: int, width: int, *, device, dtype) -> torch.Tensor:
             if value is None:
@@ -483,6 +519,7 @@ if TORCH_AVAILABLE:
             site_supervision_mask: Optional[torch.Tensor] = None,
             cyp_labels: Optional[torch.Tensor] = None,
             cyp_supervision_mask: Optional[torch.Tensor] = None,
+            graph_molecule_keys: Optional[torch.Tensor] = None,
         ) -> Dict[str, object]:
             atom_features = atom_features.float()
             multivectors, coords = self._build_multivectors(atom_features, atom_3d_features, xtb_atom_features)
@@ -504,6 +541,10 @@ if TORCH_AVAILABLE:
             wave_site_bias = self.wave_site_head(wave_bias_input)
             graph_embeddings = self._group_graph_embedding(multivectors, batch_index)
             per_atom_graph = graph_embeddings[batch_index] if graph_embeddings.numel() else multivectors.new_zeros((multivectors.size(0), self.memory.graph_dim))
+            if graph_molecule_keys is not None and graph_molecule_keys.numel():
+                atom_molecule_keys = graph_molecule_keys.to(device=batch_index.device, dtype=torch.long)[batch_index]
+            else:
+                atom_molecule_keys = torch.zeros_like(batch_index, dtype=torch.long)
             # Keys use only trainable bridge features — backbone atom_features excluded
             # to prevent frozen-backbone keys from being static (uniform similarity → conf=1/topk)
             atom_keys = self.atom_key(torch.cat([multivectors, wave_field["atom_field_features"]], dim=-1))
@@ -518,13 +559,17 @@ if TORCH_AVAILABLE:
             )
             cyp_probs_by_mol = F.softmax(cyp_logits.detach(), dim=-1)
             cyp_value_lookup = torch.argmax(cyp_probs_by_mol, dim=-1, keepdim=True).float() + 1.0
-            precedent = self.precedent_logbook.lookup(precedent_query, cyp_value_lookup[batch_index])
+            precedent = self.precedent_logbook.lookup(
+                precedent_query,
+                cyp_value_lookup[batch_index],
+                query_molecule_keys=atom_molecule_keys,
+            )
             precedent_brief = (
                 precedent["brief"].to(device=multivectors.device, dtype=multivectors.dtype)
                 if precedent is not None
                 else multivectors.new_zeros((multivectors.size(0), AuditedEpisodeLogbook.brief_dim))
             )
-            retrieval = self.memory.lookup(atom_keys, per_atom_graph)
+            retrieval = self.memory.lookup(atom_keys, per_atom_graph, query_molecule_keys=atom_molecule_keys)
             if retrieval is None:
                 site_prior = torch.full((multivectors.size(0), 1), 0.5, device=multivectors.device, dtype=multivectors.dtype)
                 cyp_prior = F.softmax(cyp_logits.detach(), dim=-1)[batch_index]
@@ -537,6 +582,14 @@ if TORCH_AVAILABLE:
                 site_prior = retrieval["site_prior"]
                 cyp_prior = retrieval["cyp_prior"]
                 confidence = retrieval["confidence"]
+                valid_rows = retrieval.get("valid_rows")
+                if valid_rows is not None:
+                    valid_rows_f = valid_rows.to(device=multivectors.device, dtype=multivectors.dtype)
+                    fallback_site_prior = torch.full_like(site_prior, 0.5)
+                    fallback_cyp_prior = F.softmax(cyp_logits.detach(), dim=-1)[batch_index]
+                    site_prior = torch.where(valid_rows_f > 0.5, site_prior, fallback_site_prior)
+                    cyp_prior = torch.where(valid_rows_f > 0.5, cyp_prior, fallback_cyp_prior)
+                    confidence = confidence * valid_rows_f
                 continuous_reasoning = self._continuous_reasoning(query_multivectors=multivectors, retrieval=retrieval)
                 analogical_site_input = torch.cat([multivectors, site_prior, cyp_prior, confidence, precedent_brief], dim=-1)
                 analogical_site_bias = self.analogical_site_head(analogical_site_input) + 0.25 * continuous_reasoning["site_bias"]
@@ -568,6 +621,7 @@ if TORCH_AVAILABLE:
                     atom_multivectors=multivectors,
                     site_labels=site_labels.float().view(-1, 1),
                     cyp_probs=cyp_probs_atom,
+                    molecule_keys=atom_molecule_keys,
                     supervision_mask=site_supervision_mask,
                 )
             metrics = {
@@ -616,26 +670,34 @@ if TORCH_AVAILABLE:
             xtb_atom_features: Optional[torch.Tensor] = None,
             site_labels: Optional[torch.Tensor] = None,
             site_supervision_mask: Optional[torch.Tensor] = None,
+            graph_molecule_keys: Optional[torch.Tensor] = None,
         ) -> Dict[str, float]:
             if site_labels is None or cyp_logits.numel() == 0:
-                return {"memory_size": float(self.memory.size()), "used": 0.0}
+                return {"memory_size": float(self.memory.size()), "used": 0.0, "added_atoms": 0.0}
             atom_features = atom_features.float()
             multivectors, _coords = self._build_multivectors(atom_features, atom_3d_features, xtb_atom_features)
             graph_embeddings = self._group_graph_embedding(multivectors, batch_index)
             per_atom_graph = graph_embeddings[batch_index] if graph_embeddings.numel() else multivectors.new_zeros((multivectors.size(0), self.memory.graph_dim))
+            if graph_molecule_keys is not None and graph_molecule_keys.numel():
+                atom_molecule_keys = graph_molecule_keys.to(device=batch_index.device, dtype=torch.long)[batch_index]
+            else:
+                atom_molecule_keys = torch.zeros_like(batch_index, dtype=torch.long)
             # Compute wave field features for trainable keys (mirrors forward() key computation)
             _wf = self.wave_field(multivectors, _coords, batch_index)
             atom_keys = self.atom_key(torch.cat([multivectors, _wf["atom_field_features"]], dim=-1))
             cyp_probs_atom = F.softmax(cyp_logits.detach(), dim=-1)[batch_index]
+            supervision = site_supervision_mask.view(-1) > 0.5 if site_supervision_mask is not None else torch.ones_like(batch_index, dtype=torch.bool)
+            added_atoms = int(supervision.sum().item())
             self.memory.update(
                 atom_keys=atom_keys,
                 atom_graph=per_atom_graph,
                 atom_multivectors=multivectors,
                 site_labels=site_labels.float().view(-1, 1),
                 cyp_probs=cyp_probs_atom,
+                molecule_keys=atom_molecule_keys,
                 supervision_mask=site_supervision_mask,
             )
-            return {"memory_size": float(self.memory.size()), "used": 1.0}
+            return {"memory_size": float(self.memory.size()), "used": 1.0, "added_atoms": float(added_atoms)}
 else:  # pragma: no cover
     class NexusHybridBridge:  # type: ignore[override]
         def __init__(self, *args, **kwargs):

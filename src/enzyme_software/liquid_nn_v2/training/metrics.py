@@ -138,9 +138,15 @@ def compute_site_metrics(predictions, labels, batch=None, threshold: float = 0.5
     return compute_site_metrics_v2(predictions, labels, batch, threshold=threshold)
 
 
-def compute_cyp_metrics(logits, labels) -> Dict[str, object]:
+def compute_cyp_metrics(logits, labels, supervision_mask=None) -> Dict[str, object]:
     logits_np = _to_numpy(logits)
     refs = _to_numpy(labels).reshape(-1)
+    if supervision_mask is not None:
+        mask = _to_numpy(supervision_mask).reshape(-1) > 0.5
+        logits_np = logits_np[mask]
+        refs = refs[mask]
+    if refs.size == 0:
+        return {"accuracy": 0.0, "f1_macro": 0.0, "f1_per_class": []}
     preds = np.argmax(logits_np, axis=-1)
     accuracy = float(np.mean(preds == refs)) if refs.size else 0.0
     f1_per_class: List[float] = []
