@@ -263,6 +263,18 @@ if TORCH_AVAILABLE:
                     return True
             return False
 
+        def _sanitize_gradients(self) -> int:
+            """Zero-out NaN/inf gradients in-place; return count of affected params."""
+            _uninit_cls = getattr(torch.nn.parameter, "UninitializedParameter", None)
+            fixed = 0
+            for param in self._trainable_parameters():
+                if _uninit_cls is not None and isinstance(param, _uninit_cls):
+                    continue
+                if param.grad is not None and not bool(torch.isfinite(param.grad).all()):
+                    param.grad = torch.nan_to_num(param.grad, nan=0.0, posinf=0.0, neginf=0.0)
+                    fixed += 1
+            return fixed
+
         def _prepare_batch(self, batch_or_graphs):
             if isinstance(batch_or_graphs, dict):
                 return move_to_device(batch_or_graphs, self.device)
@@ -473,11 +485,9 @@ if TORCH_AVAILABLE:
             self.optimizer.zero_grad()
             loss.backward()
             if self._has_nonfinite_gradients():
-                self.optimizer.zero_grad(set_to_none=True)
-                fixed = self._sanitize_trainable_parameters()
-                raise FloatingPointError(
-                    f"Non-finite gradients detected in train_epoch; sanitized_params={fixed}"
-                )
+                fixed_grads = self._sanitize_gradients()
+                fixed_params = self._sanitize_trainable_parameters()
+                print(f"train_epoch: zeroed NaN/inf in {fixed_grads} grad(s) (sanitized_params={fixed_params}). Continuing.", flush=True)
             self._clip_gradients()
             self.optimizer.step()
             return stats
@@ -517,14 +527,13 @@ if TORCH_AVAILABLE:
                 self.optimizer.zero_grad()
                 loss.backward()
                 if self._has_nonfinite_gradients():
-                    self.optimizer.zero_grad(set_to_none=True)
-                    fixed = self._sanitize_trainable_parameters()
+                    fixed_grads = self._sanitize_gradients()
+                    fixed_params = self._sanitize_trainable_parameters()
                     print(
-                        f"Skipping batch {batch_idx} due to non-finite gradients "
-                        f"(sanitized_params={fixed}).",
+                        f"Batch {batch_idx}: zeroed NaN/inf in {fixed_grads} grad(s) "
+                        f"(sanitized_params={fixed_params}). Continuing with zeroed gradients.",
                         flush=True,
                     )
-                    continue
                 self._clip_gradients()
                 self.optimizer.step()
                 self._sanitize_trainable_parameters()
