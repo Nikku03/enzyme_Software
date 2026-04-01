@@ -1,0 +1,42 @@
+{
+  "output": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/main7_site_conservative_singlecyp_clean_symm.json",
+  "n_drugs": 703,
+  "n_vs_main6": 425,
+  "multiplier": 2.53,
+  "cyp_counts": {
+    "CYP1A2": 147,
+    "CYP2C9": 74,
+    "CYP2C19": 32,
+    "CYP2D6": 92,
+    "CYP3A4": 358
+  },
+  "source_counts": {
+    "SuperCYP": 7,
+    "MetXBioDB": 334,
+    "DrugBank": 231,
+    "literature": 8,
+    "validated": 4,
+    "AZ120": 70,
+    "MetaPred": 1,
+    "metxbiodb": 48
+  },
+  "source_input_counts": {
+    "main6": 278,
+    "expanded_metx_test": 354,
+    "removed_multicyp": 365,
+    "ATTNSOM": 0,
+    "AZ120": 70
+  },
+  "dedup_stats": {
+    "total_input": 1067,
+    "unique_smiles": 872,
+    "duplicates_resolved": 194,
+    "skipped_no_smiles": 0
+  },
+  "validation_stats": {
+    "removed_no_site": 169,
+    "removed_bad_cyp": 0,
+    "removed_no_smiles": 0,
+    "kept": 703
+  }
+}
