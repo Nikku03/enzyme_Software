@@ -97,7 +97,7 @@ class ModelConfig:
     use_nexus_bridge: bool = True
     nexus_wave_hidden_dim: int = 64
     nexus_graph_dim: int = 48
-    nexus_memory_capacity: int = 4096
+    nexus_memory_capacity: int = 24576
     nexus_memory_topk: int = 16
     nexus_memory_frozen: bool = False
     nexus_rebuild_memory_before_train: bool = True
@@ -119,10 +119,10 @@ class ModelConfig:
     nexus_analogical_vote_consistency_weight: float = 0.00
     nexus_board_entropy_weight: float = 0.01
     nexus_vote_logit_scale: float = 2.0
-    nexus_live_wave_vote_inputs: bool = False
-    nexus_live_analogical_vote_inputs: bool = False
-    nexus_live_wave_vote_grad_scale: float = 0.05
-    nexus_live_analogical_vote_grad_scale: float = 0.05
+    nexus_live_wave_vote_inputs: bool = True
+    nexus_live_analogical_vote_inputs: bool = True
+    nexus_live_wave_vote_grad_scale: float = 0.02
+    nexus_live_analogical_vote_grad_scale: float = 0.02
     nexus_analogical_cyp_aux_scale: float = 0.10
     nexus_topology_feature_dim: int = 5   # per-atom global topology features (scaffold/centrality/carbonyl/size)
     learning_rate: float = 1e-3

@@ -313,13 +313,48 @@ if TORCH_AVAILABLE:
             mask = supervision_mask.float().view_as(logits)
             return (raw * mask).sum() / mask.sum().clamp_min(1.0)
 
-        def _site_style_vote_loss(self, logits, batch: Dict[str, object]):
-            site_labels = batch["site_labels"]
+        def _resolve_site_engine_supervision(
+            self,
+            *,
+            batch: Dict[str, object],
+            outputs: Dict[str, object],
+            engine_name: str,
+        ):
             site_mask = batch.get("site_supervision_mask")
             node_weights = batch.get("node_confidence_weights")
             graph_weights = batch.get("graph_confidence_weights")
+            bridge = outputs.get("nexus_bridge_outputs") or {}
+
+            if engine_name == "wave":
+                reliability = bridge.get("wave_reliability")
+                if reliability is not None:
+                    reliability = reliability.detach().float().view(-1, 1).clamp(0.0, 1.0)
+                    positive = (reliability > 0.05).float()
+                    site_mask = positive if site_mask is None else site_mask.float().view_as(positive) * positive
+                    node_weights = reliability if node_weights is None else node_weights.float().view_as(reliability) * reliability
+                    xtb_mol_valid = batch.get("xtb_mol_valid")
+                    if xtb_mol_valid is not None and xtb_mol_valid.numel():
+                        graph_valid = xtb_mol_valid.detach().float().view(-1).clamp(0.0, 1.0)
+                        graph_weights = graph_valid if graph_weights is None else graph_weights.float().view_as(graph_valid) * graph_valid
+            elif engine_name == "analogical":
+                analogical_gate = bridge.get("analogical_gate")
+                if analogical_gate is not None:
+                    analogical_gate = analogical_gate.detach().float().view(-1, 1).clamp(0.0, 1.0)
+                    positive = (analogical_gate > 0.05).float()
+                    site_mask = positive if site_mask is None else site_mask.float().view_as(positive) * positive
+                    node_weights = analogical_gate if node_weights is None else node_weights.float().view_as(analogical_gate) * analogical_gate
+
+            return site_mask, node_weights, graph_weights
+
+        def _site_style_vote_loss(self, logits, batch: Dict[str, object], *, site_mask=None, node_weights=None, graph_weights=None):
+            site_labels = batch["site_labels"]
+            site_mask = batch.get("site_supervision_mask") if site_mask is None else site_mask
+            node_weights = batch.get("node_confidence_weights") if node_weights is None else node_weights
+            graph_weights = batch.get("graph_confidence_weights") if graph_weights is None else graph_weights
             site_batch = batch["batch"]
             logits = self._sanitize_aux_logits(logits)
+            if site_mask is not None and float(site_mask.float().sum().detach().item()) < 1.0e-6:
+                return logits.sum() * 0.0
             loss_value, _ = self.loss_fn.site_loss(
                 logits,
                 site_labels,
@@ -387,10 +422,25 @@ if TORCH_AVAILABLE:
                     tensor = vote_heads.get(key)
                     if tensor is None or weight <= 0.0:
                         continue
-                    aux_loss = self._site_style_vote_loss(tensor, batch)
+                    aux_site_mask, aux_node_weights, aux_graph_weights = self._resolve_site_engine_supervision(
+                        batch=batch,
+                        outputs=outputs,
+                        engine_name=name,
+                    )
+                    aux_loss = self._site_style_vote_loss(
+                        tensor,
+                        batch,
+                        site_mask=aux_site_mask,
+                        node_weights=aux_node_weights,
+                        graph_weights=aux_graph_weights,
+                    )
                     loss = loss + (weight * aux_loss)
                     stats[f"nexus_{name}_vote_loss"] = float(aux_loss.detach().item())
                     stats[f"nexus_{name}_vote_weight"] = float(weight)
+                    if aux_site_mask is not None:
+                        stats[f"nexus_{name}_vote_supervision_fraction"] = float(
+                            aux_site_mask.float().mean().detach().item()
+                        )
                 final_probs = torch.sigmoid(outputs["site_logits"]).detach()
                 consistency_specs = [
                     ("wave", "wave_vote", float(getattr(model_config, "nexus_wave_vote_consistency_weight", 0.0))),
@@ -400,10 +450,17 @@ if TORCH_AVAILABLE:
                     tensor = vote_heads.get(key)
                     if tensor is None or weight <= 0.0:
                         continue
+                    aux_site_mask, _aux_node_weights, _aux_graph_weights = self._resolve_site_engine_supervision(
+                        batch=batch,
+                        outputs=outputs,
+                        engine_name=name,
+                    )
                     safe_tensor = self._sanitize_aux_logits(tensor)
                     raw = F.binary_cross_entropy_with_logits(safe_tensor, final_probs, reduction="none")
-                    if site_mask is not None:
-                        mask = site_mask.float().view_as(raw)
+                    if aux_site_mask is not None:
+                        mask = aux_site_mask.float().view_as(raw)
+                        if float(mask.sum().detach().item()) < 1.0e-6:
+                            continue
                         cons_loss = (raw * mask).sum() / mask.sum().clamp_min(1.0)
                     else:
                         cons_loss = raw.mean()

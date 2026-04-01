@@ -547,6 +547,8 @@ if TORCH_AVAILABLE:
                         xtb_atom_features=batch.get("xtb_atom_features"),
                         site_labels=batch.get("site_labels"),
                         site_supervision_mask=batch.get("site_supervision_mask"),
+                        cyp_labels=batch.get("cyp_labels"),
+                        cyp_supervision_mask=batch.get("cyp_supervision_mask"),
                         graph_molecule_keys=batch.get("graph_molecule_keys"),
                     )
                     total_batches += 1

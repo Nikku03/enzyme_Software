@@ -689,7 +689,18 @@ if TORCH_AVAILABLE:
             )
             total_aux_loss = wave_aux_loss + analogical_aux_loss
             if (not self.memory_frozen) and self.training and site_labels is not None and cyp_logits.numel():
-                cyp_probs_atom = F.softmax(cyp_logits.detach(), dim=-1)[batch_index]
+                cyp_probs_by_mol = F.softmax(cyp_logits.detach(), dim=-1)
+                if cyp_labels is not None:
+                    true_cyp = F.one_hot(
+                        cyp_labels.long().clamp(min=0),
+                        num_classes=self.num_cyp_classes,
+                    ).to(dtype=cyp_probs_by_mol.dtype, device=cyp_probs_by_mol.device)
+                    if cyp_supervision_mask is not None:
+                        cyp_mask = cyp_supervision_mask.float().view(-1, 1).to(device=cyp_probs_by_mol.device, dtype=cyp_probs_by_mol.dtype)
+                        cyp_probs_by_mol = cyp_mask * true_cyp + (1.0 - cyp_mask) * cyp_probs_by_mol
+                    else:
+                        cyp_probs_by_mol = true_cyp
+                cyp_probs_atom = cyp_probs_by_mol[batch_index]
                 self.memory.update(
                     atom_keys=atom_keys,
                     atom_graph=per_atom_graph,
@@ -755,6 +766,8 @@ if TORCH_AVAILABLE:
             xtb_atom_features: Optional[torch.Tensor] = None,
             site_labels: Optional[torch.Tensor] = None,
             site_supervision_mask: Optional[torch.Tensor] = None,
+            cyp_labels: Optional[torch.Tensor] = None,
+            cyp_supervision_mask: Optional[torch.Tensor] = None,
             graph_molecule_keys: Optional[torch.Tensor] = None,
         ) -> Dict[str, float]:
             if site_labels is None or cyp_logits.numel() == 0:
@@ -770,7 +783,18 @@ if TORCH_AVAILABLE:
             # Compute wave field features for trainable keys (mirrors forward() key computation)
             _wf = self.wave_field(multivectors, _coords, batch_index)
             atom_keys = self.atom_key(torch.cat([multivectors, _wf["atom_field_features"]], dim=-1))
-            cyp_probs_atom = F.softmax(cyp_logits.detach(), dim=-1)[batch_index]
+            cyp_probs_by_mol = F.softmax(cyp_logits.detach(), dim=-1)
+            if cyp_labels is not None:
+                true_cyp = F.one_hot(
+                    cyp_labels.long().clamp(min=0),
+                    num_classes=self.num_cyp_classes,
+                ).to(dtype=cyp_probs_by_mol.dtype, device=cyp_probs_by_mol.device)
+                if cyp_supervision_mask is not None:
+                    cyp_mask = cyp_supervision_mask.float().view(-1, 1).to(device=cyp_probs_by_mol.device, dtype=cyp_probs_by_mol.dtype)
+                    cyp_probs_by_mol = cyp_mask * true_cyp + (1.0 - cyp_mask) * cyp_probs_by_mol
+                else:
+                    cyp_probs_by_mol = true_cyp
+            cyp_probs_atom = cyp_probs_by_mol[batch_index]
             supervision = site_supervision_mask.view(-1) > 0.5 if site_supervision_mask is not None else torch.ones_like(batch_index, dtype=torch.bool)
             added_atoms = int(supervision.sum().item())
             self.memory.update(
