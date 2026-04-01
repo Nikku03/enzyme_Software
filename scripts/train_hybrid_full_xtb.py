@@ -671,17 +671,16 @@ def main() -> None:
             setattr(train_loader, "_split_name", "train")
             train_stats = trainer.train_loader_epoch(train_loader)
 
-            # Refresh analogical memory after each epoch so it encodes the updated backbone.
-            # Only runs if nexus bridge is active and not memory-frozen.
-            _nexus_wrapper = getattr(model, "nexus_wrapper", None) or model
-            _nexus_bridge = getattr(_nexus_wrapper, "nexus_bridge", None)
+            # Refresh analogical memory after each epoch so every stored key is
+            # encoded by the same up-to-date network (not a mid-epoch mix).
             if (
-                _nexus_bridge is not None
-                and not getattr(base_config, "nexus_memory_frozen", True)
-                and getattr(_nexus_bridge, "refresh_memory", None) is not None
+                getattr(model, "nexus_bridge", None) is not None
+                and not getattr(base_config, "nexus_memory_frozen", False)
+                and getattr(model, "refresh_nexus_memory", None) is not None
             ):
                 try:
-                    _nexus_bridge.refresh_memory(train_loader, device=device)
+                    _ingested = model.refresh_nexus_memory(train_loader, device=device)
+                    print(f"  [memory refreshed: {_ingested} atoms in buffer]", flush=True)
                 except Exception as _mem_err:
                     print(f"  [memory refresh skipped: {_mem_err}]", flush=True)
 

@@ -566,6 +566,47 @@ if TORCH_AVAILABLE:
                 "used": 1.0,
             }
             return outputs
+
+        @torch.no_grad()
+        def refresh_nexus_memory(self, loader, *, device=None) -> int:
+            """Clear and rebuild the analogical memory using the current encoder.
+
+            Called once per epoch (after gradient updates) so every stored key
+            is encoded by the same up-to-date network rather than a mix of
+            mid-epoch snapshots.  Returns the number of atoms ingested.
+            """
+            if self.nexus_bridge is None:
+                return 0
+            from enzyme_software.liquid_nn_v2.training.utils import move_to_device
+            self.nexus_bridge.clear_memory()
+            was_training = self.training
+            self.eval()
+            ingested = 0
+            try:
+                for raw_batch in loader:
+                    batch = move_to_device(raw_batch, device) if device is not None else raw_batch
+                    outputs = self.forward(batch)
+                    cyp_logits = outputs.get("cyp_logits")
+                    if cyp_logits is None or not cyp_logits.numel():
+                        continue
+                    atom_features = outputs.get("atom_features")
+                    if atom_features is None:
+                        continue
+                    stats = self.nexus_bridge.ingest_batch(
+                        atom_features=atom_features,
+                        batch_index=batch["batch"],
+                        cyp_logits=cyp_logits,
+                        atom_3d_features=batch.get("atom_3d_features"),
+                        xtb_atom_features=batch.get("xtb_atom_features"),
+                        site_labels=batch.get("site_labels"),
+                        site_supervision_mask=batch.get("site_supervision_mask"),
+                    )
+                    ingested += int(stats.get("memory_size", 0))
+            finally:
+                if was_training:
+                    self.train()
+            return ingested
+
 else:  # pragma: no cover
     class HybridLNNModel:  # type: ignore[override]
         def __init__(self, *args, **kwargs):
