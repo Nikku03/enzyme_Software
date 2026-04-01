@@ -306,6 +306,19 @@ if TORCH_AVAILABLE:
                 return out[..., :width]
             return F.pad(out, (0, width - int(out.size(-1))))
 
+        def _sanitize_feature_tensor(
+            self,
+            value: torch.Tensor,
+            *,
+            clamp_value: float = 8.0,
+        ) -> torch.Tensor:
+            return torch.nan_to_num(
+                value,
+                nan=0.0,
+                posinf=clamp_value,
+                neginf=-clamp_value,
+            ).clamp(min=-clamp_value, max=clamp_value)
+
         def _build_multivectors(
             self,
             atom_features: torch.Tensor,
@@ -315,15 +328,26 @@ if TORCH_AVAILABLE:
             rows = int(atom_features.size(0))
             device = atom_features.device
             dtype = atom_features.dtype
-            steric = self._optional_feature(atom_3d_features, rows, self.steric_feature_dim, device=device, dtype=dtype)
-            xtb = self._optional_feature(xtb_atom_features, rows, self.xtb_feature_dim, device=device, dtype=dtype)
+            steric = self._sanitize_feature_tensor(
+                self._optional_feature(atom_3d_features, rows, self.steric_feature_dim, device=device, dtype=dtype)
+            )
+            xtb = self._sanitize_feature_tensor(
+                self._optional_feature(xtb_atom_features, rows, self.xtb_feature_dim, device=device, dtype=dtype)
+            )
             fused = torch.cat([atom_features, steric, xtb], dim=-1)
             multivectors = self.atom_to_multivector(fused)
-            if self.coord_proj is not None and steric.numel():
-                coords = torch.tanh(self.coord_proj(steric))
-                multivectors[:, 1:4] = multivectors[:, 1:4] + coords
+            if self.steric_feature_dim > 0 and steric.numel():
+                if steric.size(-1) >= 3:
+                    coords = steric[:, :3]
+                else:
+                    coords = F.pad(steric, (0, 3 - int(steric.size(-1))))
+                coords = self._sanitize_feature_tensor(coords, clamp_value=4.0)
             else:
                 coords = torch.zeros(rows, 3, device=device, dtype=dtype)
+            if self.coord_proj is not None and steric.numel():
+                coord_delta = 0.25 * torch.tanh(self.coord_proj(steric))
+                coord_delta = self._sanitize_feature_tensor(coord_delta, clamp_value=1.0)
+                multivectors[:, 1:4] = multivectors[:, 1:4] + coord_delta
             scalar_src = xtb if self.xtb_feature_dim > 0 else atom_features
             multivectors[:, 0:1] = multivectors[:, 0:1] + self.scalar_proj(scalar_src)
             multivectors[:, 15:16] = multivectors[:, 15:16] + self.pseudo_proj(scalar_src)
@@ -462,8 +486,9 @@ if TORCH_AVAILABLE:
         ) -> Dict[str, object]:
             atom_features = atom_features.float()
             multivectors, coords = self._build_multivectors(atom_features, atom_3d_features, xtb_atom_features)
-            wave_preds = self._wave_predictions(multivectors, coords, batch_index)
-            wave_field = self.wave_field(multivectors, coords, batch_index)
+            stable_coords = coords.detach()
+            wave_preds = self._wave_predictions(multivectors, stable_coords, batch_index)
+            wave_field = self.wave_field(multivectors, stable_coords, batch_index)
             wave_bias_input = torch.cat(
                 [
                     multivectors,
