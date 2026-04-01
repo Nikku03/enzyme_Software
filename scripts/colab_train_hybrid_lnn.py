@@ -179,11 +179,14 @@ PRESETS: dict[str, dict[str, str]] = {
     },
     "balanced": {
         # main7 = 703 molecules (2.5x main6); adds expanded_metx_test + multi-CYP primary rows + AZ120
+        # Strategy: backbone frozen ALL 50 epochs to prevent scaffold memorisation / overfitting.
+        # Only hybrid heads (council, arbiter, wave, analogical) train.
+        # Head LR raised to 2e-4 (was 5e-5) since backbone param group never exists.
         "HYBRID_COLAB_DATASET": "data/prepared_training/main7_site_conservative_singlecyp_clean_symm.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
         "HYBRID_COLAB_EPOCHS": "50",
         "HYBRID_COLAB_BATCH_SIZE": "16",
-        "HYBRID_COLAB_LR": "5e-5",
+        "HYBRID_COLAB_LR": "2e-4",
         "HYBRID_COLAB_WD": "2e-4",
         "HYBRID_COLAB_SPLIT_MODE": "scaffold_source_size",
         "HYBRID_COLAB_LIMIT": "0",
@@ -192,7 +195,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "0",
         "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
         "HYBRID_COLAB_EARLY_STOPPING_METRIC": "site_top1",
-        "HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS": "2",
+        "HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS": "50",
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
