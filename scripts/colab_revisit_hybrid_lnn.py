@@ -1733,12 +1733,39 @@ def main() -> None:
         key=lambda r: _compare_key(_selection_metrics_for_run(r, args.selection_scope)),
     )
 
+    # ── bootstrap from revisit_best.json if it beat the scan results ──────────
+    _revisit_best_path = artifact_root / "revisit_best.json"
+    if _revisit_best_path.exists():
+        try:
+            _rb = json.loads(_revisit_best_path.read_text(encoding="utf-8"))
+            _rb_score = float(_rb.get("baseline_score", -1.0))
+            _rb_ckpt  = Path(_rb.get("baseline_checkpoint", ""))
+            if _rb_score > baseline.score and _rb_ckpt.exists():
+                print(
+                    f"\n  [revisit_best] Overriding scan baseline "
+                    f"({baseline.score:.4f}) with saved best "
+                    f"({_rb_score:.4f}) from {_revisit_best_path.name}",
+                    flush=True,
+                )
+                baseline.score = _rb_score
+                _revisit_best_override_ckpt = _rb_ckpt
+            else:
+                _revisit_best_override_ckpt = None
+        except Exception as _e:
+            print(f"  [revisit_best] Could not parse {_revisit_best_path}: {_e}", flush=True)
+            _revisit_best_override_ckpt = None
+    else:
+        _revisit_best_override_ckpt = None
+
     # ── resolve baseline checkpoint ───────────────────────────────────────────
-    baseline_checkpoint = _resolve_baseline_checkpoint(
-        args.baseline_checkpoint or os.environ.get("HYBRID_COLAB_REVISIT_BASELINE_CHECKPOINT", ""),
-        baseline.report_path,
-        search_dirs,
-    )
+    if _revisit_best_override_ckpt is not None:
+        baseline_checkpoint = _revisit_best_override_ckpt
+    else:
+        baseline_checkpoint = _resolve_baseline_checkpoint(
+            args.baseline_checkpoint or os.environ.get("HYBRID_COLAB_REVISIT_BASELINE_CHECKPOINT", ""),
+            baseline.report_path,
+            search_dirs,
+        )
     if baseline_checkpoint is None or not baseline_checkpoint.exists():
         raise FileNotFoundError(f"Baseline checkpoint not found for baseline report: {baseline.report_path}")
 
