@@ -10,6 +10,7 @@ from __future__ import annotations
 import importlib
 import json
 import os
+import runpy
 import subprocess
 import sys
 from collections import Counter
@@ -99,6 +100,38 @@ def _canonical_smiles(smiles: str) -> str:
     return Chem.MolToSmiles(mol, canonical=True)
 
 
+def _resolve_dataset_path(path_str: str, *, benchmark_dir: Path) -> Path:
+    raw = Path(path_str)
+    candidates = []
+    if raw.is_absolute():
+        candidates.append(raw)
+    else:
+        candidates.append(raw)
+        candidates.append(REPO_DIR / raw)
+        candidates.append(benchmark_dir / raw.name)
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[-1]
+
+
+def _maybe_build_benchmark_sets(*, benchmark_dir: Path, holdout_path: Path) -> None:
+    builder = REPO_DIR / "scripts" / "build_main8_benchmark_sets.py"
+    if not builder.exists() or not holdout_path.exists():
+        return
+    benchmark_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Benchmark datasets missing. Building A/B/C from holdout: {holdout_path}", flush=True)
+    sys.argv = [
+        str(builder),
+        "--input",
+        str(holdout_path),
+        "--output-dir",
+        str(benchmark_dir),
+    ]
+    runpy.run_path(str(builder), run_name="__main__")
+    print()
+
+
 def main() -> None:
     os.chdir(REPO_DIR)
     _clear_repo_python_caches()
@@ -107,13 +140,18 @@ def main() -> None:
     from enzyme_software.liquid_nn_v2.features.xtb_features import load_or_compute_full_xtb_features
 
     _setdefault_env("HYBRID_COLAB_BENCHMARK_XTB_CACHE_DIR", "/content/drive/MyDrive/enzyme_hybrid_lnn/cache/full_xtb")
+    _setdefault_env("HYBRID_COLAB_BENCHMARK_DIR", "/content/drive/MyDrive/enzyme_hybrid_lnn/benchmarks")
+    _setdefault_env(
+        "HYBRID_COLAB_BENCHMARK_HOLDOUT",
+        "/content/drive/MyDrive/enzyme_hybrid_lnn/benchmarks/main8_benchmark_holdout_singlecyp.json",
+    )
     _setdefault_env(
         "HYBRID_COLAB_BENCHMARK_XTB_DATASETS",
         ",".join(
             [
-                "data/prepared_training/main8_benchmark_a_row_level_singlecyp.json",
-                "data/prepared_training/main8_benchmark_b_unique_molecules.json",
-                "data/prepared_training/main8_benchmark_c_high_confidence.json",
+                "/content/drive/MyDrive/enzyme_hybrid_lnn/benchmarks/main8_benchmark_a_row_level_singlecyp.json",
+                "/content/drive/MyDrive/enzyme_hybrid_lnn/benchmarks/main8_benchmark_b_unique_molecules.json",
+                "/content/drive/MyDrive/enzyme_hybrid_lnn/benchmarks/main8_benchmark_c_high_confidence.json",
             ]
         ),
     )
@@ -123,17 +161,30 @@ def main() -> None:
     )
 
     cache_dir = Path(os.environ["HYBRID_COLAB_BENCHMARK_XTB_CACHE_DIR"])
+    benchmark_dir = Path(os.environ["HYBRID_COLAB_BENCHMARK_DIR"])
+    holdout_path = Path(os.environ["HYBRID_COLAB_BENCHMARK_HOLDOUT"])
     cache_dir.mkdir(parents=True, exist_ok=True)
     summary_path = Path(os.environ["HYBRID_COLAB_BENCHMARK_XTB_SUMMARY_JSON"])
     summary_path.parent.mkdir(parents=True, exist_ok=True)
-    dataset_paths = [
-        Path(part.strip())
-        for part in os.environ["HYBRID_COLAB_BENCHMARK_XTB_DATASETS"].split(",")
-        if part.strip()
-    ]
+    requested_paths = [part.strip() for part in os.environ["HYBRID_COLAB_BENCHMARK_XTB_DATASETS"].split(",") if part.strip()]
+    dataset_paths = [_resolve_dataset_path(part, benchmark_dir=benchmark_dir) for part in requested_paths]
+    if any(not path.exists() for path in dataset_paths):
+        _maybe_build_benchmark_sets(benchmark_dir=benchmark_dir, holdout_path=holdout_path)
+        dataset_paths = [_resolve_dataset_path(part, benchmark_dir=benchmark_dir) for part in requested_paths]
+    missing = [path for path in dataset_paths if not path.exists()]
+    if missing:
+        missing_str = ", ".join(str(path) for path in missing)
+        raise FileNotFoundError(
+            "Benchmark dataset(s) not found. "
+            f"Missing: {missing_str}. "
+            f"Upload the benchmark JSONs to {benchmark_dir} or upload the row-level holdout to {holdout_path} "
+            "so the helper can derive A/B/C automatically."
+        )
 
     print("Hybrid Benchmark full-xTB precompute helper", flush=True)
     print(f"cache_dir={cache_dir}", flush=True)
+    print(f"benchmark_dir={benchmark_dir}", flush=True)
+    print(f"holdout_path={holdout_path}", flush=True)
     print(f"summary_json={summary_path}", flush=True)
     print("datasets:", flush=True)
     for path in dataset_paths:
