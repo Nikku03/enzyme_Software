@@ -172,6 +172,11 @@ if TORCH_AVAILABLE:
             confidence = bridge["analogical_confidence"]
             wave_preds = bridge["wave_predictions"]
             wave_field = bridge["wave_field"]
+            wave_reliability = bridge.get("wave_reliability")
+            if wave_reliability is None:
+                wave_reliability = atom_features.new_ones((rows, 1))
+            else:
+                wave_reliability = wave_reliability.detach()
             precedent_brief = bridge.get("precedent_brief")
             if precedent_brief is None:
                 precedent_brief = atom_features.new_zeros((rows, AuditedEpisodeLogbook.brief_dim))
@@ -194,14 +199,14 @@ if TORCH_AVAILABLE:
                 ],
                 dim=-1,
             )
-            wave_scalar_b = torch.tanh(wave_scalar.detach())
+            wave_scalar_b = wave_reliability * torch.tanh(wave_scalar.detach())
             steric = self._optional_feature(batch.get("atom_3d_features"), rows, steric_dim, device=device, dtype=dtype)
             xtb = self._optional_feature(batch.get("xtb_atom_features"), rows, xtb_dim, device=device, dtype=dtype)
             topology = self._optional_feature(batch.get("topology_atom_features"), rows, topology_dim, device=device, dtype=dtype)
             steric_b = torch.tanh(steric)
             xtb_b = torch.tanh(xtb)
             topology_b = topology  # features are already in [0, 1]; no tanh needed
-            wave_field_b = torch.tanh(wave_field["atom_field_features"].detach())
+            wave_field_b = wave_reliability * torch.tanh(wave_field["atom_field_features"].detach())
             wave_scalar_vote = torch.tanh(
                 self._safe_vote_tensor(
                     self._scaled_live(
@@ -231,7 +236,7 @@ if TORCH_AVAILABLE:
             )
             lnn_vote = vote_scale * torch.tanh(lnn_vote_raw)
             lnn_conf = torch.sigmoid(self.lnn_conf_head(atom_features_b))
-            wave_site_bias_b = torch.tanh(bridge["wave_site_bias"].detach())
+            wave_site_bias_b = wave_reliability * torch.tanh(bridge["wave_site_bias"].detach())
             wave_site_bias_vote = torch.tanh(
                 self._safe_vote_tensor(
                     self._scaled_live(
@@ -251,8 +256,8 @@ if TORCH_AVAILABLE:
                     dim=-1,
                 )
             )
-            wave_vote = vote_scale * torch.tanh(wave_vote_raw)
-            wave_conf = torch.sigmoid(
+            wave_vote = wave_reliability * (vote_scale * torch.tanh(wave_vote_raw))
+            wave_conf = wave_reliability * torch.sigmoid(
                 self.wave_conf_head(
                     torch.cat(
                         [
@@ -454,6 +459,8 @@ if TORCH_AVAILABLE:
                 cyp_logits=outputs["cyp_logits"],
                 atom_3d_features=batch.get("atom_3d_features"),
                 xtb_atom_features=batch.get("xtb_atom_features"),
+                xtb_atom_valid_mask=batch.get("xtb_atom_valid_mask"),
+                xtb_mol_valid=batch.get("xtb_mol_valid"),
                 site_labels=batch.get("site_labels"),
                 site_supervision_mask=batch.get("site_supervision_mask"),
                 cyp_labels=batch.get("cyp_labels"),

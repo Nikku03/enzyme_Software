@@ -441,6 +441,8 @@ if TORCH_AVAILABLE:
             *,
             wave_preds: dict[str, torch.Tensor],
             xtb_atom_features: Optional[torch.Tensor],
+            xtb_atom_valid_mask: Optional[torch.Tensor],
+            xtb_mol_valid: Optional[torch.Tensor],
             batch_index: torch.Tensor,
             atom_3d_features: Optional[torch.Tensor],
         ) -> tuple[torch.Tensor, Dict[str, float]]:
@@ -451,30 +453,39 @@ if TORCH_AVAILABLE:
             if float(xtb.detach().abs().sum().item()) < 1.0e-8:
                 zero = wave_preds["predicted_charges"].sum() * 0.0
                 return zero, {"wave_aux_loss": 0.0, "wave_charge_loss": 0.0, "wave_fukui_loss": 0.0, "wave_gap_loss": 0.0}
+            atom_valid = torch.ones_like(wave_preds["predicted_charges"], dtype=torch.float32)
+            if xtb_atom_valid_mask is not None and xtb_atom_valid_mask.numel():
+                atom_valid = xtb_atom_valid_mask.float().view(-1).clamp(0.0, 1.0)
+            if float(atom_valid.sum().detach().item()) < 1.0e-6:
+                zero = wave_preds["predicted_charges"].sum() * 0.0
+                return zero, {"wave_aux_loss": 0.0, "wave_charge_loss": 0.0, "wave_fukui_loss": 0.0, "wave_gap_loss": 0.0}
             target_charge = xtb[:, 0]
             target_fukui = (0.45 * xtb[:, 1].abs() + 0.35 * xtb[:, 3].clamp_min(0.0) + 0.20 * xtb[:, 5].clamp_min(0.0))
             gap_atom = 0.5 * xtb[:, 4].clamp_min(0.0) + 0.5 * xtb[:, 5].clamp_min(0.0)
             num_molecules = int(batch_index.max().item()) + 1 if batch_index.numel() else 0
-            target_gap = scatter_mean(gap_atom.unsqueeze(-1), batch_index, num_molecules).squeeze(-1)
-            coords = None
-            if atom_3d_features is not None and atom_3d_features.numel():
-                steric = atom_3d_features.float()
-                coords = steric[:, :3] if steric.size(-1) >= 3 else F.pad(steric, (0, 3 - int(steric.size(-1))))
-            loss, metrics = quantum_distillation_loss(
-                predicted_charges=wave_preds["predicted_charges"],
-                predicted_fukui=wave_preds["predicted_fukui"],
-                predicted_gap=wave_preds["predicted_gap"],
-                target_charges=target_charge,
-                target_fukui=target_fukui,
-                target_gap=target_gap,
-                atom_mask=torch.ones_like(target_charge),
-            )
+            idx = batch_index.long()
+            gap_sum = torch.zeros(num_molecules, device=gap_atom.device, dtype=gap_atom.dtype)
+            gap_count = torch.zeros(num_molecules, device=gap_atom.device, dtype=gap_atom.dtype)
+            gap_sum.scatter_add_(0, idx, gap_atom * atom_valid)
+            gap_count.scatter_add_(0, idx, atom_valid)
+            target_gap = gap_sum / gap_count.clamp_min(1.0)
+            if xtb_mol_valid is not None and xtb_mol_valid.numel():
+                mol_valid = xtb_mol_valid.float().view(-1).clamp(0.0, 1.0)
+            else:
+                mol_valid = (gap_count > 0.0).float()
+            charge_loss_raw = F.smooth_l1_loss(wave_preds["predicted_charges"], target_charge, reduction="none")
+            fukui_loss_raw = F.smooth_l1_loss(wave_preds["predicted_fukui"], target_fukui, reduction="none")
+            gap_loss_raw = F.smooth_l1_loss(wave_preds["predicted_gap"], target_gap, reduction="none")
+            charge_loss = (charge_loss_raw * atom_valid).sum() / atom_valid.sum().clamp_min(1.0)
+            fukui_loss = (fukui_loss_raw * atom_valid).sum() / atom_valid.sum().clamp_min(1.0)
+            gap_loss = (gap_loss_raw * mol_valid).sum() / mol_valid.sum().clamp_min(1.0)
+            loss = charge_loss + fukui_loss + gap_loss
             total = float(self.wave_aux_weight) * loss
             return total, {
                 "wave_aux_loss": float(total.detach().item()),
-                "wave_charge_loss": float(metrics["charge_loss"].detach().item()),
-                "wave_fukui_loss": float(metrics["fukui_loss"].detach().item()),
-                "wave_gap_loss": float(metrics["gap_loss"].detach().item()),
+                "wave_charge_loss": float(charge_loss.detach().item()),
+                "wave_fukui_loss": float(fukui_loss.detach().item()),
+                "wave_gap_loss": float(gap_loss.detach().item()),
             }
 
         def _analogical_aux_loss(
@@ -530,6 +541,8 @@ if TORCH_AVAILABLE:
             cyp_logits: torch.Tensor,
             atom_3d_features: Optional[torch.Tensor] = None,
             xtb_atom_features: Optional[torch.Tensor] = None,
+            xtb_atom_valid_mask: Optional[torch.Tensor] = None,
+            xtb_mol_valid: Optional[torch.Tensor] = None,
             site_labels: Optional[torch.Tensor] = None,
             site_supervision_mask: Optional[torch.Tensor] = None,
             cyp_labels: Optional[torch.Tensor] = None,
@@ -554,6 +567,19 @@ if TORCH_AVAILABLE:
                 dim=-1,
             )
             wave_site_bias = self.wave_site_head(wave_bias_input)
+            if xtb_atom_valid_mask is not None and xtb_atom_valid_mask.numel():
+                wave_reliability = xtb_atom_valid_mask.float().to(device=multivectors.device, dtype=multivectors.dtype).view(-1, 1).clamp(0.0, 1.0)
+            elif xtb_atom_features is not None and xtb_atom_features.numel():
+                wave_reliability = torch.ones((multivectors.size(0), 1), device=multivectors.device, dtype=multivectors.dtype)
+            else:
+                wave_reliability = torch.zeros((multivectors.size(0), 1), device=multivectors.device, dtype=multivectors.dtype)
+            if xtb_atom_features is not None and xtb_atom_features.numel() and xtb_atom_features.size(-1) >= 7:
+                xtb_confidence = xtb_atom_features[:, 6:7].float().to(device=multivectors.device, dtype=multivectors.dtype).clamp(0.0, 1.0)
+                wave_reliability = wave_reliability * torch.where(wave_reliability > 0.5, xtb_confidence, torch.ones_like(xtb_confidence))
+            if xtb_mol_valid is not None and xtb_mol_valid.numel():
+                mol_reliability = xtb_mol_valid.float().to(device=batch_index.device, dtype=multivectors.dtype).view(-1, 1).clamp(0.0, 1.0)
+                wave_reliability = wave_reliability * mol_reliability[batch_index]
+            wave_site_bias = wave_reliability * wave_site_bias
             graph_embeddings = self._group_graph_embedding(multivectors, batch_index)
             per_atom_graph = graph_embeddings[batch_index] if graph_embeddings.numel() else multivectors.new_zeros((multivectors.size(0), self.memory.graph_dim))
             if graph_molecule_keys is not None and graph_molecule_keys.numel():
@@ -629,6 +655,8 @@ if TORCH_AVAILABLE:
             wave_aux_loss, wave_metrics = self._wave_aux_loss(
                 wave_preds=wave_preds,
                 xtb_atom_features=xtb_atom_features,
+                xtb_atom_valid_mask=xtb_atom_valid_mask,
+                xtb_mol_valid=xtb_mol_valid,
                 batch_index=batch_index,
                 atom_3d_features=atom_3d_features,
             )
@@ -662,6 +690,9 @@ if TORCH_AVAILABLE:
                 "analogical_concentration_mean": float(concentration.detach().mean().item()) if retrieval is not None and concentration is not None and concentration.numel() else 0.0,
                 "wave_charge_mean": float(wave_preds["predicted_charges"].detach().mean().item()) if wave_preds["predicted_charges"].numel() else 0.0,
                 "wave_fukui_mean": float(wave_preds["predicted_fukui"].detach().mean().item()) if wave_preds["predicted_fukui"].numel() else 0.0,
+                "wave_reliability_mean": float(wave_reliability.detach().mean().item()) if wave_reliability.numel() else 0.0,
+                "wave_valid_atom_fraction": float((xtb_atom_valid_mask.float().mean().item()) if xtb_atom_valid_mask is not None and xtb_atom_valid_mask.numel() else 0.0),
+                "wave_valid_mol_fraction": float((xtb_mol_valid.float().mean().item()) if xtb_mol_valid is not None and xtb_mol_valid.numel() else 0.0),
                 "wave_field_density_mean": float(wave_field["global_density"].detach().mean().item()) if wave_field["global_density"].numel() else 0.0,
                 "wave_field_gap_proxy_mean": float(wave_field["global_gap_proxy"].detach().mean().item()) if wave_field["global_gap_proxy"].numel() else 0.0,
                 "continuous_reasoning_mean": float(continuous_reasoning["site_bias"].detach().mean().item()) if continuous_reasoning["site_bias"].numel() else 0.0,
@@ -675,6 +706,7 @@ if TORCH_AVAILABLE:
                 "wave_predictions": wave_preds,
                 "wave_field": wave_field,
                 "wave_site_bias": wave_site_bias,
+                "wave_reliability": wave_reliability,
                 "analogical_site_prior": site_prior,
                 "analogical_cyp_prior": cyp_prior_by_mol,
                 "analogical_confidence": confidence,
