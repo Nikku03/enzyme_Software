@@ -52,7 +52,7 @@ def _ensure_rdkit() -> None:
 
 PRESETS: dict[str, dict[str, str]] = {
     "balanced": {
-        "HYBRID_COLAB_XTB_DATASET": "data/prepared_training/main5_site_conservative_singlecyp_clean.json",
+        "HYBRID_COLAB_XTB_DATASET": "data/prepared_training/main8_site_conservative_singlecyp_clean_symm.json",
         "HYBRID_COLAB_XTB_SITE_LABELED_ONLY": "1",
         "HYBRID_COLAB_XTB_LIMIT": "0",
         "HYBRID_COLAB_XTB_SEED": "42",
