@@ -49,6 +49,10 @@ def _size_bucket(num_atoms: int) -> str:
     return "61+"
 
 
+def _clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
+
+
 def _scaffold_key(drug: Dict[str, object]) -> str:
     smiles = _canonical_smiles(drug)
     if not smiles:
@@ -100,12 +104,15 @@ def _group_signature(
 ) -> dict[str, object]:
     source_counts: dict[str, int] = defaultdict(int)
     size_counts: dict[str, int] = defaultdict(int)
+    atom_sum = 0
     for drug in group:
         source_counts[str(drug.get("source", "DrugBank"))] += 1
+        atom_sum += int(_safe_num_atoms(drug))
         if stratify_size:
             size_counts[_size_bucket(_safe_num_atoms(drug))] += 1
     return {
         "size": int(len(group)),
+        "atom_sum": float(atom_sum),
         "source_counts": dict(source_counts),
         "size_counts": dict(size_counts),
     }
@@ -129,9 +136,15 @@ def _global_targets(
     size_buckets = sorted({_size_bucket(_safe_num_atoms(drug)) for drug in drugs}) if stratify_size else []
     source_totals = Counter(str(drug.get("source", "DrugBank")) for drug in drugs)
     size_totals = Counter(_size_bucket(_safe_num_atoms(drug)) for drug in drugs) if stratify_size else Counter()
+    total_atom_sum = float(sum(_safe_num_atoms(drug) for drug in drugs))
+    dataset_mean_atoms = (total_atom_sum / total) if total > 0 else 0.0
+    heldout_target_mean = _clamp(dataset_mean_atoms, 25.0, 28.0)
     return {
         split: {
             "total": total * base_ratios[split],
+            "atom_sum": total_atom_sum * base_ratios[split],
+            "target_mean_atoms": heldout_target_mean if split in {"val", "test"} else dataset_mean_atoms,
+            "heldout_mean_band": (25.0, 28.0) if split in {"val", "test"} else None,
             "sources": {source: float(source_totals[source]) * base_ratios[split] for source in sources},
             "sizes": {bucket: float(size_totals[bucket]) * base_ratios[split] for bucket in size_buckets},
         }
@@ -152,6 +165,21 @@ def _assignment_cost(
     total_error = abs(projected_total - total_target) / max(1.0, total_target)
     total_overflow = max(0.0, projected_total - total_target) / max(1.0, total_target)
 
+    atom_sum_target = float(targets[split_name].get("atom_sum", 0.0))
+    projected_atom_sum = float(current[split_name].get("atom_sum", 0.0)) + float(group_sig.get("atom_sum", 0.0))
+    atom_sum_error = abs(projected_atom_sum - atom_sum_target) / max(1.0, atom_sum_target)
+
+    mean_cost = 0.0
+    if projected_total > 0:
+        projected_mean = projected_atom_sum / projected_total
+        target_mean = float(targets[split_name].get("target_mean_atoms", projected_mean))
+        mean_cost += abs(projected_mean - target_mean)
+        heldout_band = targets[split_name].get("heldout_mean_band")
+        if heldout_band is not None:
+            lower, upper = heldout_band
+            mean_cost += 4.0 * max(0.0, float(lower) - projected_mean)
+            mean_cost += 4.0 * max(0.0, projected_mean - float(upper))
+
     source_cost = 0.0
     for source, add_count in dict(group_sig["source_counts"]).items():
         projected = float(current[split_name]["sources"].get(source, 0.0)) + float(add_count)
@@ -165,7 +193,110 @@ def _assignment_cost(
             target = float(targets[split_name]["sizes"].get(bucket, 0.0))
             size_cost += abs(projected - target) / max(1.0, target)
 
-    return (100.0 * total_overflow) + (12.0 * total_error) + (1.5 * source_cost) + (1.0 * size_cost)
+    return (
+        (100.0 * total_overflow)
+        + (12.0 * total_error)
+        + (3.0 * atom_sum_error)
+        + (2.5 * mean_cost)
+        + (1.5 * source_cost)
+        + (1.25 * size_cost)
+    )
+
+
+def _global_assignment_score(
+    *,
+    current: dict[str, dict[str, object]],
+    targets: dict[str, dict[str, object]],
+    stratify_size: bool,
+) -> float:
+    score = 0.0
+    for split_name in ("train", "val", "test"):
+        total = float(current[split_name]["total"])
+        total_target = float(targets[split_name]["total"])
+        score += 12.0 * abs(total - total_target) / max(1.0, total_target)
+        score += 3.0 * abs(float(current[split_name].get("atom_sum", 0.0)) - float(targets[split_name].get("atom_sum", 0.0))) / max(
+            1.0, float(targets[split_name].get("atom_sum", 0.0))
+        )
+        if total > 0:
+            mean_atoms = float(current[split_name].get("atom_sum", 0.0)) / total
+            target_mean = float(targets[split_name].get("target_mean_atoms", mean_atoms))
+            score += 2.5 * abs(mean_atoms - target_mean)
+            heldout_band = targets[split_name].get("heldout_mean_band")
+            if heldout_band is not None:
+                lower, upper = heldout_band
+                score += 10.0 * max(0.0, float(lower) - mean_atoms)
+                score += 10.0 * max(0.0, mean_atoms - float(upper))
+        for source, target in dict(targets[split_name]["sources"]).items():
+            score += 1.5 * abs(float(current[split_name]["sources"].get(source, 0.0)) - float(target)) / max(1.0, float(target))
+        if stratify_size:
+            for bucket, target in dict(targets[split_name]["sizes"]).items():
+                score += 1.25 * abs(float(current[split_name]["sizes"].get(bucket, 0.0)) - float(target)) / max(1.0, float(target))
+    return score
+
+
+def _move_group_state(
+    *,
+    current: dict[str, dict[str, object]],
+    source_split: str,
+    target_split: str,
+    sig: dict[str, object],
+) -> None:
+    current[source_split]["total"] -= float(sig["size"])
+    current[target_split]["total"] += float(sig["size"])
+    current[source_split]["atom_sum"] -= float(sig.get("atom_sum", 0.0))
+    current[target_split]["atom_sum"] += float(sig.get("atom_sum", 0.0))
+    for source, count in dict(sig["source_counts"]).items():
+        current[source_split]["sources"][source] -= float(count)
+        current[target_split]["sources"][source] += float(count)
+    for bucket, count in dict(sig["size_counts"]).items():
+        current[source_split]["sizes"][bucket] -= float(count)
+        current[target_split]["sizes"][bucket] += float(count)
+
+
+def _rebalance_group_assignments(
+    *,
+    groups: List[List[Dict[str, object]]],
+    group_sigs: List[dict[str, object]],
+    assignments: List[str],
+    current: dict[str, dict[str, object]],
+    targets: dict[str, dict[str, object]],
+    stratify_size: bool,
+    seed: int,
+) -> None:
+    rng = random.Random(seed + 7919)
+    split_names = ("train", "val", "test")
+    best_score = _global_assignment_score(current=current, targets=targets, stratify_size=stratify_size)
+    improved = True
+    max_passes = 8
+    passes = 0
+    while improved and passes < max_passes:
+        improved = False
+        passes += 1
+        order = list(range(len(groups)))
+        rng.shuffle(order)
+        for idx in order:
+            current_split = assignments[idx]
+            sig = group_sigs[idx]
+            local_best_split = current_split
+            local_best_score = best_score
+            for candidate_split in split_names:
+                if candidate_split == current_split:
+                    continue
+                _move_group_state(current=current, source_split=current_split, target_split=candidate_split, sig=sig)
+                candidate_score = _global_assignment_score(
+                    current=current,
+                    targets=targets,
+                    stratify_size=stratify_size,
+                )
+                _move_group_state(current=current, source_split=candidate_split, target_split=current_split, sig=sig)
+                if candidate_score + 1e-9 < local_best_score:
+                    local_best_score = candidate_score
+                    local_best_split = candidate_split
+            if local_best_split != current_split:
+                _move_group_state(current=current, source_split=current_split, target_split=local_best_split, sig=sig)
+                assignments[idx] = local_best_split
+                best_score = local_best_score
+                improved = True
 
 
 def _split_by_global_scaffold_groups(
@@ -187,14 +318,17 @@ def _split_by_global_scaffold_groups(
 
     targets = _global_targets(drugs, train_ratio=train_ratio, val_ratio=val_ratio, stratify_size=stratify_size)
     current = {
-        "train": {"total": 0.0, "sources": defaultdict(float), "sizes": defaultdict(float)},
-        "val": {"total": 0.0, "sources": defaultdict(float), "sizes": defaultdict(float)},
-        "test": {"total": 0.0, "sources": defaultdict(float), "sizes": defaultdict(float)},
+        "train": {"total": 0.0, "atom_sum": 0.0, "sources": defaultdict(float), "sizes": defaultdict(float)},
+        "val": {"total": 0.0, "atom_sum": 0.0, "sources": defaultdict(float), "sizes": defaultdict(float)},
+        "test": {"total": 0.0, "atom_sum": 0.0, "sources": defaultdict(float), "sizes": defaultdict(float)},
     }
     splits: dict[str, List[Dict[str, object]]] = {"train": [], "val": [], "test": []}
+    group_sigs: List[dict[str, object]] = []
+    assignments: List[str] = []
 
     for group in groups:
         sig = _group_signature(group, stratify_size=stratify_size)
+        group_sigs.append(sig)
         split_name = min(
             ("train", "val", "test"),
             key=lambda name: (
@@ -209,11 +343,27 @@ def _split_by_global_scaffold_groups(
             ),
         )
         splits[split_name].extend(group)
+        assignments.append(split_name)
         current[split_name]["total"] += float(sig["size"])
+        current[split_name]["atom_sum"] += float(sig.get("atom_sum", 0.0))
         for source, count in dict(sig["source_counts"]).items():
             current[split_name]["sources"][source] += float(count)
         for bucket, count in dict(sig["size_counts"]).items():
             current[split_name]["sizes"][bucket] += float(count)
+
+    _rebalance_group_assignments(
+        groups=groups,
+        group_sigs=group_sigs,
+        assignments=assignments,
+        current=current,
+        targets=targets,
+        stratify_size=stratify_size,
+        seed=seed,
+    )
+
+    splits = {"train": [], "val": [], "test": []}
+    for group, split_name in zip(groups, assignments):
+        splits[split_name].extend(group)
 
     return splits["train"], splits["val"], splits["test"]
 

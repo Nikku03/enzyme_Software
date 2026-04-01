@@ -323,6 +323,17 @@ def _attach_effective_split_summary(split_summary: dict[str, object], loaders: d
     return updated
 
 
+def _effective_split_summary(split_summary: dict[str, object]) -> dict[str, dict[str, object]]:
+    compact: dict[str, dict[str, object]] = {}
+    for split_name, summary in split_summary.items():
+        compact[split_name] = {
+            "total": int(summary.get("effective_total", summary.get("total", 0))),
+            "invalid_count": int(summary.get("invalid_count", 0)),
+            "invalid_reasons": dict(summary.get("invalid_reasons", {}) or {}),
+        }
+    return compact
+
+
 def _save_training_state(
     *,
     model,
@@ -348,6 +359,7 @@ def _save_training_state(
     best_path = output_dir / "hybrid_full_xtb_best.pt"
     archive_path = output_dir / f"hybrid_full_xtb_{timestamp}.pt"
     report_path = artifact_dir / f"hybrid_full_xtb_report_{timestamp}.json"
+    effective_split_summary = _effective_split_summary(split_summary)
     checkpoint = {
         "model_state_dict": _initialized_state_dict(model),
         "config": {
@@ -371,6 +383,7 @@ def _save_training_state(
         "status": status,
         "split_mode": split_mode,
         "split_summary": split_summary,
+        "effective_split_summary": effective_split_summary,
     }
     torch.save(checkpoint, latest_path)
     torch.save(checkpoint, archive_path)
@@ -392,6 +405,7 @@ def _save_training_state(
                 "xtb_statuses": xtb_statuses,
                 "split_mode": split_mode,
                 "split_summary": split_summary,
+                "effective_split_summary": effective_split_summary,
                 "episode_log_path": str(episode_log_path) if episode_log_path is not None else None,
                 "history": history,
             },
