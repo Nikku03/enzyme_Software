@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from torch.utils.data import DataLoader
+from torch.utils.data import WeightedRandomSampler
 
 try:
     from rdkit import Chem
@@ -96,22 +97,43 @@ def _build_cyp3a4_candidate_masks(
 
     prior = chemistry_prior_matrix(smiles, num_atoms)
     pattern_width = int(len(CHEMISTRY_PRIOR_PATTERN_DEFS))
-    pattern_hits = (prior[:, :pattern_width].sum(axis=1) > 0.0).astype(np.float32) if prior.size else np.zeros((num_atoms,), dtype=np.float32)
+    pattern_names = [name for name, *_rest in CHEMISTRY_PRIOR_PATTERN_DEFS]
+    high_priority_names = {
+        "s_oxidation",
+        "thiophene_s",
+        "n_oxidation",
+        "primary_aro_amine",
+        "ring_nitrogen_6",
+        "benzylic",
+        "allylic",
+        "alkene_epoxidation",
+        "alpha_to_oxygen",
+        "alpha_to_nitrogen",
+        "n_methyl",
+        "o_methyl_aromatic",
+        "carbonyl_alpha",
+    }
+    high_priority_cols = [idx for idx, name in enumerate(pattern_names) if name in high_priority_names]
+    pattern_hits = (
+        (prior[:, high_priority_cols].sum(axis=1) > 0.0).astype(np.float32)
+        if prior.size and high_priority_cols
+        else np.zeros((num_atoms,), dtype=np.float32)
+    )
     reactivity = prior[:, -1].astype(np.float32) if prior.size else np.zeros((num_atoms,), dtype=np.float32)
 
-    hetero = np.zeros((num_atoms,), dtype=np.float32)
-    aromatic_hetero = np.zeros((num_atoms,), dtype=np.float32)
-    oxidation_friendly = np.zeros((num_atoms,), dtype=np.float32)
+    reactive_hetero = np.zeros((num_atoms,), dtype=np.float32)
+    soft_hetero = np.zeros((num_atoms,), dtype=np.float32)
+    alpha_hetero_carbon = np.zeros((num_atoms,), dtype=np.float32)
     for atom in mol.GetAtoms():
         idx = int(atom.GetIdx())
         atomic_num = int(atom.GetAtomicNum())
-        if atomic_num in {7, 8, 15, 16, 17, 35, 53}:
-            hetero[idx] = 1.0
-            if atom.GetIsAromatic():
-                aromatic_hetero[idx] = 1.0
+        if atomic_num in {7, 15, 16}:
+            reactive_hetero[idx] = 1.0
+        elif atomic_num == 8:
+            soft_hetero[idx] = 1.0
         if atomic_num == 6 and atom.GetTotalNumHs() > 0:
-            if atom.GetHybridization() == Chem.HybridizationType.SP3:
-                oxidation_friendly[idx] = 1.0
+            if any(int(nbr.GetAtomicNum()) in {7, 8, 15, 16} for nbr in atom.GetNeighbors()):
+                alpha_hetero_carbon[idx] = 1.0
 
     if manual_atom_prior_logits is not None:
         manual_logits = np.asarray(manual_atom_prior_logits, dtype=np.float32).reshape(num_atoms, -1)
@@ -122,22 +144,23 @@ def _build_cyp3a4_candidate_masks(
     score = (
         0.70 * reactivity
         + 0.45 * pattern_hits
-        + 0.40 * hetero
-        + 0.15 * aromatic_hetero
-        + 0.20 * oxidation_friendly
+        + 0.40 * reactive_hetero
+        + 0.18 * alpha_hetero_carbon
+        + 0.10 * soft_hetero
         + 0.30 * manual_prior
     ).astype(np.float32)
     candidate = (
         (pattern_hits > 0.5)
-        | (hetero > 0.5)
-        | (manual_prior >= 0.45)
-        | (score >= 0.55)
+        | (reactive_hetero > 0.5)
+        | (alpha_hetero_carbon > 0.5)
+        | (manual_prior >= 0.55)
+        | (score >= 0.62)
     )
     candidate = candidate.astype(np.float32)
 
-    min_keep = min(num_atoms, max(4, int(np.ceil(num_atoms * 0.35))))
+    min_keep = min(num_atoms, max(4, int(np.ceil(num_atoms * 0.20))))
     if int(candidate.sum()) < min_keep:
-        ranked = np.argsort(-(score + 0.15 * hetero + 0.05 * oxidation_friendly))
+        ranked = np.argsort(-(score + 0.10 * reactive_hetero + 0.08 * alpha_hetero_carbon))
         candidate[ranked[:min_keep]] = 1.0
 
     inference_mask = candidate.reshape(num_atoms, 1).astype(np.float32)
@@ -562,7 +585,22 @@ class FullXTBHybridDataset(CYPMetabolismDataset):
     def __getitem__(self, idx):
         item = super().__getitem__(idx)
         graph = item.get("graph")
-        if graph is None or self.full_xtb_cache_dir is None:
+        if graph is None:
+            return item
+        if self.use_candidate_mask and self.candidate_cyp == "CYP3A4":
+            candidate_mask, candidate_train_mask = _build_cyp3a4_candidate_masks(
+                graph.canonical_smiles or graph.smiles,
+                num_atoms=int(graph.num_atoms),
+                manual_atom_prior_logits=getattr(graph, "manual_engine_atom_prior_logits", None),
+            )
+            if getattr(graph, "site_labels", None) is not None and graph.site_labels.shape[0] == int(graph.num_atoms):
+                candidate_train_mask = np.maximum(candidate_train_mask, graph.site_labels.astype(np.float32))
+            graph.candidate_mask = candidate_mask
+            graph.candidate_train_mask = candidate_train_mask
+        else:
+            graph.candidate_mask = np.ones((int(graph.num_atoms), 1), dtype=np.float32)
+            graph.candidate_train_mask = np.ones((int(graph.num_atoms), 1), dtype=np.float32)
+        if self.full_xtb_cache_dir is None:
             return item
         # Shallow-copy dict and graph so cached objects are never mutated.
         # Without this, the first call appends 8 XTB dims (32→40), and the
@@ -628,20 +666,6 @@ class FullXTBHybridDataset(CYPMetabolismDataset):
             graph.topology_atom_valid_mask = np.zeros((num_atoms, 1), dtype=np.float32)
             graph.topology_mol_valid = np.asarray([[0.0]], dtype=np.float32)
 
-        if self.use_candidate_mask and self.candidate_cyp == "CYP3A4":
-            candidate_mask, candidate_train_mask = _build_cyp3a4_candidate_masks(
-                graph.canonical_smiles or graph.smiles,
-                num_atoms=num_atoms,
-                manual_atom_prior_logits=getattr(graph, "manual_engine_atom_prior_logits", None),
-            )
-            if getattr(graph, "site_labels", None) is not None and graph.site_labels.shape[0] == num_atoms:
-                candidate_train_mask = np.maximum(candidate_train_mask, graph.site_labels.astype(np.float32))
-            graph.candidate_mask = candidate_mask
-            graph.candidate_train_mask = candidate_train_mask
-        else:
-            graph.candidate_mask = np.ones((num_atoms, 1), dtype=np.float32)
-            graph.candidate_train_mask = np.ones((num_atoms, 1), dtype=np.float32)
-
         return item
 
 
@@ -660,6 +684,7 @@ def create_full_xtb_dataloaders_from_drugs(
     compute_full_xtb_if_missing: bool = False,
     use_candidate_mask: bool = False,
     candidate_cyp: Optional[str] = None,
+    balance_train_sources: bool = False,
     allow_partial_sanitize: bool = True,
     allow_aggressive_repair: bool = False,
     drop_failed: bool = True,
@@ -695,7 +720,17 @@ def create_full_xtb_dataloaders_from_drugs(
             raise RuntimeError(
                 f"FullXTBHybridDataset produced zero valid graphs for {name} split. Top failure reasons: {top}"
             )
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn, num_workers=0, pin_memory=False)
+    train_loader_kwargs = dict(batch_size=batch_size, collate_fn=collate_fn, num_workers=0, pin_memory=False)
+    if balance_train_sources:
+        source_counts = Counter(str(drug.get("source", "DrugBank")) for drug in train_ds.drugs)
+        weights = []
+        for drug in train_ds.drugs:
+            source = str(drug.get("source", "DrugBank"))
+            weights.append(1.0 / max(1, source_counts[source]))
+        sampler = WeightedRandomSampler(weights, num_samples=len(train_ds.drugs), replacement=True)
+        train_loader = DataLoader(train_ds, sampler=sampler, shuffle=False, **train_loader_kwargs)
+    else:
+        train_loader = DataLoader(train_ds, shuffle=True, **train_loader_kwargs)
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=False)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=False)
     return train_loader, val_loader, test_loader

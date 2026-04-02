@@ -309,6 +309,7 @@ def _build_loaders_with_fallback(
         compute_full_xtb_if_missing=args.compute_xtb_if_missing,
         use_candidate_mask=bool(getattr(args, "use_candidate_mask", False)),
         candidate_cyp=str(getattr(args, "target_cyp", "") or "").strip() or None,
+        balance_train_sources=bool(getattr(args, "balance_train_sources", False)),
         drop_failed=True,
     )
     try:
@@ -427,6 +428,7 @@ def _save_training_state(
         "confidence_allowlist": _parse_csv_tokens(str(getattr(args, "confidence_allowlist", "") or "")),
         "base_lnn_first": bool(getattr(args, "base_lnn_first", False)),
         "use_candidate_mask": bool(getattr(args, "use_candidate_mask", False)),
+        "balance_train_sources": bool(getattr(args, "balance_train_sources", False)),
         "split_summary": split_summary,
         "effective_split_summary": effective_split_summary,
     }
@@ -453,6 +455,7 @@ def _save_training_state(
                 "confidence_allowlist": _parse_csv_tokens(str(getattr(args, "confidence_allowlist", "") or "")),
                 "base_lnn_first": bool(getattr(args, "base_lnn_first", False)),
                 "use_candidate_mask": bool(getattr(args, "use_candidate_mask", False)),
+                "balance_train_sources": bool(getattr(args, "balance_train_sources", False)),
                 "split_summary": split_summary,
                 "effective_split_summary": effective_split_summary,
                 "episode_log_path": str(episode_log_path) if episode_log_path is not None else None,
@@ -511,6 +514,7 @@ def main() -> None:
     parser.add_argument("--target-cyp", default="")
     parser.add_argument("--confidence-allowlist", default="")
     parser.add_argument("--use-candidate-mask", action="store_true")
+    parser.add_argument("--balance-train-sources", action="store_true")
     args = parser.parse_args()
     early_stopping_patience = int(args.early_stopping_patience)
     early_stopping_enabled = early_stopping_patience > 0
@@ -612,6 +616,8 @@ def main() -> None:
         )
     if args.use_candidate_mask:
         print(f"candidate_mask=1 | candidate_cyp={str(args.target_cyp or '').strip() or 'generic'}", flush=True)
+    if args.balance_train_sources:
+        print("balance_train_sources=1", flush=True)
 
     xtb_valid_count, xtb_statuses = _count_xtb_valid(drugs, xtb_cache_dir)
     print(f"xTB cache valid molecules: {xtb_valid_count}/{len(drugs)} | statuses={xtb_statuses}", flush=True)

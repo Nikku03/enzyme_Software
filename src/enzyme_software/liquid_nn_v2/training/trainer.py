@@ -309,6 +309,22 @@ if TORCH_AVAILABLE:
                 neginf=-clamp_value,
             ).clamp(min=-clamp_value, max=clamp_value)
 
+        def _enforce_candidate_mask(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
+            candidate_mask = batch.get("candidate_mask")
+            site_logits = outputs.get("site_logits")
+            if candidate_mask is None or site_logits is None:
+                return outputs
+            mask = candidate_mask.to(device=site_logits.device, dtype=site_logits.dtype).view_as(site_logits)
+            if mask.numel() != site_logits.numel():
+                return outputs
+            masked_logits = torch.where(mask > 0.5, site_logits, torch.full_like(site_logits, -20.0))
+            outputs = dict(outputs)
+            outputs["site_logits"] = masked_logits
+            outputs["site_scores"] = torch.sigmoid(masked_logits)
+            outputs.setdefault("site_logits_base", site_logits)
+            outputs["candidate_fraction"] = float(mask.detach().mean().item())
+            return outputs
+
         def _masked_bce_with_logits(self, logits, labels, supervision_mask):
             labels = labels.float().view_as(logits)
             raw = F.binary_cross_entropy_with_logits(logits, labels, reduction="none")
@@ -616,6 +632,7 @@ if TORCH_AVAILABLE:
             batch = self._prepare_batch(graphs)
             self._sanitize_trainable_parameters()
             outputs = self.model(batch)
+            outputs = self._enforce_candidate_mask(outputs, batch)
             loss, stats = self.compute_loss(batch, outputs)
             self._run_finite_checks(outputs, stats)
             if not bool(torch.isfinite(loss)):
@@ -648,6 +665,7 @@ if TORCH_AVAILABLE:
                 self._sanitize_trainable_parameters()
                 batch = self._prepare_batch(raw_batch)
                 outputs = self.model(batch)
+                outputs = self._enforce_candidate_mask(outputs, batch)
                 loss, stats = self.compute_loss(batch, outputs)
                 self._run_finite_checks(outputs, stats, batch_idx=batch_idx)
                 if not bool(torch.isfinite(loss)):
@@ -706,6 +724,7 @@ if TORCH_AVAILABLE:
             with torch.no_grad():
                 batch = self._prepare_batch(graphs)
                 outputs = self.model(batch)
+                outputs = self._enforce_candidate_mask(outputs, batch)
             site_metrics = compute_site_metrics_v2(
                 outputs["site_scores"],
                 batch["site_labels"],
@@ -792,6 +811,7 @@ if TORCH_AVAILABLE:
                         continue
                     batch = self._prepare_batch(raw_batch)
                     outputs = self.model(batch)
+                    outputs = self._enforce_candidate_mask(outputs, batch)
                     if self.episode_logger is not None:
                         self.episode_logger.log_step(
                             split=str(getattr(loader, "_split_name", "eval")),

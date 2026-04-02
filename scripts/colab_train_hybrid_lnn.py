@@ -132,6 +132,7 @@ LOCKED_PRESET_KEYS = {
     "HYBRID_COLAB_CONFIDENCE_ALLOWLIST",
     "HYBRID_COLAB_BASE_LNN_FIRST",
     "HYBRID_COLAB_USE_CANDIDATE_MASK",
+    "HYBRID_COLAB_BALANCE_TRAIN_SOURCES",
 }
 
 
@@ -386,6 +387,7 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_CONFIDENCE_ALLOWLIST": "high,validated,validated_gold,validated_literature,curated",
         "HYBRID_COLAB_BASE_LNN_FIRST": "1",
         "HYBRID_COLAB_USE_CANDIDATE_MASK": "1",
+        "HYBRID_COLAB_BALANCE_TRAIN_SOURCES": "1",
     },
 }
 
@@ -511,6 +513,8 @@ def main() -> None:
         argv.append("--base-lnn-first")
     if os.environ.get("HYBRID_COLAB_USE_CANDIDATE_MASK", "0").strip().lower() in {"1", "true", "yes", "on"}:
         argv.append("--use-candidate-mask")
+    if os.environ.get("HYBRID_COLAB_BALANCE_TRAIN_SOURCES", "0").strip().lower() in {"1", "true", "yes", "on"}:
+        argv.append("--balance-train-sources")
     precedent_logbook = os.environ.get("HYBRID_COLAB_PRECEDENT_LOGBOOK", "").strip()
     if precedent_logbook:
         argv.extend(["--precedent-logbook", precedent_logbook])

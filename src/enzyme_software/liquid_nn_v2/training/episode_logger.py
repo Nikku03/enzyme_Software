@@ -106,6 +106,12 @@ class EpisodeLogger:
             if site_mask is not None
             else torch.ones_like(site_scores, dtype=torch.float32)
         )
+        candidate_mask = batch.get("candidate_mask")
+        candidate_mask_cpu = (
+            candidate_mask.detach().cpu().view(-1)
+            if candidate_mask is not None
+            else torch.ones_like(site_scores, dtype=torch.float32)
+        )
         cyp_logits = outputs.get("cyp_logits")
         cyp_logits_cpu = cyp_logits.detach().cpu() if cyp_logits is not None else None
         cyp_probs_cpu = torch.softmax(cyp_logits_cpu, dim=-1) if cyp_logits_cpu is not None else None
@@ -233,6 +239,7 @@ class EpisodeLogger:
                     "site_logits": _to_serializable(site_logits[start:end]),
                     "site_logits_base": _to_serializable(site_logits_base_cpu[start:end]) if site_logits_base_cpu is not None else None,
                     "site_scores": _to_serializable(site_scores[start:end]),
+                    "candidate_mask": _to_serializable(candidate_mask_cpu[start:end]),
                     "cyp_logits": _to_serializable(cyp_logits_cpu[graph_idx]) if cyp_logits_cpu is not None else None,
                     "cyp_probs": _to_serializable(cyp_probs_cpu[graph_idx]) if cyp_probs_cpu is not None else None,
                     "true_cyp_label": int(cyp_labels_cpu[graph_idx].item()) if cyp_labels_cpu is not None else None,
@@ -276,6 +283,8 @@ class EpisodeLogger:
                     "top3_atoms": top3,
                     "top5_atoms": top5,
                     "top1_score": float(site_scores[start + top1].item()) if top1 is not None else None,
+                    "candidate_atoms": int(candidate_mask_cpu[start:end].sum().item()),
+                    "candidate_fraction": float(candidate_mask_cpu[start:end].mean().item()),
                     "predicted_cyp_idx": int(torch.argmax(cyp_logits_cpu[graph_idx]).item()) if cyp_logits_cpu is not None else None,
                     "predicted_cyp_prob": float(torch.max(cyp_probs_cpu[graph_idx]).item()) if cyp_probs_cpu is not None else None,
                 },
