@@ -25,8 +25,6 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-from parse_hybrid_console_log import parse_console_line
-
 
 REPO_DIR = Path("/content/enzyme_Software")
 if str(REPO_DIR) not in sys.path:
@@ -37,6 +35,8 @@ if str(SCRIPT_DIR) not in sys.path:
 SRC_DIR = REPO_DIR / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
+
+from parse_hybrid_console_log import parse_console_line
 
 
 def _setdefault_env(name: str, value: str) -> None:
