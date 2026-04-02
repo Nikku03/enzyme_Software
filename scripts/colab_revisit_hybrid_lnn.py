@@ -423,6 +423,18 @@ def _selection_metrics_for_run(run: "ReviewedRun", scope: str = "val") -> dict[s
         tm = run.report.get("test_metrics") or {}
         if tm:
             return tm
+    history = run.report.get("history") or []
+    best_val: dict[str, Any] | None = None
+    for item in history:
+        if not isinstance(item, dict):
+            continue
+        val_metrics = item.get("val")
+        if not isinstance(val_metrics, dict) or not val_metrics:
+            continue
+        if best_val is None or _compare_key(val_metrics) > _compare_key(best_val):
+            best_val = val_metrics
+    if best_val:
+        return best_val
     diag = run.diagnostics or {}
     return {
         "site_top1_acc": float(diag.get("best_val_top1", run.report.get("best_val_top1", 0.0))),
@@ -1625,6 +1637,28 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def _git_commit() -> str:
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(ROOT),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+        if proc.returncode == 0:
+            return proc.stdout.strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _hybrid_env_snapshot(env: dict[str, str] | None = None) -> dict[str, str]:
+    source = env or os.environ
+    return {k: str(v) for k, v in sorted(source.items()) if k.startswith("HYBRID_COLAB_")}
+
+
 def _promote_baseline_artifacts(artifact_root: Path, report_path: Path, checkpoint_path: Path | None, log_path: Path | None) -> None:
     if report_path.exists():
         target = artifact_root / "revisit_current_baseline_report.json"
@@ -1819,6 +1853,8 @@ def main() -> None:
         "baseline_checkpoint": str(baseline_checkpoint),
         "baseline_score":      baseline.score,
         "selection_scope":     args.selection_scope,
+        "git_commit":          _git_commit(),
+        "bootstrap_env":       _hybrid_env_snapshot(),
         "attempts":            [],
     }
     _write_json(artifact_root / "revisit_bootstrap.json", summary)
@@ -1889,6 +1925,19 @@ def main() -> None:
         env["PYTHONPATH"] = f"{SRC}:{env.get('PYTHONPATH', '')}".rstrip(":")
         env["HYBRID_COLAB_LOCK_PRESET_POLICY"] = "1"
         env.update(strategy.model_env)
+        attempt_manifest = {
+            "attempt": attempt_idx,
+            "name": strategy.name,
+            "git_commit": _git_commit(),
+            "selection_scope": args.selection_scope,
+            "warm_start_checkpoint": str(current_checkpoint),
+            "train_settings": dict(settings),
+            "model_env": dict(strategy.model_env),
+            "resolved_hybrid_env": _hybrid_env_snapshot(env),
+            "output_dir": str(attempt_output_dir),
+            "artifact_dir": str(attempt_artifact_dir),
+        }
+        _write_json(attempt_artifact_dir / "revisit_attempt_manifest.json", attempt_manifest)
 
         print(f"\n{'='*60}", flush=True)
         print(f"Revisit {attempt_idx}/{len(strategies)}: {strategy.name}", flush=True)
@@ -1953,6 +2002,10 @@ def main() -> None:
                 for k in ("best_val_top1", "best_val_top3", "overfitting_gap",
                           "ana_conf_mean", "comp_wt_mean", "voter_accs")
             },
+            "train_settings": dict(settings),
+            "model_env": dict(strategy.model_env),
+            "resolved_hybrid_env": _hybrid_env_snapshot(env),
+            "git_commit": _git_commit(),
         }
         summary["attempts"].append(attempt_record)
 

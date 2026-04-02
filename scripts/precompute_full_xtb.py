@@ -5,7 +5,7 @@ import json
 import random
 from pathlib import Path
 
-from enzyme_software.liquid_nn_v2.features.xtb_features import load_or_compute_full_xtb_features
+from enzyme_software.liquid_nn_v2.features.xtb_features import load_or_compute_full_xtb_features, payload_cached_xtb_valid, payload_true_xtb_valid
 
 
 def _load_drugs(path: Path) -> list[dict]:
@@ -44,6 +44,7 @@ def main() -> None:
         print(f"Limited to: {len(drugs)}", flush=True)
 
     ok = 0
+    true_ok = 0
     failed = 0
     statuses: dict[str, int] = {}
     for index, drug in enumerate(drugs, start=1):
@@ -55,16 +56,20 @@ def main() -> None:
         payload = load_or_compute_full_xtb_features(smiles, cache_dir=cache_dir, compute_if_missing=True)
         status = str(payload.get("status") or "unknown")
         statuses[status] = statuses.get(status, 0) + 1
-        if bool(payload.get("xtb_valid")):
+        if payload_cached_xtb_valid(payload):
             ok += 1
         else:
             failed += 1
+        if payload_true_xtb_valid(payload):
+            true_ok += 1
         if index % 25 == 0 or index == len(drugs):
-            print(f"{index}/{len(drugs)} processed | ok={ok} | failed={failed}", flush=True)
+            print(f"{index}/{len(drugs)} processed | payload_ok={ok} | true_xtb_ok={true_ok} | failed={failed}", flush=True)
 
     print("\nStatus summary:", flush=True)
     for key in sorted(statuses):
         print(f"  {key}: {statuses[key]}", flush=True)
+    print(f"Payload-valid molecules: {ok}/{len(drugs)}", flush=True)
+    print(f"True-xTB-valid molecules: {true_ok}/{len(drugs)}", flush=True)
     print(f"Cache dir: {cache_dir}", flush=True)
 
 

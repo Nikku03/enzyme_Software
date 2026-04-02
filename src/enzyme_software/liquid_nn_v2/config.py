@@ -28,6 +28,7 @@ class ModelConfig:
     manual_atom_feature_dim: int = 8
     manual_mol_feature_dim: int = 8
     manual_prior_fusion_mode: str = "gated_add"
+    manual_prior_init_scale: float = 0.65
     use_3d_branch: bool = True
     steric_feature_dim: int = 8
     steric_hidden_dim: int = 32
@@ -90,7 +91,8 @@ class ModelConfig:
     cyp_head_hidden_dim: int = 128
     dropout: float = 0.1
     # Architecture improvements
-    use_cyp_site_conditioning: bool = True   # broadcast CYP logits as per-atom bias before site head
+    use_cyp_site_conditioning: bool = True   # FiLM-style per-atom modulation from CYP posterior before site head
+    cyp_site_condition_scale: float = 0.20
     use_cross_atom_attention: bool = True    # 2-layer self-attention on SoM atom features before site head
     use_bde_prior: bool = True               # learnable BDE→logit residual on top of site head
     bde_feature_index: int = 44             # deprecated; BDE prior now uses named physics_features["bde_values"]
@@ -153,6 +155,7 @@ class ModelConfig:
             int(self.cyp_branch_layers),
         )
         self.manual_prior_fusion_mode = str(self.manual_prior_fusion_mode)
+        self.manual_prior_init_scale = min(max(float(self.manual_prior_init_scale), 0.0), 1.5)
         self.model_variant = str(self.model_variant).strip().lower() or "baseline"
         if self.model_variant not in {"baseline", "advanced", "hybrid_selective"}:
             self.model_variant = "baseline"
@@ -211,6 +214,7 @@ class ModelConfig:
         self.nexus_live_wave_vote_grad_scale = min(max(float(self.nexus_live_wave_vote_grad_scale), 0.0), 1.0)
         self.nexus_live_analogical_vote_grad_scale = min(max(float(self.nexus_live_analogical_vote_grad_scale), 0.0), 1.0)
         self.nexus_analogical_cyp_aux_scale = max(0.0, float(self.nexus_analogical_cyp_aux_scale))
+        self.cyp_site_condition_scale = max(0.0, float(self.cyp_site_condition_scale))
 
     @property
     def num_cyp_classes(self) -> int:

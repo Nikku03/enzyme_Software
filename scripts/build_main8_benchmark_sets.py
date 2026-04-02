@@ -6,9 +6,17 @@ from collections import Counter
 from pathlib import Path
 from typing import Dict, List
 
+from rdkit import Chem
+
 
 def _canonical_smiles(row: Dict[str, object]) -> str:
-    return " ".join(str(row.get("canonical_smiles") or row.get("smiles") or "").split())
+    text = " ".join(str(row.get("canonical_smiles") or row.get("smiles") or "").split())
+    if not text:
+        return ""
+    mol = Chem.MolFromSmiles(text)
+    if mol is None:
+        return text
+    return Chem.MolToSmiles(mol, canonical=True)
 
 
 def _site_atoms(row: Dict[str, object]) -> List[int]:

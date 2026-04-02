@@ -13,7 +13,12 @@ from enzyme_software.liquid_nn_v2._compat import require_torch
 from enzyme_software.liquid_nn_v2.data.dataset_loader import CYPMetabolismDataset, collate_fn
 from enzyme_software.liquid_nn_v2.features.steric_features import StructureLibrary
 from enzyme_software.liquid_nn_v2.features.topology_features import TOPOLOGY_FEATURE_DIM, compute_atom_topology_features
-from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM, load_or_compute_full_xtb_features, xtb_status_vector
+from enzyme_software.liquid_nn_v2.features.xtb_features import (
+    FULL_XTB_FEATURE_DIM,
+    load_or_compute_full_xtb_features,
+    payload_true_xtb_valid,
+    xtb_status_vector,
+)
 
 
 def _canonical_smiles(drug: Dict[str, object]) -> str:
@@ -376,26 +381,10 @@ def _split_by_scaffold_groups(
     val_ratio: float,
     stratify_size: bool,
 ) -> Tuple[List[Dict[str, object]], List[Dict[str, object]], List[Dict[str, object]]]:
-    strata: dict[tuple[str, str], dict[str, List[Dict[str, object]]]] = defaultdict(lambda: defaultdict(list))
-    for drug in drugs:
-        source = str(drug.get("source", "DrugBank"))
-        bucket = _size_bucket(_safe_num_atoms(drug)) if stratify_size else "all"
-        strata[(source, bucket)][_scaffold_key(drug)].append(drug)
-
-    targets = _target_counts(len(drugs), train_ratio, val_ratio)
-    splits: dict[str, List[Dict[str, object]]] = {"train": [], "val": [], "test": []}
-    for idx, ((_source, _bucket), scaffold_groups) in enumerate(sorted(strata.items())):
-        stratum_groups = list(scaffold_groups.values())
-        stratum_targets = _target_counts(sum(len(g) for g in stratum_groups), train_ratio, val_ratio)
-        assigned = _assign_groups_greedily(stratum_groups, seed=seed + idx, targets=stratum_targets)
-        for split_name in splits:
-            splits[split_name].extend(assigned[split_name])
-
-    # Coarse rebalance to keep ratios roughly aligned after grouped assignment.
-    for donor, receiver in (("train", "val"), ("train", "test"), ("val", "test")):
-        while len(splits[donor]) > targets[donor] + 1 and len(splits[receiver]) < targets[receiver]:
-            splits[receiver].append(splits[donor].pop())
-    return splits["train"], splits["val"], splits["test"]
+    raise RuntimeError(
+        "_split_by_scaffold_groups is a retired helper with weaker leakage guarantees. "
+        "Use _split_by_global_scaffold_groups instead."
+    )
 
 
 def split_drugs(
@@ -530,7 +519,7 @@ class FullXTBHybridDataset(CYPMetabolismDataset):
         graph.manual_engine_atom_features = np.concatenate([base_manual, raw_features], axis=1).astype(np.float32)
         graph.xtb_atom_features = raw_features.astype(np.float32)
         graph.xtb_atom_valid_mask = raw_valid.astype(np.float32)
-        graph.xtb_mol_valid = np.asarray([[1.0 if payload.get("xtb_valid") else 0.0]], dtype=np.float32)
+        graph.xtb_mol_valid = np.asarray([[1.0 if payload_true_xtb_valid(payload) else 0.0]], dtype=np.float32)
         graph.xtb_feature_status = str(payload.get("status") or "missing")
         graph.xtb_status_flags = xtb_status_vector(graph.xtb_feature_status)
 

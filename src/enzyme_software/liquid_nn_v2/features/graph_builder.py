@@ -125,19 +125,21 @@ def smiles_to_graph(
     if site_atoms is not None:
         labels = np.zeros((mol.GetNumAtoms(), 1), dtype=np.float32)
         site_supervision_mask = np.ones((mol.GetNumAtoms(), 1), dtype=np.float32)
+        invalid_site_atoms: List[int] = []
         for idx in site_atoms:
             idx_int = int(idx)
             if 0 <= idx_int < mol.GetNumAtoms():
                 labels[idx_int, 0] = 1.0
             else:
-                warnings.warn(
-                    f"site_atom index {idx_int} out of range for {smiles} (num_atoms={mol.GetNumAtoms()})",
-                    RuntimeWarning,
-                )
+                invalid_site_atoms.append(idx_int)
+        if invalid_site_atoms:
+            raise ValueError(
+                f"Invalid site_atom indices for {smiles}: {invalid_site_atoms} "
+                f"(num_atoms={mol.GetNumAtoms()})"
+            )
         if len(site_atoms) > 0 and float(labels.sum()) == 0.0:
-            warnings.warn(
-                f"No valid site labels set for {smiles}; site_atoms={site_atoms}, num_atoms={mol.GetNumAtoms()}",
-                RuntimeWarning,
+            raise ValueError(
+                f"No valid site labels set for {smiles}; site_atoms={site_atoms}, num_atoms={mol.GetNumAtoms()}"
             )
     else:
         labels = np.zeros((mol.GetNumAtoms(), 1), dtype=np.float32)

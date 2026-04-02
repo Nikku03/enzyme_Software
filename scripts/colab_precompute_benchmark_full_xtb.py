@@ -225,11 +225,11 @@ def main() -> None:
             if smiles not in unique_smiles_seen:
                 unique_smiles_seen.add(smiles)
                 global_statuses[status] += 1
-                if bool(payload.get("xtb_valid")):
+                if bool(payload.get("true_xtb_valid", payload.get("xtb_valid"))):
                     total_unique_ok += 1
                 else:
                     total_unique_failed += 1
-            if bool(payload.get("xtb_valid")):
+            if bool(payload.get("true_xtb_valid", payload.get("xtb_valid"))):
                 dataset_ok += 1
             else:
                 dataset_failed += 1

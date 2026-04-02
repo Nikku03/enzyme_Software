@@ -365,6 +365,26 @@ if TORCH_AVAILABLE:
             )
             return loss_value
 
+        def _override_style_vote_loss(self, logits, batch: Dict[str, object], *, base_logits, site_mask=None, node_weights=None):
+            labels = batch["site_labels"].float().view_as(logits)
+            site_mask = batch.get("site_supervision_mask") if site_mask is None else site_mask
+            node_weights = batch.get("node_confidence_weights") if node_weights is None else node_weights
+            safe_logits = self._sanitize_aux_logits(logits)
+            base_probs = torch.sigmoid(self._sanitize_aux_logits(base_logits.detach())).view_as(safe_logits)
+            target = (labels - base_probs).clamp(-1.0, 1.0)
+            pred = torch.tanh(safe_logits)
+            raw = F.smooth_l1_loss(pred, target, reduction="none")
+            if node_weights is not None:
+                node_weights = node_weights.float().view_as(raw).to(device=raw.device, dtype=raw.dtype)
+                raw = raw * node_weights
+            if site_mask is None:
+                return raw.mean()
+            mask = site_mask.float().view_as(raw).to(device=raw.device, dtype=raw.dtype)
+            if float(mask.sum().detach().item()) < 1.0e-6:
+                return raw.sum() * 0.0
+            denom = (mask * (node_weights if node_weights is not None else 1.0)).sum().clamp_min(1.0e-6) if node_weights is not None else mask.sum().clamp_min(1.0)
+            return (raw * mask).sum() / denom
+
         def compute_loss(self, batch: Dict[str, object], outputs: Dict[str, object]):
             # Fix 5: inject size-aware per-graph/per-atom weights when none are set.
             # Large molecules get proportionally more gradient signal so the model
@@ -414,11 +434,11 @@ if TORCH_AVAILABLE:
                 site_labels = batch["site_labels"]
                 site_mask = batch.get("site_supervision_mask")
                 aux_specs = [
-                    ("lnn", "lnn_vote", float(getattr(model_config, "nexus_lnn_vote_aux_weight", 0.0))),
-                    ("wave", "wave_vote", float(getattr(model_config, "nexus_wave_vote_aux_weight", 0.0))),
-                    ("analogical", "analogical_vote", float(getattr(model_config, "nexus_analogical_vote_aux_weight", 0.0))),
+                    ("lnn", "lnn_vote", float(getattr(model_config, "nexus_lnn_vote_aux_weight", 0.0)), "site"),
+                    ("wave", "wave_vote", float(getattr(model_config, "nexus_wave_vote_aux_weight", 0.0)), "override"),
+                    ("analogical", "analogical_vote", float(getattr(model_config, "nexus_analogical_vote_aux_weight", 0.0)), "override"),
                 ]
-                for name, key, weight in aux_specs:
+                for name, key, weight, style in aux_specs:
                     tensor = vote_heads.get(key)
                     if tensor is None or weight <= 0.0:
                         continue
@@ -427,16 +447,26 @@ if TORCH_AVAILABLE:
                         outputs=outputs,
                         engine_name=name,
                     )
-                    aux_loss = self._site_style_vote_loss(
-                        tensor,
-                        batch,
-                        site_mask=aux_site_mask,
-                        node_weights=aux_node_weights,
-                        graph_weights=aux_graph_weights,
-                    )
+                    if style == "override":
+                        aux_loss = self._override_style_vote_loss(
+                            tensor,
+                            batch,
+                            base_logits=outputs.get("site_logits_base", outputs["site_logits"]),
+                            site_mask=aux_site_mask,
+                            node_weights=aux_node_weights,
+                        )
+                    else:
+                        aux_loss = self._site_style_vote_loss(
+                            tensor,
+                            batch,
+                            site_mask=aux_site_mask,
+                            node_weights=aux_node_weights,
+                            graph_weights=aux_graph_weights,
+                        )
                     loss = loss + (weight * aux_loss)
                     stats[f"nexus_{name}_vote_loss"] = float(aux_loss.detach().item())
                     stats[f"nexus_{name}_vote_weight"] = float(weight)
+                    stats[f"nexus_{name}_vote_style"] = 1.0 if style == "override" else 0.0
                     if aux_site_mask is not None:
                         stats[f"nexus_{name}_vote_supervision_fraction"] = float(
                             aux_site_mask.float().mean().detach().item()

@@ -92,6 +92,8 @@ class EpisodeLogger:
         xtb_status = list(batch.get("xtb_feature_status", []))
 
         site_logits = outputs["site_logits"].detach().cpu().view(-1)
+        site_logits_base = outputs.get("site_logits_base")
+        site_logits_base_cpu = site_logits_base.detach().cpu().view(-1) if site_logits_base is not None else None
         site_scores = outputs.get("site_scores")
         if site_scores is None:
             site_scores = torch.sigmoid(outputs["site_logits"])
@@ -140,6 +142,12 @@ class EpisodeLogger:
         analogical_cyp_prior_cpu = analogical_cyp_prior.detach().cpu() if analogical_cyp_prior is not None else None
         analogical_confidence = bridge.get("analogical_confidence")
         analogical_confidence_cpu = analogical_confidence.detach().cpu() if analogical_confidence is not None else None
+        analogical_gate = bridge.get("analogical_gate")
+        analogical_gate_cpu = analogical_gate.detach().cpu() if analogical_gate is not None else None
+        analogical_selectivity = bridge.get("analogical_selectivity")
+        analogical_selectivity_cpu = analogical_selectivity.detach().cpu() if analogical_selectivity is not None else None
+        analogical_margin = bridge.get("analogical_margin")
+        analogical_margin_cpu = analogical_margin.detach().cpu() if analogical_margin is not None else None
         analogical_site_bias = bridge.get("analogical_site_bias")
         analogical_site_bias_cpu = analogical_site_bias.detach().cpu() if analogical_site_bias is not None else None
         analogical_cyp_bias = bridge.get("analogical_cyp_bias")
@@ -148,6 +156,8 @@ class EpisodeLogger:
         continuous_reasoning_cpu = continuous_reasoning.detach().cpu() if continuous_reasoning is not None else None
         precedent_brief = bridge.get("precedent_brief")
         precedent_brief_cpu = precedent_brief.detach().cpu() if precedent_brief is not None else None
+        wave_reliability = bridge.get("wave_reliability")
+        wave_reliability_cpu = wave_reliability.detach().cpu() if wave_reliability is not None else None
         bridge_metrics = _to_serializable(bridge.get("metrics") or {})
 
         def _slice_vote_head(name: str, *, start_idx: int, end_idx: int):
@@ -221,6 +231,7 @@ class EpisodeLogger:
                 },
                 "output": {
                     "site_logits": _to_serializable(site_logits[start:end]),
+                    "site_logits_base": _to_serializable(site_logits_base_cpu[start:end]) if site_logits_base_cpu is not None else None,
                     "site_scores": _to_serializable(site_scores[start:end]),
                     "cyp_logits": _to_serializable(cyp_logits_cpu[graph_idx]) if cyp_logits_cpu is not None else None,
                     "cyp_probs": _to_serializable(cyp_probs_cpu[graph_idx]) if cyp_probs_cpu is not None else None,
@@ -234,6 +245,7 @@ class EpisodeLogger:
                     "analogical_vote": _slice_vote_head("analogical_vote", start_idx=start, end_idx=end),
                     "analogical_conf": _slice_vote_head("analogical_conf", start_idx=start, end_idx=end),
                     "council_logit": _slice_vote_head("council_logit", start_idx=start, end_idx=end),
+                    "arbiter_residual": _slice_vote_head("arbiter_residual", start_idx=start, end_idx=end),
                     "board_weights": _slice_vote_head("board_weights", start_idx=start, end_idx=end),
                 },
                 "wave": {
@@ -244,11 +256,15 @@ class EpisodeLogger:
                     "atom_field_features": _to_serializable(wave_field_cpu.get("atom_field_features")[start:end]) if "atom_field_features" in wave_field_cpu else None,
                     "global_density": _to_serializable(wave_field_cpu.get("global_density")[graph_idx]) if "global_density" in wave_field_cpu else None,
                     "global_gap_proxy": _to_serializable(wave_field_cpu.get("global_gap_proxy")[graph_idx]) if "global_gap_proxy" in wave_field_cpu else None,
+                    "reliability": _to_serializable(wave_reliability_cpu[start:end]) if wave_reliability_cpu is not None else None,
                 },
                 "analogical": {
                     "site_prior": _to_serializable(analogical_site_prior_cpu[start:end]) if analogical_site_prior_cpu is not None else None,
                     "site_bias": _to_serializable(analogical_site_bias_cpu[start:end]) if analogical_site_bias_cpu is not None else None,
                     "confidence": _to_serializable(analogical_confidence_cpu[start:end]) if analogical_confidence_cpu is not None else None,
+                    "gate": _to_serializable(analogical_gate_cpu[start:end]) if analogical_gate_cpu is not None else None,
+                    "selectivity": _to_serializable(analogical_selectivity_cpu[start:end]) if analogical_selectivity_cpu is not None else None,
+                    "margin": _to_serializable(analogical_margin_cpu[start:end]) if analogical_margin_cpu is not None else None,
                     "continuous_reasoning_features": _to_serializable(continuous_reasoning_cpu[start:end]) if continuous_reasoning_cpu is not None else None,
                     "precedent_brief": _to_serializable(precedent_brief_cpu[start:end]) if precedent_brief_cpu is not None else None,
                     "cyp_prior": _to_serializable(analogical_cyp_prior_cpu[graph_idx]) if analogical_cyp_prior_cpu is not None else None,

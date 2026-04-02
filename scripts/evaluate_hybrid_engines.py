@@ -20,7 +20,7 @@ from enzyme_software.liquid_nn_v2.data.cyp_classes import MAJOR_CYP_CLASSES
 from enzyme_software.liquid_nn_v2.data.dataset_loader import collate_fn
 from enzyme_software.liquid_nn_v2.experiments.hybrid_full_xtb import FullXTBHybridDataset
 from enzyme_software.liquid_nn_v2.features.steric_features import StructureLibrary
-from enzyme_software.liquid_nn_v2.features.xtb_features import load_or_compute_full_xtb_features
+from enzyme_software.liquid_nn_v2.features.xtb_features import load_or_compute_full_xtb_features, payload_true_xtb_valid
 from enzyme_software.liquid_nn_v2.training.metrics import compute_cyp_metrics, compute_site_metrics_v2
 from enzyme_software.liquid_nn_v2.training.utils import move_to_device
 
@@ -85,7 +85,7 @@ def _split_by_wave_valid(rows: List[dict], cache_dir: Path) -> tuple[List[dict],
         payload = load_or_compute_full_xtb_features(smiles, cache_dir=cache_dir, compute_if_missing=False)
         status = str(payload.get("status") or "unknown")
         statuses[status] += 1
-        if bool(payload.get("xtb_valid")):
+        if payload_true_xtb_valid(payload):
             valid_rows.append(row)
         else:
             missing_rows.append(row)
@@ -305,6 +305,7 @@ def main() -> None:
         "xtb_cache_dir": xtb_cache_dir,
         "structure_sdf": structure_sdf,
         "modes": modes,
+        "wave_valid_definition": "true_xtb_valid_or_xtb_valid_legacy",
         "mode_semantics": {mode: _mode_semantics(mode) for mode in modes},
         "notes": {
             "site_metrics_by_mode": "Standalone site-predictor metrics only.",

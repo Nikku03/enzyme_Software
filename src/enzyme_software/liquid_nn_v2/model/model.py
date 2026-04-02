@@ -80,6 +80,7 @@ if TORCH_AVAILABLE:
                 hidden_dim=config.som_head_hidden_dim,
                 fusion_mode=config.manual_prior_fusion_mode,
                 dropout=config.dropout,
+                prior_scale_init=config.manual_prior_init_scale,
             )
             self.cyp_head = ResidualFusionHead(
                 input_dim=config.cyp_branch_dim,
@@ -88,9 +89,15 @@ if TORCH_AVAILABLE:
                 hidden_dim=config.cyp_head_hidden_dim,
                 fusion_mode=config.manual_prior_fusion_mode,
                 dropout=config.dropout,
+                prior_scale_init=config.manual_prior_init_scale,
             )
-            # CYP-to-site conditioning: broadcast CYP logits as per-atom bias before site head
-            self.cyp_site_conditioner = nn.Linear(config.num_cyp_classes, 1, bias=False) if config.use_cyp_site_conditioning else None
+            # CYP-to-site conditioning: FiLM-style per-atom modulation from CYP posterior
+            self.cyp_site_conditioner = (
+                nn.Linear(config.num_cyp_classes, 2 * config.som_branch_dim, bias=True)
+                if config.use_cyp_site_conditioning
+                else None
+            )
+            self.cyp_site_condition_scale = float(config.cyp_site_condition_scale)
             # BDE learned prior: residual correction on site logit from named BDE feature
             self.bde_prior = nn.Linear(1, 1, bias=True) if config.use_bde_prior else None
             self.last_gate_values = None
@@ -152,11 +159,15 @@ if TORCH_AVAILABLE:
             }
 
         def _apply_cyp_conditioning(self, som_features, cyp_logits, mol_batch):
-            """Broadcast CYP logit projection as a per-atom bias."""
+            """FiLM-style per-atom modulation from CYP posterior."""
             if self.cyp_site_conditioner is None:
                 return som_features
-            cyp_bias = self.cyp_site_conditioner(cyp_logits.detach())  # (B_mol, 1)
-            return som_features + cyp_bias[mol_batch]                   # (N_atoms, branch_dim) broadcast
+            cyp_context = torch.softmax(cyp_logits, dim=-1)
+            film = self.cyp_site_conditioner(cyp_context)
+            gamma, beta = torch.chunk(film, 2, dim=-1)
+            scale = 1.0 + self.cyp_site_condition_scale * torch.tanh(gamma)
+            shift = self.cyp_site_condition_scale * torch.tanh(beta)
+            return som_features * scale[mol_batch] + shift[mol_batch]
 
         def _apply_bde_prior(self, site_logits, bde_values):
             """Add learnable BDE→logit residual from named physics features."""

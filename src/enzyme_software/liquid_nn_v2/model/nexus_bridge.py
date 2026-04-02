@@ -520,13 +520,21 @@ if TORCH_AVAILABLE:
             multivectors: torch.Tensor,
             coords: torch.Tensor,
             batch_index: torch.Tensor,
+            atom_valid_mask: Optional[torch.Tensor] = None,
+            mol_valid_mask: Optional[torch.Tensor] = None,
         ) -> dict[str, torch.Tensor]:
             num_molecules = int(batch_index.max().item()) + 1 if batch_index.numel() else 0
             pred_charge = multivectors.new_zeros(multivectors.size(0))
             pred_fukui = multivectors.new_zeros(multivectors.size(0))
             pred_gap = multivectors.new_zeros(num_molecules)
             for mol_idx in range(num_molecules):
+                if mol_valid_mask is not None and float(mol_valid_mask[mol_idx].item()) <= 0.5:
+                    continue
                 mask = batch_index == mol_idx
+                if atom_valid_mask is not None:
+                    mask = mask & (atom_valid_mask.view(-1) > 0.5)
+                if not bool(mask.any()):
+                    continue
                 preds = self.wave_head(multivectors[mask], atom_coords=coords[mask])
                 pred_charge[mask] = preds["predicted_charges"].view(-1)
                 pred_fukui[mask] = preds["predicted_fukui"].view(-1)
@@ -654,15 +662,43 @@ if TORCH_AVAILABLE:
         ) -> Dict[str, object]:
             atom_features = atom_features.float()
             multivectors, coords = self._build_multivectors(atom_features, atom_3d_features, xtb_atom_features)
+            if xtb_mol_valid is not None and xtb_mol_valid.numel():
+                mol_valid_mask = xtb_mol_valid.float().to(device=batch_index.device, dtype=multivectors.dtype).view(-1, 1).clamp(0.0, 1.0)
+            else:
+                mol_valid_mask = None
+            if xtb_atom_valid_mask is not None and xtb_atom_valid_mask.numel():
+                atom_valid_mask = xtb_atom_valid_mask.float().to(device=multivectors.device, dtype=multivectors.dtype).view(-1, 1).clamp(0.0, 1.0)
+            elif xtb_atom_features is not None and xtb_atom_features.numel():
+                atom_valid_mask = torch.ones((multivectors.size(0), 1), device=multivectors.device, dtype=multivectors.dtype)
+            else:
+                atom_valid_mask = torch.zeros((multivectors.size(0), 1), device=multivectors.device, dtype=multivectors.dtype)
+            wave_compute_mask = atom_valid_mask
+            if mol_valid_mask is not None:
+                wave_compute_mask = wave_compute_mask * mol_valid_mask[batch_index]
+            masked_multivectors = multivectors * wave_compute_mask
+            masked_coords = coords * wave_compute_mask
             stable_coords = coords.detach()
-            wave_preds = self._wave_predictions(multivectors, stable_coords, batch_index)
-            wave_field = self.wave_field(multivectors, stable_coords, batch_index)
+            wave_preds = self._wave_predictions(
+                masked_multivectors,
+                stable_coords * wave_compute_mask.detach(),
+                batch_index,
+                atom_valid_mask=atom_valid_mask,
+                mol_valid_mask=mol_valid_mask,
+            )
+            wave_field = self.wave_field(masked_multivectors, stable_coords * wave_compute_mask.detach(), batch_index)
+            wave_field["atom_field_features"] = wave_field["atom_field_features"] * wave_compute_mask
+            wave_field["global_density"] = wave_field["global_density"] * (
+                mol_valid_mask.view(-1) if mol_valid_mask is not None else torch.ones_like(wave_field["global_density"])
+            )
+            wave_field["global_gap_proxy"] = wave_field["global_gap_proxy"] * (
+                mol_valid_mask.view(-1) if mol_valid_mask is not None else torch.ones_like(wave_field["global_gap_proxy"])
+            )
             wave_bias_input = torch.cat(
                 [
-                    multivectors,
+                    masked_multivectors,
                     wave_preds["predicted_charges"].unsqueeze(-1),
                     wave_preds["predicted_fukui"].unsqueeze(-1),
-                    coords,
+                    masked_coords,
                     wave_field["atom_field_features"],
                     wave_field["global_density"].unsqueeze(-1),
                     wave_field["global_gap_proxy"][batch_index].unsqueeze(-1),
@@ -670,18 +706,12 @@ if TORCH_AVAILABLE:
                 dim=-1,
             )
             wave_site_bias = self.wave_site_head(wave_bias_input)
-            if xtb_atom_valid_mask is not None and xtb_atom_valid_mask.numel():
-                wave_reliability = xtb_atom_valid_mask.float().to(device=multivectors.device, dtype=multivectors.dtype).view(-1, 1).clamp(0.0, 1.0)
-            elif xtb_atom_features is not None and xtb_atom_features.numel():
-                wave_reliability = torch.ones((multivectors.size(0), 1), device=multivectors.device, dtype=multivectors.dtype)
-            else:
-                wave_reliability = torch.zeros((multivectors.size(0), 1), device=multivectors.device, dtype=multivectors.dtype)
+            wave_reliability = atom_valid_mask
             if xtb_atom_features is not None and xtb_atom_features.numel() and xtb_atom_features.size(-1) >= 7:
                 xtb_confidence = xtb_atom_features[:, 6:7].float().to(device=multivectors.device, dtype=multivectors.dtype).clamp(0.0, 1.0)
                 wave_reliability = wave_reliability * torch.where(wave_reliability > 0.5, xtb_confidence, torch.ones_like(xtb_confidence))
-            if xtb_mol_valid is not None and xtb_mol_valid.numel():
-                mol_reliability = xtb_mol_valid.float().to(device=batch_index.device, dtype=multivectors.dtype).view(-1, 1).clamp(0.0, 1.0)
-                wave_reliability = wave_reliability * mol_reliability[batch_index]
+            if mol_valid_mask is not None:
+                wave_reliability = wave_reliability * mol_valid_mask[batch_index]
             wave_site_bias = wave_reliability * wave_site_bias
             graph_embeddings = self._group_graph_embedding(multivectors, batch_index)
             per_atom_graph = graph_embeddings[batch_index] if graph_embeddings.numel() else multivectors.new_zeros((multivectors.size(0), self.memory.graph_dim))
@@ -844,6 +874,10 @@ if TORCH_AVAILABLE:
                 "analogical_cyp_prior": cyp_prior_by_mol,
                 "analogical_confidence": confidence,
                 "analogical_gate": analogical_gate,
+                "analogical_best_score": best_score,
+                "analogical_margin": support_margin,
+                "analogical_concentration": concentration,
+                "analogical_selectivity": selectivity,
                 "analogical_site_bias": analogical_site_bias,
                 "analogical_cyp_bias": analogical_cyp_bias,
                 "continuous_reasoning_features": continuous_reasoning["features"],

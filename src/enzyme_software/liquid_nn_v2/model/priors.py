@@ -71,12 +71,16 @@ if TORCH_AVAILABLE:
             hidden_dim: Optional[int] = None,
             fusion_mode: str = "gated_add",
             dropout: float = 0.1,
+            prior_scale_init: float = 0.65,
         ):
             super().__init__()
             self.output_dim = int(output_dim)
             self.prior_feature_dim = int(prior_feature_dim)
             self.fusion_mode = str(fusion_mode)
             hidden_dim = hidden_dim or max(32, input_dim)
+            init = min(max(float(prior_scale_init), 1.0e-3), 1.5)
+            init_sigmoid = min(max(init / 1.5, 1.0e-3), 1.0 - 1.0e-3)
+            self.prior_scale_logit = nn.Parameter(torch.logit(torch.tensor(init_sigmoid, dtype=torch.float32)))
             self.residual_net = nn.Sequential(
                 nn.Linear(input_dim, hidden_dim),
                 nn.SiLU(),
@@ -94,6 +98,7 @@ if TORCH_AVAILABLE:
 
         def forward(self, features, prior_logits=None, prior_features=None):
             residual_logits = self.residual_net(features)
+            prior_scale = 1.5 * torch.sigmoid(self.prior_scale_logit).to(device=features.device, dtype=features.dtype)
             if prior_logits is None:
                 prior_logits = torch.zeros(
                     features.size(0),
@@ -115,26 +120,29 @@ if TORCH_AVAILABLE:
                     prior_features = prior_features.unsqueeze(-1)
             else:
                 prior_features = torch.zeros(features.size(0), 0, device=features.device, dtype=features.dtype)
+            scaled_prior_logits = prior_scale * prior_logits
 
             if self.fusion_mode == "additive":
                 gate = torch.ones_like(residual_logits)
-                logits = prior_logits + residual_logits
+                logits = scaled_prior_logits + residual_logits
             elif self.fusion_mode == "concat_proj":
                 gate = torch.ones_like(residual_logits)
-                logits = self.concat_proj(torch.cat([prior_logits, residual_logits], dim=-1))
+                logits = self.concat_proj(torch.cat([scaled_prior_logits, residual_logits], dim=-1))
             else:
-                gate = self.gate_net(torch.cat([features, prior_logits, prior_features], dim=-1))
-                logits = prior_logits + gate * residual_logits
+                gate = self.gate_net(torch.cat([features, scaled_prior_logits, prior_features], dim=-1))
+                logits = scaled_prior_logits + gate * residual_logits
 
             diagnostics = {
                 "residual_abs_mean": float(residual_logits.detach().abs().mean().item()),
                 "prior_abs_mean": float(prior_logits.detach().abs().mean().item()),
                 "gate_mean": float(gate.detach().mean().item()),
+                "prior_scale": float(prior_scale.detach().item()),
             }
             return logits, {
                 "residual_logits": residual_logits,
-                "prior_logits": prior_logits,
+                "prior_logits": scaled_prior_logits,
                 "gate": gate,
+                "prior_scale": prior_scale,
                 "diagnostics": diagnostics,
             }
 else:  # pragma: no cover

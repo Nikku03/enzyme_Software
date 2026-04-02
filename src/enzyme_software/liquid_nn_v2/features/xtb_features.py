@@ -4,6 +4,7 @@ import json
 import shutil
 import subprocess
 import tempfile
+import hashlib
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -41,6 +42,7 @@ FULL_XTB_FEATURE_NAMES = (
     "lookup_bde_norm",
 )
 FULL_XTB_FEATURE_DIM = len(FULL_XTB_FEATURE_NAMES)
+FULL_XTB_CACHE_SCHEMA_VERSION = 2
 XTB_STATUS_NAMES = (
     "ok",
     "missing",
@@ -64,6 +66,20 @@ def xtb_status_vector(status: Optional[str]) -> np.ndarray:
     return vector
 
 
+def payload_true_xtb_valid(payload: Optional[Dict[str, object]]) -> bool:
+    if not payload:
+        return False
+    if "true_xtb_valid" in payload:
+        return bool(payload.get("true_xtb_valid"))
+    return bool(payload.get("xtb_valid"))
+
+
+def payload_cached_xtb_valid(payload: Optional[Dict[str, object]]) -> bool:
+    if not payload:
+        return False
+    return bool(payload.get("xtb_valid"))
+
+
 def xtb_available(xtb_path: str = "xtb") -> bool:
     return shutil.which(xtb_path) is not None
 
@@ -74,8 +90,6 @@ def normalize_bde(bde: float, min_bde: float = 250.0, max_bde: float = 500.0) ->
 
 
 def _cache_key(smiles: str) -> str:
-    import hashlib
-
     return hashlib.sha256(smiles.encode("utf-8")).hexdigest()[:24]
 
 
@@ -85,7 +99,18 @@ def _cache_path(smiles: str, cache_dir: str | Path) -> Path:
     return base / f"{_cache_key(smiles)}.json"
 
 
-def _full_cache_path(smiles: str, cache_dir: str | Path) -> Path:
+def _full_cache_key(smiles: str, target_bond: Optional[str]) -> str:
+    token = f"{smiles}||{str(target_bond or '').strip()}||schema={FULL_XTB_CACHE_SCHEMA_VERSION}"
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()[:24]
+
+
+def _full_cache_path(smiles: str, cache_dir: str | Path, *, target_bond: Optional[str] = None) -> Path:
+    base = Path(cache_dir)
+    base.mkdir(parents=True, exist_ok=True)
+    return base / f"{_full_cache_key(smiles, target_bond)}_full.json"
+
+
+def _legacy_full_cache_path(smiles: str, cache_dir: str | Path) -> Path:
     base = Path(cache_dir)
     base.mkdir(parents=True, exist_ok=True)
     return base / f"{_cache_key(smiles)}_full.json"
@@ -117,14 +142,108 @@ def _invalid_full_xtb_payload(
     error: Optional[str],
 ) -> Dict[str, object]:
     return {
+        "cache_schema_version": FULL_XTB_CACHE_SCHEMA_VERSION,
         "canonical_smiles": canonical_smiles,
         "xtb_valid": False,
+        "true_xtb_valid": False,
         "atom_valid_mask": [[0.0] for _ in range(max(0, num_atoms))],
         "atom_features": [[0.0] * FULL_XTB_FEATURE_DIM for _ in range(max(0, num_atoms))],
         "feature_names": list(FULL_XTB_FEATURE_NAMES),
         "status": status,
+        "xtb_source_kind": "missing",
+        "true_xtb_used": False,
+        "lookup_only": False,
+        "manual_fallback_used": False,
+        "resolved_target_bond": None,
         "error": error,
     }
+
+
+def _full_xtb_source_summary(module_minus1_result: Dict[str, Any]) -> Dict[str, object]:
+    resolved = module_minus1_result.get("resolved_target") or {}
+    cpt_scores = module_minus1_result.get("cpt_scores") or {}
+    global_bde = cpt_scores.get("bde") or module_minus1_result.get("bde") or {}
+    candidates = (
+        module_minus1_result.get("candidate_sites")
+        or resolved.get("candidate_bonds")
+        or resolved.get("candidate_sites")
+        or []
+    )
+    source_names: set[str] = set()
+    status_names: set[str] = set()
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        bde_payload = candidate.get("bde") if isinstance(candidate.get("bde"), dict) else {}
+        source = str(bde_payload.get("source") or candidate.get("source") or "").strip().lower()
+        xtb_status = str(bde_payload.get("xtb_status") or candidate.get("xtb_status") or "").strip().lower()
+        if source:
+            source_names.add(source)
+        if xtb_status:
+            status_names.add(xtb_status)
+    global_source = str(global_bde.get("source") or "").strip().lower()
+    global_status = str(global_bde.get("xtb_status") or "").strip().lower()
+    if global_source:
+        source_names.add(global_source)
+    if global_status:
+        status_names.add(global_status)
+
+    true_xtb_sources = {"xtb_validated", "xtb_only"}
+    lookup_sources = {"lookup_safeguard", "lookup_fallback"}
+    true_xtb_used = bool(source_names.intersection(true_xtb_sources) or status_names.intersection({"ok", "xtb_validated"}))
+    lookup_only = bool(source_names) and source_names.issubset(lookup_sources)
+    manual_fallback_used = bool(source_names.intersection(lookup_sources) or status_names.intersection({"lookup_fallback", "lookup_safeguard"}))
+    if true_xtb_used and lookup_only:
+        source_kind = "mixed"
+    elif true_xtb_used:
+        source_kind = "true_xtb"
+    elif lookup_only:
+        source_kind = "lookup_only"
+    elif source_names:
+        source_kind = "heuristic_only"
+    else:
+        source_kind = "unknown"
+    return {
+        "xtb_source_kind": source_kind,
+        "true_xtb_used": bool(true_xtb_used),
+        "lookup_only": bool(lookup_only),
+        "manual_fallback_used": bool(manual_fallback_used),
+        "source_names": sorted(source_names),
+        "status_names": sorted(status_names),
+    }
+
+
+def _normalize_full_xtb_payload(
+    payload: Dict[str, object],
+    *,
+    canonical_smiles: Optional[str],
+    num_atoms: int,
+    resolved_target_bond: Optional[str],
+) -> Dict[str, object]:
+    feature_names = list(payload.get("feature_names") or [])
+    atom_features = payload.get("atom_features") or []
+    atom_valid_mask = payload.get("atom_valid_mask") or []
+    if feature_names and feature_names != list(FULL_XTB_FEATURE_NAMES):
+        raise ValueError(f"Unexpected full-xTB feature_names: {feature_names}")
+    if atom_features and len(atom_features[0]) != FULL_XTB_FEATURE_DIM:
+        raise ValueError(
+            f"Unexpected full-xTB feature width: {len(atom_features[0])} != {FULL_XTB_FEATURE_DIM}"
+        )
+    if atom_features and len(atom_features) != num_atoms:
+        raise ValueError(f"full-xTB atom count mismatch: {len(atom_features)} != {num_atoms}")
+    if atom_valid_mask and len(atom_valid_mask) != num_atoms:
+        raise ValueError(f"full-xTB valid-mask length mismatch: {len(atom_valid_mask)} != {num_atoms}")
+    normalized = dict(payload)
+    normalized["cache_schema_version"] = int(payload.get("cache_schema_version") or FULL_XTB_CACHE_SCHEMA_VERSION)
+    normalized["canonical_smiles"] = canonical_smiles
+    normalized["resolved_target_bond"] = resolved_target_bond
+    normalized.setdefault("feature_names", list(FULL_XTB_FEATURE_NAMES))
+    normalized.setdefault("xtb_source_kind", "unknown" if payload_cached_xtb_valid(payload) else "missing")
+    normalized.setdefault("true_xtb_used", False)
+    normalized.setdefault("true_xtb_valid", bool(payload.get("true_xtb_used")) and payload_cached_xtb_valid(payload))
+    normalized.setdefault("lookup_only", False)
+    normalized.setdefault("manual_fallback_used", False)
+    return normalized
 
 
 def _embed_molecule(smiles: str):
@@ -364,7 +483,7 @@ def attach_xtb_features_to_graph(
 
     graph.xtb_atom_features = raw_features
     graph.xtb_atom_valid_mask = raw_valid
-    graph.xtb_mol_valid = np.asarray([[1.0 if payload.get("xtb_valid") else 0.0]], dtype=np.float32)
+    graph.xtb_mol_valid = np.asarray([[1.0 if payload_true_xtb_valid(payload) else 0.0]], dtype=np.float32)
     graph.xtb_feature_status = str(payload.get("status") or "missing")
     graph.xtb_status_flags = xtb_status_vector(graph.xtb_feature_status)
     return graph
@@ -549,15 +668,26 @@ def compute_full_xtb_payload(
         return _invalid_full_xtb_payload(canonical_smiles, num_atoms, status="manual_engine_error", error=str(exc))
 
     module_minus1 = ctx.data.get("module_minus1") or {}
+    source_summary = _full_xtb_source_summary(module_minus1)
     tensor = extract_full_xtb_features(module_minus1, num_atoms)
     valid_mask = (tensor.abs().sum(dim=1, keepdim=True) > 0).to(dtype=tensor.dtype)
+    xtb_valid = bool(valid_mask.any().item())
     return {
+        "cache_schema_version": FULL_XTB_CACHE_SCHEMA_VERSION,
         "canonical_smiles": canonical_smiles,
-        "xtb_valid": bool(valid_mask.any().item()),
+        "xtb_valid": xtb_valid,
+        "true_xtb_valid": bool(source_summary["true_xtb_used"]) and xtb_valid,
         "atom_valid_mask": valid_mask.tolist(),
         "atom_features": tensor.tolist(),
         "feature_names": list(FULL_XTB_FEATURE_NAMES),
-        "status": "ok" if bool(valid_mask.any().item()) else "no_xtb_payload",
+        "status": "ok" if xtb_valid else "no_xtb_payload",
+        "xtb_source_kind": source_summary["xtb_source_kind"],
+        "true_xtb_used": bool(source_summary["true_xtb_used"]),
+        "lookup_only": bool(source_summary["lookup_only"]),
+        "manual_fallback_used": bool(source_summary["manual_fallback_used"]),
+        "resolved_target_bond": resolved_target,
+        "source_names": list(source_summary["source_names"]),
+        "status_names": list(source_summary["status_names"]),
         "error": None,
     }
 
@@ -571,9 +701,20 @@ def load_or_compute_full_xtb_features(
 ) -> Dict[str, object]:
     prep = prepare_mol(smiles)
     cache_smiles = prep.canonical_smiles or smiles
-    path = _full_cache_path(cache_smiles, cache_dir)
-    if path.exists():
-        return json.loads(path.read_text())
+    resolved_target_bond = str(target_bond).strip() if str(target_bond or "").strip() else None
+    path = _full_cache_path(cache_smiles, cache_dir, target_bond=resolved_target_bond)
+    legacy_path = _legacy_full_cache_path(cache_smiles, cache_dir)
+    existing_path = path if path.exists() else (legacy_path if legacy_path.exists() else None)
+    if existing_path is not None:
+        payload = _normalize_full_xtb_payload(
+            json.loads(existing_path.read_text()),
+            canonical_smiles=prep.canonical_smiles,
+            num_atoms=prep.mol.GetNumAtoms() if prep.mol is not None else 0,
+            resolved_target_bond=resolved_target_bond,
+        )
+        if existing_path != path:
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        return payload
     if not compute_if_missing:
         num_atoms = prep.mol.GetNumAtoms() if prep.mol is not None else 0
         return _invalid_full_xtb_payload(
@@ -582,6 +723,12 @@ def load_or_compute_full_xtb_features(
             status="missing",
             error="cache_missing",
         )
-    payload = compute_full_xtb_payload(cache_smiles, target_bond=target_bond)
+    payload = compute_full_xtb_payload(cache_smiles, target_bond=resolved_target_bond)
+    payload = _normalize_full_xtb_payload(
+        payload,
+        canonical_smiles=prep.canonical_smiles,
+        num_atoms=prep.mol.GetNumAtoms() if prep.mol is not None else 0,
+        resolved_target_bond=resolved_target_bond,
+    )
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return payload

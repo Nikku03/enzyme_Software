@@ -125,7 +125,18 @@ def _site_atom_indices(drug: dict) -> list[int]:
 
 
 def _canonical_smiles_key(smiles: str) -> str:
-    return " ".join(str(smiles or "").strip().split())
+    text = " ".join(str(smiles or "").strip().split())
+    if not text:
+        return ""
+    try:
+        from rdkit import Chem
+
+        mol = Chem.MolFromSmiles(text)
+        if mol is not None:
+            return str(Chem.MolToSmiles(mol, canonical=True))
+    except Exception:
+        pass
+    return text
 
 
 def _safe_num_atoms(drug: dict) -> int:
@@ -254,7 +265,7 @@ def _load_xenosite_aux_entries(manifest_path: Path, *, topk: int = 1, per_file_l
 
 
 def _count_xtb_valid(drugs: list[dict], cache_dir: Path) -> tuple[int, dict[str, int]]:
-    from enzyme_software.liquid_nn_v2.features.xtb_features import load_or_compute_full_xtb_features
+    from enzyme_software.liquid_nn_v2.features.xtb_features import load_or_compute_full_xtb_features, payload_true_xtb_valid
 
     valid = 0
     statuses: dict[str, int] = {}
@@ -263,7 +274,7 @@ def _count_xtb_valid(drugs: list[dict], cache_dir: Path) -> tuple[int, dict[str,
         if not smiles:
             continue
         payload = load_or_compute_full_xtb_features(smiles, cache_dir=cache_dir, compute_if_missing=False)
-        if bool(payload.get("xtb_valid")):
+        if payload_true_xtb_valid(payload):
             valid += 1
         status = str(payload.get("status") or "unknown")
         statuses[status] = statuses.get(status, 0) + 1
