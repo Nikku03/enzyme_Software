@@ -300,11 +300,15 @@ if TORCH_AVAILABLE:
             label_smoothing: float = 0.0,
             top1_margin_weight: float = 0.0,
             top1_margin_value: float = 0.5,
+            top1_margin_topk: int = 1,
+            top1_margin_decay: float = 1.0,
         ):
             super().__init__()
             self.focal = FocalLoss(gamma=focal_gamma, pos_weight=pos_weight, label_smoothing=label_smoothing)
             self.top1_margin_weight = float(top1_margin_weight)
             self.top1_margin_value = float(top1_margin_value)
+            self.top1_margin_topk = max(1, int(top1_margin_topk))
+            self.top1_margin_decay = min(max(float(top1_margin_decay), 0.1), 1.0)
             self.ranking = RankingLoss(margin=ranking_margin, hard_negative_fraction=hard_negative_fraction)
             self.listmle = ListwiseRankingLoss()
             self.softap = SoftAPLoss(temperature=softap_temperature)
@@ -312,17 +316,20 @@ if TORCH_AVAILABLE:
             self.listmle_weight = float(listmle_weight)
             self.softap_weight = float(softap_weight)
 
-        def _top1_margin_loss(self, logits, labels, batch, supervision_mask=None):
+        def _top1_margin_loss(self, logits, labels, batch, supervision_mask=None, graph_weights=None):
             """Penalise each molecule where the top-scored atom is not a true site.
 
-            For every molecule: loss = max(0, margin - (best_pos_logit - best_neg_logit)).
-            This directly targets the rank-1 error case that top1 accuracy measures.
+            For every molecule: loss = max(0, margin - (best_pos_logit - hard_neg_logit)).
+            When topk > 1, average over the highest-scoring wrong atoms so the model
+            learns to separate the true site from the full confusing local pocket,
+            not only the single current winner.
             """
             logits_flat = logits.view(-1)
             labels_flat = labels.view(-1)
             sup_flat = supervision_mask.view(-1) if supervision_mask is not None else None
             num_mol = int(batch.max().item()) + 1 if batch.numel() else 0
             losses = []
+            weights = []
             for mol_idx in range(num_mol):
                 mol_mask = batch == mol_idx
                 if not bool(mol_mask.any()):
@@ -341,11 +348,29 @@ if TORCH_AVAILABLE:
                 if not bool(pos_mask.any()) or not bool(neg_mask.any()):
                     continue
                 best_pos = mol_logits[pos_mask].max()
-                best_neg = mol_logits[neg_mask].max()
-                losses.append(torch.relu(self.top1_margin_value - (best_pos - best_neg)))
+                neg_logits = mol_logits[neg_mask]
+                topk = min(self.top1_margin_topk, int(neg_logits.numel()))
+                hard_negs = torch.topk(neg_logits, k=topk, largest=True).values
+                margin_terms = torch.relu(self.top1_margin_value - (best_pos - hard_negs))
+                if topk > 1:
+                    decay = torch.pow(
+                        torch.full((topk,), self.top1_margin_decay, dtype=margin_terms.dtype, device=margin_terms.device),
+                        torch.arange(topk, dtype=margin_terms.dtype, device=margin_terms.device),
+                    )
+                    margin_value = (margin_terms * decay).sum() / decay.sum().clamp_min(1.0e-6)
+                else:
+                    margin_value = margin_terms.mean()
+                losses.append(margin_value)
+                if graph_weights is not None and mol_idx < int(graph_weights.numel()):
+                    weights.append(graph_weights[mol_idx].to(dtype=margin_value.dtype, device=margin_value.device))
+                else:
+                    weights.append(torch.tensor(1.0, dtype=margin_value.dtype, device=margin_value.device))
             if not losses:
                 return logits.sum() * 0.0
-            return torch.stack(losses).mean()
+            stacked_losses = torch.stack(losses)
+            stacked_weights = torch.stack(weights)
+            denom = stacked_weights.sum().clamp_min(1.0e-6)
+            return (stacked_losses * stacked_weights).sum() / denom
 
         def forward(self, logits, labels, batch, supervision_mask=None, node_weights=None, graph_weights=None):
             focal_loss = self.focal(logits, labels, supervision_mask=supervision_mask, node_weights=node_weights, batch=batch)
@@ -381,7 +406,13 @@ if TORCH_AVAILABLE:
                     softap_loss = torch.stack(per_mol_softap).mean()
             top1_margin_loss = logits.sum() * 0.0
             if self.top1_margin_weight > 0.0:
-                top1_margin_loss = self._top1_margin_loss(logits, labels, batch, supervision_mask=supervision_mask)
+                top1_margin_loss = self._top1_margin_loss(
+                    logits,
+                    labels,
+                    batch,
+                    supervision_mask=supervision_mask,
+                    graph_weights=graph_weights,
+                )
             total = (
                 focal_loss
                 + self.ranking_weight * ranking_loss
@@ -417,18 +448,25 @@ if TORCH_AVAILABLE:
             site_label_smoothing: float = 0.0,
             site_top1_margin_weight: float = 0.0,
             site_top1_margin_value: float = 0.5,
+            site_ranking_weight: float = 0.5,
+            site_hard_negative_fraction: float = 0.5,
+            site_top1_margin_topk: int = 1,
+            site_top1_margin_decay: float = 1.0,
         ):
             super().__init__()
             self.site_loss = SiteOfMetabolismLoss(
                 focal_gamma=2.0,
                 pos_weight=15.0,
                 ranking_margin=1.0,
-                ranking_weight=0.5,
+                ranking_weight=float(site_ranking_weight),
                 listmle_weight=0.0,
                 softap_weight=0.0,
+                hard_negative_fraction=float(site_hard_negative_fraction),
                 label_smoothing=float(site_label_smoothing),
                 top1_margin_weight=float(site_top1_margin_weight),
                 top1_margin_value=float(site_top1_margin_value),
+                top1_margin_topk=int(site_top1_margin_topk),
+                top1_margin_decay=float(site_top1_margin_decay),
             )
             self.log_var_site = nn.Parameter(torch.tensor(0.0))
             self.log_var_cyp = nn.Parameter(torch.tensor(0.0))

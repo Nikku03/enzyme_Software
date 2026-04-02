@@ -99,6 +99,16 @@ class ModelConfig:
     site_logit_bias_warmup_epochs: int = 8
     site_logit_bias_target: float = -0.10
     site_logit_bias_weight: float = 0.05
+    site_ranking_weight: float = 0.5
+    site_hard_negative_fraction: float = 0.5
+    site_top1_margin_topk: int = 1
+    site_top1_margin_decay: float = 1.0
+    site_source_weight_default: float = 1.0
+    site_source_weight_drugbank: float = 1.0
+    site_source_weight_az120: float = 1.0
+    site_source_weight_metxbiodb: float = 1.0
+    site_source_weight_attnsom: float = 1.0
+    site_source_weight_cyp_dbs_external: float = 1.0
     use_nexus_bridge: bool = True
     nexus_wave_hidden_dim: int = 64
     nexus_graph_dim: int = 48
@@ -228,6 +238,16 @@ class ModelConfig:
         self.cyp_site_condition_scale = max(0.0, float(self.cyp_site_condition_scale))
         self.site_logit_bias_warmup_epochs = max(0, int(self.site_logit_bias_warmup_epochs))
         self.site_logit_bias_weight = max(0.0, float(self.site_logit_bias_weight))
+        self.site_ranking_weight = max(0.0, float(self.site_ranking_weight))
+        self.site_hard_negative_fraction = min(max(float(self.site_hard_negative_fraction), 0.0), 1.0)
+        self.site_top1_margin_topk = max(1, int(self.site_top1_margin_topk))
+        self.site_top1_margin_decay = min(max(float(self.site_top1_margin_decay), 0.1), 1.0)
+        self.site_source_weight_default = max(0.1, float(self.site_source_weight_default))
+        self.site_source_weight_drugbank = max(0.1, float(self.site_source_weight_drugbank))
+        self.site_source_weight_az120 = max(0.1, float(self.site_source_weight_az120))
+        self.site_source_weight_metxbiodb = max(0.1, float(self.site_source_weight_metxbiodb))
+        self.site_source_weight_attnsom = max(0.1, float(self.site_source_weight_attnsom))
+        self.site_source_weight_cyp_dbs_external = max(0.1, float(self.site_source_weight_cyp_dbs_external))
 
     @property
     def num_cyp_classes(self) -> int:

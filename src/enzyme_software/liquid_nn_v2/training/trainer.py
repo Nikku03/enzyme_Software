@@ -107,6 +107,14 @@ if TORCH_AVAILABLE:
             self.site_logit_bias_warmup_epochs = max(0, int(getattr(model_config, "site_logit_bias_warmup_epochs", 8)))
             self.site_logit_bias_target = float(getattr(model_config, "site_logit_bias_target", -0.10))
             self.site_logit_bias_weight = max(0.0, float(getattr(model_config, "site_logit_bias_weight", 0.05)))
+            self.site_source_weight_default = float(getattr(model_config, "site_source_weight_default", 1.0))
+            self.site_source_weight_map = {
+                "drugbank": float(getattr(model_config, "site_source_weight_drugbank", 1.0)),
+                "az120": float(getattr(model_config, "site_source_weight_az120", 1.0)),
+                "metxbiodb": float(getattr(model_config, "site_source_weight_metxbiodb", 1.0)),
+                "attnsom": float(getattr(model_config, "site_source_weight_attnsom", 1.0)),
+                "cyp_dbs_external": float(getattr(model_config, "site_source_weight_cyp_dbs_external", 1.0)),
+            }
             if self.cyp_class_weights is not None:
                 weights = self.cyp_class_weights.to(self.device) if hasattr(self.cyp_class_weights, "to") else torch.as_tensor(self.cyp_class_weights, dtype=torch.float32, device=self.device)
             self.loss_fn = AdaptiveLossV2(
@@ -119,6 +127,10 @@ if TORCH_AVAILABLE:
                 site_label_smoothing=float(getattr(model_config, "nexus_site_label_smoothing", 0.05)),
                 site_top1_margin_weight=float(getattr(model_config, "nexus_top1_margin_weight", 0.5)),
                 site_top1_margin_value=float(getattr(model_config, "nexus_top1_margin_value", 0.5)),
+                site_ranking_weight=float(getattr(model_config, "site_ranking_weight", 0.5)),
+                site_hard_negative_fraction=float(getattr(model_config, "site_hard_negative_fraction", 0.5)),
+                site_top1_margin_topk=int(getattr(model_config, "site_top1_margin_topk", 1)),
+                site_top1_margin_decay=float(getattr(model_config, "site_top1_margin_decay", 1.0)),
             )
             self.loss_fn.to(self.device)
             trainable_params = self._trainable_parameters()
@@ -309,6 +321,48 @@ if TORCH_AVAILABLE:
                 neginf=-clamp_value,
             ).clamp(min=-clamp_value, max=clamp_value)
 
+        def _graph_source_weights(self, batch: Dict[str, object]):
+            metadata = list(batch.get("graph_metadata") or [])
+            if not metadata:
+                return None
+            weights = []
+            changed = False
+            for meta in metadata:
+                source = str((meta or {}).get("source", "")).strip().lower()
+                weight = float(self.site_source_weight_map.get(source, self.site_source_weight_default))
+                changed = changed or abs(weight - 1.0) > 1.0e-6
+                weights.append(weight)
+            if not weights or not changed:
+                return None
+            tensor = torch.tensor(weights, dtype=torch.float32, device=self.device)
+            return tensor / tensor.mean().clamp_min(1.0e-6)
+
+        def _augment_site_weights(self, batch: Dict[str, object]) -> Dict[str, float]:
+            stats: Dict[str, float] = {}
+            graph_source_weights = self._graph_source_weights(batch)
+            batch_idx = batch.get("batch")
+            if graph_source_weights is None or batch_idx is None or not hasattr(batch_idx, "numel") or batch_idx.numel() == 0:
+                return stats
+            graph_weights = batch.get("graph_confidence_weights")
+            if graph_weights is None:
+                graph_weights = torch.ones_like(graph_source_weights)
+            else:
+                graph_weights = graph_weights.to(device=graph_source_weights.device, dtype=graph_source_weights.dtype)
+            new_graph_weights = graph_weights * graph_source_weights
+            new_graph_weights = new_graph_weights / new_graph_weights.mean().clamp_min(1.0e-6)
+            batch["graph_confidence_weights"] = new_graph_weights
+            node_weights = batch.get("node_confidence_weights")
+            source_to_node = graph_source_weights[batch_idx.long()].unsqueeze(-1)
+            if node_weights is None:
+                batch["node_confidence_weights"] = new_graph_weights[batch_idx.long()].unsqueeze(-1)
+            else:
+                node_weights = node_weights.to(device=source_to_node.device, dtype=source_to_node.dtype)
+                batch["node_confidence_weights"] = node_weights * source_to_node
+            stats["source_weight_mean"] = float(graph_source_weights.mean().detach().item())
+            stats["source_weight_max"] = float(graph_source_weights.max().detach().item())
+            stats["source_weight_min"] = float(graph_source_weights.min().detach().item())
+            return stats
+
         def _enforce_candidate_mask(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
             candidate_mask = batch.get("candidate_mask")
             site_logits = outputs.get("site_logits")
@@ -412,6 +466,7 @@ if TORCH_AVAILABLE:
                 candidate_train_mask = candidate_train_mask.float()
                 site_mask = candidate_train_mask if site_mask is None else site_mask.float().view_as(candidate_train_mask) * candidate_train_mask
             batch["effective_site_supervision_mask"] = site_mask
+            source_weight_stats = self._augment_site_weights(batch)
             # Fix 5: inject size-aware per-graph/per-atom weights when none are set.
             # Large molecules get proportionally more gradient signal so the model
             # learns to rank sites in 26-40 and 41+ atom molecules.
@@ -443,6 +498,7 @@ if TORCH_AVAILABLE:
                 outputs.get("deliberation_outputs"),
             )
             stats = dict(stats)
+            stats.update(source_weight_stats)
             if (
                 self.site_logit_bias_weight > 0.0
                 and self.current_epoch < self.site_logit_bias_warmup_epochs
