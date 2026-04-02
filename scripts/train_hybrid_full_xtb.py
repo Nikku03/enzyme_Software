@@ -90,6 +90,9 @@ def _collect_model_overrides() -> dict[str, int | float]:
         "HYBRID_COLAB_NEXUS_LIVE_WAVE_VOTE_GRAD_SCALE": (_env_float, "nexus_live_wave_vote_grad_scale"),
         "HYBRID_COLAB_NEXUS_LIVE_ANALOGICAL_VOTE_GRAD_SCALE": (_env_float, "nexus_live_analogical_vote_grad_scale"),
         "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE": (_env_float, "nexus_analogical_cyp_aux_scale"),
+        "HYBRID_COLAB_NEXUS_SIDEINFO_HIDDEN_DIM": (_env_int, "nexus_sideinfo_hidden_dim"),
+        "HYBRID_COLAB_NEXUS_SIDEINFO_DROPOUT": (_env_float, "nexus_sideinfo_dropout"),
+        "HYBRID_COLAB_NEXUS_SIDEINFO_INIT_SCALE": (_env_float, "nexus_sideinfo_init_scale"),
     }
     overrides: dict[str, int | float] = {}
     for env_name, (parser, field_name) in mapping.items():
@@ -427,6 +430,7 @@ def _save_training_state(
         "target_cyp": str(getattr(args, "target_cyp", "") or ""),
         "confidence_allowlist": _parse_csv_tokens(str(getattr(args, "confidence_allowlist", "") or "")),
         "base_lnn_first": bool(getattr(args, "base_lnn_first", False)),
+        "nexus_sideinfo_only": bool(getattr(args, "nexus_sideinfo_only", False)),
         "use_candidate_mask": bool(getattr(args, "use_candidate_mask", False)),
         "balance_train_sources": bool(getattr(args, "balance_train_sources", False)),
         "split_summary": split_summary,
@@ -454,6 +458,7 @@ def _save_training_state(
                 "target_cyp": str(getattr(args, "target_cyp", "") or ""),
                 "confidence_allowlist": _parse_csv_tokens(str(getattr(args, "confidence_allowlist", "") or "")),
                 "base_lnn_first": bool(getattr(args, "base_lnn_first", False)),
+                "nexus_sideinfo_only": bool(getattr(args, "nexus_sideinfo_only", False)),
                 "use_candidate_mask": bool(getattr(args, "use_candidate_mask", False)),
                 "balance_train_sources": bool(getattr(args, "balance_train_sources", False)),
                 "split_summary": split_summary,
@@ -499,6 +504,7 @@ def main() -> None:
     parser.add_argument("--compute-xtb-if-missing", action="store_true")
     parser.add_argument("--disable-nexus-bridge", action="store_true")
     parser.add_argument("--base-lnn-first", action="store_true")
+    parser.add_argument("--nexus-sideinfo-only", action="store_true")
     parser.add_argument("--freeze-nexus-memory", action="store_true")
     parser.add_argument("--skip-nexus-memory-rebuild", action="store_true")
     parser.add_argument("--backbone-freeze-epochs", type=int, default=0,
@@ -547,6 +553,10 @@ def main() -> None:
 
     drugs = _load_drugs(dataset_path)
     print(f"Loaded {len(drugs)} drugs", flush=True)
+    if args.nexus_sideinfo_only:
+        args.disable_nexus_bridge = False
+        args.base_lnn_first = False
+        print("nexus_sideinfo_only=1 | NEXUS enabled as feature sidecar only", flush=True)
     if args.base_lnn_first:
         args.disable_nexus_bridge = True
         args.freeze_nexus_memory = True
@@ -618,6 +628,8 @@ def main() -> None:
         print(f"candidate_mask=1 | candidate_cyp={str(args.target_cyp or '').strip() or 'generic'}", flush=True)
     if args.balance_train_sources:
         print("balance_train_sources=1", flush=True)
+    if args.nexus_sideinfo_only:
+        print("nexus_sideinfo_only=1 | side engines feed features into LNN without votes", flush=True)
 
     xtb_valid_count, xtb_statuses = _count_xtb_valid(drugs, xtb_cache_dir)
     print(f"xTB cache valid molecules: {xtb_valid_count}/{len(drugs)} | statuses={xtb_statuses}", flush=True)
@@ -652,6 +664,8 @@ def main() -> None:
         use_manual_engine_priors=manual_engine_enabled,
         use_3d_branch=True,
         use_nexus_bridge=not bool(args.disable_nexus_bridge),
+        use_nexus_site_arbiter=not bool(args.nexus_sideinfo_only),
+        use_nexus_sideinfo_features=bool(args.nexus_sideinfo_only),
         nexus_memory_frozen=bool(args.freeze_nexus_memory),
         nexus_rebuild_memory_before_train=not bool(args.skip_nexus_memory_rebuild),
         return_intermediate_stats=True,

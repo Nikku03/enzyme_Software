@@ -112,6 +112,10 @@ class ModelConfig:
     nexus_analogical_site_init: float = 0.20
     nexus_analogical_cyp_init: float = 0.12
     use_nexus_site_arbiter: bool = True
+    use_nexus_sideinfo_features: bool = False
+    nexus_sideinfo_hidden_dim: int = 128
+    nexus_sideinfo_dropout: float = 0.10
+    nexus_sideinfo_init_scale: float = 0.20
     nexus_site_arbiter_hidden_dim: int = 128
     nexus_site_arbiter_dropout: float = 0.20
     nexus_site_label_smoothing: float = 0.05
@@ -203,6 +207,10 @@ class ModelConfig:
         self.nexus_wave_site_init = min(max(float(self.nexus_wave_site_init), 1.0e-3), 1.0 - 1.0e-3)
         self.nexus_analogical_site_init = min(max(float(self.nexus_analogical_site_init), 1.0e-3), 1.0 - 1.0e-3)
         self.nexus_analogical_cyp_init = min(max(float(self.nexus_analogical_cyp_init), 1.0e-3), 1.0 - 1.0e-3)
+        self.use_nexus_sideinfo_features = bool(self.use_nexus_sideinfo_features)
+        self.nexus_sideinfo_hidden_dim = max(32, int(self.nexus_sideinfo_hidden_dim))
+        self.nexus_sideinfo_dropout = min(max(float(self.nexus_sideinfo_dropout), 0.0), 0.5)
+        self.nexus_sideinfo_init_scale = min(max(float(self.nexus_sideinfo_init_scale), 1.0e-3), 1.0)
         self.nexus_site_arbiter_hidden_dim = max(32, int(self.nexus_site_arbiter_hidden_dim))
         self.nexus_site_arbiter_dropout = min(max(float(self.nexus_site_arbiter_dropout), 0.0), 0.5)
         self.nexus_lnn_vote_aux_weight = max(0.0, float(self.nexus_lnn_vote_aux_weight))

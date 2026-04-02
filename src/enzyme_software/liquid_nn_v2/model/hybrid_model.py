@@ -22,6 +22,10 @@ if TORCH_AVAILABLE:
             self.nexus_bridge = None
             self.site_arbiter_head = None
             self.site_arbiter_uses_bridge = False
+            self.nexus_sideinfo_uses_bridge = False
+            self.nexus_sideinfo_proj = None
+            self.nexus_sideinfo_gate = None
+            self.nexus_sideinfo_scale_logit = None
             if bool(getattr(self.config, "use_nexus_bridge", True)):
                 atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
                 num_cyp = int(getattr(self.config, "num_cyp_classes", 9))
@@ -47,6 +51,27 @@ if TORCH_AVAILABLE:
                 self.ana_cyp_weight_logit = nn.Parameter(
                     torch.logit(torch.tensor(float(getattr(self.config, "nexus_analogical_cyp_init", 0.12))))
                 )
+                if bool(getattr(self.config, "use_nexus_sideinfo_features", False)):
+                    sideinfo_hidden = int(getattr(self.config, "nexus_sideinfo_hidden_dim", atom_dim))
+                    sideinfo_dropout = float(getattr(self.config, "nexus_sideinfo_dropout", 0.10))
+                    sideinfo_in = 14 + (15 + num_cyp)
+                    self.nexus_sideinfo_proj = nn.Sequential(
+                        nn.Linear(sideinfo_in, sideinfo_hidden),
+                        nn.SiLU(),
+                        nn.Dropout(sideinfo_dropout),
+                        nn.Linear(sideinfo_hidden, atom_dim),
+                    )
+                    self.nexus_sideinfo_gate = nn.Sequential(
+                        nn.Linear(atom_dim + sideinfo_in, max(32, sideinfo_hidden // 2)),
+                        nn.SiLU(),
+                        nn.Dropout(sideinfo_dropout),
+                        nn.Linear(max(32, sideinfo_hidden // 2), 1),
+                        nn.Sigmoid(),
+                    )
+                    self.nexus_sideinfo_scale_logit = nn.Parameter(
+                        torch.logit(torch.tensor(float(getattr(self.config, "nexus_sideinfo_init_scale", 0.20))))
+                    )
+                    self.nexus_sideinfo_uses_bridge = True
                 if bool(getattr(self.config, "use_nexus_site_arbiter", True)):
                     arbiter_hidden = int(getattr(self.config, "nexus_site_arbiter_hidden_dim", 128))
                     arbiter_dropout = float(getattr(self.config, "nexus_site_arbiter_dropout", 0.10))
@@ -171,6 +196,66 @@ if TORCH_AVAILABLE:
             diagnostics["nexus_bridge"] = nexus_stats
             result["diagnostics"] = diagnostics
             return result
+
+        def _site_logits_from_sideinfo(
+            self,
+            outputs: Dict[str, object],
+            bridge: Dict[str, object],
+            batch: Dict[str, object],
+        ) -> tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+            atom_features = outputs["atom_features"]
+            batch_index = batch["batch"]
+            device = atom_features.device
+            dtype = atom_features.dtype
+            rows = int(atom_features.size(0))
+            num_molecules = int(outputs["cyp_logits"].size(0))
+            base_cyp = bridge["analogical_cyp_prior"][batch_index].detach()
+            wave_preds = bridge["wave_predictions"]
+            wave_field = bridge["wave_field"]
+            wave_gap = wave_preds["predicted_gap"][batch_index].unsqueeze(-1).detach()
+            wave_inputs = torch.cat(
+                [
+                    wave_preds["predicted_charges"].unsqueeze(-1).detach(),
+                    wave_preds["predicted_fukui"].unsqueeze(-1).detach(),
+                    wave_gap,
+                    bridge["wave_site_bias"].detach(),
+                    bridge["wave_reliability"].detach(),
+                    wave_field["atom_field_features"].detach(),
+                ],
+                dim=-1,
+            )
+            analogical_inputs = torch.cat(
+                [
+                    bridge["analogical_site_prior"].detach(),
+                    bridge["analogical_confidence"].detach(),
+                    bridge["analogical_gate"].detach(),
+                    bridge["analogical_site_bias"].detach(),
+                    bridge["continuous_reasoning_features"].detach(),
+                    bridge["precedent_brief"].detach(),
+                    base_cyp,
+                ],
+                dim=-1,
+            )
+            sideinfo = torch.nan_to_num(torch.cat([wave_inputs, analogical_inputs], dim=-1), nan=0.0, posinf=4.0, neginf=-4.0)
+            sideinfo_residual = torch.tanh(self.nexus_sideinfo_proj(sideinfo))
+            sideinfo_gate = self.nexus_sideinfo_gate(torch.cat([atom_features, sideinfo], dim=-1))
+            sideinfo_scale = torch.sigmoid(self.nexus_sideinfo_scale_logit).to(device=device, dtype=dtype)
+            fused_atom_features = atom_features + sideinfo_scale * sideinfo_gate * sideinfo_residual
+            prior_payload = self.base_lnn.manual_priors(batch, num_atoms=rows, num_molecules=num_molecules, device=device)
+            site_logits, _site_residual = self.base_lnn.site_head(
+                fused_atom_features,
+                prior_logits=prior_payload.get("atom_prior_logits") if getattr(self.base_lnn.config, "use_manual_engine_priors", False) else None,
+                prior_features=prior_payload.get("atom_prior_embedding") if getattr(self.base_lnn.config, "use_manual_engine_priors", False) else None,
+            )
+            site_logits = self.base_lnn._apply_bde_prior(site_logits, (batch.get("physics_features") or {}).get("bde_values"))
+            sideinfo_diag = {
+                "fused_atom_features": fused_atom_features,
+                "sideinfo_inputs": sideinfo,
+                "sideinfo_residual": sideinfo_residual,
+                "sideinfo_gate": sideinfo_gate,
+                "sideinfo_scale": sideinfo_scale.view(1, 1),
+            }
+            return site_logits.clamp(-20.0, 20.0), sideinfo_diag
 
         def _site_logits_from_arbiter(
             self,
@@ -475,20 +560,26 @@ if TORCH_AVAILABLE:
             result = dict(outputs)
             result["site_logits_base"] = outputs["site_logits"]
             result["cyp_logits_base"] = outputs["cyp_logits"]
-            ana_cyp_weight = torch.sigmoid(self.ana_cyp_weight_logit)
             council = None
-            if self.site_arbiter_uses_bridge:
+            sideinfo = None
+            if self.nexus_sideinfo_uses_bridge:
+                site_logits, sideinfo = self._site_logits_from_sideinfo(outputs, bridge, batch)
+                cyp_logits = outputs["cyp_logits"]
+                site_mode = "nexus_sideinfo"
+            elif self.site_arbiter_uses_bridge:
                 site_logits, council = self._site_logits_from_arbiter(outputs, bridge, batch)
+                ana_cyp_weight = torch.sigmoid(self.ana_cyp_weight_logit)
+                cyp_logits = outputs["cyp_logits"] + ana_cyp_weight * bridge["analogical_cyp_bias"].detach()
                 site_mode = "nexus_council"
             else:
                 site_logits = outputs["site_logits"]
+                cyp_logits = outputs["cyp_logits"]
                 site_mode = "base"
-            cyp_logits = outputs["cyp_logits"] + ana_cyp_weight * bridge["analogical_cyp_bias"].detach()
             cyp_logits = torch.nan_to_num(cyp_logits, nan=0.0, posinf=20.0, neginf=-20.0).clamp(-20.0, 20.0)
             diagnostics = dict(result.get("diagnostics") or {})
             diagnostics["nexus_bridge"] = {
                 **bridge["metrics"],
-                "analogical_cyp_weight": float(ana_cyp_weight.detach().item()),
+                "analogical_cyp_weight": float(torch.sigmoid(self.ana_cyp_weight_logit).detach().item()) if council is not None else 0.0,
                 "site_mode": site_mode,
                 "wave_vote_gate_mean": float(torch.sigmoid((bridge["wave_reliability"].detach() - 0.35) / 0.08).mean().item()) if bridge.get("wave_reliability") is not None else 0.0,
                 "analogical_gate_mean": float(bridge["analogical_gate"].detach().mean().item()) if bridge.get("analogical_gate") is not None else 0.0,
@@ -496,9 +587,14 @@ if TORCH_AVAILABLE:
                 "site_logits_council_mean": float(council["council_logit"].detach().mean().item()) if council else 0.0,
                 "site_logits_arbiter_residual_mean": float(council["arbiter_residual"].detach().mean().item()) if council else 0.0,
                 "site_logits_final_mean": float(site_logits.detach().mean().item()),
+                "sideinfo_gate_mean": float(sideinfo["sideinfo_gate"].detach().mean().item()) if sideinfo else 0.0,
+                "sideinfo_residual_norm_mean": float(sideinfo["sideinfo_residual"].detach().norm(dim=-1).mean().item()) if sideinfo else 0.0,
+                "sideinfo_scale": float(sideinfo["sideinfo_scale"].detach().view(-1)[0].item()) if sideinfo else 0.0,
             }
             result.update(
                 {
+                    "atom_features_base": outputs.get("atom_features"),
+                    "atom_features": sideinfo["fused_atom_features"] if sideinfo else outputs.get("atom_features"),
                     "site_logits": site_logits,
                     "reranked_site_logits": site_logits,
                     "site_scores": torch.sigmoid(site_logits),
@@ -507,6 +603,7 @@ if TORCH_AVAILABLE:
                     "nexus_bridge_losses": bridge["losses"],
                     "atom_multivectors": bridge["atom_multivectors"],
                     "site_vote_heads": council,
+                    "nexus_sideinfo": sideinfo,
                     "diagnostics": diagnostics,
                 }
             )
