@@ -112,11 +112,22 @@ def _build_cyp3a4_candidate_masks(
         "n_methyl",
         "o_methyl_aromatic",
         "carbonyl_alpha",
+        "halogen_adjacent",
+    }
+    broad_priority_names = {
+        "aromatic_ch",
+        "halogen_adjacent",
     }
     high_priority_cols = [idx for idx, name in enumerate(pattern_names) if name in high_priority_names]
+    broad_priority_cols = [idx for idx, name in enumerate(pattern_names) if name in broad_priority_names]
     pattern_hits = (
         (prior[:, high_priority_cols].sum(axis=1) > 0.0).astype(np.float32)
         if prior.size and high_priority_cols
+        else np.zeros((num_atoms,), dtype=np.float32)
+    )
+    broad_pattern_hits = (
+        (prior[:, broad_priority_cols].sum(axis=1) > 0.0).astype(np.float32)
+        if prior.size and broad_priority_cols
         else np.zeros((num_atoms,), dtype=np.float32)
     )
     reactivity = prior[:, -1].astype(np.float32) if prior.size else np.zeros((num_atoms,), dtype=np.float32)
@@ -124,6 +135,8 @@ def _build_cyp3a4_candidate_masks(
     reactive_hetero = np.zeros((num_atoms,), dtype=np.float32)
     soft_hetero = np.zeros((num_atoms,), dtype=np.float32)
     alpha_hetero_carbon = np.zeros((num_atoms,), dtype=np.float32)
+    aromatic_adjacent_carbon = np.zeros((num_atoms,), dtype=np.float32)
+    tertiary_amine_adjacent = np.zeros((num_atoms,), dtype=np.float32)
     for atom in mol.GetAtoms():
         idx = int(atom.GetIdx())
         atomic_num = int(atom.GetAtomicNum())
@@ -134,6 +147,13 @@ def _build_cyp3a4_candidate_masks(
         if atomic_num == 6 and atom.GetTotalNumHs() > 0:
             if any(int(nbr.GetAtomicNum()) in {7, 8, 15, 16} for nbr in atom.GetNeighbors()):
                 alpha_hetero_carbon[idx] = 1.0
+            if any(bool(nbr.GetIsAromatic()) for nbr in atom.GetNeighbors()):
+                aromatic_adjacent_carbon[idx] = 1.0
+            if any(
+                int(nbr.GetAtomicNum()) == 7 and int(nbr.GetDegree()) >= 3
+                for nbr in atom.GetNeighbors()
+            ):
+                tertiary_amine_adjacent[idx] = 1.0
 
     if manual_atom_prior_logits is not None:
         manual_logits = np.asarray(manual_atom_prior_logits, dtype=np.float32).reshape(num_atoms, -1)
@@ -142,25 +162,41 @@ def _build_cyp3a4_candidate_masks(
         manual_prior = np.zeros((num_atoms,), dtype=np.float32)
 
     score = (
-        0.70 * reactivity
+        0.62 * reactivity
         + 0.45 * pattern_hits
+        + 0.18 * broad_pattern_hits
         + 0.40 * reactive_hetero
         + 0.18 * alpha_hetero_carbon
+        + 0.18 * aromatic_adjacent_carbon
+        + 0.20 * tertiary_amine_adjacent
         + 0.10 * soft_hetero
-        + 0.30 * manual_prior
+        + 0.35 * manual_prior
     ).astype(np.float32)
     candidate = (
         (pattern_hits > 0.5)
         | (reactive_hetero > 0.5)
         | (alpha_hetero_carbon > 0.5)
-        | (manual_prior >= 0.55)
-        | (score >= 0.62)
+        | (manual_prior >= 0.45)
+        | ((broad_pattern_hits > 0.5) & (score >= 0.36))
+        | ((aromatic_adjacent_carbon > 0.5) & (score >= 0.38))
+        | ((tertiary_amine_adjacent > 0.5) & (score >= 0.36))
+        | ((soft_hetero > 0.5) & (score >= 0.34))
+        | (score >= 0.52)
     )
     candidate = candidate.astype(np.float32)
 
-    min_keep = min(num_atoms, max(4, int(np.ceil(num_atoms * 0.20))))
+    min_keep = min(num_atoms, max(6, int(np.ceil(num_atoms * 0.30))))
     if int(candidate.sum()) < min_keep:
-        ranked = np.argsort(-(score + 0.10 * reactive_hetero + 0.08 * alpha_hetero_carbon))
+        ranked = np.argsort(
+            -(
+                score
+                + 0.12 * reactive_hetero
+                + 0.10 * alpha_hetero_carbon
+                + 0.10 * aromatic_adjacent_carbon
+                + 0.10 * tertiary_amine_adjacent
+                + 0.05 * broad_pattern_hits
+            )
+        )
         candidate[ranked[:min_keep]] = 1.0
 
     inference_mask = candidate.reshape(num_atoms, 1).astype(np.float32)

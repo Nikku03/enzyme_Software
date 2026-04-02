@@ -22,7 +22,16 @@ def _safe_binary_auc(labels, scores) -> float:
         return 0.5
 
 
-def compute_topk_accuracy(scores, labels, batch, k: int = 1, supervision_mask=None, ranking_mask=None) -> float:
+def compute_topk_accuracy(
+    scores,
+    labels,
+    batch,
+    k: int = 1,
+    supervision_mask=None,
+    ranking_mask=None,
+    *,
+    count_missing_positive_as_miss: bool = False,
+) -> float:
     scores_np = _to_numpy(scores).reshape(-1)
     labels_np = _to_numpy(labels).reshape(-1)
     batch_np = _to_numpy(batch).reshape(-1)
@@ -34,22 +43,27 @@ def compute_topk_accuracy(scores, labels, batch, k: int = 1, supervision_mask=No
     correct = 0
     total = 0
     for mol_idx in range(num_molecules):
-        mol_mask = batch_np == mol_idx
-        if ranking_np is not None:
-            mol_mask = mol_mask & (ranking_np > 0.5)
+        supervised_mol_mask = batch_np == mol_idx
         if mask_np is not None:
-            supervised = mask_np[mol_mask] > 0.5
-            if not np.any(supervised):
-                continue
-            mol_scores = scores_np[mol_mask][supervised]
-            mol_labels = labels_np[mol_mask][supervised]
-        else:
-            mol_scores = scores_np[mol_mask]
-            mol_labels = labels_np[mol_mask]
+            supervised_mol_mask = supervised_mol_mask & (mask_np > 0.5)
+        if not np.any(supervised_mol_mask):
+            continue
+        true_sites_full = np.where(labels_np[supervised_mol_mask] == 1)[0]
+        if true_sites_full.size == 0:
+            continue
+        ranked_mol_mask = supervised_mol_mask
+        if ranking_np is not None:
+            ranked_mol_mask = ranked_mol_mask & (ranking_np > 0.5)
+        mol_scores = scores_np[ranked_mol_mask]
+        mol_labels = labels_np[ranked_mol_mask]
         if mol_scores.size == 0:
+            if count_missing_positive_as_miss:
+                total += 1
             continue
         true_sites = np.where(mol_labels == 1)[0]
         if true_sites.size == 0:
+            if count_missing_positive_as_miss:
+                total += 1
             continue
         if len(mol_scores) <= k:
             topk_idx = np.arange(len(mol_scores))
@@ -69,8 +83,9 @@ def compute_site_metrics_v2(scores, labels, batch, threshold: float = 0.5, super
         ranking_flat = _to_numpy(ranking_mask).reshape(-1) > 0.5
     else:
         ranking_flat = None
+    supervision_flat = _to_numpy(supervision_mask).reshape(-1) > 0.5 if supervision_mask is not None else None
     if supervision_mask is not None:
-        mask_flat = _to_numpy(supervision_mask).reshape(-1) > 0.5
+        mask_flat = supervision_flat.copy()
         if ranking_flat is not None:
             mask_flat = mask_flat & ranking_flat
         scores_eval = scores_flat[mask_flat]
@@ -92,6 +107,11 @@ def compute_site_metrics_v2(scores, labels, batch, threshold: float = 0.5, super
             "site_top1_acc": 0.0,
             "site_top2_acc": 0.0,
             "site_top3_acc": 0.0,
+            "site_top1_acc_all_molecules": 0.0,
+            "site_top2_acc_all_molecules": 0.0,
+            "site_top3_acc_all_molecules": 0.0,
+            "site_candidate_positive_coverage_molecules": 0.0,
+            "site_candidate_positive_coverage_atoms": 0.0,
             "precision": 0.0,
             "recall": 0.0,
             "f1": 0.0,
@@ -113,6 +133,59 @@ def compute_site_metrics_v2(scores, labels, batch, threshold: float = 0.5, super
     top1_acc = compute_topk_accuracy(scores_flat, labels_flat, batch_flat, k=1, supervision_mask=mask_flat, ranking_mask=ranking_flat)
     top2_acc = compute_topk_accuracy(scores_flat, labels_flat, batch_flat, k=2, supervision_mask=mask_flat, ranking_mask=ranking_flat)
     top3_acc = compute_topk_accuracy(scores_flat, labels_flat, batch_flat, k=3, supervision_mask=mask_flat, ranking_mask=ranking_flat)
+    top1_all = compute_topk_accuracy(
+        scores_flat,
+        labels_flat,
+        batch_flat,
+        k=1,
+        supervision_mask=supervision_flat,
+        ranking_mask=None,
+        count_missing_positive_as_miss=True,
+    )
+    top2_all = compute_topk_accuracy(
+        scores_flat,
+        labels_flat,
+        batch_flat,
+        k=2,
+        supervision_mask=supervision_flat,
+        ranking_mask=None,
+        count_missing_positive_as_miss=True,
+    )
+    top3_all = compute_topk_accuracy(
+        scores_flat,
+        labels_flat,
+        batch_flat,
+        k=3,
+        supervision_mask=supervision_flat,
+        ranking_mask=None,
+        count_missing_positive_as_miss=True,
+    )
+    candidate_molecules_total = 0
+    candidate_molecules_hit = 0
+    candidate_positive_total = 0
+    candidate_positive_hit = 0
+    num_molecules = int(batch_flat.max()) + 1 if batch_flat.size else 0
+    for mol_idx in range(num_molecules):
+        mol_mask = batch_flat == mol_idx
+        if supervision_flat is not None:
+            mol_mask = mol_mask & supervision_flat
+        if not np.any(mol_mask):
+            continue
+        mol_labels = labels_flat[mol_mask]
+        positive_mask = mol_labels == 1
+        if not np.any(positive_mask):
+            continue
+        candidate_molecules_total += 1
+        if ranking_flat is None:
+            candidate_molecules_hit += 1
+            candidate_positive_total += int(np.sum(positive_mask))
+            candidate_positive_hit += int(np.sum(positive_mask))
+            continue
+        mol_ranking = ranking_flat[mol_mask]
+        candidate_positive_total += int(np.sum(positive_mask))
+        candidate_positive_hit += int(np.sum(positive_mask & mol_ranking))
+        if bool(np.any(positive_mask & mol_ranking)):
+            candidate_molecules_hit += 1
     return {
         "site_precision": precision,
         "site_recall": recall,
@@ -121,6 +194,15 @@ def compute_site_metrics_v2(scores, labels, batch, threshold: float = 0.5, super
         "site_top1_acc": top1_acc,
         "site_top2_acc": top2_acc,
         "site_top3_acc": top3_acc,
+        "site_top1_acc_all_molecules": top1_all,
+        "site_top2_acc_all_molecules": top2_all,
+        "site_top3_acc_all_molecules": top3_all,
+        "site_candidate_positive_coverage_molecules": (
+            float(candidate_molecules_hit) / float(candidate_molecules_total) if candidate_molecules_total > 0 else 0.0
+        ),
+        "site_candidate_positive_coverage_atoms": (
+            float(candidate_positive_hit) / float(candidate_positive_total) if candidate_positive_total > 0 else 0.0
+        ),
         "precision": precision,
         "recall": recall,
         "f1": f1,
