@@ -106,20 +106,21 @@ if TORCH_AVAILABLE:
             if k > 1:
                 concentration = (concentration - (1.0 / float(k))) / (1.0 - (1.0 / float(k)))
             concentration = concentration.clamp(0.0, 1.0)
-            score_conf = torch.sigmoid((best_score - 0.30) / 0.12)
-            margin_conf = torch.sigmoid((support_margin - 0.04) / 0.04)
-            confidence = (0.50 * score_conf) + (0.30 * margin_conf) + (0.20 * concentration)
+            score_conf = torch.sigmoid((best_score - 0.24) / 0.14)
+            margin_conf = torch.sigmoid((support_margin - 0.03) / 0.05)
+            confidence = (0.45 * score_conf) + (0.20 * margin_conf) + (0.35 * concentration)
             confidence = confidence * valid_rows.unsqueeze(-1).to(dtype=confidence.dtype)
             # Separate "there is some memory support" from "the retrieval is
             # selective enough to trust".  The benchmark failures showed that the
             # analogical branch is often active but diffuse (tiny margin /
             # concentration), which should cause abstention rather than a vote.
-            selectivity = (
-                torch.sigmoid((support_margin - 0.025) / 0.025)
-                * torch.sigmoid((concentration - 0.10) / 0.08)
-            )
+            # The previous product-based gate over-suppressed retrieval so hard
+            # that analogical almost never participated on benchmark.
+            margin_selectivity = torch.sigmoid((support_margin - 0.015) / 0.035)
+            concentration_selectivity = torch.sigmoid((concentration - 0.06) / 0.10)
+            selectivity = (0.60 * margin_selectivity) + (0.40 * concentration_selectivity)
             selectivity = selectivity * valid_rows.unsqueeze(-1).to(dtype=confidence.dtype)
-            trust_gate = (confidence * selectivity).clamp(0.0, 1.0)
+            trust_gate = (confidence * (0.30 + (0.70 * selectivity))).clamp(0.0, 1.0)
             return {
                 "site_prior": site_prior,
                 "cyp_prior": cyp_prior,

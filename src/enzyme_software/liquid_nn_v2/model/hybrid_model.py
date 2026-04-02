@@ -187,6 +187,8 @@ if TORCH_AVAILABLE:
             if analogical_gate is None:
                 analogical_gate = bridge["analogical_confidence"]
             analogical_gate = analogical_gate.detach().clamp(0.0, 1.0)
+            analogical_context_gate = torch.sigmoid((analogical_gate - 0.12) / 0.10)
+            analogical_vote_gate = torch.sigmoid((analogical_gate - 0.18) / 0.10)
             vote_scale = float(getattr(self.config, "nexus_vote_logit_scale", 2.0))
             live_wave_vote_inputs = bool(getattr(self.config, "nexus_live_wave_vote_inputs", True))
             live_analogical_vote_inputs = bool(getattr(self.config, "nexus_live_analogical_vote_inputs", True))
@@ -276,11 +278,11 @@ if TORCH_AVAILABLE:
                     )
                 )
             )
-            analogical_site_bias_b = analogical_gate * torch.tanh(bridge["analogical_site_bias"].detach())
-            continuous_reasoning_b = analogical_gate * torch.tanh(bridge["continuous_reasoning_features"].detach())
-            analogical_site_prior = analogical_gate * bridge["analogical_site_prior"].detach()
-            confidence_b = analogical_gate * confidence.detach()
-            analogical_cyp_context_b = analogical_gate * analogical_cyp_context.detach()
+            analogical_site_bias_b = analogical_context_gate * torch.tanh(bridge["analogical_site_bias"].detach())
+            continuous_reasoning_b = analogical_context_gate * torch.tanh(bridge["continuous_reasoning_features"].detach())
+            analogical_site_prior = analogical_context_gate * bridge["analogical_site_prior"].detach()
+            confidence_b = analogical_context_gate * confidence.detach()
+            analogical_cyp_context_b = analogical_context_gate * analogical_cyp_context.detach()
             analogical_site_prior_vote = self._safe_vote_tensor(
                 self._scaled_live(
                     bridge["analogical_site_prior"],
@@ -313,7 +315,7 @@ if TORCH_AVAILABLE:
                     )
                 )
             )
-            precedent_brief_vote = analogical_gate * self._safe_vote_tensor(
+            precedent_brief_vote = analogical_context_gate * self._safe_vote_tensor(
                 self._scaled_live(
                     precedent_brief,
                     enabled=live_analogical_vote_inputs,
@@ -332,8 +334,8 @@ if TORCH_AVAILABLE:
                     dim=-1,
                 )
             )
-            analogical_vote = analogical_gate * (vote_scale * torch.tanh(analogical_vote_raw))
-            analogical_conf = analogical_gate * torch.sigmoid(
+            analogical_vote = analogical_vote_gate * (vote_scale * torch.tanh(analogical_vote_raw))
+            analogical_conf = analogical_vote_gate * torch.sigmoid(
                 self.analogical_conf_head(
                     torch.cat(
                         [
@@ -361,7 +363,7 @@ if TORCH_AVAILABLE:
                     xtb_b,
                     topology_b,
                     wave_field_b,
-                    analogical_gate * precedent_brief.detach(),
+                    analogical_context_gate * precedent_brief.detach(),
                     wave_site_bias_b,
                     analogical_site_bias_b,
                     continuous_reasoning_b,
