@@ -179,6 +179,13 @@ if TORCH_AVAILABLE:
         def _safe_vote_tensor(self, value: torch.Tensor) -> torch.Tensor:
             return torch.nan_to_num(value, nan=0.0, posinf=4.0, neginf=-4.0).clamp(-4.0, 4.0)
 
+        def _match_last_dim(self, value: torch.Tensor, width: int) -> torch.Tensor:
+            if int(value.size(-1)) == int(width):
+                return value
+            if int(value.size(-1)) > int(width):
+                return value[..., :width]
+            return torch.nn.functional.pad(value, (0, int(width) - int(value.size(-1))))
+
         def _apply_candidate_mask(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
             candidate_mask = batch.get("candidate_mask")
             site_logits = outputs.get("site_logits")
@@ -240,8 +247,13 @@ if TORCH_AVAILABLE:
                 dim=-1,
             )
             sideinfo = torch.nan_to_num(torch.cat([wave_inputs, analogical_inputs], dim=-1), nan=0.0, posinf=4.0, neginf=-4.0)
+            expected_sideinfo = int(self.nexus_sideinfo_proj[0].in_features)
+            sideinfo = self._match_last_dim(sideinfo, expected_sideinfo)
             sideinfo_residual = torch.tanh(self.nexus_sideinfo_proj(sideinfo))
-            sideinfo_gate = self.nexus_sideinfo_gate(torch.cat([atom_features, sideinfo], dim=-1))
+            gate_in = torch.cat([atom_features, sideinfo], dim=-1)
+            expected_gate = int(self.nexus_sideinfo_gate[0].in_features)
+            gate_in = self._match_last_dim(gate_in, expected_gate)
+            sideinfo_gate = self.nexus_sideinfo_gate(gate_in)
             sideinfo_scale = torch.sigmoid(self.nexus_sideinfo_scale_logit).to(device=device, dtype=dtype)
             fused_atom_features = atom_features + sideinfo_scale * sideinfo_gate * sideinfo_residual
             prior_payload = self.base_lnn.manual_priors(batch, num_atoms=rows, num_molecules=num_molecules, device=device)
