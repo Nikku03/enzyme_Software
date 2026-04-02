@@ -246,23 +246,23 @@ PRESETS: dict[str, dict[str, str]] = {
     },
     "balanced": {
         # main8 = 933 molecules (main7 703 + CYP_DBs novel 230)
-        # Strategy: backbone frozen ALL 50 epochs (prevents scaffold memorisation).
-        # Only hybrid heads (council, arbiter, wave, analogical) train.
+        # Strategy: short backbone freeze for stabilization, then full-model
+        # finetuning on the scaffold/source/size split.
         # No early stopping: run the full fixed schedule for controlled comparison.
         "HYBRID_COLAB_DATASET": "data/prepared_training/main8_site_conservative_singlecyp_clean_symm.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
-        "HYBRID_COLAB_EPOCHS": "50",
+        "HYBRID_COLAB_EPOCHS": "60",
         "HYBRID_COLAB_BATCH_SIZE": "16",
-        "HYBRID_COLAB_LR": "2e-4",
-        "HYBRID_COLAB_WD": "5e-4",
+        "HYBRID_COLAB_LR": "5e-5",
+        "HYBRID_COLAB_WD": "1e-4",
         "HYBRID_COLAB_SPLIT_MODE": "scaffold_source_size",
         "HYBRID_COLAB_LIMIT": "0",
-        "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "1",
+        "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
         "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
-        "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "0",
+        "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
         "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "0",
         "HYBRID_COLAB_EARLY_STOPPING_METRIC": "site_top1",
-        "HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS": "50",
+        "HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS": "5",
         "HYBRID_COLAB_INCLUDE_XENOSITE": "1",
         "HYBRID_COLAB_XENOSITE_TOPK": "1",
         "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",

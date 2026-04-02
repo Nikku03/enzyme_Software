@@ -16,6 +16,7 @@ from enzyme_software.liquid_nn_v2.features.topology_features import TOPOLOGY_FEA
 from enzyme_software.liquid_nn_v2.features.xtb_features import (
     FULL_XTB_FEATURE_DIM,
     load_or_compute_full_xtb_features,
+    payload_training_xtb_valid,
     payload_true_xtb_valid,
     xtb_status_vector,
 )
@@ -519,7 +520,7 @@ class FullXTBHybridDataset(CYPMetabolismDataset):
         graph.manual_engine_atom_features = np.concatenate([base_manual, raw_features], axis=1).astype(np.float32)
         graph.xtb_atom_features = raw_features.astype(np.float32)
         graph.xtb_atom_valid_mask = raw_valid.astype(np.float32)
-        graph.xtb_mol_valid = np.asarray([[1.0 if payload_true_xtb_valid(payload) else 0.0]], dtype=np.float32)
+        graph.xtb_mol_valid = np.asarray([[1.0 if payload_training_xtb_valid(payload) else 0.0]], dtype=np.float32)
         graph.xtb_feature_status = str(payload.get("status") or "missing")
         graph.xtb_status_flags = xtb_status_vector(graph.xtb_feature_status)
 

@@ -80,6 +80,19 @@ def payload_cached_xtb_valid(payload: Optional[Dict[str, object]]) -> bool:
     return bool(payload.get("xtb_valid"))
 
 
+def payload_training_xtb_valid(payload: Optional[Dict[str, object]]) -> bool:
+    if not payload:
+        return False
+    if payload_true_xtb_valid(payload):
+        return True
+    if not payload_cached_xtb_valid(payload):
+        return False
+    atom_valid_mask = np.asarray(payload.get("atom_valid_mask") or [], dtype=np.float32)
+    if atom_valid_mask.size == 0:
+        return False
+    return bool(np.any(atom_valid_mask > 0.0))
+
+
 def xtb_available(xtb_path: str = "xtb") -> bool:
     return shutil.which(xtb_path) is not None
 
@@ -483,7 +496,7 @@ def attach_xtb_features_to_graph(
 
     graph.xtb_atom_features = raw_features
     graph.xtb_atom_valid_mask = raw_valid
-    graph.xtb_mol_valid = np.asarray([[1.0 if payload_true_xtb_valid(payload) else 0.0]], dtype=np.float32)
+    graph.xtb_mol_valid = np.asarray([[1.0 if payload_training_xtb_valid(payload) else 0.0]], dtype=np.float32)
     graph.xtb_feature_status = str(payload.get("status") or "missing")
     graph.xtb_status_flags = xtb_status_vector(graph.xtb_feature_status)
     return graph
