@@ -26,6 +26,18 @@ DEFAULT_MANUAL_FEATURE_DIM = 32
 _CACHE_DIR = Path(__file__).resolve().parent / "cache" / "manual_engine"
 _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 _CACHE_VERSION = 3
+MANUAL_ENGINE_STATUS_NAMES = ("manual", "fallback", "missing")
+
+
+def manual_engine_status_vector(status: Optional[str]) -> np.ndarray:
+    key = str(status or "").strip().lower()
+    vector = np.zeros((len(MANUAL_ENGINE_STATUS_NAMES),), dtype=np.float32)
+    index = {
+        "manual": 0,
+        "fallback": 1,
+    }.get(key, 2)
+    vector[index] = 1.0
+    return vector
 
 
 def infer_target_bond(smiles: str, *, allow_partial_sanitize: bool = True, allow_aggressive_repair: bool = False) -> str:
@@ -442,7 +454,7 @@ if TORCH_AVAILABLE:
             "manual_engine_atom_prior_logits": atom_prior_logits.cpu().numpy().astype(np.float32),
             "manual_engine_cyp_prior_logits": cyp_prior_logits.unsqueeze(0).cpu().numpy().astype(np.float32),
             "manual_engine_route_prior": route_prior.unsqueeze(0).cpu().numpy().astype(np.float32),
-            "manual_engine_status": np.asarray([1.0 if manual_features.get("manual_feature_status") == "manual" else 0.0, 1.0 if manual_features.get("manual_feature_status") == "fallback" else 0.0], dtype=np.float32),
+            "manual_engine_status": manual_engine_status_vector(manual_features.get("manual_feature_status")),
         }
 
 
@@ -465,6 +477,7 @@ if TORCH_AVAILABLE:
             allow_aggressive_repair=allow_aggressive_repair,
         )
         if bundle is None:
+            graph.manual_engine_status = manual_engine_status_vector("missing")
             return graph
         for key, value in bundle.items():
             setattr(graph, key, value)

@@ -14,9 +14,31 @@ def _safe_tensor(data, *, dtype=torch.float32):
 
 def _stable_molecule_key(smiles: str, *, primary_cyp: str = "") -> int:
     canonical = " ".join(str(smiles or "").split())
-    payload = canonical.encode("utf-8")
+    try:
+        from rdkit import Chem
+
+        mol = Chem.MolFromSmiles(canonical)
+        if mol is not None:
+            canonical = Chem.MolToSmiles(mol, canonical=True)
+    except Exception:
+        pass
+    cyp_text = str(primary_cyp or "").strip()
+    payload = f"{canonical}\0{cyp_text}".encode("utf-8")
     digest = hashlib.blake2b(payload, digest_size=8).digest()
     return int.from_bytes(digest, byteorder="big", signed=False) & ((1 << 63) - 1)
+
+
+def _cyp_class_match(query_cyp: torch.Tensor, memory_cyp: torch.Tensor) -> torch.Tensor:
+    """
+    CYP classes are categorical identities, not ordered numeric values.
+
+    Return 1.0 only for exact known-class matches and 0.0 otherwise. Unknown
+    classes (encoded as 0) abstain instead of being treated as a match.
+    """
+    qc = query_cyp.float().view(-1, 1)
+    mc = memory_cyp.float().view(1, -1)
+    known = (qc > 0.0) & (mc > 0.0)
+    return ((qc == mc) & known).to(dtype=qc.dtype)
 
 
 if TORCH_AVAILABLE:
@@ -160,8 +182,7 @@ if TORCH_AVAILABLE:
             mv = F.normalize(mem_vectors.float(), p=2, dim=-1)
             scores = torch.matmul(qv, mv.transpose(0, 1))
             if query_cyp_values is not None:
-                qc = query_cyp_values.float().view(-1, 1)
-                cyp_match = 1.0 - (qc - mem_cyp.view(1, -1)).abs().clamp(max=1.0)
+                cyp_match = _cyp_class_match(query_cyp_values, mem_cyp)
                 scores = scores + self.cyp_weight * cyp_match
             allowed = torch.ones_like(scores, dtype=torch.bool)
             if query_molecule_keys is not None:
@@ -186,7 +207,16 @@ if TORCH_AVAILABLE:
             else:
                 support_margin = top_scores[:, :1]
             cyp_alignment = (
-                (weights.unsqueeze(-1) * (1.0 - (mem_cyp[top_idx] - query_cyp_values.float().view(-1, 1, 1)).abs().clamp(max=1.0))).sum(dim=1)
+                (
+                    weights.unsqueeze(-1)
+                    * (
+                        (
+                            (query_cyp_values.float().view(-1, 1, 1) == mem_cyp[top_idx])
+                            & (query_cyp_values.float().view(-1, 1, 1) > 0.0)
+                            & (mem_cyp[top_idx] > 0.0)
+                        ).to(dtype=weights.dtype)
+                    )
+                ).sum(dim=1)
                 if query_cyp_values is not None
                 else positive_support.new_zeros((positive_support.size(0), 1))
             )

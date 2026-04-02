@@ -293,9 +293,9 @@ if TORCH_AVAILABLE:
             pos_weight: float = 10.0,
             ranking_margin: float = 1.0,
             ranking_weight: float = 1.0,
-            listmle_weight: float = 0.25,
+            listmle_weight: float = 0.0,
             hard_negative_fraction: Optional[float] = 0.5,
-            softap_weight: float = 0.3,
+            softap_weight: float = 0.0,
             softap_temperature: float = 0.1,
             label_smoothing: float = 0.0,
             top1_margin_weight: float = 0.0,
@@ -350,7 +350,9 @@ if TORCH_AVAILABLE:
         def forward(self, logits, labels, batch, supervision_mask=None, node_weights=None, graph_weights=None):
             focal_loss = self.focal(logits, labels, supervision_mask=supervision_mask, node_weights=node_weights, batch=batch)
             ranking_loss = self.ranking(logits, labels, batch, supervision_mask=supervision_mask, graph_weights=graph_weights)
-            listmle_loss = self.listmle(logits, labels, batch, supervision_mask=supervision_mask, graph_weights=graph_weights)
+            listmle_loss = logits.sum() * 0.0
+            if self.listmle_weight > 0.0:
+                listmle_loss = self.listmle(logits, labels, batch, supervision_mask=supervision_mask, graph_weights=graph_weights)
             # SoftAP: per-molecule, same iteration structure as RankingLoss
             softap_loss = logits.sum() * 0.0
             if self.softap_weight > 0.0 and batch is not None and batch.numel():
@@ -422,6 +424,8 @@ if TORCH_AVAILABLE:
                 pos_weight=15.0,
                 ranking_margin=1.0,
                 ranking_weight=0.5,
+                listmle_weight=0.0,
+                softap_weight=0.0,
                 label_smoothing=float(site_label_smoothing),
                 top1_margin_weight=float(site_top1_margin_weight),
                 top1_margin_value=float(site_top1_margin_value),

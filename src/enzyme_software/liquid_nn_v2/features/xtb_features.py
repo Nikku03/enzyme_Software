@@ -41,6 +41,27 @@ FULL_XTB_FEATURE_NAMES = (
     "lookup_bde_norm",
 )
 FULL_XTB_FEATURE_DIM = len(FULL_XTB_FEATURE_NAMES)
+XTB_STATUS_NAMES = (
+    "ok",
+    "missing",
+    "no_xtb_payload",
+    "manual_engine_error",
+    "rdkit_unavailable",
+    "embedding_failed",
+    "xtb_unavailable",
+    "xtb_error",
+    "xtb_failed",
+    "other",
+)
+
+
+def xtb_status_vector(status: Optional[str]) -> np.ndarray:
+    key = str(status or "").strip().lower()
+    vector = np.zeros((len(XTB_STATUS_NAMES),), dtype=np.float32)
+    lookup = {name: idx for idx, name in enumerate(XTB_STATUS_NAMES[:-1])}
+    index = lookup.get(key, len(XTB_STATUS_NAMES) - 1)
+    vector[index] = 1.0
+    return vector
 
 
 def xtb_available(xtb_path: str = "xtb") -> bool:
@@ -345,6 +366,7 @@ def attach_xtb_features_to_graph(
     graph.xtb_atom_valid_mask = raw_valid
     graph.xtb_mol_valid = np.asarray([[1.0 if payload.get("xtb_valid") else 0.0]], dtype=np.float32)
     graph.xtb_feature_status = str(payload.get("status") or "missing")
+    graph.xtb_status_flags = xtb_status_vector(graph.xtb_feature_status)
     return graph
 
 

@@ -93,7 +93,7 @@ class ModelConfig:
     use_cyp_site_conditioning: bool = True   # broadcast CYP logits as per-atom bias before site head
     use_cross_atom_attention: bool = True    # 2-layer self-attention on SoM atom features before site head
     use_bde_prior: bool = True               # learnable BDE→logit residual on top of site head
-    bde_feature_index: int = 44             # index of normalized BDE in atom feature vector (stable; XTB appended at end)
+    bde_feature_index: int = 44             # deprecated; BDE prior now uses named physics_features["bde_values"]
     use_nexus_bridge: bool = True
     nexus_wave_hidden_dim: int = 64
     nexus_graph_dim: int = 48

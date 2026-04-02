@@ -91,7 +91,7 @@ if TORCH_AVAILABLE:
             )
             # CYP-to-site conditioning: broadcast CYP logits as per-atom bias before site head
             self.cyp_site_conditioner = nn.Linear(config.num_cyp_classes, 1, bias=False) if config.use_cyp_site_conditioning else None
-            # BDE learned prior: residual correction on site logit from raw BDE feature
+            # BDE learned prior: residual correction on site logit from named BDE feature
             self.bde_prior = nn.Linear(1, 1, bias=True) if config.use_bde_prior else None
             self.last_gate_values = None
             self.last_tau_history = None
@@ -139,6 +139,7 @@ if TORCH_AVAILABLE:
                 "batch": mol_batch,
                 "tau_init": tau_init,
                 "physics_out": physics_out,
+                "bde_values": physics_features.get("bde_values"),
                 "prior_payload": prior_payload,
                 "steric_payload": steric_payload,
                 "shared_atoms": shared_atoms,
@@ -157,12 +158,19 @@ if TORCH_AVAILABLE:
             cyp_bias = self.cyp_site_conditioner(cyp_logits.detach())  # (B_mol, 1)
             return som_features + cyp_bias[mol_batch]                   # (N_atoms, branch_dim) broadcast
 
-        def _apply_bde_prior(self, site_logits, raw_x):
-            """Add learnable BDE→logit residual."""
+        def _apply_bde_prior(self, site_logits, bde_values):
+            """Add learnable BDE→logit residual from named physics features."""
             if self.bde_prior is None:
                 return site_logits
-            bde_raw = raw_x[:, self.config.bde_feature_index].unsqueeze(-1)  # (N, 1)
-            return site_logits + self.bde_prior(bde_raw)
+            if bde_values is None:
+                return site_logits
+            if bde_values.ndim == 1:
+                bde_values = bde_values.unsqueeze(-1)
+            bde_values = torch.nan_to_num(bde_values.to(dtype=site_logits.dtype, device=site_logits.device), nan=0.0, posinf=500.0, neginf=0.0)
+            # Normalize raw BDE values to a stable [0,1] range expected by the prior.
+            if float(bde_values.detach().abs().max().item()) > 2.0:
+                bde_values = ((bde_values - 250.0) / 250.0).clamp(0.0, 1.0)
+            return site_logits + self.bde_prior(bde_values)
 
         def _build_common_outputs(
             self,
@@ -264,7 +272,7 @@ if TORCH_AVAILABLE:
                 prior_logits=encoded["prior_payload"].get("atom_prior_logits") if self.config.use_manual_engine_priors else None,
                 prior_features=encoded["prior_payload"].get("atom_prior_embedding") if self.config.use_manual_engine_priors else None,
             )
-            site_logits = self._apply_bde_prior(site_logits, encoded["x"])
+            site_logits = self._apply_bde_prior(site_logits, encoded.get("bde_values"))
             return self._build_common_outputs(
                 encoded,
                 som_payload,
@@ -457,7 +465,7 @@ if TORCH_AVAILABLE:
                 prior_logits=encoded["prior_payload"].get("atom_prior_logits") if self.config.use_manual_engine_priors else None,
                 prior_features=encoded["prior_payload"].get("atom_prior_embedding") if self.config.use_manual_engine_priors else None,
             )
-            site_logits = self._apply_bde_prior(site_logits, encoded["x"])
+            site_logits = self._apply_bde_prior(site_logits, encoded.get("bde_values"))
             if self.config.use_tunneling_module and self.config.use_tunneling_for_site_scores:
                 site_logits = site_logits + torch.log(tunneling_payload["tunnel_prob"].clamp(min=1.0e-6))
 
@@ -575,7 +583,7 @@ if TORCH_AVAILABLE:
                 prior_logits=encoded["prior_payload"].get("atom_prior_logits") if self.config.use_manual_engine_priors else None,
                 prior_features=encoded["prior_payload"].get("atom_prior_embedding") if self.config.use_manual_engine_priors else None,
             )
-            site_logits = self._apply_bde_prior(site_logits, encoded["x"])
+            site_logits = self._apply_bde_prior(site_logits, encoded.get("bde_values"))
 
             tunneling_payload = {"barrier": None, "tunnel_prob": None, "stats": {}}
             tunnel_bias = torch.zeros_like(site_logits)

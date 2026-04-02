@@ -13,7 +13,7 @@ from enzyme_software.liquid_nn_v2._compat import require_torch
 from enzyme_software.liquid_nn_v2.data.dataset_loader import CYPMetabolismDataset, collate_fn
 from enzyme_software.liquid_nn_v2.features.steric_features import StructureLibrary
 from enzyme_software.liquid_nn_v2.features.topology_features import TOPOLOGY_FEATURE_DIM, compute_atom_topology_features
-from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM, load_or_compute_full_xtb_features
+from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM, load_or_compute_full_xtb_features, xtb_status_vector
 
 
 def _canonical_smiles(drug: Dict[str, object]) -> str:
@@ -532,6 +532,7 @@ class FullXTBHybridDataset(CYPMetabolismDataset):
         graph.xtb_atom_valid_mask = raw_valid.astype(np.float32)
         graph.xtb_mol_valid = np.asarray([[1.0 if payload.get("xtb_valid") else 0.0]], dtype=np.float32)
         graph.xtb_feature_status = str(payload.get("status") or "missing")
+        graph.xtb_status_flags = xtb_status_vector(graph.xtb_feature_status)
 
         # Global topology features (scaffold/sidechain role, centrality, carbonyl
         # distance, molecule size context).  These give the site arbiter context
@@ -540,8 +541,12 @@ class FullXTBHybridDataset(CYPMetabolismDataset):
         topo = compute_atom_topology_features(smiles_for_topo)
         if topo is not None and topo.shape[0] == num_atoms:
             graph.topology_atom_features = topo
+            graph.topology_atom_valid_mask = np.ones((num_atoms, 1), dtype=np.float32)
+            graph.topology_mol_valid = np.asarray([[1.0]], dtype=np.float32)
         else:
             graph.topology_atom_features = np.zeros((num_atoms, TOPOLOGY_FEATURE_DIM), dtype=np.float32)
+            graph.topology_atom_valid_mask = np.zeros((num_atoms, 1), dtype=np.float32)
+            graph.topology_mol_valid = np.asarray([[0.0]], dtype=np.float32)
 
         return item
 

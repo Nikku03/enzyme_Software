@@ -108,6 +108,22 @@ def _has_site_labels(drug: dict) -> bool:
     return bool(drug.get("som") or drug.get("site_atoms") or drug.get("site_atom_indices") or drug.get("metabolism_sites"))
 
 
+def _site_atom_indices(drug: dict) -> list[int]:
+    site_atoms: list[int] = []
+    if drug.get("som"):
+        for som in drug["som"]:
+            atom_idx = som.get("atom_idx", som) if isinstance(som, dict) else som
+            if isinstance(atom_idx, int):
+                site_atoms.append(int(atom_idx))
+    elif drug.get("site_atoms"):
+        site_atoms = [int(v) for v in drug.get("site_atoms", []) if isinstance(v, int)]
+    elif drug.get("site_atom_indices"):
+        site_atoms = [int(v) for v in drug.get("site_atom_indices", []) if isinstance(v, int)]
+    elif drug.get("metabolism_sites"):
+        site_atoms = [int(v) for v in drug.get("metabolism_sites", []) if isinstance(v, int)]
+    return sorted(set(site_atoms))
+
+
 def _canonical_smiles_key(smiles: str) -> str:
     return " ".join(str(smiles or "").strip().split())
 
@@ -145,7 +161,7 @@ def _atom_bucket(drug: dict) -> str:
 
 
 def _site_count_bucket(drug: dict) -> str:
-    count = len(list(drug.get("site_atoms") or []))
+    count = len(_site_atom_indices(drug))
     if count <= 0:
         return "none"
     if count == 1:

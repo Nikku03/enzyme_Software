@@ -7,6 +7,11 @@ import numpy as np
 
 from enzyme_software.liquid_nn_v2._compat import TORCH_AVAILABLE, require_torch, torch
 from enzyme_software.liquid_nn_v2.data.smarts_patterns import FUNCTIONAL_GROUP_SMARTS
+from enzyme_software.liquid_nn_v2.features.manual_engine_features import MANUAL_ENGINE_STATUS_NAMES, manual_engine_status_vector
+from enzyme_software.liquid_nn_v2.features.xtb_features import xtb_status_vector
+
+
+ATOM_3D_SOURCE_NAMES = ("structure_library", "fallback_embed", "missing")
 
 
 def _tensor(data, *, dtype=None):
@@ -41,12 +46,18 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
     manual_atom_prior_parts: List[object] = []
     manual_cyp_prior_parts: List[object] = []
     manual_route_prior_parts: List[object] = []
+    manual_status_parts: List[object] = []
     xtb_atom_parts: List[object] = []
     xtb_atom_valid_parts: List[object] = []
     xtb_mol_valid_parts: List[object] = []
+    xtb_status_flag_parts: List[object] = []
     xtb_statuses: List[str] = []
     atom_3d_parts: List[object] = []
+    atom_3d_valid_parts: List[object] = []
+    atom_3d_source_parts: List[object] = []
     topology_atom_parts: List[object] = []
+    topology_atom_valid_parts: List[object] = []
+    topology_mol_valid_parts: List[object] = []
     parsing_statuses: List[str] = []
     canonical_smiles: List[str] = []
     repaired_flags: List[bool] = []
@@ -79,12 +90,43 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
         manual_atom_prior_parts.append(_tensor(graph.manual_engine_atom_prior_logits, dtype=torch.float32) if getattr(graph, "manual_engine_atom_prior_logits", None) is not None else None)
         manual_cyp_prior_parts.append(_tensor(graph.manual_engine_cyp_prior_logits, dtype=torch.float32) if getattr(graph, "manual_engine_cyp_prior_logits", None) is not None else None)
         manual_route_prior_parts.append(_tensor(graph.manual_engine_route_prior, dtype=torch.float32) if getattr(graph, "manual_engine_route_prior", None) is not None else None)
+        manual_status_parts.append(
+            _tensor(getattr(graph, "manual_engine_status"), dtype=torch.float32).view(1, -1)
+            if getattr(graph, "manual_engine_status", None) is not None
+            else _tensor(manual_engine_status_vector("missing"), dtype=torch.float32).view(1, -1)
+        )
         xtb_atom_parts.append(_tensor(graph.xtb_atom_features, dtype=torch.float32) if getattr(graph, "xtb_atom_features", None) is not None else None)
         xtb_atom_valid_parts.append(_tensor(graph.xtb_atom_valid_mask, dtype=torch.float32) if getattr(graph, "xtb_atom_valid_mask", None) is not None else None)
         xtb_mol_valid_parts.append(_tensor(graph.xtb_mol_valid, dtype=torch.float32) if getattr(graph, "xtb_mol_valid", None) is not None else None)
-        xtb_statuses.append(str(getattr(graph, "xtb_feature_status", "missing")))
+        xtb_status = str(getattr(graph, "xtb_feature_status", "missing"))
+        xtb_statuses.append(xtb_status)
+        xtb_status_flag_parts.append(
+            _tensor(getattr(graph, "xtb_status_flags"), dtype=torch.float32).view(1, -1)
+            if getattr(graph, "xtb_status_flags", None) is not None
+            else _tensor(xtb_status_vector(xtb_status), dtype=torch.float32).view(1, -1)
+        )
         atom_3d_parts.append(_tensor(graph.atom_3d_features, dtype=torch.float32) if getattr(graph, "atom_3d_features", None) is not None else None)
+        atom_3d_valid_parts.append(
+            _tensor(getattr(graph, "atom_3d_valid_mask"), dtype=torch.float32)
+            if getattr(graph, "atom_3d_valid_mask", None) is not None
+            else torch.zeros((graph.num_atoms, 1), dtype=torch.float32)
+        )
+        atom_3d_source_parts.append(
+            _tensor(getattr(graph, "atom_3d_source"), dtype=torch.float32)
+            if getattr(graph, "atom_3d_source", None) is not None
+            else torch.tensor([[0.0, 0.0, 1.0]], dtype=torch.float32)
+        )
         topology_atom_parts.append(_tensor(graph.topology_atom_features, dtype=torch.float32) if getattr(graph, "topology_atom_features", None) is not None else None)
+        topology_atom_valid_parts.append(
+            _tensor(getattr(graph, "topology_atom_valid_mask"), dtype=torch.float32)
+            if getattr(graph, "topology_atom_valid_mask", None) is not None
+            else torch.zeros((graph.num_atoms, 1), dtype=torch.float32)
+        )
+        topology_mol_valid_parts.append(
+            _tensor(getattr(graph, "topology_mol_valid"), dtype=torch.float32)
+            if getattr(graph, "topology_mol_valid", None) is not None
+            else torch.zeros((1, 1), dtype=torch.float32)
+        )
         parsing_statuses.append(str(getattr(graph, "parsing_status", "unknown")))
         canonical_smiles.append(str(getattr(graph, "canonical_smiles", graph.smiles)))
         repaired_flags.append(bool(getattr(graph, "repaired", False)))
@@ -125,7 +167,7 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
     if cyp_labels:
         batch["cyp_labels"] = torch.as_tensor(cyp_labels, dtype=torch.long)
         batch["cyp_supervision_mask"] = torch.as_tensor(cyp_supervision_mask, dtype=torch.float32)
-    def _stack_optional(per_graph_values, row_counts, *, keep_rows="atom"):
+    def _stack_optional(per_graph_values, row_counts, *, name: str):
         present = [value for value in per_graph_values if value is not None]
         if not present:
             return None
@@ -136,21 +178,37 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
                 rows = row_counts[idx]
                 filled.append(torch.zeros((rows, width), dtype=torch.float32))
             else:
-                filled.append(value if value.ndim > 1 else value.unsqueeze(-1))
+                value = value if value.ndim > 1 else value.unsqueeze(-1)
+                rows = row_counts[idx]
+                if value.shape[0] != rows:
+                    raise ValueError(
+                        f"Optional feature '{name}' row mismatch for graph {idx}: expected {rows}, got {value.shape[0]}"
+                    )
+                if value.shape[1] != width:
+                    raise ValueError(
+                        f"Optional feature '{name}' width mismatch for graph {idx}: expected {width}, got {value.shape[1]}"
+                    )
+                filled.append(value)
         return torch.cat(filled, dim=0)
 
     atom_counts = [int(graph.num_atoms) for graph in graphs]
     mol_counts = [1 for _ in graphs]
-    manual_atom = _stack_optional(manual_atom_parts, atom_counts)
-    manual_mol = _stack_optional(manual_mol_parts, mol_counts)
-    manual_atom_prior = _stack_optional(manual_atom_prior_parts, atom_counts)
-    manual_cyp_prior = _stack_optional(manual_cyp_prior_parts, mol_counts)
-    manual_route_prior = _stack_optional(manual_route_prior_parts, mol_counts)
-    xtb_atom = _stack_optional(xtb_atom_parts, atom_counts)
-    xtb_atom_valid = _stack_optional(xtb_atom_valid_parts, atom_counts)
-    xtb_mol_valid = _stack_optional(xtb_mol_valid_parts, mol_counts)
-    atom_3d = _stack_optional(atom_3d_parts, atom_counts)
-    topology_atom = _stack_optional(topology_atom_parts, atom_counts)
+    manual_atom = _stack_optional(manual_atom_parts, atom_counts, name="manual_engine_atom_features")
+    manual_mol = _stack_optional(manual_mol_parts, mol_counts, name="manual_engine_mol_features")
+    manual_atom_prior = _stack_optional(manual_atom_prior_parts, atom_counts, name="manual_engine_atom_prior_logits")
+    manual_cyp_prior = _stack_optional(manual_cyp_prior_parts, mol_counts, name="manual_engine_cyp_prior_logits")
+    manual_route_prior = _stack_optional(manual_route_prior_parts, mol_counts, name="manual_engine_route_prior")
+    manual_status = _stack_optional(manual_status_parts, mol_counts, name="manual_engine_status")
+    xtb_atom = _stack_optional(xtb_atom_parts, atom_counts, name="xtb_atom_features")
+    xtb_atom_valid = _stack_optional(xtb_atom_valid_parts, atom_counts, name="xtb_atom_valid_mask")
+    xtb_mol_valid = _stack_optional(xtb_mol_valid_parts, mol_counts, name="xtb_mol_valid")
+    xtb_status_flags = _stack_optional(xtb_status_flag_parts, mol_counts, name="xtb_status_flags")
+    atom_3d = _stack_optional(atom_3d_parts, atom_counts, name="atom_3d_features")
+    atom_3d_valid = _stack_optional(atom_3d_valid_parts, atom_counts, name="atom_3d_valid_mask")
+    atom_3d_source = _stack_optional(atom_3d_source_parts, mol_counts, name="atom_3d_source")
+    topology_atom = _stack_optional(topology_atom_parts, atom_counts, name="topology_atom_features")
+    topology_atom_valid = _stack_optional(topology_atom_valid_parts, atom_counts, name="topology_atom_valid_mask")
+    topology_mol_valid = _stack_optional(topology_mol_valid_parts, mol_counts, name="topology_mol_valid")
     if manual_atom is not None:
         batch["manual_engine_atom_features"] = manual_atom
     if manual_mol is not None:
@@ -161,16 +219,28 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
         batch["manual_engine_cyp_prior_logits"] = manual_cyp_prior
     if manual_route_prior is not None:
         batch["manual_engine_route_prior"] = manual_route_prior
+    if manual_status is not None:
+        batch["manual_engine_status"] = manual_status
     if xtb_atom is not None:
         batch["xtb_atom_features"] = xtb_atom
     if xtb_atom_valid is not None:
         batch["xtb_atom_valid_mask"] = xtb_atom_valid
     if xtb_mol_valid is not None:
         batch["xtb_mol_valid"] = xtb_mol_valid
+    if xtb_status_flags is not None:
+        batch["xtb_status_flags"] = xtb_status_flags
     if atom_3d is not None:
         batch["atom_3d_features"] = atom_3d
+    if atom_3d_valid is not None:
+        batch["atom_3d_valid_mask"] = atom_3d_valid
+    if atom_3d_source is not None:
+        batch["atom_3d_source"] = atom_3d_source
     if topology_atom is not None:
         batch["topology_atom_features"] = topology_atom
+    if topology_atom_valid is not None:
+        batch["topology_atom_valid_mask"] = topology_atom_valid
+    if topology_mol_valid is not None:
+        batch["topology_mol_valid"] = topology_mol_valid
     if os.environ.get("LNN_DEBUG_COLLATE", "").strip().lower() in {"1", "true", "yes", "on"} and "site_labels" in batch:
         print(f"DEBUG collate: site_labels sum = {batch['site_labels'].sum().item()}")
     return batch
@@ -258,6 +328,11 @@ def create_dummy_batch(
         result["manual_engine_mol_features"] = torch.rand(num_molecules, 8)
         result["manual_engine_atom_prior_logits"] = torch.rand(total_atoms, 1)
         result["manual_engine_cyp_prior_logits"] = torch.rand(num_molecules, 5)
+        result["manual_engine_status"] = torch.zeros(num_molecules, len(MANUAL_ENGINE_STATUS_NAMES))
+        result["manual_engine_status"][:, 0] = 1.0
     if include_3d:
         result["atom_3d_features"] = torch.rand(total_atoms, 8)
+        result["atom_3d_valid_mask"] = torch.ones(total_atoms, 1)
+        result["atom_3d_source"] = torch.zeros(num_molecules, len(ATOM_3D_SOURCE_NAMES))
+        result["atom_3d_source"][:, 0] = 1.0
     return result

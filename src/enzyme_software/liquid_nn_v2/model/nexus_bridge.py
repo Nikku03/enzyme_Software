@@ -24,6 +24,9 @@ if TORCH_AVAILABLE:
             topk: int = 32,
             graph_weight: float = 0.25,
             temperature: float = 0.25,
+            hard_negative_ratio: float = 2.0,
+            min_hard_negatives: int = 32,
+            max_hard_negatives: int = 256,
         ) -> None:
             super().__init__()
             self.key_dim = int(key_dim)
@@ -33,6 +36,9 @@ if TORCH_AVAILABLE:
             self.topk = max(1, int(topk))
             self.graph_weight = float(max(graph_weight, 0.0))
             self.temperature = float(max(temperature, 1.0e-3))
+            self.hard_negative_ratio = float(max(hard_negative_ratio, 0.0))
+            self.min_hard_negatives = max(0, int(min_hard_negatives))
+            self.max_hard_negatives = max(self.min_hard_negatives, int(max_hard_negatives))
             self.register_buffer("keys", torch.zeros(self.capacity, self.key_dim))
             self.register_buffer("graph", torch.zeros(self.capacity, self.graph_dim))
             self.register_buffer("site", torch.zeros(self.capacity, 1))
@@ -140,20 +146,42 @@ if TORCH_AVAILABLE:
             cyp_probs: torch.Tensor,
             molecule_keys: torch.Tensor,
             supervision_mask: Optional[torch.Tensor] = None,
-        ) -> None:
+            hard_negative_scores: Optional[torch.Tensor] = None,
+        ) -> int:
             if atom_keys.numel() == 0:
-                return
+                return 0
             mask = torch.ones(atom_keys.size(0), dtype=torch.bool, device=atom_keys.device)
             if supervision_mask is not None:
                 mask = supervision_mask.view(-1) > 0.5
             if not bool(mask.any()):
-                return
-            keys = atom_keys[mask].detach()
-            graph = atom_graph[mask].detach()
-            multivector = atom_multivectors[mask].detach()
-            site = site_labels[mask].detach().view(-1, 1)
-            cyp = cyp_probs[mask].detach()
-            mol_keys = molecule_keys[mask].detach().view(-1)
+                return 0
+            labels_flat = site_labels.view(-1)
+            positive_mask = mask & (labels_flat > 0.5)
+            selected_mask = positive_mask.clone()
+            negative_mask = mask & ~positive_mask
+            if bool(negative_mask.any()):
+                negative_idx = torch.nonzero(negative_mask, as_tuple=False).view(-1)
+                if hard_negative_scores is not None:
+                    hardness = hard_negative_scores.view(-1)[negative_idx].detach().float()
+                else:
+                    hardness = torch.zeros_like(negative_idx, dtype=atom_keys.dtype)
+                positive_count = int(positive_mask.sum().item())
+                if positive_count > 0:
+                    desired_negatives = max(self.min_hard_negatives, int(round(self.hard_negative_ratio * positive_count)))
+                else:
+                    desired_negatives = self.min_hard_negatives
+                desired_negatives = min(desired_negatives, self.max_hard_negatives, int(negative_idx.numel()))
+                if desired_negatives > 0:
+                    hard_order = torch.topk(hardness, k=desired_negatives, dim=0).indices
+                    selected_mask[negative_idx[hard_order]] = True
+            if not bool(selected_mask.any()):
+                return 0
+            keys = atom_keys[selected_mask].detach()
+            graph = atom_graph[selected_mask].detach()
+            multivector = atom_multivectors[selected_mask].detach()
+            site = site_labels[selected_mask].detach().view(-1, 1)
+            cyp = cyp_probs[selected_mask].detach()
+            mol_keys = molecule_keys[selected_mask].detach().view(-1)
             count = int(keys.size(0))
             ptr = int(self.ptr.item())
             if count >= self.capacity:
@@ -193,6 +221,7 @@ if TORCH_AVAILABLE:
                 self.molecule_key[:second] = mol_keys[first:]
                 self.valid[:second] = True
             self.ptr.fill_(end % self.capacity)
+            return count
 
 
     class NexusHybridBridge(nn.Module):
@@ -210,6 +239,7 @@ if TORCH_AVAILABLE:
             num_cyp_classes: int,
             steric_feature_dim: int = 8,
             xtb_feature_dim: int = FULL_XTB_FEATURE_DIM,
+            topology_feature_dim: int = 5,
             wave_hidden_dim: int = 64,
             graph_dim: int = 48,
             memory_capacity: int = 4096,
@@ -223,6 +253,7 @@ if TORCH_AVAILABLE:
             self.num_cyp_classes = int(num_cyp_classes)
             self.steric_feature_dim = int(max(0, steric_feature_dim))
             self.xtb_feature_dim = int(max(0, xtb_feature_dim))
+            self.topology_feature_dim = int(max(0, topology_feature_dim))
             self.wave_aux_weight = float(max(0.0, wave_aux_weight))
             self.analogical_aux_weight = float(max(0.0, analogical_aux_weight))
             self.analogical_cyp_aux_scale = float(max(0.0, analogical_cyp_aux_scale))
@@ -252,10 +283,28 @@ if TORCH_AVAILABLE:
                 dropout=0.05,
             )
             key_dim = hidden // 2
-            # Key encoder: multivectors + wave field, with LayerNorm on input so
-            # keys are well-distributed from epoch 1 (not dependent on bridge weights
-            # escaping near-zero initialization before the memory becomes useful).
-            _key_in_dim = 16 + WholeMoleculeWaveField.field_feature_dim  # 26D, fully trainable
+            backbone_key_dim = max(16, hidden // 4)
+            local_key_dim = max(16, hidden // 4)
+            local_descriptor_dim = self.steric_feature_dim + self.xtb_feature_dim + self.topology_feature_dim
+            self.backbone_key_proj = nn.Sequential(
+                nn.LayerNorm(self.atom_feature_dim),
+                nn.Linear(self.atom_feature_dim, hidden),
+                nn.SiLU(),
+                nn.Linear(hidden, backbone_key_dim),
+            )
+            self.local_descriptor_proj = (
+                nn.Sequential(
+                    nn.LayerNorm(local_descriptor_dim),
+                    nn.Linear(local_descriptor_dim, hidden),
+                    nn.SiLU(),
+                    nn.Linear(hidden, local_key_dim),
+                )
+                if local_descriptor_dim > 0
+                else None
+            )
+            # Retrieval keys need both trainable bridge state and stable chemistry
+            # signals. Bridge-only keys were too diffuse on the benchmark.
+            _key_in_dim = 16 + WholeMoleculeWaveField.field_feature_dim + backbone_key_dim + local_key_dim
             self.atom_key = nn.Sequential(
                 nn.LayerNorm(_key_in_dim),
                 nn.Linear(_key_in_dim, hidden),
@@ -416,6 +465,46 @@ if TORCH_AVAILABLE:
             multivectors[:, 15:16] = multivectors[:, 15:16] + self.pseudo_proj(scalar_src)
             return multivectors, coords
 
+        def _build_atom_keys(
+            self,
+            *,
+            atom_features: torch.Tensor,
+            multivectors: torch.Tensor,
+            atom_field_features: torch.Tensor,
+            atom_3d_features: Optional[torch.Tensor],
+            xtb_atom_features: Optional[torch.Tensor],
+            topology_atom_features: Optional[torch.Tensor],
+        ) -> torch.Tensor:
+            rows = int(atom_features.size(0))
+            device = atom_features.device
+            dtype = atom_features.dtype
+            backbone_features = self._sanitize_feature_tensor(atom_features)
+            backbone_proj = self.backbone_key_proj(backbone_features)
+            if self.local_descriptor_proj is not None:
+                steric = self._sanitize_feature_tensor(
+                    self._optional_feature(atom_3d_features, rows, self.steric_feature_dim, device=device, dtype=dtype)
+                )
+                xtb = self._sanitize_feature_tensor(
+                    self._optional_feature(xtb_atom_features, rows, self.xtb_feature_dim, device=device, dtype=dtype)
+                )
+                topology = self._sanitize_feature_tensor(
+                    self._optional_feature(topology_atom_features, rows, self.topology_feature_dim, device=device, dtype=dtype)
+                )
+                local_descriptor = torch.cat([steric, xtb, topology], dim=-1)
+                local_proj = self.local_descriptor_proj(local_descriptor)
+            else:
+                local_proj = multivectors.new_zeros((rows, 0))
+            key_input = torch.cat(
+                [
+                    multivectors,
+                    self._sanitize_feature_tensor(atom_field_features),
+                    backbone_proj,
+                    local_proj,
+                ],
+                dim=-1,
+            )
+            return self.atom_key(key_input)
+
         def _group_graph_embedding(self, multivectors: torch.Tensor, batch_index: torch.Tensor) -> torch.Tensor:
             num_molecules = int(batch_index.max().item()) + 1 if batch_index.numel() else 0
             if num_molecules == 0:
@@ -550,9 +639,11 @@ if TORCH_AVAILABLE:
             *,
             atom_features: torch.Tensor,
             batch_index: torch.Tensor,
+            site_logits: Optional[torch.Tensor] = None,
             cyp_logits: torch.Tensor,
             atom_3d_features: Optional[torch.Tensor] = None,
             xtb_atom_features: Optional[torch.Tensor] = None,
+            topology_atom_features: Optional[torch.Tensor] = None,
             xtb_atom_valid_mask: Optional[torch.Tensor] = None,
             xtb_mol_valid: Optional[torch.Tensor] = None,
             site_labels: Optional[torch.Tensor] = None,
@@ -598,9 +689,14 @@ if TORCH_AVAILABLE:
                 atom_molecule_keys = graph_molecule_keys.to(device=batch_index.device, dtype=torch.long)[batch_index]
             else:
                 atom_molecule_keys = torch.zeros_like(batch_index, dtype=torch.long)
-            # Keys use only trainable bridge features — backbone atom_features excluded
-            # to prevent frozen-backbone keys from being static (uniform similarity → conf=1/topk)
-            atom_keys = self.atom_key(torch.cat([multivectors, wave_field["atom_field_features"]], dim=-1))
+            atom_keys = self._build_atom_keys(
+                atom_features=atom_features,
+                multivectors=multivectors,
+                atom_field_features=wave_field["atom_field_features"],
+                atom_3d_features=atom_3d_features,
+                xtb_atom_features=xtb_atom_features,
+                topology_atom_features=topology_atom_features,
+            )
             precedent_query = torch.cat(
                 [
                     multivectors,
@@ -701,6 +797,10 @@ if TORCH_AVAILABLE:
                     else:
                         cyp_probs_by_mol = true_cyp
                 cyp_probs_atom = cyp_probs_by_mol[batch_index]
+                if site_logits is not None:
+                    hard_negative_scores = torch.sigmoid(site_logits.detach().view(-1, 1))
+                else:
+                    hard_negative_scores = site_prior.detach()
                 self.memory.update(
                     atom_keys=atom_keys,
                     atom_graph=per_atom_graph,
@@ -709,6 +809,7 @@ if TORCH_AVAILABLE:
                     cyp_probs=cyp_probs_atom,
                     molecule_keys=atom_molecule_keys,
                     supervision_mask=site_supervision_mask,
+                    hard_negative_scores=hard_negative_scores,
                 )
             metrics = {
                 **wave_metrics,
@@ -761,9 +862,11 @@ if TORCH_AVAILABLE:
             *,
             atom_features: torch.Tensor,
             batch_index: torch.Tensor,
+            site_logits: Optional[torch.Tensor] = None,
             cyp_logits: torch.Tensor,
             atom_3d_features: Optional[torch.Tensor] = None,
             xtb_atom_features: Optional[torch.Tensor] = None,
+            topology_atom_features: Optional[torch.Tensor] = None,
             site_labels: Optional[torch.Tensor] = None,
             site_supervision_mask: Optional[torch.Tensor] = None,
             cyp_labels: Optional[torch.Tensor] = None,
@@ -780,9 +883,15 @@ if TORCH_AVAILABLE:
                 atom_molecule_keys = graph_molecule_keys.to(device=batch_index.device, dtype=torch.long)[batch_index]
             else:
                 atom_molecule_keys = torch.zeros_like(batch_index, dtype=torch.long)
-            # Compute wave field features for trainable keys (mirrors forward() key computation)
             _wf = self.wave_field(multivectors, _coords, batch_index)
-            atom_keys = self.atom_key(torch.cat([multivectors, _wf["atom_field_features"]], dim=-1))
+            atom_keys = self._build_atom_keys(
+                atom_features=atom_features,
+                multivectors=multivectors,
+                atom_field_features=_wf["atom_field_features"],
+                atom_3d_features=atom_3d_features,
+                xtb_atom_features=xtb_atom_features,
+                topology_atom_features=topology_atom_features,
+            )
             cyp_probs_by_mol = F.softmax(cyp_logits.detach(), dim=-1)
             if cyp_labels is not None:
                 true_cyp = F.one_hot(
@@ -796,8 +905,11 @@ if TORCH_AVAILABLE:
                     cyp_probs_by_mol = true_cyp
             cyp_probs_atom = cyp_probs_by_mol[batch_index]
             supervision = site_supervision_mask.view(-1) > 0.5 if site_supervision_mask is not None else torch.ones_like(batch_index, dtype=torch.bool)
-            added_atoms = int(supervision.sum().item())
-            self.memory.update(
+            if site_logits is not None:
+                hard_negative_scores = torch.sigmoid(site_logits.detach().view(-1, 1))
+            else:
+                hard_negative_scores = torch.zeros((site_labels.numel(), 1), device=site_labels.device, dtype=site_labels.dtype)
+            selected_atoms = self.memory.update(
                 atom_keys=atom_keys,
                 atom_graph=per_atom_graph,
                 atom_multivectors=multivectors,
@@ -805,8 +917,10 @@ if TORCH_AVAILABLE:
                 cyp_probs=cyp_probs_atom,
                 molecule_keys=atom_molecule_keys,
                 supervision_mask=site_supervision_mask,
+                hard_negative_scores=hard_negative_scores,
             )
-            return {"memory_size": float(self.memory.size()), "used": 1.0, "added_atoms": float(added_atoms)}
+            used = 1.0 if bool(supervision.any()) else 0.0
+            return {"memory_size": float(self.memory.size()), "used": used, "added_atoms": float(selected_atoms)}
 else:  # pragma: no cover
     class NexusHybridBridge:  # type: ignore[override]
         def __init__(self, *args, **kwargs):

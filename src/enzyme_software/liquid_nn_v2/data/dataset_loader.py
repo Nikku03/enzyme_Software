@@ -30,13 +30,39 @@ CONFIDENCE_WEIGHTS = {
 }
 
 
+def _extract_site_atoms(drug: Dict[str, object]) -> List[int]:
+    site_atoms: List[int] = []
+    raw_som = drug.get("som")
+    if raw_som:
+        for som in raw_som:
+            atom_idx = som.get("atom_idx", som) if isinstance(som, dict) else som
+            if isinstance(atom_idx, int):
+                site_atoms.append(int(atom_idx))
+    elif drug.get("site_atoms"):
+        site_atoms = [int(v) for v in drug.get("site_atoms", []) if isinstance(v, int)]
+    elif drug.get("site_atom_indices"):
+        site_atoms = [int(v) for v in drug.get("site_atom_indices", []) if isinstance(v, int)]
+    elif drug.get("metabolism_sites"):
+        site_atoms = [int(v) for v in drug.get("metabolism_sites", []) if isinstance(v, int)]
+    return sorted(set(site_atoms))
+
+
 def stable_molecule_key(
     smiles: str,
     *,
     primary_cyp: str = "",
 ) -> int:
     canonical = " ".join(str(smiles or "").split())
-    payload = canonical.encode("utf-8")
+    try:
+        from rdkit import Chem
+
+        mol = Chem.MolFromSmiles(canonical)
+        if mol is not None:
+            canonical = Chem.MolToSmiles(mol, canonical=True)
+    except Exception:
+        pass
+    cyp_text = str(primary_cyp or "").strip()
+    payload = f"{canonical}\0{cyp_text}".encode("utf-8")
     digest = hashlib.blake2b(payload, digest_size=8).digest()
     return int.from_bytes(digest, byteorder="big", signed=False) & ((1 << 63) - 1)
 
@@ -145,20 +171,8 @@ class CYPMetabolismDataset(Dataset):
         drug = self.drugs[idx]
         smiles = str(drug.get("smiles", ""))
         cyp = str(drug.get("cyp") or drug.get("primary_cyp") or "")
-        site_atoms = []
-        has_site_supervision = False
-        if drug.get("som"):
-            for som in drug["som"]:
-                atom_idx = som.get("atom_idx", som) if isinstance(som, dict) else som
-                if isinstance(atom_idx, int):
-                    site_atoms.append(atom_idx)
-            has_site_supervision = len(site_atoms) > 0
-        elif drug.get("site_atoms"):
-            site_atoms = [int(v) for v in drug.get("site_atoms", [])]
-            has_site_supervision = len(site_atoms) > 0
-        elif drug.get("site_atom_indices"):
-            site_atoms = [int(v) for v in drug.get("site_atom_indices", [])]
-            has_site_supervision = len(site_atoms) > 0
+        site_atoms = _extract_site_atoms(drug)
+        has_site_supervision = len(site_atoms) > 0
         try:
             with mol_provenance_context(
                 caller_module="dataset loader",

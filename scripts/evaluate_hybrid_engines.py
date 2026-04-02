@@ -26,6 +26,8 @@ from enzyme_software.liquid_nn_v2.training.utils import move_to_device
 
 
 DEFAULT_MODES = ("final", "base_lnn", "lnn_vote", "wave_vote", "analogical_vote")
+SITE_PREDICTOR_MODES = {"final", "base_lnn"}
+VOTE_PROXY_MODES = {"lnn_vote", "wave_vote", "analogical_vote", "council_only"}
 
 
 def _require_rdkit() -> None:
@@ -146,6 +148,14 @@ def _safe_sigmoid(value: torch.Tensor | None, fallback: torch.Tensor) -> torch.T
     return torch.sigmoid(torch.nan_to_num(value, nan=0.0, posinf=20.0, neginf=-20.0))
 
 
+def _mode_semantics(mode: str) -> str:
+    if mode in SITE_PREDICTOR_MODES:
+        return "standalone_site_predictor"
+    if mode in VOTE_PROXY_MODES:
+        return "council_vote_head_proxy_not_standalone"
+    return "unknown"
+
+
 def _score_tensors_for_modes(outputs: Dict[str, object], modes: Iterable[str]) -> Dict[str, torch.Tensor]:
     site_logits = outputs["site_logits"]
     fallback = torch.sigmoid(site_logits)
@@ -218,6 +228,7 @@ def _evaluate_rows(
             "invalid_count": len(rows),
             "invalid_reasons": dict(sorted((getattr(dataset, "_invalid_reasons", {}) or {}).items())),
             "site_metrics_by_mode": {},
+            "vote_head_proxy_metrics_by_mode": {},
             "cyp_metrics": {},
         }
 
@@ -229,6 +240,7 @@ def _evaluate_rows(
     merged_cyp_masks = torch.cat(cyp_masks, dim=0)
 
     site_metrics_by_mode: Dict[str, Dict[str, float]] = {}
+    vote_head_proxy_metrics_by_mode: Dict[str, Dict[str, float]] = {}
     for mode in modes:
         merged_scores = torch.cat(site_scores_by_mode[mode], dim=0) if site_scores_by_mode[mode] else torch.zeros_like(merged_site_labels)
         metrics = compute_site_metrics_v2(
@@ -239,7 +251,11 @@ def _evaluate_rows(
         )
         metrics["mean_score"] = float(merged_scores.mean().item()) if merged_scores.numel() else 0.0
         metrics["active_fraction"] = float((merged_scores > 0.5).float().mean().item()) if merged_scores.numel() else 0.0
-        site_metrics_by_mode[mode] = metrics
+        metrics["mode_semantics"] = _mode_semantics(mode)
+        if mode in SITE_PREDICTOR_MODES:
+            site_metrics_by_mode[mode] = metrics
+        else:
+            vote_head_proxy_metrics_by_mode[mode] = metrics
 
     return {
         "name": name,
@@ -248,6 +264,7 @@ def _evaluate_rows(
         "invalid_count": int(len(rows) - int(getattr(dataset, "_valid_count", 0))),
         "invalid_reasons": dict(sorted((getattr(dataset, "_invalid_reasons", {}) or {}).items())),
         "site_metrics_by_mode": site_metrics_by_mode,
+        "vote_head_proxy_metrics_by_mode": vote_head_proxy_metrics_by_mode,
         "cyp_metrics": compute_cyp_metrics(
             merged_cyp_logits,
             merged_cyp_labels,
@@ -257,7 +274,7 @@ def _evaluate_rows(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Evaluate individual hybrid engines on benchmark datasets.")
+    parser = argparse.ArgumentParser(description="Evaluate hybrid benchmark site predictors and council vote-head proxies.")
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--datasets", required=True, help="Comma-separated benchmark JSON paths")
     parser.add_argument("--xtb-cache-dir", default="cache/full_xtb")
@@ -288,6 +305,11 @@ def main() -> None:
         "xtb_cache_dir": xtb_cache_dir,
         "structure_sdf": structure_sdf,
         "modes": modes,
+        "mode_semantics": {mode: _mode_semantics(mode) for mode in modes},
+        "notes": {
+            "site_metrics_by_mode": "Standalone site-predictor metrics only.",
+            "vote_head_proxy_metrics_by_mode": "Council vote-head proxy metrics; these are not fair standalone engine evaluations.",
+        },
         "checkpoint_best_val_top1": payload.get("best_val_top1"),
         "checkpoint_best_val_monitor": payload.get("best_val_monitor"),
         "benchmarks": {},
@@ -334,9 +356,14 @@ def main() -> None:
             dataset_report[subset_name] = subset_report
             print(f"  {subset_name}: effective={subset_report['effective_total']}")
             for mode in modes:
-                metrics = subset_report["site_metrics_by_mode"].get(mode, {})
+                if mode in SITE_PREDICTOR_MODES:
+                    metrics = subset_report["site_metrics_by_mode"].get(mode, {})
+                    label = mode
+                else:
+                    metrics = subset_report["vote_head_proxy_metrics_by_mode"].get(mode, {})
+                    label = f"{mode} [proxy]"
                 print(
-                    f"    {mode}: "
+                    f"    {label}: "
                     f"top1={metrics.get('site_top1_acc', 0.0):.4f} "
                     f"top2={metrics.get('site_top2_acc', 0.0):.4f} "
                     f"top3={metrics.get('site_top3_acc', 0.0):.4f} "

@@ -41,12 +41,18 @@ class MoleculeGraph:
     manual_engine_atom_prior_logits: Optional[np.ndarray] = None
     manual_engine_cyp_prior_logits: Optional[np.ndarray] = None
     manual_engine_route_prior: Optional[np.ndarray] = None
+    manual_engine_status: Optional[np.ndarray] = None
     xtb_atom_features: Optional[np.ndarray] = None
     xtb_atom_valid_mask: Optional[np.ndarray] = None
     xtb_mol_valid: Optional[np.ndarray] = None
     xtb_feature_status: Optional[str] = None
+    xtb_status_flags: Optional[np.ndarray] = None
     atom_3d_features: Optional[np.ndarray] = None
+    atom_3d_valid_mask: Optional[np.ndarray] = None
+    atom_3d_source: Optional[np.ndarray] = None
     topology_atom_features: Optional[np.ndarray] = None
+    topology_atom_valid_mask: Optional[np.ndarray] = None
+    topology_mol_valid: Optional[np.ndarray] = None
     parsing_status: str = "ok"
     repaired: bool = False
     aggressive_repair: bool = False
@@ -138,9 +144,17 @@ def smiles_to_graph(
         site_supervision_mask = np.zeros((mol.GetNumAtoms(), 1), dtype=np.float32)
 
     cyp_index = CYP_TO_INDEX.get(cyp_label) if cyp_label else None
-    atom_3d_features = compute_atom_3d_features(mol, structure_mol) if structure_mol is not None else None
+    atom_3d_features = None
+    atom_3d_source = np.asarray([[0.0, 0.0, 1.0]], dtype=np.float32)
+    if structure_mol is not None:
+        atom_3d_features = compute_atom_3d_features(mol, structure_mol)
+        if atom_3d_features is not None:
+            atom_3d_source = np.asarray([[1.0, 0.0, 0.0]], dtype=np.float32)
     if atom_3d_features is None:
         atom_3d_features = compute_atom_3d_features_for_smiles(prep.canonical_smiles or smiles)
+        if atom_3d_features is not None:
+            atom_3d_source = np.asarray([[0.0, 1.0, 0.0]], dtype=np.float32)
+    atom_3d_valid_mask = np.ones((mol.GetNumAtoms(), 1), dtype=np.float32) if atom_3d_features is not None else np.zeros((mol.GetNumAtoms(), 1), dtype=np.float32)
     return MoleculeGraph(
         smiles=smiles,
         canonical_smiles=prep.canonical_smiles,
@@ -156,6 +170,11 @@ def smiles_to_graph(
         site_supervision_mask=site_supervision_mask,
         cyp_label=cyp_index,
         atom_3d_features=atom_3d_features,
+        atom_3d_valid_mask=atom_3d_valid_mask,
+        atom_3d_source=atom_3d_source,
+        manual_engine_status=np.asarray([0.0, 0.0, 1.0], dtype=np.float32),
+        topology_atom_valid_mask=np.zeros((mol.GetNumAtoms(), 1), dtype=np.float32),
+        topology_mol_valid=np.asarray([[0.0]], dtype=np.float32),
         parsing_status=prep.status,
         repaired=prep.repaired,
         aggressive_repair=prep.aggressive_repair,

@@ -33,11 +33,18 @@ def compute_topk_accuracy(scores, labels, batch, k: int = 1, supervision_mask=No
     correct = 0
     total = 0
     for mol_idx in range(num_molecules):
-        mask = batch_np == mol_idx
-        if mask_np is not None and not np.any(mask_np[mask] > 0.5):
+        mol_mask = batch_np == mol_idx
+        if mask_np is not None:
+            supervised = mask_np[mol_mask] > 0.5
+            if not np.any(supervised):
+                continue
+            mol_scores = scores_np[mol_mask][supervised]
+            mol_labels = labels_np[mol_mask][supervised]
+        else:
+            mol_scores = scores_np[mol_mask]
+            mol_labels = labels_np[mol_mask]
+        if mol_scores.size == 0:
             continue
-        mol_scores = scores_np[mask]
-        mol_labels = labels_np[mask]
         true_sites = np.where(mol_labels == 1)[0]
         if true_sites.size == 0:
             continue

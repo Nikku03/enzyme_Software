@@ -34,6 +34,7 @@ if TORCH_AVAILABLE:
                     num_cyp_classes=num_cyp,
                     steric_feature_dim=steric_dim,
                     xtb_feature_dim=xtb_dim,
+                    topology_feature_dim=topology_dim,
                     wave_hidden_dim=int(getattr(self.config, "nexus_wave_hidden_dim", 64)),
                     graph_dim=graph_dim,
                     memory_capacity=int(getattr(self.config, "nexus_memory_capacity", 4096)),
@@ -405,39 +406,12 @@ if TORCH_AVAILABLE:
                 cncl_cnts.scatter_add_(0, idx_exp_c, torch.ones_like(council_logit))
                 cncl_means = cncl_sums / cncl_cnts.clamp(min=1.0)
                 council_logit = council_logit - cncl_means[batch_index]
-            arbiter_in = torch.cat(
-                [
-                    board_context,
-                    board_weights,
-                    lnn_vote,
-                    lnn_conf,
-                    wave_vote,
-                    wave_conf,
-                    analogical_vote,
-                    analogical_conf,
-                ],
-                dim=-1,
-            )
-            arbiter_in = torch.nan_to_num(arbiter_in, nan=0.0, posinf=4.0, neginf=-4.0)
             base_site_logits = outputs["site_logits"]
-            arbiter_residual = self.site_arbiter_head(arbiter_in)
-            # Per-molecule zero-centering: force the arbiter to only change
-            # *relative* rankings within a molecule, not the global logit
-            # magnitude. Without this the arbiter learns a persistent negative
-            # bias (mean ≈ -2.5) that suppresses all predictions uniformly
-            # instead of pushing the true site above wrong atoms.
-            if batch_index.numel() > 0:
-                num_mol_arb = int(batch_index.max().item()) + 1
-                arb_sums = torch.zeros(num_mol_arb, 1, device=device, dtype=dtype)
-                arb_cnts = torch.zeros(num_mol_arb, 1, device=device, dtype=dtype)
-                idx_exp = batch_index.unsqueeze(-1)
-                arb_sums.scatter_add_(0, idx_exp, arbiter_residual)
-                arb_cnts.scatter_add_(0, idx_exp, torch.ones_like(arbiter_residual))
-                arb_means = arb_sums / arb_cnts.clamp(min=1.0)
-                arbiter_residual = arbiter_residual - arb_means[batch_index]
-            # Treat the council and arbiter as residual corrections on top of the
-            # base site logits so they cannot bury the base model from step 1.
-            site_logits = base_site_logits + council_logit + arbiter_residual
+            # The council is the only active correction path now. The extra
+            # arbiter residual was redundant and made the fusion stack harder to
+            # reason about without showing strong standalone value.
+            arbiter_residual = torch.zeros_like(base_site_logits)
+            site_logits = base_site_logits + council_logit
             site_logits = torch.nan_to_num(site_logits, nan=0.0, posinf=20.0, neginf=-20.0)
             council = {
                 "base_site_logits": base_site_logits,
@@ -462,9 +436,11 @@ if TORCH_AVAILABLE:
             bridge = self.nexus_bridge(
                 atom_features=atom_features,
                 batch_index=batch["batch"],
+                site_logits=outputs["site_logits"],
                 cyp_logits=outputs["cyp_logits"],
                 atom_3d_features=batch.get("atom_3d_features"),
                 xtb_atom_features=batch.get("xtb_atom_features"),
+                topology_atom_features=batch.get("topology_atom_features"),
                 xtb_atom_valid_mask=batch.get("xtb_atom_valid_mask"),
                 xtb_mol_valid=batch.get("xtb_mol_valid"),
                 site_labels=batch.get("site_labels"),
@@ -478,9 +454,9 @@ if TORCH_AVAILABLE:
             result["cyp_logits_base"] = outputs["cyp_logits"]
             ana_cyp_weight = torch.sigmoid(self.ana_cyp_weight_logit)
             council = None
-            if self.site_arbiter_head is not None and self.site_arbiter_uses_bridge:
+            if self.site_arbiter_uses_bridge:
                 site_logits, council = self._site_logits_from_arbiter(outputs, bridge, batch)
-                site_mode = "nexus_arbiter"
+                site_mode = "nexus_council"
             else:
                 site_logits = outputs["site_logits"]
                 site_mode = "base"
@@ -542,9 +518,11 @@ if TORCH_AVAILABLE:
                     stats = self.nexus_bridge.ingest_batch(
                         atom_features=outputs["atom_features"],
                         batch_index=batch["batch"],
+                        site_logits=outputs.get("site_logits"),
                         cyp_logits=outputs["cyp_logits"],
                         atom_3d_features=batch.get("atom_3d_features"),
                         xtb_atom_features=batch.get("xtb_atom_features"),
+                        topology_atom_features=batch.get("topology_atom_features"),
                         site_labels=batch.get("site_labels"),
                         site_supervision_mask=batch.get("site_supervision_mask"),
                         cyp_labels=batch.get("cyp_labels"),
@@ -621,9 +599,11 @@ if TORCH_AVAILABLE:
                     stats = self.nexus_bridge.ingest_batch(
                         atom_features=atom_features,
                         batch_index=batch["batch"],
+                        site_logits=outputs.get("site_logits"),
                         cyp_logits=cyp_logits,
                         atom_3d_features=batch.get("atom_3d_features"),
                         xtb_atom_features=batch.get("xtb_atom_features"),
+                        topology_atom_features=batch.get("topology_atom_features"),
                         site_labels=batch.get("site_labels"),
                         site_supervision_mask=batch.get("site_supervision_mask"),
                         graph_molecule_keys=batch.get("graph_molecule_keys"),
