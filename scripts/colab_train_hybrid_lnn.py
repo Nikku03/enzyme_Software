@@ -25,10 +25,15 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
+from parse_hybrid_console_log import parse_console_line
+
 
 REPO_DIR = Path("/content/enzyme_Software")
 if str(REPO_DIR) not in sys.path:
     sys.path.insert(0, str(REPO_DIR))
+SCRIPT_DIR = REPO_DIR / "scripts"
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 SRC_DIR = REPO_DIR / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -47,17 +52,34 @@ def _env_flag(name: str, default: bool) -> bool:
 
 
 class _TeeStream:
-    def __init__(self, *streams):
+    def __init__(self, *streams, jsonl_handle=None, stream_name="stdout"):
         self._streams = streams
+        self._jsonl_handle = jsonl_handle
+        self._stream_name = stream_name
+        self._buffer = ""
 
     def write(self, data):
         for stream in self._streams:
             stream.write(data)
+        if self._jsonl_handle is not None and data:
+            self._buffer += data
+            while "\n" in self._buffer:
+                line, self._buffer = self._buffer.split("\n", 1)
+                record = parse_console_line(line + "\n")
+                record["stream"] = self._stream_name
+                self._jsonl_handle.write(json.dumps(record, ensure_ascii=True) + "\n")
         return len(data)
 
     def flush(self):
+        if self._jsonl_handle is not None and self._buffer:
+            record = parse_console_line(self._buffer)
+            record["stream"] = self._stream_name
+            self._jsonl_handle.write(json.dumps(record, ensure_ascii=True) + "\n")
+            self._buffer = ""
         for stream in self._streams:
             stream.flush()
+        if self._jsonl_handle is not None:
+            self._jsonl_handle.flush()
 
     def isatty(self):
         primary = self._streams[0]
@@ -70,13 +92,18 @@ class _TeeStream:
 
 
 @contextmanager
-def _capture_console_log(log_path: Path):
+def _capture_console_log(log_path: Path, jsonl_path: Path | None = None):
     log_path.parent.mkdir(parents=True, exist_ok=True)
+    if jsonl_path is not None:
+        jsonl_path.parent.mkdir(parents=True, exist_ok=True)
     original_stdout = sys.stdout
     original_stderr = sys.stderr
-    with log_path.open("a", encoding="utf-8", buffering=1) as handle:
-        sys.stdout = _TeeStream(original_stdout, handle)
-        sys.stderr = _TeeStream(original_stderr, handle)
+    with log_path.open("a", encoding="utf-8", buffering=1) as handle, (
+        jsonl_path.open("a", encoding="utf-8", buffering=1) if jsonl_path is not None else open(os.devnull, "w", encoding="utf-8")
+    ) as jsonl_handle:
+        active_jsonl = None if jsonl_path is None else jsonl_handle
+        sys.stdout = _TeeStream(original_stdout, handle, jsonl_handle=active_jsonl, stream_name="stdout")
+        sys.stderr = _TeeStream(original_stderr, handle, jsonl_handle=active_jsonl, stream_name="stderr")
         try:
             yield
         finally:
@@ -368,6 +395,12 @@ def main() -> None:
             str(Path(artifact_dir) / f"hybrid_full_xtb_console_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"),
         )
     )
+    console_jsonl_path = Path(
+        os.environ.get(
+            "HYBRID_COLAB_CONSOLE_JSONL",
+            str(console_log_path.with_suffix(".jsonl")),
+        )
+    )
     manual_cache_dir = os.environ.get(
         "HYBRID_COLAB_MANUAL_CACHE_DIR",
         "/content/drive/MyDrive/enzyme_hybrid_lnn/cache/manual_engine_full",
@@ -441,9 +474,10 @@ def main() -> None:
     if precedent_logbook:
         argv.extend(["--precedent-logbook", precedent_logbook])
 
-    with _capture_console_log(console_log_path):
+    with _capture_console_log(console_log_path, console_jsonl_path):
         print("Hybrid LNN Colab wrapper")
         print(f"console_log={console_log_path}")
+        print(f"console_jsonl={console_jsonl_path}")
         print(f"preset={preset}")
         print(f"output_dir={output_dir}")
         print(f"artifact_dir={artifact_dir}")
