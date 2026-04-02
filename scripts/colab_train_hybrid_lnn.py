@@ -128,6 +128,10 @@ LOCKED_PRESET_KEYS = {
     "HYBRID_COLAB_SEED",
     "HYBRID_COLAB_TRAIN_RATIO",
     "HYBRID_COLAB_VAL_RATIO",
+    "HYBRID_COLAB_TARGET_CYP",
+    "HYBRID_COLAB_CONFIDENCE_ALLOWLIST",
+    "HYBRID_COLAB_BASE_LNN_FIRST",
+    "HYBRID_COLAB_USE_CANDIDATE_MASK",
 }
 
 
@@ -356,6 +360,33 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_TRAIN_RATIO": "0.80",
         "HYBRID_COLAB_VAL_RATIO": "0.10",
     },
+    "cyp3a4_base": {
+        "HYBRID_COLAB_DATASET": "data/prepared_training/main8_site_conservative_singlecyp_clean_symm.json",
+        "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
+        "HYBRID_COLAB_EPOCHS": "35",
+        "HYBRID_COLAB_BATCH_SIZE": "12",
+        "HYBRID_COLAB_LR": "2e-5",
+        "HYBRID_COLAB_WD": "1e-4",
+        "HYBRID_COLAB_SPLIT_MODE": "scaffold_source_size",
+        "HYBRID_COLAB_LIMIT": "0",
+        "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
+        "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
+        "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
+        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "8",
+        "HYBRID_COLAB_EARLY_STOPPING_METRIC": "site_top1",
+        "HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS": "3",
+        "HYBRID_COLAB_INCLUDE_XENOSITE": "0",
+        "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
+        "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS": "0",
+        "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS": "0",
+        "HYBRID_COLAB_SEED": "42",
+        "HYBRID_COLAB_TRAIN_RATIO": "0.80",
+        "HYBRID_COLAB_VAL_RATIO": "0.10",
+        "HYBRID_COLAB_TARGET_CYP": "CYP3A4",
+        "HYBRID_COLAB_CONFIDENCE_ALLOWLIST": "high,validated,validated_gold,validated_literature,curated",
+        "HYBRID_COLAB_BASE_LNN_FIRST": "1",
+        "HYBRID_COLAB_USE_CANDIDATE_MASK": "1",
+    },
 }
 
 
@@ -470,6 +501,16 @@ def main() -> None:
         argv.extend(["--xenosite-topk", os.environ["HYBRID_COLAB_XENOSITE_TOPK"]])
     if os.environ.get("HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK", "1").strip().lower() in {"1", "true", "yes", "on"}:
         argv.append("--disable-precedent-logbook")
+    target_cyp = os.environ.get("HYBRID_COLAB_TARGET_CYP", "").strip()
+    if target_cyp:
+        argv.extend(["--target-cyp", target_cyp])
+    confidence_allowlist = os.environ.get("HYBRID_COLAB_CONFIDENCE_ALLOWLIST", "").strip()
+    if confidence_allowlist:
+        argv.extend(["--confidence-allowlist", confidence_allowlist])
+    if os.environ.get("HYBRID_COLAB_BASE_LNN_FIRST", "0").strip().lower() in {"1", "true", "yes", "on"}:
+        argv.append("--base-lnn-first")
+    if os.environ.get("HYBRID_COLAB_USE_CANDIDATE_MASK", "0").strip().lower() in {"1", "true", "yes", "on"}:
+        argv.append("--use-candidate-mask")
     precedent_logbook = os.environ.get("HYBRID_COLAB_PRECEDENT_LOGBOOK", "").strip()
     if precedent_logbook:
         argv.extend(["--precedent-logbook", precedent_logbook])

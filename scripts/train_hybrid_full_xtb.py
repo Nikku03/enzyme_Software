@@ -108,6 +108,18 @@ def _has_site_labels(drug: dict) -> bool:
     return bool(drug.get("som") or drug.get("site_atoms") or drug.get("site_atom_indices") or drug.get("metabolism_sites"))
 
 
+def _primary_cyp(drug: dict) -> str:
+    value = str(drug.get("cyp") or drug.get("primary_cyp") or "").strip()
+    if value:
+        return value
+    all_cyps = list(drug.get("all_cyps", []) or [])
+    return str(all_cyps[0]).strip() if all_cyps else ""
+
+
+def _parse_csv_tokens(raw: str) -> list[str]:
+    return [token.strip() for token in str(raw or "").split(",") if token.strip()]
+
+
 def _site_atom_indices(drug: dict) -> list[int]:
     site_atoms: list[int] = []
     if drug.get("som"):
@@ -295,6 +307,8 @@ def _build_loaders_with_fallback(
         manual_feature_cache_dir=args.manual_feature_cache_dir,
         full_xtb_cache_dir=str(Path(args.xtb_cache_dir)),
         compute_full_xtb_if_missing=args.compute_xtb_if_missing,
+        use_candidate_mask=bool(getattr(args, "use_candidate_mask", False)),
+        candidate_cyp=str(getattr(args, "target_cyp", "") or "").strip() or None,
         drop_failed=True,
     )
     try:
@@ -409,6 +423,10 @@ def _save_training_state(
         "xtb_cache_dir": str(xtb_cache_dir),
         "status": status,
         "split_mode": split_mode,
+        "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+        "confidence_allowlist": _parse_csv_tokens(str(getattr(args, "confidence_allowlist", "") or "")),
+        "base_lnn_first": bool(getattr(args, "base_lnn_first", False)),
+        "use_candidate_mask": bool(getattr(args, "use_candidate_mask", False)),
         "split_summary": split_summary,
         "effective_split_summary": effective_split_summary,
     }
@@ -431,6 +449,10 @@ def _save_training_state(
                 "xtb_valid_molecules": xtb_valid_count,
                 "xtb_statuses": xtb_statuses,
                 "split_mode": split_mode,
+                "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+                "confidence_allowlist": _parse_csv_tokens(str(getattr(args, "confidence_allowlist", "") or "")),
+                "base_lnn_first": bool(getattr(args, "base_lnn_first", False)),
+                "use_candidate_mask": bool(getattr(args, "use_candidate_mask", False)),
                 "split_summary": split_summary,
                 "effective_split_summary": effective_split_summary,
                 "episode_log_path": str(episode_log_path) if episode_log_path is not None else None,
@@ -473,6 +495,7 @@ def main() -> None:
     parser.add_argument("--site-labeled-only", action="store_true")
     parser.add_argument("--compute-xtb-if-missing", action="store_true")
     parser.add_argument("--disable-nexus-bridge", action="store_true")
+    parser.add_argument("--base-lnn-first", action="store_true")
     parser.add_argument("--freeze-nexus-memory", action="store_true")
     parser.add_argument("--skip-nexus-memory-rebuild", action="store_true")
     parser.add_argument("--backbone-freeze-epochs", type=int, default=0,
@@ -485,6 +508,9 @@ def main() -> None:
     parser.add_argument("--disable-episode-log", action="store_true")
     parser.add_argument("--precedent-logbook", default="")
     parser.add_argument("--disable-precedent-logbook", action="store_true")
+    parser.add_argument("--target-cyp", default="")
+    parser.add_argument("--confidence-allowlist", default="")
+    parser.add_argument("--use-candidate-mask", action="store_true")
     args = parser.parse_args()
     early_stopping_patience = int(args.early_stopping_patience)
     early_stopping_enabled = early_stopping_patience > 0
@@ -517,12 +543,31 @@ def main() -> None:
 
     drugs = _load_drugs(dataset_path)
     print(f"Loaded {len(drugs)} drugs", flush=True)
+    if args.base_lnn_first:
+        args.disable_nexus_bridge = True
+        args.freeze_nexus_memory = True
+        args.skip_nexus_memory_rebuild = True
+        print("base_lnn_first=1 | NEXUS bridge disabled for this run", flush=True)
+    if str(args.target_cyp or "").strip():
+        target_cyp = str(args.target_cyp).strip()
+        drugs = [drug for drug in drugs if _primary_cyp(drug) == target_cyp]
+        print(f"Filtered target_cyp={target_cyp}: {len(drugs)}", flush=True)
+        if target_cyp.upper() == "CYP3A4" and args.base_lnn_first and not args.use_candidate_mask:
+            args.use_candidate_mask = True
+            print("Auto-enabled CYP3A4 candidate masking for base_lnn_first run", flush=True)
+    confidence_allowlist = _parse_csv_tokens(args.confidence_allowlist)
+    if confidence_allowlist:
+        allowed = {token.lower() for token in confidence_allowlist}
+        drugs = [drug for drug in drugs if str(drug.get("confidence") or "").strip().lower() in allowed]
+        print(f"Filtered confidence_allowlist={confidence_allowlist}: {len(drugs)}", flush=True)
     if args.site_labeled_only:
         drugs = [drug for drug in drugs if _has_site_labels(drug)]
         print(f"Site-labeled: {len(drugs)}", flush=True)
     if args.limit is not None:
         drugs = drugs[: int(args.limit)]
         print(f"Limited to: {len(drugs)}", flush=True)
+    if not drugs:
+        raise RuntimeError("No training drugs remain after target/confidence/site filters")
 
     train_drugs, val_drugs, test_drugs = split_drugs(
         drugs,
@@ -565,6 +610,8 @@ def main() -> None:
             f"site_count_buckets={summary['site_count_buckets']} | near_duplicates={summary['near_duplicates']}",
             flush=True,
         )
+    if args.use_candidate_mask:
+        print(f"candidate_mask=1 | candidate_cyp={str(args.target_cyp or '').strip() or 'generic'}", flush=True)
 
     xtb_valid_count, xtb_statuses = _count_xtb_valid(drugs, xtb_cache_dir)
     print(f"xTB cache valid molecules: {xtb_valid_count}/{len(drugs)} | statuses={xtb_statuses}", flush=True)

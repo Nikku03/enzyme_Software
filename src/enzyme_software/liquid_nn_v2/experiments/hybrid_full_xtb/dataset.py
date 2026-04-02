@@ -9,8 +9,14 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 from torch.utils.data import DataLoader
 
+try:
+    from rdkit import Chem
+except Exception:  # pragma: no cover - optional dependency at import time
+    Chem = None
+
 from enzyme_software.liquid_nn_v2._compat import require_torch
 from enzyme_software.liquid_nn_v2.data.dataset_loader import CYPMetabolismDataset, collate_fn
+from enzyme_software.liquid_nn_v2.features.micropattern_features import CHEMISTRY_PRIOR_PATTERN_DEFS, chemistry_prior_matrix
 from enzyme_software.liquid_nn_v2.features.steric_features import StructureLibrary
 from enzyme_software.liquid_nn_v2.features.topology_features import TOPOLOGY_FEATURE_DIM, compute_atom_topology_features
 from enzyme_software.liquid_nn_v2.features.xtb_features import (
@@ -57,6 +63,86 @@ def _size_bucket(num_atoms: int) -> str:
 
 def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
+
+
+def _sigmoid_np(values: np.ndarray) -> np.ndarray:
+    clipped = np.clip(values.astype(np.float32), -20.0, 20.0)
+    return 1.0 / (1.0 + np.exp(-clipped))
+
+
+def _build_cyp3a4_candidate_masks(
+    smiles: str,
+    *,
+    num_atoms: int,
+    manual_atom_prior_logits: Optional[np.ndarray] = None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Build a chemically pruned shortlist for CYP3A4 SoM ranking.
+
+    The goal is not perfect mechanistic completeness. The goal is to remove
+    obviously implausible atoms while keeping a generous shortlist that still
+    covers heteroatom oxidation and classic benzylic/allylic C-H oxidation.
+    """
+    if num_atoms <= 0:
+        empty = np.zeros((0, 1), dtype=np.float32)
+        return empty, empty
+    if Chem is None:
+        ones = np.ones((num_atoms, 1), dtype=np.float32)
+        return ones, ones
+
+    mol = Chem.MolFromSmiles(str(smiles or "").strip())
+    if mol is None or int(mol.GetNumAtoms()) != int(num_atoms):
+        ones = np.ones((num_atoms, 1), dtype=np.float32)
+        return ones, ones
+
+    prior = chemistry_prior_matrix(smiles, num_atoms)
+    pattern_width = int(len(CHEMISTRY_PRIOR_PATTERN_DEFS))
+    pattern_hits = (prior[:, :pattern_width].sum(axis=1) > 0.0).astype(np.float32) if prior.size else np.zeros((num_atoms,), dtype=np.float32)
+    reactivity = prior[:, -1].astype(np.float32) if prior.size else np.zeros((num_atoms,), dtype=np.float32)
+
+    hetero = np.zeros((num_atoms,), dtype=np.float32)
+    aromatic_hetero = np.zeros((num_atoms,), dtype=np.float32)
+    oxidation_friendly = np.zeros((num_atoms,), dtype=np.float32)
+    for atom in mol.GetAtoms():
+        idx = int(atom.GetIdx())
+        atomic_num = int(atom.GetAtomicNum())
+        if atomic_num in {7, 8, 15, 16, 17, 35, 53}:
+            hetero[idx] = 1.0
+            if atom.GetIsAromatic():
+                aromatic_hetero[idx] = 1.0
+        if atomic_num == 6 and atom.GetTotalNumHs() > 0:
+            if atom.GetHybridization() == Chem.HybridizationType.SP3:
+                oxidation_friendly[idx] = 1.0
+
+    if manual_atom_prior_logits is not None:
+        manual_logits = np.asarray(manual_atom_prior_logits, dtype=np.float32).reshape(num_atoms, -1)
+        manual_prior = _sigmoid_np(manual_logits[:, 0])
+    else:
+        manual_prior = np.zeros((num_atoms,), dtype=np.float32)
+
+    score = (
+        0.70 * reactivity
+        + 0.45 * pattern_hits
+        + 0.40 * hetero
+        + 0.15 * aromatic_hetero
+        + 0.20 * oxidation_friendly
+        + 0.30 * manual_prior
+    ).astype(np.float32)
+    candidate = (
+        (pattern_hits > 0.5)
+        | (hetero > 0.5)
+        | (manual_prior >= 0.45)
+        | (score >= 0.55)
+    )
+    candidate = candidate.astype(np.float32)
+
+    min_keep = min(num_atoms, max(4, int(np.ceil(num_atoms * 0.35))))
+    if int(candidate.sum()) < min_keep:
+        ranked = np.argsort(-(score + 0.15 * hetero + 0.05 * oxidation_friendly))
+        candidate[ranked[:min_keep]] = 1.0
+
+    inference_mask = candidate.reshape(num_atoms, 1).astype(np.float32)
+    train_mask = inference_mask.copy()
+    return inference_mask, train_mask
 
 
 def _scaffold_key(drug: Dict[str, object]) -> str:
@@ -431,11 +517,15 @@ class FullXTBHybridDataset(CYPMetabolismDataset):
         *args,
         full_xtb_cache_dir: Optional[str] = None,
         compute_full_xtb_if_missing: bool = False,
+        use_candidate_mask: bool = False,
+        candidate_cyp: Optional[str] = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.full_xtb_cache_dir = full_xtb_cache_dir
         self.compute_full_xtb_if_missing = bool(compute_full_xtb_if_missing)
+        self.use_candidate_mask = bool(use_candidate_mask)
+        self.candidate_cyp = str(candidate_cyp or "").strip().upper()
 
     def precompute(self):
         # Cache base features only (32-dim), NOT XTB-augmented (40-dim).
@@ -538,6 +628,20 @@ class FullXTBHybridDataset(CYPMetabolismDataset):
             graph.topology_atom_valid_mask = np.zeros((num_atoms, 1), dtype=np.float32)
             graph.topology_mol_valid = np.asarray([[0.0]], dtype=np.float32)
 
+        if self.use_candidate_mask and self.candidate_cyp == "CYP3A4":
+            candidate_mask, candidate_train_mask = _build_cyp3a4_candidate_masks(
+                graph.canonical_smiles or graph.smiles,
+                num_atoms=num_atoms,
+                manual_atom_prior_logits=getattr(graph, "manual_engine_atom_prior_logits", None),
+            )
+            if getattr(graph, "site_labels", None) is not None and graph.site_labels.shape[0] == num_atoms:
+                candidate_train_mask = np.maximum(candidate_train_mask, graph.site_labels.astype(np.float32))
+            graph.candidate_mask = candidate_mask
+            graph.candidate_train_mask = candidate_train_mask
+        else:
+            graph.candidate_mask = np.ones((num_atoms, 1), dtype=np.float32)
+            graph.candidate_train_mask = np.ones((num_atoms, 1), dtype=np.float32)
+
         return item
 
 
@@ -554,6 +658,8 @@ def create_full_xtb_dataloaders_from_drugs(
     manual_feature_cache_dir: Optional[str] = None,
     full_xtb_cache_dir: Optional[str] = None,
     compute_full_xtb_if_missing: bool = False,
+    use_candidate_mask: bool = False,
+    candidate_cyp: Optional[str] = None,
     allow_partial_sanitize: bool = True,
     allow_aggressive_repair: bool = False,
     drop_failed: bool = True,
@@ -571,6 +677,8 @@ def create_full_xtb_dataloaders_from_drugs(
         "drop_failed": drop_failed,
         "full_xtb_cache_dir": full_xtb_cache_dir,
         "compute_full_xtb_if_missing": compute_full_xtb_if_missing,
+        "use_candidate_mask": use_candidate_mask,
+        "candidate_cyp": candidate_cyp,
     }
     train_ds = FullXTBHybridDataset(split="train", augment=True, drugs=train_drugs, **common)
     val_ds = FullXTBHybridDataset(split="val", augment=False, drugs=val_drugs, **common)

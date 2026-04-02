@@ -151,6 +151,27 @@ if TORCH_AVAILABLE:
         def _safe_vote_tensor(self, value: torch.Tensor) -> torch.Tensor:
             return torch.nan_to_num(value, nan=0.0, posinf=4.0, neginf=-4.0).clamp(-4.0, 4.0)
 
+        def _apply_candidate_mask(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
+            candidate_mask = batch.get("candidate_mask")
+            site_logits = outputs.get("site_logits")
+            if candidate_mask is None or site_logits is None:
+                return outputs
+            mask = candidate_mask.to(device=site_logits.device, dtype=site_logits.dtype).view_as(site_logits)
+            if mask.numel() != site_logits.numel():
+                return outputs
+            masked_logits = torch.where(mask > 0.5, site_logits, torch.full_like(site_logits, -20.0))
+            result = dict(outputs)
+            result.setdefault("site_logits_base", site_logits)
+            result["site_logits"] = masked_logits
+            result["reranked_site_logits"] = masked_logits
+            result["site_scores"] = torch.sigmoid(masked_logits)
+            diagnostics = dict(result.get("diagnostics") or {})
+            nexus_stats = dict(diagnostics.get("nexus_bridge") or {})
+            nexus_stats["candidate_fraction"] = float(mask.detach().mean().item())
+            diagnostics["nexus_bridge"] = nexus_stats
+            result["diagnostics"] = diagnostics
+            return result
+
         def _site_logits_from_arbiter(
             self,
             outputs: Dict[str, object],
@@ -550,6 +571,7 @@ if TORCH_AVAILABLE:
         ) -> Dict[str, object]:
             outputs = dict(self.base_lnn(batch))
             outputs = self._apply_nexus_bridge(outputs, batch)
+            outputs = self._apply_candidate_mask(outputs, batch)
             prior = route_prior
             if prior is None:
                 prior = batch.get("manual_engine_route_prior")

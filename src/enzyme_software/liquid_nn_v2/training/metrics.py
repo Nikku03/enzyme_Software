@@ -22,11 +22,12 @@ def _safe_binary_auc(labels, scores) -> float:
         return 0.5
 
 
-def compute_topk_accuracy(scores, labels, batch, k: int = 1, supervision_mask=None) -> float:
+def compute_topk_accuracy(scores, labels, batch, k: int = 1, supervision_mask=None, ranking_mask=None) -> float:
     scores_np = _to_numpy(scores).reshape(-1)
     labels_np = _to_numpy(labels).reshape(-1)
     batch_np = _to_numpy(batch).reshape(-1)
     mask_np = _to_numpy(supervision_mask).reshape(-1) if supervision_mask is not None else None
+    ranking_np = _to_numpy(ranking_mask).reshape(-1) if ranking_mask is not None else None
     if batch_np.size == 0:
         return 0.0
     num_molecules = int(batch_np.max()) + 1
@@ -34,6 +35,8 @@ def compute_topk_accuracy(scores, labels, batch, k: int = 1, supervision_mask=No
     total = 0
     for mol_idx in range(num_molecules):
         mol_mask = batch_np == mol_idx
+        if ranking_np is not None:
+            mol_mask = mol_mask & (ranking_np > 0.5)
         if mask_np is not None:
             supervised = mask_np[mol_mask] > 0.5
             if not np.any(supervised):
@@ -58,18 +61,28 @@ def compute_topk_accuracy(scores, labels, batch, k: int = 1, supervision_mask=No
     return correct / total if total > 0 else 0.0
 
 
-def compute_site_metrics_v2(scores, labels, batch, threshold: float = 0.5, supervision_mask=None) -> Dict[str, float]:
+def compute_site_metrics_v2(scores, labels, batch, threshold: float = 0.5, supervision_mask=None, ranking_mask=None) -> Dict[str, float]:
     scores_flat = _to_numpy(scores).reshape(-1)
     labels_flat = _to_numpy(labels).reshape(-1)
     batch_flat = _to_numpy(batch).reshape(-1)
+    if ranking_mask is not None:
+        ranking_flat = _to_numpy(ranking_mask).reshape(-1) > 0.5
+    else:
+        ranking_flat = None
     if supervision_mask is not None:
         mask_flat = _to_numpy(supervision_mask).reshape(-1) > 0.5
+        if ranking_flat is not None:
+            mask_flat = mask_flat & ranking_flat
         scores_eval = scores_flat[mask_flat]
         labels_eval = labels_flat[mask_flat]
     else:
-        mask_flat = None
-        scores_eval = scores_flat
-        labels_eval = labels_flat
+        mask_flat = ranking_flat
+        if ranking_flat is not None:
+            scores_eval = scores_flat[ranking_flat]
+            labels_eval = labels_flat[ranking_flat]
+        else:
+            scores_eval = scores_flat
+            labels_eval = labels_flat
     if labels_eval.size == 0:
         return {
             "site_precision": 0.0,
@@ -97,9 +110,9 @@ def compute_site_metrics_v2(scores, labels, batch, threshold: float = 0.5, super
     recall = tp / (tp + fn + 1e-8)
     f1 = 2.0 * precision * recall / (precision + recall + 1e-8)
     auc = _safe_binary_auc(labels_eval, scores_eval)
-    top1_acc = compute_topk_accuracy(scores_flat, labels_flat, batch_flat, k=1, supervision_mask=mask_flat)
-    top2_acc = compute_topk_accuracy(scores_flat, labels_flat, batch_flat, k=2, supervision_mask=mask_flat)
-    top3_acc = compute_topk_accuracy(scores_flat, labels_flat, batch_flat, k=3, supervision_mask=mask_flat)
+    top1_acc = compute_topk_accuracy(scores_flat, labels_flat, batch_flat, k=1, supervision_mask=mask_flat, ranking_mask=ranking_flat)
+    top2_acc = compute_topk_accuracy(scores_flat, labels_flat, batch_flat, k=2, supervision_mask=mask_flat, ranking_mask=ranking_flat)
+    top3_acc = compute_topk_accuracy(scores_flat, labels_flat, batch_flat, k=3, supervision_mask=mask_flat, ranking_mask=ranking_flat)
     return {
         "site_precision": precision,
         "site_recall": recall,

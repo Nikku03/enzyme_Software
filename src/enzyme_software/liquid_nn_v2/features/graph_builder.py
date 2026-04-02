@@ -35,6 +35,8 @@ class MoleculeGraph:
     batch: np.ndarray
     site_labels: Optional[np.ndarray] = None
     site_supervision_mask: Optional[np.ndarray] = None
+    candidate_mask: Optional[np.ndarray] = None
+    candidate_train_mask: Optional[np.ndarray] = None
     cyp_label: Optional[int] = None
     manual_engine_atom_features: Optional[np.ndarray] = None
     manual_engine_mol_features: Optional[np.ndarray] = None
@@ -170,6 +172,8 @@ def smiles_to_graph(
         batch=np.zeros(mol.GetNumAtoms(), dtype=np.int64),
         site_labels=labels,
         site_supervision_mask=site_supervision_mask,
+        candidate_mask=np.ones((mol.GetNumAtoms(), 1), dtype=np.float32),
+        candidate_train_mask=np.ones((mol.GetNumAtoms(), 1), dtype=np.float32),
         cyp_label=cyp_index,
         atom_3d_features=atom_3d_features,
         atom_3d_valid_mask=atom_3d_valid_mask,

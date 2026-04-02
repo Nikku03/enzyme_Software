@@ -101,8 +101,12 @@ if TORCH_AVAILABLE:
             self.device = self.device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self._disable_broken_torch_compile_wrappers()
             self.model.to(self.device)
+            self.current_epoch = 0
             weights = None
             model_config = getattr(self.model, "config", None)
+            self.site_logit_bias_warmup_epochs = max(0, int(getattr(model_config, "site_logit_bias_warmup_epochs", 8)))
+            self.site_logit_bias_target = float(getattr(model_config, "site_logit_bias_target", -0.10))
+            self.site_logit_bias_weight = max(0.0, float(getattr(model_config, "site_logit_bias_weight", 0.05)))
             if self.cyp_class_weights is not None:
                 weights = self.cyp_class_weights.to(self.device) if hasattr(self.cyp_class_weights, "to") else torch.as_tensor(self.cyp_class_weights, dtype=torch.float32, device=self.device)
             self.loss_fn = AdaptiveLossV2(
@@ -320,7 +324,7 @@ if TORCH_AVAILABLE:
             outputs: Dict[str, object],
             engine_name: str,
         ):
-            site_mask = batch.get("site_supervision_mask")
+            site_mask = batch.get("effective_site_supervision_mask", batch.get("site_supervision_mask"))
             node_weights = batch.get("node_confidence_weights")
             graph_weights = batch.get("graph_confidence_weights")
             bridge = outputs.get("nexus_bridge_outputs") or {}
@@ -348,7 +352,7 @@ if TORCH_AVAILABLE:
 
         def _site_style_vote_loss(self, logits, batch: Dict[str, object], *, site_mask=None, node_weights=None, graph_weights=None):
             site_labels = batch["site_labels"]
-            site_mask = batch.get("site_supervision_mask") if site_mask is None else site_mask
+            site_mask = batch.get("effective_site_supervision_mask", batch.get("site_supervision_mask")) if site_mask is None else site_mask
             node_weights = batch.get("node_confidence_weights") if node_weights is None else node_weights
             graph_weights = batch.get("graph_confidence_weights") if graph_weights is None else graph_weights
             site_batch = batch["batch"]
@@ -367,7 +371,7 @@ if TORCH_AVAILABLE:
 
         def _override_style_vote_loss(self, logits, batch: Dict[str, object], *, base_logits, site_mask=None, node_weights=None):
             labels = batch["site_labels"].float().view_as(logits)
-            site_mask = batch.get("site_supervision_mask") if site_mask is None else site_mask
+            site_mask = batch.get("effective_site_supervision_mask", batch.get("site_supervision_mask")) if site_mask is None else site_mask
             node_weights = batch.get("node_confidence_weights") if node_weights is None else node_weights
             safe_logits = self._sanitize_aux_logits(logits)
             base_probs = torch.sigmoid(self._sanitize_aux_logits(base_logits.detach())).view_as(safe_logits)
@@ -386,6 +390,12 @@ if TORCH_AVAILABLE:
             return (raw * mask).sum() / denom
 
         def compute_loss(self, batch: Dict[str, object], outputs: Dict[str, object]):
+            site_mask = batch.get("site_supervision_mask")
+            candidate_train_mask = batch.get("candidate_train_mask")
+            if candidate_train_mask is not None:
+                candidate_train_mask = candidate_train_mask.float()
+                site_mask = candidate_train_mask if site_mask is None else site_mask.float().view_as(candidate_train_mask) * candidate_train_mask
+            batch["effective_site_supervision_mask"] = site_mask
             # Fix 5: inject size-aware per-graph/per-atom weights when none are set.
             # Large molecules get proportionally more gradient signal so the model
             # learns to rank sites in 26-40 and 41+ atom molecules.
@@ -407,7 +417,7 @@ if TORCH_AVAILABLE:
                 batch["site_labels"],
                 batch["cyp_labels"],
                 batch["batch"],
-                batch.get("site_supervision_mask"),
+                site_mask,
                 batch.get("cyp_supervision_mask"),
                 batch.get("graph_confidence_weights"),
                 batch.get("node_confidence_weights"),
@@ -417,6 +427,23 @@ if TORCH_AVAILABLE:
                 outputs.get("deliberation_outputs"),
             )
             stats = dict(stats)
+            if (
+                self.site_logit_bias_weight > 0.0
+                and self.current_epoch < self.site_logit_bias_warmup_epochs
+            ):
+                bias_logits = outputs.get("site_logits_base", outputs["site_logits"])
+                bias_mask = site_mask
+                if bias_mask is not None and float(bias_mask.float().sum().detach().item()) > 0.0:
+                    flat_logits = bias_logits.view(-1)
+                    flat_mask = bias_mask.view(-1) > 0.5
+                    masked_mean = flat_logits[flat_mask].mean()
+                    bias_excess = torch.relu(masked_mean - self.site_logit_bias_target)
+                    logit_bias_loss = bias_excess.square()
+                    loss = loss + (self.site_logit_bias_weight * logit_bias_loss)
+                    stats["site_logit_bias_loss"] = float(logit_bias_loss.detach().item())
+                    stats["site_logit_bias_mean"] = float(masked_mean.detach().item())
+                    stats["site_logit_bias_target"] = float(self.site_logit_bias_target)
+                    stats["site_logit_bias_weight"] = float(self.site_logit_bias_weight)
             bridge_losses = outputs.get("nexus_bridge_losses") or {}
             if isinstance(bridge_losses, dict):
                 bridge_total = bridge_losses.get("total")
@@ -614,6 +641,7 @@ if TORCH_AVAILABLE:
         def train_loader_epoch(self, loader) -> Dict[str, float]:
             self.model.train()
             history = []
+            self.current_epoch = int(getattr(loader, "_current_epoch", 0) or 0)
             for batch_idx, raw_batch in enumerate(loader):
                 if raw_batch is None:
                     continue
@@ -683,6 +711,7 @@ if TORCH_AVAILABLE:
                 batch["site_labels"],
                 batch["batch"],
                 supervision_mask=batch.get("site_supervision_mask"),
+                ranking_mask=batch.get("candidate_mask"),
             )
             cyp_metrics = compute_cyp_metrics(
                 outputs["cyp_logits"],
@@ -751,6 +780,7 @@ if TORCH_AVAILABLE:
             site_scores = []
             site_labels = []
             site_supervision_masks = []
+            candidate_masks = []
             site_batch = []
             cyp_logits = []
             cyp_labels = []
@@ -784,6 +814,9 @@ if TORCH_AVAILABLE:
                     site_supervision_masks.append(
                         batch.get("site_supervision_mask", torch.ones_like(batch["site_labels"])).detach().cpu()
                     )
+                    candidate_masks.append(
+                        batch.get("candidate_mask", torch.ones_like(batch["site_labels"])).detach().cpu()
+                    )
                     site_batch.append(batch["batch"].detach().cpu() + batch_offset)
                     cyp_logits.append(outputs["cyp_logits"].detach().cpu())
                     cyp_labels.append(batch["cyp_labels"].detach().cpu())
@@ -796,6 +829,7 @@ if TORCH_AVAILABLE:
             merged_site_scores = torch.cat(site_scores, dim=0)
             merged_site_labels = torch.cat(site_labels, dim=0)
             merged_site_supervision_mask = torch.cat(site_supervision_masks, dim=0)
+            merged_candidate_mask = torch.cat(candidate_masks, dim=0)
             merged_site_batch = torch.cat(site_batch, dim=0)
             merged_cyp_logits = torch.cat(cyp_logits, dim=0)
             merged_cyp_labels = torch.cat(cyp_labels, dim=0)
@@ -805,6 +839,7 @@ if TORCH_AVAILABLE:
                 merged_site_labels,
                 merged_site_batch,
                 supervision_mask=merged_site_supervision_mask,
+                ranking_mask=merged_candidate_mask,
             )
             cyp_metrics = compute_cyp_metrics(
                 merged_cyp_logits,
