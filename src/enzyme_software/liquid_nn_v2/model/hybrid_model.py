@@ -186,6 +186,9 @@ if TORCH_AVAILABLE:
                 return value[..., :width]
             return torch.nn.functional.pad(value, (0, int(width) - int(value.size(-1))))
 
+        def _base_impl(self):
+            return getattr(self.base_lnn, "impl", self.base_lnn)
+
         def _apply_candidate_mask(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
             candidate_mask = batch.get("candidate_mask")
             site_logits = outputs.get("site_logits")
@@ -256,13 +259,14 @@ if TORCH_AVAILABLE:
             sideinfo_gate = self.nexus_sideinfo_gate(gate_in)
             sideinfo_scale = torch.sigmoid(self.nexus_sideinfo_scale_logit).to(device=device, dtype=dtype)
             fused_atom_features = atom_features + sideinfo_scale * sideinfo_gate * sideinfo_residual
-            prior_payload = self.base_lnn.manual_priors(batch, num_atoms=rows, num_molecules=num_molecules, device=device)
-            site_logits, _site_residual = self.base_lnn.site_head(
+            base_impl = self._base_impl()
+            prior_payload = base_impl.manual_priors(batch, num_atoms=rows, num_molecules=num_molecules, device=device)
+            site_logits, _site_residual = base_impl.site_head(
                 fused_atom_features,
                 prior_logits=prior_payload.get("atom_prior_logits") if getattr(self.base_lnn.config, "use_manual_engine_priors", False) else None,
                 prior_features=prior_payload.get("atom_prior_embedding") if getattr(self.base_lnn.config, "use_manual_engine_priors", False) else None,
             )
-            site_logits = self.base_lnn._apply_bde_prior(site_logits, (batch.get("physics_features") or {}).get("bde_values"))
+            site_logits = base_impl._apply_bde_prior(site_logits, (batch.get("physics_features") or {}).get("bde_values"))
             sideinfo_diag = {
                 "fused_atom_features": fused_atom_features,
                 "sideinfo_inputs": sideinfo,
