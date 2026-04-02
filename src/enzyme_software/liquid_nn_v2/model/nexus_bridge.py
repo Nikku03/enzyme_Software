@@ -687,9 +687,7 @@ if TORCH_AVAILABLE:
             )
             wave_field = self.wave_field(masked_multivectors, stable_coords * wave_compute_mask.detach(), batch_index)
             wave_field["atom_field_features"] = wave_field["atom_field_features"] * wave_compute_mask
-            wave_field["global_density"] = wave_field["global_density"] * (
-                mol_valid_mask.view(-1) if mol_valid_mask is not None else torch.ones_like(wave_field["global_density"])
-            )
+            wave_field["global_density"] = wave_field["global_density"] * wave_compute_mask.view(-1)
             wave_field["global_gap_proxy"] = wave_field["global_gap_proxy"] * (
                 mol_valid_mask.view(-1) if mol_valid_mask is not None else torch.ones_like(wave_field["global_gap_proxy"])
             )
