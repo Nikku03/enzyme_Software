@@ -21,6 +21,8 @@ import subprocess
 import sys
 import importlib
 import json
+from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 
 
@@ -42,6 +44,46 @@ def _env_flag(name: str, default: bool) -> bool:
     if raw is None:
         return default
     return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+class _TeeStream:
+    def __init__(self, *streams):
+        self._streams = streams
+
+    def write(self, data):
+        for stream in self._streams:
+            stream.write(data)
+        return len(data)
+
+    def flush(self):
+        for stream in self._streams:
+            stream.flush()
+
+    def isatty(self):
+        primary = self._streams[0]
+        return bool(getattr(primary, "isatty", lambda: False)())
+
+    @property
+    def encoding(self):
+        primary = self._streams[0]
+        return getattr(primary, "encoding", "utf-8")
+
+
+@contextmanager
+def _capture_console_log(log_path: Path):
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    with log_path.open("a", encoding="utf-8", buffering=1) as handle:
+        sys.stdout = _TeeStream(original_stdout, handle)
+        sys.stderr = _TeeStream(original_stderr, handle)
+        try:
+            yield
+        finally:
+            sys.stdout.flush()
+            sys.stderr.flush()
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
 
 
 LOCKED_PRESET_KEYS = {
@@ -320,6 +362,12 @@ def main() -> None:
         "HYBRID_COLAB_ARTIFACT_DIR",
         "/content/drive/MyDrive/enzyme_hybrid_lnn/artifacts/hybrid_full_xtb",
     )
+    console_log_path = Path(
+        os.environ.get(
+            "HYBRID_COLAB_CONSOLE_LOG",
+            str(Path(artifact_dir) / f"hybrid_full_xtb_console_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"),
+        )
+    )
     manual_cache_dir = os.environ.get(
         "HYBRID_COLAB_MANUAL_CACHE_DIR",
         "/content/drive/MyDrive/enzyme_hybrid_lnn/cache/manual_engine_full",
@@ -393,34 +441,36 @@ def main() -> None:
     if precedent_logbook:
         argv.extend(["--precedent-logbook", precedent_logbook])
 
-    print("Hybrid LNN Colab wrapper")
-    print(f"preset={preset}")
-    print(f"output_dir={output_dir}")
-    print(f"artifact_dir={artifact_dir}")
-    print(f"manual_cache_dir={manual_cache_dir}")
-    print(f"xtb_cache_dir={xtb_cache_dir}")
-    print(f"warm_start={checkpoint}")
-    if os.environ.get("HYBRID_COLAB_WARM_START_REPORT", "").strip():
-        print(f"warm_start_report={os.environ['HYBRID_COLAB_WARM_START_REPORT']}")
-    print(f"warm_start_mode={os.environ.get('HYBRID_COLAB_WARM_START_MODE', 'best')}")
-    print(f"split_mode={os.environ.get('HYBRID_COLAB_SPLIT_MODE', 'scaffold_source_size')}")
-    print(f"lock_preset_policy={int(_env_flag('HYBRID_COLAB_LOCK_PRESET_POLICY', True))}")
-    print(f"disable_precedent_logbook={os.environ.get('HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK', '1')}")
-    print(f"live_wave_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS', '0')}")
-    print(f"live_analogical_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS', '0')}")
-    print(f"TORCHDYNAMO_DISABLE={os.environ.get('TORCHDYNAMO_DISABLE', '')}")
-    print(f"TORCH_COMPILE_DISABLE={os.environ.get('TORCH_COMPILE_DISABLE', '')}")
-    print(f"HYBRID_FORCE_MANUAL_OPTIMIZER={os.environ.get('HYBRID_FORCE_MANUAL_OPTIMIZER', '')}")
-    if overridden_keys:
-        print("preset_policy_overrode=" + ",".join(sorted(overridden_keys)))
-    if precedent_logbook:
-        print(f"precedent_logbook={precedent_logbook}")
-    for key in sorted(PRESETS[preset]):
-        print(f"{key}={os.environ[key]}")
-    print()
+    with _capture_console_log(console_log_path):
+        print("Hybrid LNN Colab wrapper")
+        print(f"console_log={console_log_path}")
+        print(f"preset={preset}")
+        print(f"output_dir={output_dir}")
+        print(f"artifact_dir={artifact_dir}")
+        print(f"manual_cache_dir={manual_cache_dir}")
+        print(f"xtb_cache_dir={xtb_cache_dir}")
+        print(f"warm_start={checkpoint}")
+        if os.environ.get("HYBRID_COLAB_WARM_START_REPORT", "").strip():
+            print(f"warm_start_report={os.environ['HYBRID_COLAB_WARM_START_REPORT']}")
+        print(f"warm_start_mode={os.environ.get('HYBRID_COLAB_WARM_START_MODE', 'best')}")
+        print(f"split_mode={os.environ.get('HYBRID_COLAB_SPLIT_MODE', 'scaffold_source_size')}")
+        print(f"lock_preset_policy={int(_env_flag('HYBRID_COLAB_LOCK_PRESET_POLICY', True))}")
+        print(f"disable_precedent_logbook={os.environ.get('HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK', '1')}")
+        print(f"live_wave_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS', '0')}")
+        print(f"live_analogical_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS', '0')}")
+        print(f"TORCHDYNAMO_DISABLE={os.environ.get('TORCHDYNAMO_DISABLE', '')}")
+        print(f"TORCH_COMPILE_DISABLE={os.environ.get('TORCH_COMPILE_DISABLE', '')}")
+        print(f"HYBRID_FORCE_MANUAL_OPTIMIZER={os.environ.get('HYBRID_FORCE_MANUAL_OPTIMIZER', '')}")
+        if overridden_keys:
+            print("preset_policy_overrode=" + ",".join(sorted(overridden_keys)))
+        if precedent_logbook:
+            print(f"precedent_logbook={precedent_logbook}")
+        for key in sorted(PRESETS[preset]):
+            print(f"{key}={os.environ[key]}")
+        print()
 
-    sys.argv = argv
-    runpy.run_path(str(REPO_DIR / "scripts" / "train_hybrid_full_xtb.py"), run_name="__main__")
+        sys.argv = argv
+        runpy.run_path(str(REPO_DIR / "scripts" / "train_hybrid_full_xtb.py"), run_name="__main__")
 
 
 if __name__ == "__main__":
