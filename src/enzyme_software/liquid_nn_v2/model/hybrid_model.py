@@ -7,6 +7,7 @@ from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_
 from enzyme_software.liquid_nn_v2.features.route_prior import combine_lnn_with_prior
 from enzyme_software.liquid_nn_v2.model.nexus_bridge import NexusHybridBridge
 from enzyme_software.liquid_nn_v2.model.precedent_logbook import AuditedEpisodeLogbook
+from enzyme_software.liquid_nn_v2.model.wave_field import WholeMoleculeWaveField
 
 
 if TORCH_AVAILABLE:
@@ -54,7 +55,9 @@ if TORCH_AVAILABLE:
                 if bool(getattr(self.config, "use_nexus_sideinfo_features", False)):
                     sideinfo_hidden = int(getattr(self.config, "nexus_sideinfo_hidden_dim", atom_dim))
                     sideinfo_dropout = float(getattr(self.config, "nexus_sideinfo_dropout", 0.10))
-                    sideinfo_in = 14 + (15 + num_cyp)
+                    wave_sideinfo_in = 5 + int(WholeMoleculeWaveField.field_feature_dim)
+                    analogical_sideinfo_in = 15 + num_cyp
+                    sideinfo_in = wave_sideinfo_in + analogical_sideinfo_in
                     self.nexus_sideinfo_proj = nn.Sequential(
                         nn.Linear(sideinfo_in, sideinfo_hidden),
                         nn.SiLU(),
