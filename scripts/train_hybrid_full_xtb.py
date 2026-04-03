@@ -103,7 +103,6 @@ def _collect_model_overrides() -> dict[str, int | float]:
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_METXBIODB": (_env_float, "site_source_weight_metxbiodb"),
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_ATTNSOM": (_env_float, "site_source_weight_attnsom"),
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_CYP_DBS_EXTERNAL": (_env_float, "site_source_weight_cyp_dbs_external"),
-        "HYBRID_COLAB_CANDIDATE_MASK_LOGIT_BIAS": (_env_float, "candidate_mask_logit_bias"),
         "HYBRID_COLAB_DOMAIN_ADV_WEIGHT": (_env_float, "domain_adv_weight"),
         "HYBRID_COLAB_DOMAIN_ADV_GRAD_SCALE": (_env_float, "domain_adv_grad_scale"),
         "HYBRID_COLAB_DOMAIN_ADV_HIDDEN_DIM": (_env_int, "domain_adv_hidden_dim"),
