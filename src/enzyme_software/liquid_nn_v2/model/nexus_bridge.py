@@ -23,6 +23,7 @@ if TORCH_AVAILABLE:
             capacity: int = 4096,
             topk: int = 32,
             graph_weight: float = 0.25,
+            cyp_weight: float = 0.35,
             temperature: float = 0.25,
             hard_negative_ratio: float = 2.0,
             min_hard_negatives: int = 32,
@@ -35,6 +36,7 @@ if TORCH_AVAILABLE:
             self.capacity = max(64, int(capacity))
             self.topk = max(1, int(topk))
             self.graph_weight = float(max(graph_weight, 0.0))
+            self.cyp_weight = float(max(cyp_weight, 0.0))
             self.temperature = float(max(temperature, 1.0e-3))
             self.hard_negative_ratio = float(max(hard_negative_ratio, 0.0))
             self.min_hard_negatives = max(0, int(min_hard_negatives))
@@ -67,6 +69,7 @@ if TORCH_AVAILABLE:
             query_keys: torch.Tensor,
             query_graph: torch.Tensor,
             query_molecule_keys: Optional[torch.Tensor] = None,
+            query_cyp_probs: Optional[torch.Tensor] = None,
         ) -> Optional[Dict[str, torch.Tensor]]:
             size = self.size()
             if size <= 0:
@@ -84,6 +87,15 @@ if TORCH_AVAILABLE:
             atom_scores = torch.matmul(q_keys, k_keys.transpose(0, 1))
             graph_scores = torch.matmul(q_graph, k_graph.transpose(0, 1))
             scores = atom_scores + self.graph_weight * graph_scores
+            if query_cyp_probs is not None:
+                q_cyp = query_cyp_probs.float()
+                cyp_scores = torch.matmul(q_cyp, mem_cyp.transpose(0, 1))
+                q_argmax = torch.argmax(q_cyp, dim=-1, keepdim=True)
+                m_argmax = torch.argmax(mem_cyp, dim=-1).view(1, -1)
+                q_known = torch.max(q_cyp, dim=-1, keepdim=True).values > 0.5
+                m_known = torch.max(mem_cyp, dim=-1).values.view(1, -1) > 0.5
+                exact_cyp = ((q_argmax == m_argmax) & q_known & m_known).to(dtype=q_cyp.dtype)
+                scores = scores + self.cyp_weight * ((0.75 * cyp_scores) + (0.25 * exact_cyp))
             if query_molecule_keys is not None:
                 qm = query_molecule_keys.to(device=scores.device, dtype=torch.long).view(-1, 1)
                 same_molecule = qm == mem_molecule_key.view(1, -1)
@@ -259,7 +271,13 @@ if TORCH_AVAILABLE:
             self.analogical_aux_weight = float(max(0.0, analogical_aux_weight))
             self.analogical_cyp_aux_scale = float(max(0.0, analogical_cyp_aux_scale))
             self.memory_frozen = False
-            self.precedent_logbook = AuditedEpisodeLogbook(max_cases=max(4096, memory_capacity * 8), topk=max(8, min(32, memory_topk)))
+            self.precedent_logbook_loaded_from_file = False
+            self.precedent_logbook = AuditedEpisodeLogbook(
+                max_cases=max(4096, memory_capacity * 8),
+                topk=max(8, min(24, memory_topk)),
+                cyp_weight=0.35,
+                temperature=0.14,
+            )
             total_in = self.atom_feature_dim + self.steric_feature_dim + self.xtb_feature_dim
             hidden = max(64, int(wave_hidden_dim))
             self.atom_to_multivector = nn.Sequential(
@@ -335,6 +353,8 @@ if TORCH_AVAILABLE:
                 num_cyp_classes=self.num_cyp_classes,
                 capacity=memory_capacity,
                 topk=memory_topk,
+                cyp_weight=0.35,
+                temperature=0.16,
             )
 
         def _continuous_reasoning(
@@ -399,13 +419,17 @@ if TORCH_AVAILABLE:
         @torch.no_grad()
         def clear_memory(self) -> None:
             self.memory.clear()
+            if not self.precedent_logbook_loaded_from_file:
+                self.precedent_logbook.clear()
 
         def set_memory_frozen(self, frozen: bool) -> None:
             self.memory_frozen = bool(frozen)
 
         @torch.no_grad()
         def load_precedent_logbook(self, path: str, *, cyp_names: Optional[list[str]] = None) -> Dict[str, float]:
-            return self.precedent_logbook.load_jsonl(path, cyp_names=cyp_names, allowed_splits=("train",))
+            stats = self.precedent_logbook.load_jsonl(path, cyp_names=cyp_names, allowed_splits=("train",))
+            self.precedent_logbook_loaded_from_file = bool(float(stats.get("cases", 0.0)) > 0.0)
+            return stats
 
         def _optional_feature(self, value: Optional[torch.Tensor], rows: int, width: int, *, device, dtype) -> torch.Tensor:
             if value is None:
@@ -673,31 +697,21 @@ if TORCH_AVAILABLE:
                 atom_valid_mask = torch.ones((multivectors.size(0), 1), device=multivectors.device, dtype=multivectors.dtype)
             else:
                 atom_valid_mask = torch.zeros((multivectors.size(0), 1), device=multivectors.device, dtype=multivectors.dtype)
-            wave_compute_mask = atom_valid_mask
-            if mol_valid_mask is not None:
-                wave_compute_mask = wave_compute_mask * mol_valid_mask[batch_index]
-            masked_multivectors = multivectors * wave_compute_mask
-            masked_coords = coords * wave_compute_mask
             stable_coords = coords.detach()
             wave_preds = self._wave_predictions(
-                masked_multivectors,
-                stable_coords * wave_compute_mask.detach(),
+                multivectors,
+                stable_coords,
                 batch_index,
-                atom_valid_mask=atom_valid_mask,
-                mol_valid_mask=mol_valid_mask,
+                atom_valid_mask=None,
+                mol_valid_mask=None,
             )
-            wave_field = self.wave_field(masked_multivectors, stable_coords * wave_compute_mask.detach(), batch_index)
-            wave_field["atom_field_features"] = wave_field["atom_field_features"] * wave_compute_mask
-            wave_field["global_density"] = wave_field["global_density"] * wave_compute_mask.view(-1)
-            wave_field["global_gap_proxy"] = wave_field["global_gap_proxy"] * (
-                mol_valid_mask.view(-1) if mol_valid_mask is not None else torch.ones_like(wave_field["global_gap_proxy"])
-            )
+            wave_field = self.wave_field(multivectors, stable_coords, batch_index)
             wave_bias_input = torch.cat(
                 [
-                    masked_multivectors,
+                    multivectors,
                     wave_preds["predicted_charges"].unsqueeze(-1),
                     wave_preds["predicted_fukui"].unsqueeze(-1),
-                    masked_coords,
+                    coords,
                     wave_field["atom_field_features"],
                     wave_field["global_density"].unsqueeze(-1),
                     wave_field["global_gap_proxy"][batch_index].unsqueeze(-1),
@@ -705,12 +719,14 @@ if TORCH_AVAILABLE:
                 dim=-1,
             )
             wave_site_bias = self.wave_site_head(wave_bias_input)
-            wave_reliability = atom_valid_mask
+            wave_reliability = 0.05 * torch.ones_like(atom_valid_mask)
+            if mol_valid_mask is not None:
+                wave_reliability = wave_reliability + 0.20 * mol_valid_mask[batch_index]
+            wave_reliability = wave_reliability + 0.50 * atom_valid_mask
             if xtb_atom_features is not None and xtb_atom_features.numel() and xtb_atom_features.size(-1) >= 7:
                 xtb_confidence = xtb_atom_features[:, 6:7].float().to(device=multivectors.device, dtype=multivectors.dtype).clamp(0.0, 1.0)
-                wave_reliability = wave_reliability * torch.where(wave_reliability > 0.5, xtb_confidence, torch.ones_like(xtb_confidence))
-            if mol_valid_mask is not None:
-                wave_reliability = wave_reliability * mol_valid_mask[batch_index]
+                wave_reliability = wave_reliability + 0.25 * atom_valid_mask * xtb_confidence
+            wave_reliability = wave_reliability.clamp(0.0, 1.0)
             wave_site_bias = wave_reliability * wave_site_bias
             graph_embeddings = self._group_graph_embedding(multivectors, batch_index)
             per_atom_graph = graph_embeddings[batch_index] if graph_embeddings.numel() else multivectors.new_zeros((multivectors.size(0), self.memory.graph_dim))
@@ -736,6 +752,17 @@ if TORCH_AVAILABLE:
                 dim=-1,
             )
             cyp_probs_by_mol = F.softmax(cyp_logits.detach(), dim=-1)
+            if cyp_labels is not None:
+                true_cyp = F.one_hot(
+                    cyp_labels.long().clamp(min=0),
+                    num_classes=self.num_cyp_classes,
+                ).to(dtype=cyp_probs_by_mol.dtype, device=cyp_probs_by_mol.device)
+                if cyp_supervision_mask is not None:
+                    cyp_mask = cyp_supervision_mask.float().view(-1, 1).to(device=cyp_probs_by_mol.device, dtype=cyp_probs_by_mol.dtype)
+                    cyp_probs_by_mol = cyp_mask * true_cyp + (1.0 - cyp_mask) * cyp_probs_by_mol
+                else:
+                    cyp_probs_by_mol = true_cyp
+            cyp_probs_atom = cyp_probs_by_mol[batch_index]
             cyp_value_lookup = torch.argmax(cyp_probs_by_mol, dim=-1, keepdim=True).float() + 1.0
             precedent = self.precedent_logbook.lookup(
                 precedent_query,
@@ -747,7 +774,12 @@ if TORCH_AVAILABLE:
                 if precedent is not None
                 else multivectors.new_zeros((multivectors.size(0), AuditedEpisodeLogbook.brief_dim))
             )
-            retrieval = self.memory.lookup(atom_keys, per_atom_graph, query_molecule_keys=atom_molecule_keys)
+            retrieval = self.memory.lookup(
+                atom_keys,
+                per_atom_graph,
+                query_molecule_keys=atom_molecule_keys,
+                query_cyp_probs=cyp_probs_atom,
+            )
             best_score = None
             support_margin = None
             concentration = None
@@ -814,18 +846,6 @@ if TORCH_AVAILABLE:
             )
             total_aux_loss = wave_aux_loss + analogical_aux_loss
             if (not self.memory_frozen) and self.training and site_labels is not None and cyp_logits.numel():
-                cyp_probs_by_mol = F.softmax(cyp_logits.detach(), dim=-1)
-                if cyp_labels is not None:
-                    true_cyp = F.one_hot(
-                        cyp_labels.long().clamp(min=0),
-                        num_classes=self.num_cyp_classes,
-                    ).to(dtype=cyp_probs_by_mol.dtype, device=cyp_probs_by_mol.device)
-                    if cyp_supervision_mask is not None:
-                        cyp_mask = cyp_supervision_mask.float().view(-1, 1).to(device=cyp_probs_by_mol.device, dtype=cyp_probs_by_mol.dtype)
-                        cyp_probs_by_mol = cyp_mask * true_cyp + (1.0 - cyp_mask) * cyp_probs_by_mol
-                    else:
-                        cyp_probs_by_mol = true_cyp
-                cyp_probs_atom = cyp_probs_by_mol[batch_index]
                 if site_logits is not None:
                     hard_negative_scores = torch.sigmoid(site_logits.detach().view(-1, 1))
                 else:
@@ -840,6 +860,18 @@ if TORCH_AVAILABLE:
                     supervision_mask=site_supervision_mask,
                     hard_negative_scores=hard_negative_scores,
                 )
+                if not self.precedent_logbook_loaded_from_file:
+                    self.precedent_logbook.update(
+                        case_vectors=precedent_query,
+                        case_labels=site_labels.float().view(-1, 1),
+                        case_cyp_values=cyp_value_lookup[batch_index],
+                        molecule_keys=atom_molecule_keys,
+                        supervision_mask=site_supervision_mask,
+                        hard_negative_scores=hard_negative_scores,
+                        hard_negative_ratio=1.0,
+                        min_hard_negatives=16,
+                        max_hard_negatives=96,
+                    )
             metrics = {
                 **wave_metrics,
                 **analogical_metrics,

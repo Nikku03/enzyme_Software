@@ -59,6 +59,7 @@ if TORCH_AVAILABLE:
             self.register_buffer("case_cyp", torch.zeros(self.max_cases, 1))
             self.register_buffer("case_molecule_key", torch.zeros(self.max_cases, dtype=torch.long))
             self.register_buffer("valid", torch.zeros(self.max_cases, dtype=torch.bool))
+            self.register_buffer("ptr", torch.zeros((), dtype=torch.long))
 
         def size(self) -> int:
             return int(self.valid.sum().item())
@@ -70,6 +71,7 @@ if TORCH_AVAILABLE:
             self.case_cyp.zero_()
             self.case_molecule_key.zero_()
             self.valid.zero_()
+            self.ptr.zero_()
 
         @staticmethod
         def _case_vector_from_episode(episode: dict, atom_idx: int) -> Optional[torch.Tensor]:
@@ -158,12 +160,89 @@ if TORCH_AVAILABLE:
             self.case_cyp[:count] = cyp
             self.case_molecule_key[:count] = molecule_keys
             self.valid[:count] = True
+            self.ptr.fill_(count % self.max_cases)
             return {
                 "cases": float(count),
                 "episodes": float(episodes),
                 "positive_cases": float(positive_cases),
                 "negative_cases": float(negative_cases),
             }
+
+        @torch.no_grad()
+        def update(
+            self,
+            *,
+            case_vectors: torch.Tensor,
+            case_labels: torch.Tensor,
+            case_cyp_values: torch.Tensor,
+            molecule_keys: torch.Tensor,
+            supervision_mask: Optional[torch.Tensor] = None,
+            hard_negative_scores: Optional[torch.Tensor] = None,
+            hard_negative_ratio: float = 1.5,
+            min_hard_negatives: int = 16,
+            max_hard_negatives: int = 128,
+        ) -> int:
+            if case_vectors.numel() == 0:
+                return 0
+            mask = torch.ones(case_vectors.size(0), dtype=torch.bool, device=case_vectors.device)
+            if supervision_mask is not None:
+                mask = supervision_mask.view(-1) > 0.5
+            if not bool(mask.any()):
+                return 0
+            labels_flat = case_labels.view(-1)
+            positive_mask = mask & (labels_flat > 0.5)
+            selected_mask = positive_mask.clone()
+            negative_mask = mask & ~positive_mask
+            if bool(negative_mask.any()):
+                negative_idx = torch.nonzero(negative_mask, as_tuple=False).view(-1)
+                if hard_negative_scores is not None:
+                    hardness = hard_negative_scores.view(-1)[negative_idx].detach().float()
+                else:
+                    hardness = torch.zeros_like(negative_idx, dtype=case_vectors.dtype)
+                positive_count = int(positive_mask.sum().item())
+                desired_negatives = max(int(min_hard_negatives), int(round(float(hard_negative_ratio) * max(1, positive_count))))
+                desired_negatives = min(desired_negatives, int(max_hard_negatives), int(negative_idx.numel()))
+                if desired_negatives > 0:
+                    hard_order = torch.topk(hardness, k=desired_negatives, dim=0).indices
+                    selected_mask[negative_idx[hard_order]] = True
+            if not bool(selected_mask.any()):
+                return 0
+            vectors = case_vectors[selected_mask].detach().float()
+            labels = case_labels[selected_mask].detach().view(-1, 1).float()
+            cyp = case_cyp_values[selected_mask].detach().view(-1, 1).float()
+            mol_keys = molecule_keys[selected_mask].detach().view(-1).long()
+            count = int(vectors.size(0))
+            ptr = int(self.ptr.item())
+            if count >= self.max_cases:
+                vectors = vectors[-self.max_cases :]
+                labels = labels[-self.max_cases :]
+                cyp = cyp[-self.max_cases :]
+                mol_keys = mol_keys[-self.max_cases :]
+                count = self.max_cases
+                ptr = 0
+            end = ptr + count
+            if end <= self.max_cases:
+                sl = slice(ptr, end)
+                self.case_vectors[sl] = vectors
+                self.case_labels[sl] = labels
+                self.case_cyp[sl] = cyp
+                self.case_molecule_key[sl] = mol_keys
+                self.valid[sl] = True
+            else:
+                first = self.max_cases - ptr
+                second = count - first
+                self.case_vectors[ptr:] = vectors[:first]
+                self.case_labels[ptr:] = labels[:first]
+                self.case_cyp[ptr:] = cyp[:first]
+                self.case_molecule_key[ptr:] = mol_keys[:first]
+                self.valid[ptr:] = True
+                self.case_vectors[:second] = vectors[first:]
+                self.case_labels[:second] = labels[first:]
+                self.case_cyp[:second] = cyp[first:]
+                self.case_molecule_key[:second] = mol_keys[first:]
+                self.valid[:second] = True
+            self.ptr.fill_(end % self.max_cases)
+            return count
 
         def lookup(
             self,
