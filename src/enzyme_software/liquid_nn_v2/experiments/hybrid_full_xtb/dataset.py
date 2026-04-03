@@ -157,7 +157,10 @@ def _build_cyp3a4_candidate_masks(
 
     if manual_atom_prior_logits is not None:
         manual_logits = np.asarray(manual_atom_prior_logits, dtype=np.float32).reshape(num_atoms, -1)
-        manual_prior = _sigmoid_np(manual_logits[:, 0])
+        # Manual priors are stored as logits with 0 meaning "no manual signal".
+        # A plain sigmoid would turn that neutral state into 0.5, which makes
+        # every atom look mildly supported and collapses the shortlist to all-ones.
+        manual_prior = np.clip((_sigmoid_np(manual_logits[:, 0]) - 0.5) * 2.0, 0.0, 1.0)
     else:
         manual_prior = np.zeros((num_atoms,), dtype=np.float32)
 
