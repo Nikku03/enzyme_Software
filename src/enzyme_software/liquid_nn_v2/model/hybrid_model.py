@@ -27,6 +27,17 @@ if TORCH_AVAILABLE:
             self.nexus_sideinfo_proj = None
             self.nexus_sideinfo_gate = None
             self.nexus_sideinfo_scale_logit = None
+            self.domain_adv_head = None
+            domain_adv_weight = float(getattr(self.config, "domain_adv_weight", 0.0))
+            if domain_adv_weight > 0.0:
+                domain_hidden = int(getattr(self.config, "domain_adv_hidden_dim", 64))
+                mol_dim = int(getattr(self.config, "cyp_branch_dim", getattr(self.config, "mol_dim", 128)))
+                self.domain_adv_head = nn.Sequential(
+                    nn.Linear(mol_dim, domain_hidden),
+                    nn.SiLU(),
+                    nn.Dropout(float(getattr(self.config, "dropout", 0.1))),
+                    nn.Linear(domain_hidden, 6),
+                )
             if bool(getattr(self.config, "use_nexus_bridge", True)):
                 atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
                 num_cyp = int(getattr(self.config, "num_cyp_classes", 9))
@@ -188,6 +199,11 @@ if TORCH_AVAILABLE:
 
         def _base_impl(self):
             return getattr(self.base_lnn, "impl", self.base_lnn)
+
+        def _gradient_reverse(self, value: torch.Tensor, scale: float) -> torch.Tensor:
+            if scale <= 0.0:
+                return value.detach()
+            return value.detach() - (float(scale) * (value - value.detach()))
 
         def _apply_candidate_mask(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
             candidate_mask = batch.get("candidate_mask")
@@ -693,6 +709,14 @@ if TORCH_AVAILABLE:
             route_prior: Optional[torch.Tensor] = None,
         ) -> Dict[str, object]:
             outputs = dict(self.base_lnn(batch))
+            if self.domain_adv_head is not None:
+                mol_features = outputs.get("mol_features")
+                if mol_features is not None and getattr(mol_features, "numel", lambda: 0)():
+                    rev = self._gradient_reverse(
+                        mol_features,
+                        scale=float(getattr(self.config, "domain_adv_grad_scale", 0.1)),
+                    )
+                    outputs["domain_logits"] = self.domain_adv_head(rev)
             outputs = self._apply_nexus_bridge(outputs, batch)
             outputs = self._apply_candidate_mask(outputs, batch)
             prior = route_prior

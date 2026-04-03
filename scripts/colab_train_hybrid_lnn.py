@@ -465,6 +465,9 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_METXBIODB": "1.15",
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_ATTNSOM": "1.35",
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_CYP_DBS_EXTERNAL": "1.75",
+        "HYBRID_COLAB_DOMAIN_ADV_WEIGHT": "0.06",
+        "HYBRID_COLAB_DOMAIN_ADV_GRAD_SCALE": "0.15",
+        "HYBRID_COLAB_DOMAIN_ADV_HIDDEN_DIM": "96",
     },
     "cyp3a4_sideinfo_transfer": {
         "HYBRID_COLAB_DATASET": "data/prepared_training/main8_cyp3a4_augmented.json",

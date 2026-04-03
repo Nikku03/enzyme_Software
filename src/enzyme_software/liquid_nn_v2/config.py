@@ -112,6 +112,9 @@ class ModelConfig:
     candidate_mask_mode: str = "hard"
     candidate_mask_logit_bias: float = 2.0
     disable_cyp_task: bool = False
+    domain_adv_weight: float = 0.0
+    domain_adv_grad_scale: float = 0.1
+    domain_adv_hidden_dim: int = 64
     use_nexus_bridge: bool = True
     nexus_wave_hidden_dim: int = 64
     nexus_graph_dim: int = 48
@@ -256,6 +259,9 @@ class ModelConfig:
             self.candidate_mask_mode = "hard"
         self.candidate_mask_logit_bias = max(0.0, float(self.candidate_mask_logit_bias))
         self.disable_cyp_task = bool(self.disable_cyp_task)
+        self.domain_adv_weight = max(0.0, float(self.domain_adv_weight))
+        self.domain_adv_grad_scale = max(0.0, float(self.domain_adv_grad_scale))
+        self.domain_adv_hidden_dim = max(16, int(self.domain_adv_hidden_dim))
 
     @property
     def num_cyp_classes(self) -> int:

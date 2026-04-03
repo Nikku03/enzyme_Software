@@ -15,6 +15,15 @@ from enzyme_software.liquid_nn_v2.training.utils import collate_molecule_graphs,
 
 
 if TORCH_AVAILABLE:
+    _DOMAIN_SOURCE_TO_IDX = {
+        "drugbank": 0,
+        "az120": 1,
+        "metxbiodb": 2,
+        "attnsom": 3,
+        "cyp_dbs_external": 4,
+        "other": 5,
+    }
+
     class _NoOpScheduler:
         def step(self, val_metric: float) -> None:
             return None
@@ -363,6 +372,16 @@ if TORCH_AVAILABLE:
             stats["source_weight_min"] = float(graph_source_weights.min().detach().item())
             return stats
 
+        def _graph_domain_targets(self, batch: Dict[str, object]):
+            metadata = list(batch.get("graph_metadata") or [])
+            if not metadata:
+                return None
+            labels = []
+            for meta in metadata:
+                source = str((meta or {}).get("source", "")).strip().lower().replace("-", "_").replace(" ", "_")
+                labels.append(int(_DOMAIN_SOURCE_TO_IDX.get(source, _DOMAIN_SOURCE_TO_IDX["other"])))
+            return torch.tensor(labels, dtype=torch.long, device=self.device)
+
         def _enforce_candidate_mask(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
             candidate_mask = batch.get("candidate_mask")
             site_logits = outputs.get("site_logits")
@@ -620,6 +639,18 @@ if TORCH_AVAILABLE:
                     loss = loss + (board_entropy_weight * uniform_kl)
                     stats["nexus_board_uniform_kl"] = float(uniform_kl.detach().item())
                     stats["nexus_board_entropy_weight"] = float(board_entropy_weight)
+            domain_logits = outputs.get("domain_logits")
+            domain_weight = float(getattr(model_config, "domain_adv_weight", 0.0)) if model_config is not None else 0.0
+            if domain_logits is not None and domain_weight > 0.0:
+                domain_targets = self._graph_domain_targets(batch)
+                if domain_targets is not None and int(domain_targets.numel()) == int(domain_logits.shape[0]) and int(domain_targets.numel()) > 1:
+                    domain_loss = F.cross_entropy(domain_logits, domain_targets)
+                    loss = loss + (domain_weight * domain_loss)
+                    domain_pred = torch.argmax(domain_logits.detach(), dim=-1)
+                    domain_acc = (domain_pred == domain_targets).float().mean()
+                    stats["domain_adv_loss"] = float(domain_loss.detach().item())
+                    stats["domain_adv_weight"] = float(domain_weight)
+                    stats["domain_adv_acc"] = float(domain_acc.detach().item())
             stats.update(self._collect_output_stats(outputs))
             weighted_loss = self._apply_confidence_weights(loss, batch)
             if weighted_loss is not loss:
