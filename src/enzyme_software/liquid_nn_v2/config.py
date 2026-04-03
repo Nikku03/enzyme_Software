@@ -112,6 +112,8 @@ class ModelConfig:
     candidate_mask_mode: str = "hard"
     candidate_mask_logit_bias: float = 2.0
     disable_cyp_task: bool = False
+    fixed_cyp_index: int = -1
+    fixed_cyp_logit: float = 8.0
     domain_adv_weight: float = 0.0
     domain_adv_grad_scale: float = 0.1
     domain_adv_hidden_dim: int = 64
@@ -259,6 +261,8 @@ class ModelConfig:
             self.candidate_mask_mode = "hard"
         self.candidate_mask_logit_bias = max(0.0, float(self.candidate_mask_logit_bias))
         self.disable_cyp_task = bool(self.disable_cyp_task)
+        self.fixed_cyp_index = int(self.fixed_cyp_index)
+        self.fixed_cyp_logit = float(self.fixed_cyp_logit)
         self.domain_adv_weight = max(0.0, float(self.domain_adv_weight))
         self.domain_adv_grad_scale = max(0.0, float(self.domain_adv_grad_scale))
         self.domain_adv_hidden_dim = max(16, int(self.domain_adv_hidden_dim))

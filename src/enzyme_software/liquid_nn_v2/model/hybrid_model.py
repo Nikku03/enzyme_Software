@@ -205,6 +205,30 @@ if TORCH_AVAILABLE:
                 return value.detach()
             return value.detach() - (float(scale) * (value - value.detach()))
 
+        def _apply_fixed_cyp_context(self, outputs: Dict[str, object]) -> Dict[str, object]:
+            fixed_idx = int(getattr(self.config, "fixed_cyp_index", -1))
+            if fixed_idx < 0:
+                return outputs
+            cyp_logits = outputs.get("cyp_logits")
+            if cyp_logits is None or not getattr(cyp_logits, "numel", lambda: 0)():
+                return outputs
+            if fixed_idx >= int(cyp_logits.shape[-1]):
+                return outputs
+            fixed_logit = float(getattr(self.config, "fixed_cyp_logit", 8.0))
+            forced = torch.full_like(cyp_logits, -fixed_logit)
+            forced[:, fixed_idx] = fixed_logit
+            outputs = dict(outputs)
+            outputs.setdefault("cyp_logits_base", cyp_logits)
+            outputs["cyp_logits"] = forced
+            diagnostics = dict(outputs.get("diagnostics") or {})
+            diagnostics["fixed_cyp_context"] = {
+                "enabled": 1.0,
+                "fixed_cyp_index": float(fixed_idx),
+                "fixed_cyp_logit": float(fixed_logit),
+            }
+            outputs["diagnostics"] = diagnostics
+            return outputs
+
         def _apply_candidate_mask(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
             candidate_mask = batch.get("candidate_mask")
             site_logits = outputs.get("site_logits")
@@ -709,6 +733,7 @@ if TORCH_AVAILABLE:
             route_prior: Optional[torch.Tensor] = None,
         ) -> Dict[str, object]:
             outputs = dict(self.base_lnn(batch))
+            outputs = self._apply_fixed_cyp_context(outputs)
             if self.domain_adv_head is not None:
                 mol_features = outputs.get("mol_features")
                 if mol_features is not None and getattr(mol_features, "numel", lambda: 0)():

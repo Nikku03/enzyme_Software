@@ -801,6 +801,14 @@ def main() -> None:
         print("nexus_sideinfo_only=1 | side engines feed features into LNN without votes", flush=True)
     if args.site_only_target_cyp and str(args.target_cyp or "").strip():
         print(f"site_only_target_cyp=1 | disabling CYP task for {str(args.target_cyp).strip()}", flush=True)
+    fixed_cyp_index = -1
+    if args.site_only_target_cyp and str(args.target_cyp or "").strip():
+        target = str(args.target_cyp).strip().upper()
+        try:
+            fixed_cyp_index = list(ModelConfig().cyp_names).index(target)
+            print(f"fixed_cyp_context=1 | cyp={target} | cyp_index={fixed_cyp_index}", flush=True)
+        except ValueError:
+            print(f"fixed_cyp_context=0 | target_cyp={target} not in model cyp_names", flush=True)
 
     xtb_validity_summary = _summarize_xtb_validity(drugs, xtb_cache_dir)
     print(
@@ -846,6 +854,7 @@ def main() -> None:
         use_nexus_sideinfo_features=bool(args.nexus_sideinfo_only),
         use_cyp_site_conditioning=not bool(args.site_only_target_cyp and str(args.target_cyp or "").strip()),
         disable_cyp_task=bool(args.site_only_target_cyp and str(args.target_cyp or "").strip()),
+        fixed_cyp_index=int(fixed_cyp_index),
         candidate_mask_mode=str(args.candidate_mask_mode or "hard").strip().lower() or "hard",
         candidate_mask_logit_bias=float(args.candidate_mask_logit_bias),
         nexus_memory_frozen=bool(args.freeze_nexus_memory),
@@ -956,6 +965,10 @@ def main() -> None:
 
     base_predictor = _resolve_base_predictor()
     frozen_named_modules: list[tuple[str, object]] = []
+    if bool(args.site_only_target_cyp and str(args.target_cyp or "").strip()):
+        for module_name in ("cyp_branch", "cyp_head"):
+            if module_name not in freeze_base_modules:
+                freeze_base_modules.append(module_name)
     if base_predictor is not None and freeze_base_modules:
         available_modules = dict(base_predictor.named_children())
         for module_name in freeze_base_modules:
