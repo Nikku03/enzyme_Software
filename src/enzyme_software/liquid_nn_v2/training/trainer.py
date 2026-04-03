@@ -371,7 +371,15 @@ if TORCH_AVAILABLE:
             mask = candidate_mask.to(device=site_logits.device, dtype=site_logits.dtype).view_as(site_logits)
             if mask.numel() != site_logits.numel():
                 return outputs
-            masked_logits = torch.where(mask > 0.5, site_logits, torch.full_like(site_logits, -20.0))
+            model_config = getattr(self.model, "config", None)
+            mask_mode = str(getattr(model_config, "candidate_mask_mode", "hard")).strip().lower()
+            if mask_mode == "off":
+                masked_logits = site_logits
+            elif mask_mode == "soft":
+                bias = float(getattr(model_config, "candidate_mask_logit_bias", 2.0))
+                masked_logits = site_logits - ((1.0 - mask) * bias)
+            else:
+                masked_logits = torch.where(mask > 0.5, site_logits, torch.full_like(site_logits, -20.0))
             outputs = dict(outputs)
             outputs["site_logits"] = masked_logits
             outputs["site_scores"] = torch.sigmoid(masked_logits)
@@ -462,7 +470,9 @@ if TORCH_AVAILABLE:
         def compute_loss(self, batch: Dict[str, object], outputs: Dict[str, object]):
             site_mask = batch.get("site_supervision_mask")
             candidate_train_mask = batch.get("candidate_train_mask")
-            if candidate_train_mask is not None:
+            model_config = getattr(self.model, "config", None)
+            mask_mode = str(getattr(model_config, "candidate_mask_mode", "hard")).strip().lower()
+            if candidate_train_mask is not None and mask_mode == "hard":
                 candidate_train_mask = candidate_train_mask.float()
                 site_mask = candidate_train_mask if site_mask is None else site_mask.float().view_as(candidate_train_mask) * candidate_train_mask
             batch["effective_site_supervision_mask"] = site_mask
@@ -482,6 +492,12 @@ if TORCH_AVAILABLE:
                     batch["graph_confidence_weights"] = gcw
                     if batch.get("node_confidence_weights") is None:
                         batch["node_confidence_weights"] = gcw[batch_idx.long()].unsqueeze(-1)
+            cyp_supervision_mask = batch.get("cyp_supervision_mask")
+            if bool(getattr(model_config, "disable_cyp_task", False)):
+                if cyp_supervision_mask is None:
+                    cyp_supervision_mask = torch.zeros_like(batch["cyp_labels"], dtype=torch.float32, device=batch["cyp_labels"].device)
+                else:
+                    cyp_supervision_mask = torch.zeros_like(cyp_supervision_mask, dtype=torch.float32)
             loss, stats = self.loss_fn(
                 outputs["site_logits"],
                 outputs["cyp_logits"],
@@ -489,7 +505,7 @@ if TORCH_AVAILABLE:
                 batch["cyp_labels"],
                 batch["batch"],
                 site_mask,
-                batch.get("cyp_supervision_mask"),
+                cyp_supervision_mask,
                 batch.get("graph_confidence_weights"),
                 batch.get("node_confidence_weights"),
                 outputs.get("tau_history"),

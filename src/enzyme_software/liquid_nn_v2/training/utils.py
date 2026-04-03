@@ -64,6 +64,10 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
     canonical_smiles: List[str] = []
     repaired_flags: List[bool] = []
     aggressive_repair_flags: List[bool] = []
+    graph_names: List[str] = []
+    graph_confidences: List[str] = []
+    graph_metadata: List[dict[str, object]] = []
+    graph_molecule_keys: List[int] = []
     physics_keys = ["bde_values", "bond_classes", "electronegativity", "is_aromatic", "functional_groups", "radical_stability", "nucleophilicity", "electrophilicity", "heteroatom_distance"]
     physics_parts = {key: [] for key in physics_keys}
     offset = 0
@@ -137,6 +141,11 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
         canonical_smiles.append(str(getattr(graph, "canonical_smiles", graph.smiles)))
         repaired_flags.append(bool(getattr(graph, "repaired", False)))
         aggressive_repair_flags.append(bool(getattr(graph, "aggressive_repair", False)))
+        meta = dict(getattr(graph, "example_metadata", {}) or {})
+        graph_names.append(str(getattr(graph, "example_name", meta.get("name", ""))))
+        graph_confidences.append(str(getattr(graph, "example_confidence", meta.get("confidence", ""))))
+        graph_metadata.append(meta)
+        graph_molecule_keys.append(int(getattr(graph, "example_molecule_key", meta.get("molecule_key", 0)) or 0))
         offset += graph.num_atoms
     num_molecules = len(graphs)
     max_atoms = max((int(graph.num_atoms) for graph in graphs), default=0)
@@ -165,6 +174,12 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
         "repaired": repaired_flags,
         "aggressive_repair": aggressive_repair_flags,
         "xtb_feature_status": xtb_statuses,
+        "graph_names": graph_names,
+        "graph_confidences": graph_confidences,
+        "graph_metadata": graph_metadata,
+        "graph_num_atoms": [int(graph.num_atoms) for graph in graphs],
+        "graph_molecule_keys": torch.as_tensor(graph_molecule_keys, dtype=torch.long),
+        "num_graphs": num_molecules,
     }
     if site_parts:
         batch["site_labels"] = torch.cat(site_parts, dim=0)

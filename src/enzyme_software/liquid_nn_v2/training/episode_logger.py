@@ -284,6 +284,11 @@ class EpisodeLogger:
                     "top5_atoms": top5,
                     "top1_score": float(site_scores[start + top1].item()) if top1 is not None else None,
                     "candidate_atoms": int(candidate_mask_cpu[start:end].sum().item()),
+                    "candidate_atom_indices": [
+                        int(local_idx)
+                        for local_idx in range(num_atoms)
+                        if float(candidate_mask_cpu[start + local_idx].item()) > 0.5
+                    ],
                     "candidate_fraction": float(candidate_mask_cpu[start:end].mean().item()),
                     "predicted_cyp_idx": int(torch.argmax(cyp_logits_cpu[graph_idx]).item()) if cyp_logits_cpu is not None else None,
                     "predicted_cyp_prob": float(torch.max(cyp_probs_cpu[graph_idx]).item()) if cyp_probs_cpu is not None else None,

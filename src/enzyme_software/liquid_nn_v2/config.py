@@ -109,6 +109,9 @@ class ModelConfig:
     site_source_weight_metxbiodb: float = 1.0
     site_source_weight_attnsom: float = 1.0
     site_source_weight_cyp_dbs_external: float = 1.0
+    candidate_mask_mode: str = "hard"
+    candidate_mask_logit_bias: float = 2.0
+    disable_cyp_task: bool = False
     use_nexus_bridge: bool = True
     nexus_wave_hidden_dim: int = 64
     nexus_graph_dim: int = 48
@@ -248,6 +251,11 @@ class ModelConfig:
         self.site_source_weight_metxbiodb = max(0.1, float(self.site_source_weight_metxbiodb))
         self.site_source_weight_attnsom = max(0.1, float(self.site_source_weight_attnsom))
         self.site_source_weight_cyp_dbs_external = max(0.1, float(self.site_source_weight_cyp_dbs_external))
+        self.candidate_mask_mode = str(self.candidate_mask_mode).strip().lower() or "hard"
+        if self.candidate_mask_mode not in {"hard", "soft", "off"}:
+            self.candidate_mask_mode = "hard"
+        self.candidate_mask_logit_bias = max(0.0, float(self.candidate_mask_logit_bias))
+        self.disable_cyp_task = bool(self.disable_cyp_task)
 
     @property
     def num_cyp_classes(self) -> int:

@@ -210,25 +210,30 @@ class CYPMetabolismDataset(Dataset):
                 return self._get_dummy(error_reason=f"{type(exc).__name__}: {exc}")
             raise
         confidence_value = str(drug.get("confidence") or drug.get("source") or "unknown")
+        metadata = {
+            "id": str(drug.get("drug_id", drug.get("id", idx))),
+            "name": str(drug.get("name", "")),
+            "smiles": smiles,
+            "source": str(drug.get("source", "")),
+            "confidence": confidence_value,
+            "primary_cyp": cyp,
+            "all_cyps": [str(v) for v in list(drug.get("all_cyps", []))],
+            "site_atoms": [int(v) for v in site_atoms],
+            "auxiliary_site_only": bool(drug.get("auxiliary_site_only", False)),
+            "site_source": str(drug.get("site_source", "")),
+            "molecule_key": int(stable_molecule_key(smiles, primary_cyp=cyp)),
+        }
+        graph.example_name = str(drug.get("name", ""))
+        graph.example_confidence = confidence_value
+        graph.example_metadata = dict(metadata)
+        graph.example_molecule_key = int(metadata["molecule_key"])
         return {
             "graph": graph,
             "smiles": smiles,
             "name": str(drug.get("name", "")),
             "confidence": confidence_value,
             "confidence_weight": float(CONFIDENCE_WEIGHTS.get(confidence_value, 0.5)),
-            "metadata": {
-                "id": str(drug.get("drug_id", drug.get("id", idx))),
-                "name": str(drug.get("name", "")),
-                "smiles": smiles,
-                "source": str(drug.get("source", "")),
-                "confidence": confidence_value,
-                "primary_cyp": cyp,
-                "all_cyps": [str(v) for v in list(drug.get("all_cyps", []))],
-                "site_atoms": [int(v) for v in site_atoms],
-                "auxiliary_site_only": bool(drug.get("auxiliary_site_only", False)),
-                "site_source": str(drug.get("site_source", "")),
-                "molecule_key": int(stable_molecule_key(smiles, primary_cyp=cyp)),
-            },
+            "metadata": metadata,
         }
 
     def _get_dummy(self, *, error_reason: str = "unknown"):

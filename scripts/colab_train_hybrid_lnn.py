@@ -134,8 +134,11 @@ LOCKED_PRESET_KEYS = {
     "HYBRID_COLAB_BASE_LNN_FIRST",
     "HYBRID_COLAB_NEXUS_SIDEINFO_ONLY",
     "HYBRID_COLAB_USE_CANDIDATE_MASK",
+    "HYBRID_COLAB_CANDIDATE_MASK_MODE",
+    "HYBRID_COLAB_CANDIDATE_MASK_LOGIT_BIAS",
     "HYBRID_COLAB_BALANCE_TRAIN_SOURCES",
     "HYBRID_COLAB_FREEZE_BASE_MODULES",
+    "HYBRID_COLAB_SITE_ONLY_TARGET_CYP",
 }
 
 
@@ -418,7 +421,10 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_CONFIDENCE_ALLOWLIST": "high,validated,validated_gold,validated_literature,curated",
         "HYBRID_COLAB_NEXUS_SIDEINFO_ONLY": "1",
         "HYBRID_COLAB_USE_CANDIDATE_MASK": "1",
+        "HYBRID_COLAB_CANDIDATE_MASK_MODE": "soft",
+        "HYBRID_COLAB_CANDIDATE_MASK_LOGIT_BIAS": "1.50",
         "HYBRID_COLAB_BALANCE_TRAIN_SOURCES": "0",
+        "HYBRID_COLAB_SITE_ONLY_TARGET_CYP": "1",
     },
     "cyp3a4_sideinfo_augmented": {
         "HYBRID_COLAB_DATASET": "data/prepared_training/main8_cyp3a4_augmented.json",
@@ -445,7 +451,10 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_TARGET_CYP": "CYP3A4",
         "HYBRID_COLAB_NEXUS_SIDEINFO_ONLY": "1",
         "HYBRID_COLAB_USE_CANDIDATE_MASK": "1",
+        "HYBRID_COLAB_CANDIDATE_MASK_MODE": "soft",
+        "HYBRID_COLAB_CANDIDATE_MASK_LOGIT_BIAS": "1.35",
         "HYBRID_COLAB_BALANCE_TRAIN_SOURCES": "0",
+        "HYBRID_COLAB_SITE_ONLY_TARGET_CYP": "1",
         "HYBRID_COLAB_SITE_RANKING_WEIGHT": "0.85",
         "HYBRID_COLAB_SITE_HARD_NEGATIVE_FRACTION": "0.75",
         "HYBRID_COLAB_SITE_TOP1_MARGIN_TOPK": "3",
@@ -629,8 +638,16 @@ def main() -> None:
         argv.append("--nexus-sideinfo-only")
     if os.environ.get("HYBRID_COLAB_USE_CANDIDATE_MASK", "0").strip().lower() in {"1", "true", "yes", "on"}:
         argv.append("--use-candidate-mask")
+    candidate_mask_mode = os.environ.get("HYBRID_COLAB_CANDIDATE_MASK_MODE", "").strip()
+    if candidate_mask_mode:
+        argv.extend(["--candidate-mask-mode", candidate_mask_mode])
+    candidate_mask_logit_bias = os.environ.get("HYBRID_COLAB_CANDIDATE_MASK_LOGIT_BIAS", "").strip()
+    if candidate_mask_logit_bias:
+        argv.extend(["--candidate-mask-logit-bias", candidate_mask_logit_bias])
     if os.environ.get("HYBRID_COLAB_BALANCE_TRAIN_SOURCES", "0").strip().lower() in {"1", "true", "yes", "on"}:
         argv.append("--balance-train-sources")
+    if os.environ.get("HYBRID_COLAB_SITE_ONLY_TARGET_CYP", "0").strip().lower() in {"1", "true", "yes", "on"}:
+        argv.append("--site-only-target-cyp")
     freeze_base_modules = os.environ.get("HYBRID_COLAB_FREEZE_BASE_MODULES", "").strip()
     if freeze_base_modules:
         argv.extend(["--freeze-base-modules", freeze_base_modules])

@@ -197,7 +197,14 @@ if TORCH_AVAILABLE:
             mask = candidate_mask.to(device=site_logits.device, dtype=site_logits.dtype).view_as(site_logits)
             if mask.numel() != site_logits.numel():
                 return outputs
-            masked_logits = torch.where(mask > 0.5, site_logits, torch.full_like(site_logits, -20.0))
+            mask_mode = str(getattr(self.config, "candidate_mask_mode", "hard")).strip().lower()
+            if mask_mode == "off":
+                masked_logits = site_logits
+            elif mask_mode == "soft":
+                bias = float(getattr(self.config, "candidate_mask_logit_bias", 2.0))
+                masked_logits = site_logits - ((1.0 - mask) * bias)
+            else:
+                masked_logits = torch.where(mask > 0.5, site_logits, torch.full_like(site_logits, -20.0))
             result = dict(outputs)
             result.setdefault("site_logits_base", site_logits)
             result["site_logits"] = masked_logits

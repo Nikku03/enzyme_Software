@@ -103,6 +103,7 @@ def _collect_model_overrides() -> dict[str, int | float]:
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_METXBIODB": (_env_float, "site_source_weight_metxbiodb"),
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_ATTNSOM": (_env_float, "site_source_weight_attnsom"),
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_CYP_DBS_EXTERNAL": (_env_float, "site_source_weight_cyp_dbs_external"),
+        "HYBRID_COLAB_CANDIDATE_MASK_LOGIT_BIAS": (_env_float, "candidate_mask_logit_bias"),
     }
     overrides: dict[str, int | float] = {}
     for env_name, (parser, field_name) in mapping.items():
@@ -548,9 +549,12 @@ def _save_training_state(
         "base_lnn_first": bool(getattr(args, "base_lnn_first", False)),
         "nexus_sideinfo_only": bool(getattr(args, "nexus_sideinfo_only", False)),
         "use_candidate_mask": bool(getattr(args, "use_candidate_mask", False)),
+        "candidate_mask_mode": str(getattr(args, "candidate_mask_mode", "hard") or "hard"),
+        "candidate_mask_logit_bias": float(getattr(args, "candidate_mask_logit_bias", 2.0)),
         "balance_train_sources": bool(getattr(args, "balance_train_sources", False)),
         "freeze_base_modules": _parse_csv_tokens(str(getattr(args, "freeze_base_modules", "") or "")),
         "backbone_thaw_lr_scale": float(getattr(args, "backbone_thaw_lr_scale", 0.1)),
+        "site_only_target_cyp": bool(getattr(args, "site_only_target_cyp", False)),
         "split_summary": split_summary,
         "effective_split_summary": effective_split_summary,
         "last_train_metrics": last_train_metrics,
@@ -587,9 +591,12 @@ def _save_training_state(
                 "base_lnn_first": bool(getattr(args, "base_lnn_first", False)),
                 "nexus_sideinfo_only": bool(getattr(args, "nexus_sideinfo_only", False)),
                 "use_candidate_mask": bool(getattr(args, "use_candidate_mask", False)),
+                "candidate_mask_mode": str(getattr(args, "candidate_mask_mode", "hard") or "hard"),
+                "candidate_mask_logit_bias": float(getattr(args, "candidate_mask_logit_bias", 2.0)),
                 "balance_train_sources": bool(getattr(args, "balance_train_sources", False)),
                 "freeze_base_modules": _parse_csv_tokens(str(getattr(args, "freeze_base_modules", "") or "")),
                 "backbone_thaw_lr_scale": float(getattr(args, "backbone_thaw_lr_scale", 0.1)),
+                "site_only_target_cyp": bool(getattr(args, "site_only_target_cyp", False)),
                 "split_summary": split_summary,
                 "effective_split_summary": effective_split_summary,
                 "episode_log_path": str(episode_log_path) if episode_log_path is not None else None,
@@ -654,10 +661,13 @@ def main() -> None:
     parser.add_argument("--target-cyp", default="")
     parser.add_argument("--confidence-allowlist", default="")
     parser.add_argument("--use-candidate-mask", action="store_true")
+    parser.add_argument("--candidate-mask-mode", default="hard")
+    parser.add_argument("--candidate-mask-logit-bias", type=float, default=2.0)
     parser.add_argument("--balance-train-sources", action="store_true")
     parser.add_argument("--train-source-allowlist", default="")
     parser.add_argument("--freeze-base-modules", default="")
     parser.add_argument("--backbone-thaw-lr-scale", type=float, default=0.1)
+    parser.add_argument("--site-only-target-cyp", action="store_true")
     args = parser.parse_args()
     freeze_base_modules = _parse_csv_tokens(args.freeze_base_modules)
     early_stopping_patience = int(args.early_stopping_patience)
@@ -772,7 +782,13 @@ def main() -> None:
             flush=True,
         )
     if args.use_candidate_mask:
-        print(f"candidate_mask=1 | candidate_cyp={str(args.target_cyp or '').strip() or 'generic'}", flush=True)
+        print(
+            "candidate_mask=1 | "
+            f"candidate_cyp={str(args.target_cyp or '').strip() or 'generic'} | "
+            f"mode={str(args.candidate_mask_mode or 'hard').strip().lower() or 'hard'} | "
+            f"logit_bias={float(args.candidate_mask_logit_bias):.3f}",
+            flush=True,
+        )
     if args.balance_train_sources:
         print("balance_train_sources=1", flush=True)
     if train_source_allowlist:
@@ -781,6 +797,8 @@ def main() -> None:
         print(f"freeze_base_modules={freeze_base_modules}", flush=True)
     if args.nexus_sideinfo_only:
         print("nexus_sideinfo_only=1 | side engines feed features into LNN without votes", flush=True)
+    if args.site_only_target_cyp and str(args.target_cyp or "").strip():
+        print(f"site_only_target_cyp=1 | disabling CYP task for {str(args.target_cyp).strip()}", flush=True)
 
     xtb_validity_summary = _summarize_xtb_validity(drugs, xtb_cache_dir)
     print(
@@ -824,6 +842,10 @@ def main() -> None:
         use_nexus_bridge=not bool(args.disable_nexus_bridge),
         use_nexus_site_arbiter=not bool(args.nexus_sideinfo_only),
         use_nexus_sideinfo_features=bool(args.nexus_sideinfo_only),
+        use_cyp_site_conditioning=not bool(args.site_only_target_cyp and str(args.target_cyp or "").strip()),
+        disable_cyp_task=bool(args.site_only_target_cyp and str(args.target_cyp or "").strip()),
+        candidate_mask_mode=str(args.candidate_mask_mode or "hard").strip().lower() or "hard",
+        candidate_mask_logit_bias=float(args.candidate_mask_logit_bias),
         nexus_memory_frozen=bool(args.freeze_nexus_memory),
         nexus_rebuild_memory_before_train=not bool(args.skip_nexus_memory_rebuild),
         return_intermediate_stats=True,
