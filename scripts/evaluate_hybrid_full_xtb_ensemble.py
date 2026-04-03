@@ -125,7 +125,10 @@ def main() -> None:
         mode=args.split_mode,
     )
     loaders, manual_engine_enabled = _build_loaders_with_fallback(train_drugs, val_drugs, test_drugs, args=args)
-    test_loader = loaders["test"]
+    if isinstance(loaders, dict):
+        test_loader = loaders["test"]
+    else:
+        _train_loader, _val_loader, test_loader = loaders
 
     manual_atom_feature_dim = (32 if manual_engine_enabled else 0) + 8
     atom_input_dim = 140 + 8
