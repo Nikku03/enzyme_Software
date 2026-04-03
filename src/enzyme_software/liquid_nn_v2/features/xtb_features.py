@@ -93,6 +93,24 @@ def payload_training_xtb_valid(payload: Optional[Dict[str, object]]) -> bool:
     return bool(np.any(atom_valid_mask > 0.0))
 
 
+def payload_xtb_validity_summary(payload: Optional[Dict[str, object]]) -> Dict[str, object]:
+    if not payload:
+        return {
+            "status": "missing",
+            "source_kind": "missing",
+            "strict_true_xtb_valid": False,
+            "cached_xtb_valid": False,
+            "training_usable_xtb_valid": False,
+        }
+    return {
+        "status": str(payload.get("status") or "unknown"),
+        "source_kind": str(payload.get("xtb_source_kind") or "unknown"),
+        "strict_true_xtb_valid": bool(payload_true_xtb_valid(payload)),
+        "cached_xtb_valid": bool(payload_cached_xtb_valid(payload)),
+        "training_usable_xtb_valid": bool(payload_training_xtb_valid(payload)),
+    }
+
+
 def xtb_available(xtb_path: str = "xtb") -> bool:
     return shutil.which(xtb_path) is not None
 

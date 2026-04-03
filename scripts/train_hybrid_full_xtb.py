@@ -289,21 +289,100 @@ def _load_xenosite_aux_entries(manifest_path: Path, *, topk: int = 1, per_file_l
     return merged
 
 
-def _count_xtb_valid(drugs: list[dict], cache_dir: Path) -> tuple[int, dict[str, int]]:
-    from enzyme_software.liquid_nn_v2.features.xtb_features import load_or_compute_full_xtb_features, payload_true_xtb_valid
+def _summarize_xtb_validity(drugs: list[dict], cache_dir: Path) -> dict[str, object]:
+    from enzyme_software.liquid_nn_v2.features.xtb_features import load_or_compute_full_xtb_features, payload_xtb_validity_summary
 
-    valid = 0
+    strict_true_valid = 0
+    cached_valid = 0
+    training_usable_valid = 0
     statuses: dict[str, int] = {}
+    source_kinds: dict[str, int] = {}
     for drug in drugs:
         smiles = str(drug.get("smiles", "")).strip()
         if not smiles:
             continue
         payload = load_or_compute_full_xtb_features(smiles, cache_dir=cache_dir, compute_if_missing=False)
-        if payload_true_xtb_valid(payload):
-            valid += 1
-        status = str(payload.get("status") or "unknown")
+        summary = payload_xtb_validity_summary(payload)
+        if bool(summary["strict_true_xtb_valid"]):
+            strict_true_valid += 1
+        if bool(summary["cached_xtb_valid"]):
+            cached_valid += 1
+        if bool(summary["training_usable_xtb_valid"]):
+            training_usable_valid += 1
+        status = str(summary["status"] or "unknown")
         statuses[status] = statuses.get(status, 0) + 1
-    return valid, statuses
+        source_kind = str(summary["source_kind"] or "unknown")
+        source_kinds[source_kind] = source_kinds.get(source_kind, 0) + 1
+    return {
+        "total_molecules": int(len(drugs)),
+        "strict_true_xtb_valid_molecules": int(strict_true_valid),
+        "cached_xtb_valid_molecules": int(cached_valid),
+        "training_usable_xtb_valid_molecules": int(training_usable_valid),
+        "statuses": dict(sorted(statuses.items())),
+        "source_kinds": dict(sorted(source_kinds.items())),
+        "definitions": {
+            "strict_true_xtb_valid_molecules": "Benchmark-grade true xTB provenance only.",
+            "cached_xtb_valid_molecules": "Any cached xTB payload marked xtb_valid, including lookup/manual-backed payloads.",
+            "training_usable_xtb_valid_molecules": "Training-usable xTB payloads with either strict true-xTB validity or at least one valid cached atom feature.",
+        },
+    }
+
+
+def _best_history_entry(history: list[dict], metric_name: str) -> dict | None:
+    if not history:
+        return None
+    return max(history, key=lambda row: float((row.get("val") or {}).get(metric_name, float("-inf"))))
+
+
+def _nexus_diagnosis(history: list[dict]) -> dict[str, object]:
+    best_site_top1 = _best_history_entry(history, "site_top1_acc")
+    train_stats = dict((best_site_top1 or {}).get("train") or {})
+    diagnosis: dict[str, object] = {
+        "wave": {},
+        "analogical": {},
+        "summary": [],
+    }
+    wave_valid_mol = float(train_stats.get("nexus_wave_valid_mol_fraction", 0.0))
+    wave_valid_atom = float(train_stats.get("nexus_wave_valid_atom_fraction", 0.0))
+    wave_reliability = float(train_stats.get("nexus_wave_reliability_mean", 0.0))
+    diagnosis["wave"] = {
+        "valid_molecule_fraction": wave_valid_mol,
+        "valid_atom_fraction": wave_valid_atom,
+        "reliability_mean": wave_reliability,
+        "assessment": (
+            "weak_due_to_low_validity_and_low_reliability"
+            if wave_valid_mol < 0.5 or wave_reliability < 0.15
+            else "potentially_usable"
+        ),
+    }
+    analogical_margin = float(train_stats.get("nexus_analogical_margin_mean", 0.0))
+    analogical_concentration = float(train_stats.get("nexus_analogical_concentration_mean", 0.0))
+    analogical_gate = float(train_stats.get("nexus_analogical_gate_mean", 0.0))
+    precedent_size = float(train_stats.get("nexus_precedent_logbook_size", 0.0))
+    diagnosis["analogical"] = {
+        "confidence_mean": float(train_stats.get("nexus_analogical_confidence_mean", 0.0)),
+        "gate_mean": analogical_gate,
+        "margin_mean": analogical_margin,
+        "concentration_mean": analogical_concentration,
+        "selectivity_mean": float(train_stats.get("nexus_analogical_selectivity_mean", 0.0)),
+        "precedent_logbook_size": precedent_size,
+        "assessment": (
+            "weak_due_to_diffuse_memory_and_missing_precedents"
+            if analogical_margin < 0.03 or analogical_concentration < 0.02 or precedent_size <= 0.0
+            else "potentially_usable"
+        ),
+    }
+    summary: list[str] = []
+    if wave_valid_mol < 0.5:
+        summary.append("Wave is data-limited: fewer than half the molecules are training-usable for wave supervision.")
+    if wave_reliability < 0.15:
+        summary.append("Wave is reliability-limited: even valid molecules produce weak trusted wave signal.")
+    if precedent_size <= 0.0:
+        summary.append("Analogical is precedent-limited: no curated precedent logbook was loaded.")
+    if analogical_margin < 0.03 or analogical_concentration < 0.02:
+        summary.append("Analogical is retrieval-limited: memory matches are diffuse, with tiny support margin/concentration.")
+    diagnosis["summary"] = summary
+    return diagnosis
 
 
 def _build_loaders_with_fallback(
@@ -401,8 +480,7 @@ def _save_training_state(
     best_state,
     base_config,
     xtb_cache_dir: Path,
-    xtb_valid_count: int,
-    xtb_statuses: dict[str, int],
+    xtb_validity_summary: dict[str, object],
     split_mode: str,
     split_summary: dict[str, object],
     episode_log_path: Path | None = None,
@@ -415,6 +493,17 @@ def _save_training_state(
     archive_path = output_dir / f"hybrid_full_xtb_{timestamp}.pt"
     report_path = artifact_dir / f"hybrid_full_xtb_report_{timestamp}.json"
     effective_split_summary = _effective_split_summary(split_summary)
+    history_len = int(len(history))
+    final_epoch = int(history[-1]["epoch"]) if history else 0
+    best_site_top1_entry = _best_history_entry(history, "site_top1_acc")
+    best_monitor_entry = _best_history_entry(history, args.early_stopping_metric)
+    best_epoch = int((best_site_top1_entry or {}).get("epoch") or 0)
+    best_monitor_epoch = int((best_monitor_entry or {}).get("epoch") or 0)
+    last_train_metrics = dict(history[-1].get("train") or {}) if history else {}
+    last_val_metrics = dict(history[-1].get("val") or {}) if history else {}
+    best_val_metrics = dict((best_site_top1_entry or {}).get("val") or {})
+    best_train_metrics = dict((best_site_top1_entry or {}).get("train") or {})
+    nexus_diagnosis = _nexus_diagnosis(history)
     checkpoint = {
         "model_state_dict": _initialized_state_dict(model),
         "config": {
@@ -430,11 +519,16 @@ def _save_training_state(
         ).__dict__,
         "best_val_top1": best_val_top1,
         "best_val_monitor": best_val_monitor,
+        "best_epoch": best_epoch,
+        "best_monitor_epoch": best_monitor_epoch,
+        "history_len": history_len,
+        "final_epoch": final_epoch,
         "early_stopping_metric": args.early_stopping_metric,
         "test_metrics": test_metrics,
         "history": history,
         "xtb_feature_dim": FULL_XTB_FEATURE_DIM,
         "xtb_cache_dir": str(xtb_cache_dir),
+        "xtb_validity": xtb_validity_summary,
         "status": status,
         "split_mode": split_mode,
         "target_cyp": str(getattr(args, "target_cyp", "") or ""),
@@ -445,6 +539,11 @@ def _save_training_state(
         "balance_train_sources": bool(getattr(args, "balance_train_sources", False)),
         "split_summary": split_summary,
         "effective_split_summary": effective_split_summary,
+        "last_train_metrics": last_train_metrics,
+        "last_val_metrics": last_val_metrics,
+        "best_val_metrics": best_val_metrics,
+        "best_train_metrics": best_train_metrics,
+        "nexus_diagnosis": nexus_diagnosis,
     }
     torch.save(checkpoint, latest_path)
     torch.save(checkpoint, archive_path)
@@ -459,11 +558,14 @@ def _save_training_state(
                 "status": status,
                 "best_val_top1": best_val_top1,
                 "best_val_monitor": best_val_monitor,
+                "best_epoch": best_epoch,
+                "best_monitor_epoch": best_monitor_epoch,
+                "history_len": history_len,
+                "final_epoch": final_epoch,
                 "early_stopping_metric": args.early_stopping_metric,
                 "test_metrics": test_metrics,
                 "xtb_feature_dim": FULL_XTB_FEATURE_DIM,
-                "xtb_valid_molecules": xtb_valid_count,
-                "xtb_statuses": xtb_statuses,
+                "xtb_validity": xtb_validity_summary,
                 "split_mode": split_mode,
                 "target_cyp": str(getattr(args, "target_cyp", "") or ""),
                 "confidence_allowlist": _parse_csv_tokens(str(getattr(args, "confidence_allowlist", "") or "")),
@@ -474,6 +576,11 @@ def _save_training_state(
                 "split_summary": split_summary,
                 "effective_split_summary": effective_split_summary,
                 "episode_log_path": str(episode_log_path) if episode_log_path is not None else None,
+                "last_train_metrics": last_train_metrics,
+                "last_val_metrics": last_val_metrics,
+                "best_val_metrics": best_val_metrics,
+                "best_train_metrics": best_train_metrics,
+                "nexus_diagnosis": nexus_diagnosis,
                 "history": history,
             },
             indent=2,
@@ -641,8 +748,15 @@ def main() -> None:
     if args.nexus_sideinfo_only:
         print("nexus_sideinfo_only=1 | side engines feed features into LNN without votes", flush=True)
 
-    xtb_valid_count, xtb_statuses = _count_xtb_valid(drugs, xtb_cache_dir)
-    print(f"xTB cache valid molecules: {xtb_valid_count}/{len(drugs)} | statuses={xtb_statuses}", flush=True)
+    xtb_validity_summary = _summarize_xtb_validity(drugs, xtb_cache_dir)
+    print(
+        "xTB validity: "
+        f"strict_true={xtb_validity_summary['strict_true_xtb_valid_molecules']}/{len(drugs)} | "
+        f"training_usable={xtb_validity_summary['training_usable_xtb_valid_molecules']}/{len(drugs)} | "
+        f"cached={xtb_validity_summary['cached_xtb_valid_molecules']}/{len(drugs)} | "
+        f"statuses={xtb_validity_summary['statuses']}",
+        flush=True,
+    )
 
     (train_loader, val_loader, test_loader), manual_engine_enabled = _build_loaders_with_fallback(
         train_drugs,
@@ -882,8 +996,7 @@ def main() -> None:
                 best_state=best_state,
                 base_config=base_config,
                 xtb_cache_dir=xtb_cache_dir,
-                xtb_valid_count=xtb_valid_count,
-                xtb_statuses=xtb_statuses,
+                xtb_validity_summary=xtb_validity_summary,
                 split_mode=args.split_mode,
                 split_summary=split_summary,
                 episode_log_path=episode_log_path,
@@ -911,8 +1024,7 @@ def main() -> None:
             best_state=best_state,
             base_config=base_config,
             xtb_cache_dir=xtb_cache_dir,
-            xtb_valid_count=xtb_valid_count,
-            xtb_statuses=xtb_statuses,
+            xtb_validity_summary=xtb_validity_summary,
             split_mode=args.split_mode,
             split_summary=split_summary,
             episode_log_path=episode_log_path,
@@ -946,8 +1058,7 @@ def main() -> None:
         best_state=best_state,
         base_config=base_config,
         xtb_cache_dir=xtb_cache_dir,
-        xtb_valid_count=xtb_valid_count,
-        xtb_statuses=xtb_statuses,
+        xtb_validity_summary=xtb_validity_summary,
         split_mode=args.split_mode,
         split_summary=split_summary,
         episode_log_path=episode_log_path,

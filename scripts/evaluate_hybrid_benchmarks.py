@@ -20,7 +20,11 @@ from enzyme_software.liquid_nn_v2._compat import require_torch, torch
 from enzyme_software.liquid_nn_v2.data.cyp_classes import MAJOR_CYP_CLASSES
 from enzyme_software.liquid_nn_v2.experiments.hybrid_full_xtb import FullXTBHybridDataset
 from enzyme_software.liquid_nn_v2.features.steric_features import StructureLibrary
-from enzyme_software.liquid_nn_v2.features.xtb_features import load_or_compute_full_xtb_features, payload_true_xtb_valid
+from enzyme_software.liquid_nn_v2.features.xtb_features import (
+    load_or_compute_full_xtb_features,
+    payload_training_xtb_valid,
+    payload_true_xtb_valid,
+)
 from enzyme_software.liquid_nn_v2.training.trainer import Trainer
 from enzyme_software.liquid_nn_v2.data.dataset_loader import collate_fn
 
@@ -83,8 +87,9 @@ def _make_row(drug: dict) -> dict:
     return row
 
 
-def _split_by_wave_valid(rows: List[dict], cache_dir: Path) -> tuple[List[dict], List[dict], Dict[str, int]]:
-    valid_rows: List[dict] = []
+def _split_by_wave_valid(rows: List[dict], cache_dir: Path) -> tuple[List[dict], List[dict], List[dict], Dict[str, int]]:
+    strict_valid_rows: List[dict] = []
+    training_usable_rows: List[dict] = []
     missing_rows: List[dict] = []
     statuses: Counter[str] = Counter()
     for row in rows:
@@ -93,10 +98,13 @@ def _split_by_wave_valid(rows: List[dict], cache_dir: Path) -> tuple[List[dict],
         status = str(payload.get("status") or "unknown")
         statuses[status] += 1
         if payload_true_xtb_valid(payload):
-            valid_rows.append(row)
+            strict_valid_rows.append(row)
+            training_usable_rows.append(row)
+        elif payload_training_xtb_valid(payload):
+            training_usable_rows.append(row)
         else:
             missing_rows.append(row)
-    return valid_rows, missing_rows, dict(sorted(statuses.items()))
+    return strict_valid_rows, training_usable_rows, missing_rows, dict(sorted(statuses.items()))
 
 
 def _make_loader(
@@ -213,7 +221,8 @@ def main() -> None:
         "structure_sdf": structure_sdf,
         "checkpoint_best_val_top1": payload.get("best_val_top1"),
         "checkpoint_best_val_monitor": payload.get("best_val_monitor"),
-        "wave_valid_definition": "true_xtb_valid_or_xtb_valid_legacy",
+        "wave_valid_definition": "strict_true_xtb_valid_only",
+        "wave_training_usable_definition": "strict_true_xtb_valid_or_training_usable_cached_xtb",
         "benchmarks": {},
     }
 
@@ -231,16 +240,20 @@ def main() -> None:
             raise FileNotFoundError(f"Benchmark dataset not found: {dataset_path}")
         all_rows = [_make_row(row) for row in _load_rows(dataset_path)]
         all_rows = [row for row in all_rows if _has_site_labels(row) and _supports_cyp(row)]
-        wave_valid_rows, wave_missing_rows, xtb_statuses = _split_by_wave_valid(all_rows, Path(xtb_cache_dir))
+        wave_valid_rows, wave_training_usable_rows, wave_missing_rows, xtb_statuses = _split_by_wave_valid(all_rows, Path(xtb_cache_dir))
 
         print("-" * 60)
         print(dataset_path)
-        print(f"rows={len(all_rows)} | wave_valid={len(wave_valid_rows)} | wave_missing={len(wave_missing_rows)}")
+        print(
+            f"rows={len(all_rows)} | wave_strict_valid={len(wave_valid_rows)} | "
+            f"wave_training_usable={len(wave_training_usable_rows)} | wave_missing={len(wave_missing_rows)}"
+        )
         print(f"xtb_statuses={xtb_statuses}")
 
         dataset_report: Dict[str, object] = {
             "rows": len(all_rows),
             "wave_valid_rows": len(wave_valid_rows),
+            "wave_training_usable_rows": len(wave_training_usable_rows),
             "wave_missing_rows": len(wave_missing_rows),
             "xtb_statuses": xtb_statuses,
         }
@@ -248,6 +261,7 @@ def main() -> None:
         subsets = [
             ("all", all_rows),
             ("wave_valid", wave_valid_rows),
+            ("wave_training_usable", wave_training_usable_rows),
             ("wave_missing", wave_missing_rows),
         ]
         for subset_name, subset_rows in subsets:
