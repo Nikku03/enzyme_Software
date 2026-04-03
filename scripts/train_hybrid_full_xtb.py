@@ -89,6 +89,8 @@ def _collect_model_overrides() -> dict[str, int | float]:
         "HYBRID_COLAB_NEXUS_VOTE_LOGIT_SCALE": (_env_float, "nexus_vote_logit_scale"),
         "HYBRID_COLAB_NEXUS_LIVE_WAVE_VOTE_GRAD_SCALE": (_env_float, "nexus_live_wave_vote_grad_scale"),
         "HYBRID_COLAB_NEXUS_LIVE_ANALOGICAL_VOTE_GRAD_SCALE": (_env_float, "nexus_live_analogical_vote_grad_scale"),
+        "HYBRID_COLAB_NEXUS_WAVE_SIDEINFO_AUX_WEIGHT": (_env_float, "nexus_wave_sideinfo_aux_weight"),
+        "HYBRID_COLAB_NEXUS_ANALOGICAL_SIDEINFO_AUX_WEIGHT": (_env_float, "nexus_analogical_sideinfo_aux_weight"),
         "HYBRID_COLAB_NEXUS_ANALOGICAL_CYP_AUX_SCALE": (_env_float, "nexus_analogical_cyp_aux_scale"),
         "HYBRID_COLAB_NEXUS_SIDEINFO_HIDDEN_DIM": (_env_int, "nexus_sideinfo_hidden_dim"),
         "HYBRID_COLAB_NEXUS_SIDEINFO_DROPOUT": (_env_float, "nexus_sideinfo_dropout"),

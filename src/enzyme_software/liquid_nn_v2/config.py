@@ -150,6 +150,8 @@ class ModelConfig:
     nexus_live_analogical_vote_inputs: bool = True
     nexus_live_wave_vote_grad_scale: float = 0.02
     nexus_live_analogical_vote_grad_scale: float = 0.02
+    nexus_wave_sideinfo_aux_weight: float = 0.0
+    nexus_analogical_sideinfo_aux_weight: float = 0.0
     nexus_analogical_cyp_aux_scale: float = 0.10
     nexus_topology_feature_dim: int = 5   # per-atom global topology features (scaffold/centrality/carbonyl/size)
     learning_rate: float = 1e-3
@@ -242,6 +244,8 @@ class ModelConfig:
         self.nexus_live_analogical_vote_inputs = bool(self.nexus_live_analogical_vote_inputs)
         self.nexus_live_wave_vote_grad_scale = min(max(float(self.nexus_live_wave_vote_grad_scale), 0.0), 1.0)
         self.nexus_live_analogical_vote_grad_scale = min(max(float(self.nexus_live_analogical_vote_grad_scale), 0.0), 1.0)
+        self.nexus_wave_sideinfo_aux_weight = max(0.0, float(self.nexus_wave_sideinfo_aux_weight))
+        self.nexus_analogical_sideinfo_aux_weight = max(0.0, float(self.nexus_analogical_sideinfo_aux_weight))
         self.nexus_analogical_cyp_aux_scale = max(0.0, float(self.nexus_analogical_cyp_aux_scale))
         self.cyp_site_condition_scale = max(0.0, float(self.cyp_site_condition_scale))
         self.site_logit_bias_warmup_epochs = max(0, int(self.site_logit_bias_warmup_epochs))

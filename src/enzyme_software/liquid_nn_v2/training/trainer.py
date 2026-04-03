@@ -562,6 +562,42 @@ if TORCH_AVAILABLE:
                         continue
                     if hasattr(value, "detach"):
                         stats[f"nexus_{key}_loss"] = float(value.detach().item())
+            bridge = outputs.get("nexus_bridge_outputs") or {}
+            if isinstance(bridge, dict) and bridge:
+                wave_sideinfo_weight = float(getattr(model_config, "nexus_wave_sideinfo_aux_weight", 0.0))
+                if wave_sideinfo_weight > 0.0 and bridge.get("wave_site_bias") is not None:
+                    aux_site_mask, aux_node_weights, _aux_graph_weights = self._resolve_site_engine_supervision(
+                        batch=batch,
+                        outputs=outputs,
+                        engine_name="wave",
+                    )
+                    wave_sideinfo_loss = self._override_style_vote_loss(
+                        bridge["wave_site_bias"],
+                        batch,
+                        base_logits=outputs.get("site_logits_base", outputs["site_logits"]),
+                        site_mask=aux_site_mask,
+                        node_weights=aux_node_weights,
+                    )
+                    loss = loss + (wave_sideinfo_weight * wave_sideinfo_loss)
+                    stats["nexus_wave_sideinfo_loss"] = float(wave_sideinfo_loss.detach().item())
+                    stats["nexus_wave_sideinfo_weight"] = float(wave_sideinfo_weight)
+                analogical_sideinfo_weight = float(getattr(model_config, "nexus_analogical_sideinfo_aux_weight", 0.0))
+                if analogical_sideinfo_weight > 0.0 and bridge.get("analogical_site_bias") is not None:
+                    aux_site_mask, aux_node_weights, _aux_graph_weights = self._resolve_site_engine_supervision(
+                        batch=batch,
+                        outputs=outputs,
+                        engine_name="analogical",
+                    )
+                    analogical_sideinfo_loss = self._override_style_vote_loss(
+                        bridge["analogical_site_bias"],
+                        batch,
+                        base_logits=outputs.get("site_logits_base", outputs["site_logits"]),
+                        site_mask=aux_site_mask,
+                        node_weights=aux_node_weights,
+                    )
+                    loss = loss + (analogical_sideinfo_weight * analogical_sideinfo_loss)
+                    stats["nexus_analogical_sideinfo_loss"] = float(analogical_sideinfo_loss.detach().item())
+                    stats["nexus_analogical_sideinfo_weight"] = float(analogical_sideinfo_weight)
             vote_heads = outputs.get("site_vote_heads") or {}
             model_config = getattr(self.model, "config", None)
             if isinstance(vote_heads, dict) and vote_heads:

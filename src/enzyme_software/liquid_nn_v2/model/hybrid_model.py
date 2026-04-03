@@ -272,25 +272,50 @@ if TORCH_AVAILABLE:
             base_cyp = bridge["analogical_cyp_prior"][batch_index].detach()
             wave_preds = bridge["wave_predictions"]
             wave_field = bridge["wave_field"]
+            wave_grad_scale = float(getattr(self.config, "nexus_live_wave_vote_grad_scale", 0.02))
+            analogical_grad_scale = float(getattr(self.config, "nexus_live_analogical_vote_grad_scale", 0.02))
             wave_gap = wave_preds["predicted_gap"][batch_index].unsqueeze(-1).detach()
+            wave_charges = wave_preds["predicted_charges"].unsqueeze(-1).detach()
+            wave_fukui = wave_preds["predicted_fukui"].unsqueeze(-1).detach()
+            wave_site_bias = self._scaled_live(bridge["wave_site_bias"], enabled=True, grad_scale=wave_grad_scale)
+            wave_field_features = self._scaled_live(
+                wave_field["atom_field_features"],
+                enabled=True,
+                grad_scale=wave_grad_scale,
+            )
             wave_inputs = torch.cat(
                 [
-                    wave_preds["predicted_charges"].unsqueeze(-1).detach(),
-                    wave_preds["predicted_fukui"].unsqueeze(-1).detach(),
+                    wave_charges,
+                    wave_fukui,
                     wave_gap,
-                    bridge["wave_site_bias"].detach(),
+                    wave_site_bias,
                     bridge["wave_reliability"].detach(),
-                    wave_field["atom_field_features"].detach(),
+                    wave_field_features,
                 ],
                 dim=-1,
             )
+            analogical_site_prior = self._scaled_live(
+                bridge["analogical_site_prior"],
+                enabled=True,
+                grad_scale=analogical_grad_scale,
+            )
+            analogical_site_bias = self._scaled_live(
+                bridge["analogical_site_bias"],
+                enabled=True,
+                grad_scale=analogical_grad_scale,
+            )
+            continuous_reasoning = self._scaled_live(
+                bridge["continuous_reasoning_features"],
+                enabled=True,
+                grad_scale=analogical_grad_scale,
+            )
             analogical_inputs = torch.cat(
                 [
-                    bridge["analogical_site_prior"].detach(),
+                    analogical_site_prior,
                     bridge["analogical_confidence"].detach(),
                     bridge["analogical_gate"].detach(),
-                    bridge["analogical_site_bias"].detach(),
-                    bridge["continuous_reasoning_features"].detach(),
+                    analogical_site_bias,
+                    continuous_reasoning,
                     bridge["precedent_brief"].detach(),
                     base_cyp,
                 ],
