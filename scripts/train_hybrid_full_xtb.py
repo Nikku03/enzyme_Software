@@ -133,6 +133,10 @@ def _parse_csv_tokens(raw: str) -> list[str]:
     return [token.strip() for token in str(raw or "").split(",") if token.strip()]
 
 
+def _normalize_source_name(value: str) -> str:
+    return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+
+
 def _site_atom_indices(drug: dict) -> list[int]:
     site_atoms: list[int] = []
     if drug.get("som"):
@@ -224,6 +228,13 @@ def _split_summary(items: list[dict]) -> dict[str, object]:
         "site_count_buckets": dict(Counter(_site_count_bucket(d) for d in items)),
         "near_duplicates": _near_duplicate_summary(items),
     }
+
+
+def _filter_by_sources(items: list[dict], allowlist: list[str]) -> list[dict]:
+    if not allowlist:
+        return list(items)
+    allowed = {_normalize_source_name(token) for token in allowlist}
+    return [drug for drug in items if _normalize_source_name(str(drug.get("source", "DrugBank"))) in allowed]
 
 
 def _load_xenosite_aux_entries(manifest_path: Path, *, topk: int = 1, per_file_limit: int = 0) -> list[dict]:
@@ -533,10 +544,13 @@ def _save_training_state(
         "split_mode": split_mode,
         "target_cyp": str(getattr(args, "target_cyp", "") or ""),
         "confidence_allowlist": _parse_csv_tokens(str(getattr(args, "confidence_allowlist", "") or "")),
+        "train_source_allowlist": _parse_csv_tokens(str(getattr(args, "train_source_allowlist", "") or "")),
         "base_lnn_first": bool(getattr(args, "base_lnn_first", False)),
         "nexus_sideinfo_only": bool(getattr(args, "nexus_sideinfo_only", False)),
         "use_candidate_mask": bool(getattr(args, "use_candidate_mask", False)),
         "balance_train_sources": bool(getattr(args, "balance_train_sources", False)),
+        "freeze_base_modules": _parse_csv_tokens(str(getattr(args, "freeze_base_modules", "") or "")),
+        "backbone_thaw_lr_scale": float(getattr(args, "backbone_thaw_lr_scale", 0.1)),
         "split_summary": split_summary,
         "effective_split_summary": effective_split_summary,
         "last_train_metrics": last_train_metrics,
@@ -569,10 +583,13 @@ def _save_training_state(
                 "split_mode": split_mode,
                 "target_cyp": str(getattr(args, "target_cyp", "") or ""),
                 "confidence_allowlist": _parse_csv_tokens(str(getattr(args, "confidence_allowlist", "") or "")),
+                "train_source_allowlist": _parse_csv_tokens(str(getattr(args, "train_source_allowlist", "") or "")),
                 "base_lnn_first": bool(getattr(args, "base_lnn_first", False)),
                 "nexus_sideinfo_only": bool(getattr(args, "nexus_sideinfo_only", False)),
                 "use_candidate_mask": bool(getattr(args, "use_candidate_mask", False)),
                 "balance_train_sources": bool(getattr(args, "balance_train_sources", False)),
+                "freeze_base_modules": _parse_csv_tokens(str(getattr(args, "freeze_base_modules", "") or "")),
+                "backbone_thaw_lr_scale": float(getattr(args, "backbone_thaw_lr_scale", 0.1)),
                 "split_summary": split_summary,
                 "effective_split_summary": effective_split_summary,
                 "episode_log_path": str(episode_log_path) if episode_log_path is not None else None,
@@ -638,7 +655,11 @@ def main() -> None:
     parser.add_argument("--confidence-allowlist", default="")
     parser.add_argument("--use-candidate-mask", action="store_true")
     parser.add_argument("--balance-train-sources", action="store_true")
+    parser.add_argument("--train-source-allowlist", default="")
+    parser.add_argument("--freeze-base-modules", default="")
+    parser.add_argument("--backbone-thaw-lr-scale", type=float, default=0.1)
     args = parser.parse_args()
+    freeze_base_modules = _parse_csv_tokens(args.freeze_base_modules)
     early_stopping_patience = int(args.early_stopping_patience)
     early_stopping_enabled = early_stopping_patience > 0
 
@@ -708,6 +729,15 @@ def main() -> None:
         mode=args.split_mode,
     )
     print(f"Split mode: {args.split_mode}", flush=True)
+    train_source_allowlist = _parse_csv_tokens(args.train_source_allowlist)
+    if train_source_allowlist:
+        train_drugs = _filter_by_sources(train_drugs, train_source_allowlist)
+        print(
+            f"Filtered train_source_allowlist={train_source_allowlist}: {len(train_drugs)}",
+            flush=True,
+        )
+        if not train_drugs:
+            raise RuntimeError("No train drugs remain after train_source_allowlist filter")
     xenosite_added = 0
     if args.xenosite_manifest:
         manifest_path = Path(args.xenosite_manifest)
@@ -745,6 +775,10 @@ def main() -> None:
         print(f"candidate_mask=1 | candidate_cyp={str(args.target_cyp or '').strip() or 'generic'}", flush=True)
     if args.balance_train_sources:
         print("balance_train_sources=1", flush=True)
+    if train_source_allowlist:
+        print(f"train_source_allowlist={train_source_allowlist}", flush=True)
+    if freeze_base_modules:
+        print(f"freeze_base_modules={freeze_base_modules}", flush=True)
     if args.nexus_sideinfo_only:
         print("nexus_sideinfo_only=1 | side engines feed features into LNN without votes", flush=True)
 
@@ -886,26 +920,59 @@ def main() -> None:
     epochs_without_improvement = 0
     train_start = time.perf_counter()
     backbone_freeze_epochs = max(0, int(args.backbone_freeze_epochs))
+    backbone_thaw_lr_scale = min(max(float(args.backbone_thaw_lr_scale), 0.0), 1.0)
     _backbone_frozen = False
+
+    def _resolve_base_predictor():
+        base = getattr(model, "base_lnn", None) or getattr(model, "_base_lnn", None)
+        if base is None:
+            wrapper = getattr(model, "nexus_wrapper", None) or model
+            base = getattr(wrapper, "base_lnn", None)
+        return getattr(base, "impl", base)
+
+    base_predictor = _resolve_base_predictor()
+    frozen_named_modules: list[tuple[str, object]] = []
+    if base_predictor is not None and freeze_base_modules:
+        available_modules = dict(base_predictor.named_children())
+        for module_name in freeze_base_modules:
+            module = available_modules.get(module_name)
+            if module is not None:
+                frozen_named_modules.append((module_name, module))
+        if frozen_named_modules:
+            for _, module in frozen_named_modules:
+                for param in module.parameters():
+                    param.requires_grad = False
+            print(
+                "Frozen base modules: " + ",".join(name for name, _ in frozen_named_modules),
+                flush=True,
+            )
+        else:
+            print(
+                "Requested freeze_base_modules but no matching base modules were found; "
+                f"available={sorted(available_modules)}",
+                flush=True,
+            )
 
     def _set_backbone_frozen(frozen: bool) -> None:
         """Freeze or unfreeze base_lnn backbone. When unfreezing, add a low-LR param group."""
         base = getattr(model, "base_lnn", None) or getattr(model, "_base_lnn", None)
         if base is None:
-            # HybridLNNModel wraps NexusHybridWrapper which wraps base_lnn
             wrapper = getattr(model, "nexus_wrapper", None) or model
             base = getattr(wrapper, "base_lnn", None)
         if base is None:
             return
         for param in base.parameters():
             param.requires_grad = not frozen
+        for _, module in frozen_named_modules:
+            for param in module.parameters():
+                param.requires_grad = False
         if not frozen:
             # Add backbone params as a separate lower-LR group if not already added
             backbone_params = [p for p in base.parameters() if p.requires_grad]
             existing_ids = {id(p) for group in trainer.optimizer.param_groups for p in group["params"]}
             new_backbone = [p for p in backbone_params if id(p) not in existing_ids]
             if new_backbone:
-                backbone_lr = args.learning_rate * 0.1
+                backbone_lr = args.learning_rate * backbone_thaw_lr_scale
                 # Copy betas/eps from first group so _ManualAdamW.step() doesn't KeyError
                 ref_group = trainer.optimizer.param_groups[0]
                 trainer.optimizer.param_groups.append({

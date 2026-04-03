@@ -130,10 +130,12 @@ LOCKED_PRESET_KEYS = {
     "HYBRID_COLAB_VAL_RATIO",
     "HYBRID_COLAB_TARGET_CYP",
     "HYBRID_COLAB_CONFIDENCE_ALLOWLIST",
+    "HYBRID_COLAB_TRAIN_SOURCE_ALLOWLIST",
     "HYBRID_COLAB_BASE_LNN_FIRST",
     "HYBRID_COLAB_NEXUS_SIDEINFO_ONLY",
     "HYBRID_COLAB_USE_CANDIDATE_MASK",
     "HYBRID_COLAB_BALANCE_TRAIN_SOURCES",
+    "HYBRID_COLAB_FREEZE_BASE_MODULES",
 }
 
 
@@ -455,6 +457,46 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_ATTNSOM": "1.35",
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_CYP_DBS_EXTERNAL": "1.75",
     },
+    "cyp3a4_sideinfo_transfer": {
+        "HYBRID_COLAB_DATASET": "data/prepared_training/main8_cyp3a4_augmented.json",
+        "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
+        "HYBRID_COLAB_EPOCHS": "8",
+        "HYBRID_COLAB_BATCH_SIZE": "10",
+        "HYBRID_COLAB_LR": "7e-6",
+        "HYBRID_COLAB_WD": "1e-4",
+        "HYBRID_COLAB_SPLIT_MODE": "scaffold_source_size",
+        "HYBRID_COLAB_LIMIT": "0",
+        "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
+        "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
+        "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "0",
+        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "4",
+        "HYBRID_COLAB_EARLY_STOPPING_METRIC": "site_top1",
+        "HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS": "2",
+        "HYBRID_COLAB_BACKBONE_THAW_LR_SCALE": "0.05",
+        "HYBRID_COLAB_INCLUDE_XENOSITE": "0",
+        "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
+        "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS": "0",
+        "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS": "0",
+        "HYBRID_COLAB_SEED": "42",
+        "HYBRID_COLAB_TRAIN_RATIO": "0.80",
+        "HYBRID_COLAB_VAL_RATIO": "0.10",
+        "HYBRID_COLAB_TARGET_CYP": "CYP3A4",
+        "HYBRID_COLAB_NEXUS_SIDEINFO_ONLY": "1",
+        "HYBRID_COLAB_USE_CANDIDATE_MASK": "1",
+        "HYBRID_COLAB_BALANCE_TRAIN_SOURCES": "0",
+        "HYBRID_COLAB_TRAIN_SOURCE_ALLOWLIST": "ATTNSOM,CYP_DBs_external",
+        "HYBRID_COLAB_FREEZE_BASE_MODULES": "shared_encoder,physics_branch,steric_branch,manual_priors,cyp_branch,cyp_head",
+        "HYBRID_COLAB_SITE_RANKING_WEIGHT": "0.90",
+        "HYBRID_COLAB_SITE_HARD_NEGATIVE_FRACTION": "0.80",
+        "HYBRID_COLAB_SITE_TOP1_MARGIN_TOPK": "3",
+        "HYBRID_COLAB_SITE_TOP1_MARGIN_DECAY": "0.65",
+        "HYBRID_COLAB_SITE_SOURCE_WEIGHT_DEFAULT": "1.0",
+        "HYBRID_COLAB_SITE_SOURCE_WEIGHT_DRUGBANK": "1.0",
+        "HYBRID_COLAB_SITE_SOURCE_WEIGHT_AZ120": "1.0",
+        "HYBRID_COLAB_SITE_SOURCE_WEIGHT_METXBIODB": "1.0",
+        "HYBRID_COLAB_SITE_SOURCE_WEIGHT_ATTNSOM": "1.4",
+        "HYBRID_COLAB_SITE_SOURCE_WEIGHT_CYP_DBS_EXTERNAL": "1.8",
+    },
 }
 
 
@@ -564,6 +606,9 @@ def main() -> None:
     backbone_freeze = int(os.environ.get("HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS", "0") or "0")
     if backbone_freeze > 0:
         argv.extend(["--backbone-freeze-epochs", str(backbone_freeze)])
+    backbone_thaw_lr_scale = os.environ.get("HYBRID_COLAB_BACKBONE_THAW_LR_SCALE", "").strip()
+    if backbone_thaw_lr_scale:
+        argv.extend(["--backbone-thaw-lr-scale", backbone_thaw_lr_scale])
     if os.environ.get("HYBRID_COLAB_INCLUDE_XENOSITE", "1").strip().lower() in {"1", "true", "yes", "on"}:
         argv.extend(["--xenosite-manifest", xenosite_manifest])
         argv.extend(["--xenosite-topk", os.environ["HYBRID_COLAB_XENOSITE_TOPK"]])
@@ -575,6 +620,9 @@ def main() -> None:
     confidence_allowlist = os.environ.get("HYBRID_COLAB_CONFIDENCE_ALLOWLIST", "").strip()
     if confidence_allowlist:
         argv.extend(["--confidence-allowlist", confidence_allowlist])
+    train_source_allowlist = os.environ.get("HYBRID_COLAB_TRAIN_SOURCE_ALLOWLIST", "").strip()
+    if train_source_allowlist:
+        argv.extend(["--train-source-allowlist", train_source_allowlist])
     if os.environ.get("HYBRID_COLAB_BASE_LNN_FIRST", "0").strip().lower() in {"1", "true", "yes", "on"}:
         argv.append("--base-lnn-first")
     if os.environ.get("HYBRID_COLAB_NEXUS_SIDEINFO_ONLY", "0").strip().lower() in {"1", "true", "yes", "on"}:
@@ -583,6 +631,9 @@ def main() -> None:
         argv.append("--use-candidate-mask")
     if os.environ.get("HYBRID_COLAB_BALANCE_TRAIN_SOURCES", "0").strip().lower() in {"1", "true", "yes", "on"}:
         argv.append("--balance-train-sources")
+    freeze_base_modules = os.environ.get("HYBRID_COLAB_FREEZE_BASE_MODULES", "").strip()
+    if freeze_base_modules:
+        argv.extend(["--freeze-base-modules", freeze_base_modules])
     precedent_logbook = os.environ.get("HYBRID_COLAB_PRECEDENT_LOGBOOK", "").strip()
     if precedent_logbook:
         argv.extend(["--precedent-logbook", precedent_logbook])
