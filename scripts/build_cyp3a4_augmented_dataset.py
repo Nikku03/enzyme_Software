@@ -36,6 +36,10 @@ def _key_for(smiles: str, cyp: str) -> str:
     return f"{_canon_smiles(smiles)}::{str(cyp).strip()}"
 
 
+def _source_key(row: dict) -> str:
+    return str(row.get("site_source") or row.get("source") or "unknown").strip()
+
+
 def _safe_mol_prop(mol: Chem.Mol, name: str) -> str:
     if not mol.HasProp(name):
         return ""
@@ -242,9 +246,14 @@ def merge_rows(base_rows: list[dict], imported_rows: list[dict], *, merge_policy
         "source_details_augmented": 0,
     }
     for row in base_rows:
-        merged[_key_for(row["smiles"], row["primary_cyp"])] = dict(row)
+        key = _key_for(row["smiles"], row["primary_cyp"])
+        if merge_policy == "keep_sources":
+            key = f"{key}::{_source_key(row)}"
+        merged[key] = dict(row)
     for row in imported_rows:
         key = _key_for(row["smiles"], row["primary_cyp"])
+        if merge_policy == "keep_sources":
+            key = f"{key}::{_source_key(row)}"
         if key not in merged:
             merged[key] = dict(row)
             stats["new_rows"] += 1
@@ -324,7 +333,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--merge-policy",
-        choices=("union", "base_priority"),
+        choices=("union", "base_priority", "keep_sources"),
         default="union",
     )
     args = parser.parse_args()

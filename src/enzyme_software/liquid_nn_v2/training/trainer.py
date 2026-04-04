@@ -337,7 +337,7 @@ if TORCH_AVAILABLE:
             weights = []
             changed = False
             for meta in metadata:
-                source = str((meta or {}).get("source", "")).strip().lower()
+                source = str((meta or {}).get("site_source") or (meta or {}).get("source") or "").strip().lower()
                 weight = float(self.site_source_weight_map.get(source, self.site_source_weight_default))
                 changed = changed or abs(weight - 1.0) > 1.0e-6
                 weights.append(weight)
@@ -378,7 +378,7 @@ if TORCH_AVAILABLE:
                 return None
             labels = []
             for meta in metadata:
-                source = str((meta or {}).get("source", "")).strip().lower().replace("-", "_").replace(" ", "_")
+                source = str((meta or {}).get("site_source") or (meta or {}).get("source") or "").strip().lower().replace("-", "_").replace(" ", "_")
                 labels.append(int(_DOMAIN_SOURCE_TO_IDX.get(source, _DOMAIN_SOURCE_TO_IDX["other"])))
             return torch.tensor(labels, dtype=torch.long, device=self.device)
 
@@ -396,7 +396,7 @@ if TORCH_AVAILABLE:
             main_sources = {"drugbank", "az120", "metxbiodb", "metxbiodb"}
             hard_sources = {"attnsom", "cyp_dbs_external"}
             source_names = [
-                str((meta or {}).get("source", "")).strip().lower().replace("-", "_").replace(" ", "_")
+                str((meta or {}).get("site_source") or (meta or {}).get("source") or "").strip().lower().replace("-", "_").replace(" ", "_")
                 for meta in metadata
             ]
             main_idx = [idx for idx, source in enumerate(source_names) if source in main_sources]

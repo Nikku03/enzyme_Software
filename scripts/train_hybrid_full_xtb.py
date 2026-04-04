@@ -144,6 +144,10 @@ def _normalize_source_name(value: str) -> str:
     return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
 
 
+def _provenance_source(item: dict) -> str:
+    return str(item.get("site_source") or item.get("source") or "unknown")
+
+
 def _site_atom_indices(drug: dict) -> list[int]:
     site_atoms: list[int] = []
     if drug.get("som"):
@@ -230,7 +234,7 @@ def _split_summary(items: list[dict]) -> dict[str, object]:
     return {
         "total": int(len(items)),
         "site_supervised": int(sum(1 for d in items if _has_site_labels(d))),
-        "sources": dict(Counter(str(d.get("source", "DrugBank")) for d in items)),
+        "sources": dict(Counter(_provenance_source(d) for d in items)),
         "atom_buckets": dict(Counter(_atom_bucket(d) for d in items)),
         "site_count_buckets": dict(Counter(_site_count_bucket(d) for d in items)),
         "near_duplicates": _near_duplicate_summary(items),
@@ -241,7 +245,40 @@ def _filter_by_sources(items: list[dict], allowlist: list[str]) -> list[dict]:
     if not allowlist:
         return list(items)
     allowed = {_normalize_source_name(token) for token in allowlist}
-    return [drug for drug in items if _normalize_source_name(str(drug.get("source", "DrugBank"))) in allowed]
+    return [drug for drug in items if _normalize_source_name(_provenance_source(drug)) in allowed]
+
+
+def _episode_source_breakdown(path: Path | None) -> dict[str, dict[str, float]]:
+    if path is None or not path.exists():
+        return {}
+    counts: dict[str, list[int]] = {}
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                record = json.loads(line)
+            except Exception:
+                continue
+            if record.get("record_type") != "episode" or str(record.get("split", "")).strip() != "test":
+                continue
+            input_meta = record.get("input") or {}
+            source = str(input_meta.get("site_source") or input_meta.get("source") or "unknown")
+            bucket = counts.setdefault(source, [0, 0, 0, 0])
+            bucket[0] += 1
+            bucket[1] += int(bool(record.get("top1_hit")))
+            bucket[2] += int(bool(record.get("top3_hit")))
+            bucket[3] += int(bool(record.get("top5_hit")))
+    return {
+        source: {
+            "n": int(n),
+            "top1": (float(t1) / float(n)) if n else 0.0,
+            "top3": (float(t3) / float(n)) if n else 0.0,
+            "top5": (float(t5) / float(n)) if n else 0.0,
+        }
+        for source, (n, t1, t3, t5) in sorted(counts.items())
+    }
 
 
 def _load_xenosite_aux_entries(manifest_path: Path, *, topk: int = 1, per_file_limit: int = 0) -> list[dict]:
@@ -529,6 +566,7 @@ def _save_training_state(
     best_val_metrics = dict((best_site_top1_entry or {}).get("val") or {})
     best_train_metrics = dict((best_site_top1_entry or {}).get("train") or {})
     nexus_diagnosis = _nexus_diagnosis(history)
+    source_breakdown = _episode_source_breakdown(episode_log_path)
     checkpoint = {
         "model_state_dict": _initialized_state_dict(model),
         "config": {
@@ -575,6 +613,7 @@ def _save_training_state(
         "best_val_metrics": best_val_metrics,
         "best_train_metrics": best_train_metrics,
         "nexus_diagnosis": nexus_diagnosis,
+        "source_breakdown": source_breakdown,
     }
     torch.save(checkpoint, latest_path)
     torch.save(checkpoint, archive_path)
@@ -618,6 +657,7 @@ def _save_training_state(
                 "best_val_metrics": best_val_metrics,
                 "best_train_metrics": best_train_metrics,
                 "nexus_diagnosis": nexus_diagnosis,
+                "source_breakdown": source_breakdown,
                 "history": history,
             },
             indent=2,
