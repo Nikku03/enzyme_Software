@@ -179,7 +179,7 @@ def load_astrazeneca_csv(path: Path) -> list[dict]:
     return records
 
 
-def load_attnsom_sdf(path: Path, *, source_name: str) -> list[dict]:
+def load_attnsom_sdf(path: Path, *, source_name: str, cyp_name: str = "CYP3A4") -> list[dict]:
     if not path.exists():
         return []
     records: list[dict] = []
@@ -215,8 +215,8 @@ def load_attnsom_sdf(path: Path, *, source_name: str) -> list[dict]:
                 "id": f"{source_name.lower()}:{_safe_mol_prop(mol, 'ID') or len(records)}",
                 "name": _safe_mol_prop(mol, "ID") or _safe_mol_prop(mol, "_Name") or source_name,
                 "smiles": smiles,
-                "primary_cyp": "CYP3A4",
-                "all_cyps": ["CYP3A4"],
+                "primary_cyp": cyp_name,
+                "all_cyps": [cyp_name],
                 "reactions": ["hydroxylation"],
                 "site_atoms": site_atoms,
                 "metabolism_sites": site_atoms,
