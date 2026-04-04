@@ -264,12 +264,13 @@ def _episode_source_breakdown(path: Path | None) -> dict[str, dict[str, float]]:
             if record.get("record_type") != "episode" or str(record.get("split", "")).strip() != "test":
                 continue
             input_meta = record.get("input") or {}
+            outcome = record.get("outcome") or {}
             source = str(input_meta.get("site_source") or input_meta.get("source") or "unknown")
             bucket = counts.setdefault(source, [0, 0, 0, 0])
             bucket[0] += 1
-            bucket[1] += int(bool(record.get("top1_hit")))
-            bucket[2] += int(bool(record.get("top3_hit")))
-            bucket[3] += int(bool(record.get("top5_hit")))
+            bucket[1] += int(bool(outcome.get("top1_hit")))
+            bucket[2] += int(bool(outcome.get("top3_hit")))
+            bucket[3] += int(bool(outcome.get("top5_hit")))
     return {
         source: {
             "n": int(n),
