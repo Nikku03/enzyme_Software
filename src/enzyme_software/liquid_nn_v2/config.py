@@ -117,6 +117,8 @@ class ModelConfig:
     domain_adv_weight: float = 0.0
     domain_adv_grad_scale: float = 0.1
     domain_adv_hidden_dim: int = 64
+    source_align_weight: float = 0.0
+    source_align_cov_weight: float = 0.5
     use_nexus_bridge: bool = True
     nexus_wave_hidden_dim: int = 64
     nexus_graph_dim: int = 48
@@ -270,6 +272,8 @@ class ModelConfig:
         self.domain_adv_weight = max(0.0, float(self.domain_adv_weight))
         self.domain_adv_grad_scale = max(0.0, float(self.domain_adv_grad_scale))
         self.domain_adv_hidden_dim = max(16, int(self.domain_adv_hidden_dim))
+        self.source_align_weight = max(0.0, float(self.source_align_weight))
+        self.source_align_cov_weight = max(0.0, float(self.source_align_cov_weight))
 
     @property
     def num_cyp_classes(self) -> int:

@@ -382,6 +382,51 @@ if TORCH_AVAILABLE:
                 labels.append(int(_DOMAIN_SOURCE_TO_IDX.get(source, _DOMAIN_SOURCE_TO_IDX["other"])))
             return torch.tensor(labels, dtype=torch.long, device=self.device)
 
+        def _source_align_loss(self, outputs: Dict[str, object], batch: Dict[str, object]):
+            model_config = getattr(self.model, "config", None)
+            align_weight = float(getattr(model_config, "source_align_weight", 0.0)) if model_config is not None else 0.0
+            if align_weight <= 0.0:
+                return None
+            mol_features = outputs.get("mol_features")
+            metadata = list(batch.get("graph_metadata") or [])
+            if mol_features is None or not hasattr(mol_features, "shape") or mol_features.ndim != 2:
+                return None
+            if len(metadata) != int(mol_features.shape[0]) or len(metadata) < 4:
+                return None
+            main_sources = {"drugbank", "az120", "metxbiodb", "metxbiodb"}
+            hard_sources = {"attnsom", "cyp_dbs_external"}
+            source_names = [
+                str((meta or {}).get("source", "")).strip().lower().replace("-", "_").replace(" ", "_")
+                for meta in metadata
+            ]
+            main_idx = [idx for idx, source in enumerate(source_names) if source in main_sources]
+            hard_idx = [idx for idx, source in enumerate(source_names) if source in hard_sources]
+            if len(main_idx) < 2 or len(hard_idx) < 2:
+                return None
+            main_x = mol_features[torch.tensor(main_idx, device=mol_features.device, dtype=torch.long)]
+            hard_x = mol_features[torch.tensor(hard_idx, device=mol_features.device, dtype=torch.long)]
+            main_mean = main_x.mean(dim=0)
+            hard_mean = hard_x.mean(dim=0)
+            mean_loss = F.mse_loss(hard_mean, main_mean)
+            cov_weight = float(getattr(model_config, "source_align_cov_weight", 0.5))
+            cov_loss = mean_loss * 0.0
+            if cov_weight > 0.0 and int(main_x.shape[0]) > 1 and int(hard_x.shape[0]) > 1:
+                main_centered = main_x - main_mean
+                hard_centered = hard_x - hard_mean
+                main_cov = (main_centered.transpose(0, 1) @ main_centered) / float(max(1, int(main_x.shape[0]) - 1))
+                hard_cov = (hard_centered.transpose(0, 1) @ hard_centered) / float(max(1, int(hard_x.shape[0]) - 1))
+                cov_loss = F.mse_loss(hard_cov, main_cov)
+            total = align_weight * (mean_loss + (cov_weight * cov_loss))
+            return total, {
+                "source_align_loss": float(total.detach().item()),
+                "source_align_mean_loss": float(mean_loss.detach().item()),
+                "source_align_cov_loss": float(cov_loss.detach().item()),
+                "source_align_weight": float(align_weight),
+                "source_align_cov_weight": float(cov_weight),
+                "source_align_main_count": float(len(main_idx)),
+                "source_align_hard_count": float(len(hard_idx)),
+            }
+
         def _enforce_candidate_mask(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
             candidate_mask = batch.get("candidate_mask")
             site_logits = outputs.get("site_logits")
@@ -687,6 +732,11 @@ if TORCH_AVAILABLE:
                     stats["domain_adv_loss"] = float(domain_loss.detach().item())
                     stats["domain_adv_weight"] = float(domain_weight)
                     stats["domain_adv_acc"] = float(domain_acc.detach().item())
+            source_align = self._source_align_loss(outputs, batch)
+            if source_align is not None:
+                align_loss, align_stats = source_align
+                loss = loss + align_loss
+                stats.update(align_stats)
             stats.update(self._collect_output_stats(outputs))
             weighted_loss = self._apply_confidence_weights(loss, batch)
             if weighted_loss is not loss:

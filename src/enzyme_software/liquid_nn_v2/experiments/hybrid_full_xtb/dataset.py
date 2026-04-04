@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import math
 import random
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -8,7 +9,7 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from torch.utils.data import DataLoader
-from torch.utils.data import WeightedRandomSampler
+from torch.utils.data import Sampler
 
 try:
     from rdkit import Chem
@@ -205,6 +206,76 @@ def _build_cyp3a4_candidate_masks(
     inference_mask = candidate.reshape(num_atoms, 1).astype(np.float32)
     train_mask = inference_mask.copy()
     return inference_mask, train_mask
+
+
+class _CappedSourceBatchSampler(Sampler[list[int]]):
+    """Batch sampler that guarantees limited hard-source presence per batch.
+
+    This avoids the old inverse-frequency sampler behavior where tiny sources
+    dominated updates, while still ensuring ATTNSOM/CYP_DBs_external appear
+    inside batches often enough to affect ranking gradients.
+    """
+
+    def __init__(self, drugs: list[dict], *, batch_size: int, seed: int = 42):
+        self.batch_size = max(1, int(batch_size))
+        self.seed = int(seed)
+        self._groups: dict[str, list[int]] = defaultdict(list)
+        for idx, drug in enumerate(drugs):
+            source = str(drug.get("source", "") or "").strip().lower().replace("-", "_").replace(" ", "_")
+            self._groups[source].append(idx)
+        all_indices = list(range(len(drugs)))
+        hard_attn = list(self._groups.get("attnsom", ()))
+        hard_ext = list(self._groups.get("cyp_dbs_external", ()))
+        hard = set(hard_attn) | set(hard_ext)
+        main = [idx for idx in all_indices if idx not in hard]
+        self._main = main
+        self._attn = hard_attn
+        self._ext = hard_ext
+        self._num_batches = max(1, int(math.ceil(len(drugs) / float(self.batch_size))))
+
+    def __len__(self) -> int:
+        return self._num_batches
+
+    def _cycled_take(self, pool: list[int], cursor: int, quota: int, rng: random.Random) -> tuple[list[int], int]:
+        if quota <= 0 or not pool:
+            return [], cursor
+        items: list[int] = []
+        local_pool = pool
+        cur = int(cursor)
+        while len(items) < quota:
+            if cur >= len(local_pool):
+                rng.shuffle(local_pool)
+                cur = 0
+            items.append(local_pool[cur])
+            cur += 1
+        return items, cur
+
+    def __iter__(self):
+        rng = random.Random(self.seed)
+        main = list(self._main)
+        attn = list(self._attn)
+        ext = list(self._ext)
+        rng.shuffle(main)
+        rng.shuffle(attn)
+        rng.shuffle(ext)
+        main_cur = 0
+        attn_cur = 0
+        ext_cur = 0
+        for _ in range(self._num_batches):
+            ext_quota = 1 if ext and self.batch_size >= 8 else 0
+            attn_quota = 0
+            if attn:
+                attn_quota = 2 if self.batch_size >= 12 else 1
+            main_quota = max(0, self.batch_size - ext_quota - attn_quota)
+            batch: list[int] = []
+            picked, main_cur = self._cycled_take(main, main_cur, main_quota, rng)
+            batch.extend(picked)
+            picked, attn_cur = self._cycled_take(attn, attn_cur, attn_quota, rng)
+            batch.extend(picked)
+            picked, ext_cur = self._cycled_take(ext, ext_cur, ext_quota, rng)
+            batch.extend(picked)
+            rng.shuffle(batch)
+            yield batch
 
 
 def _scaffold_key(drug: Dict[str, object]) -> str:
@@ -761,13 +832,18 @@ def create_full_xtb_dataloaders_from_drugs(
             )
     train_loader_kwargs = dict(batch_size=batch_size, collate_fn=collate_fn, num_workers=0, pin_memory=False)
     if balance_train_sources:
-        source_counts = Counter(str(drug.get("source", "DrugBank")) for drug in train_ds.drugs)
-        weights = []
-        for drug in train_ds.drugs:
-            source = str(drug.get("source", "DrugBank"))
-            weights.append(1.0 / max(1, source_counts[source]))
-        sampler = WeightedRandomSampler(weights, num_samples=len(train_ds.drugs), replacement=True)
-        train_loader = DataLoader(train_ds, sampler=sampler, shuffle=False, **train_loader_kwargs)
+        batch_sampler = _CappedSourceBatchSampler(
+            train_ds.drugs,
+            batch_size=batch_size,
+            seed=42,
+        )
+        train_loader = DataLoader(
+            train_ds,
+            batch_sampler=batch_sampler,
+            collate_fn=collate_fn,
+            num_workers=0,
+            pin_memory=False,
+        )
     else:
         train_loader = DataLoader(train_ds, shuffle=True, **train_loader_kwargs)
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=False)
