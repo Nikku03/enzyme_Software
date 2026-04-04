@@ -269,6 +269,42 @@ def _ensure_rdkit() -> None:
         ) from exc
 
 
+def _resolve_dataset_path(path_str: str, *, benchmark_dir: Path) -> Path:
+    raw = Path(path_str)
+    candidates = []
+    if raw.is_absolute():
+        candidates.append(raw)
+    else:
+        candidates.append(raw)
+        candidates.append(REPO_DIR / raw)
+        candidates.append(benchmark_dir / raw.name)
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[-1]
+
+
+def _maybe_build_benchmark_sets(*, benchmark_dir: Path, holdout_path: Path) -> None:
+    builder = REPO_DIR / "scripts" / "build_main8_benchmark_sets.py"
+    if not builder.exists() or not holdout_path.exists():
+        return
+    benchmark_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Benchmark datasets missing. Building A/B/C from holdout: {holdout_path}", flush=True)
+    argv_backup = list(sys.argv)
+    try:
+        sys.argv = [
+            str(builder),
+            "--input",
+            str(holdout_path),
+            "--output-dir",
+            str(benchmark_dir),
+        ]
+        runpy.run_path(str(builder), run_name="__main__")
+    finally:
+        sys.argv = argv_backup
+    print()
+
+
 def _clear_repo_python_caches() -> None:
     for pattern in ("*.pyc",):
         subprocess.run(
@@ -910,6 +946,33 @@ def main() -> None:
         "HYBRID_COLAB_XENOSITE_MANIFEST",
         "data/xenosite_suppl/manifest.json",
     )
+    benchmark_dir = Path(
+        os.environ.get(
+            "HYBRID_COLAB_BENCHMARK_DIR",
+            "/content/drive/MyDrive/enzyme_hybrid_lnn/benchmarks",
+        )
+    )
+    benchmark_holdout = Path(
+        os.environ.get(
+            "HYBRID_COLAB_BENCHMARK_HOLDOUT",
+            str(benchmark_dir / "main8_benchmark_holdout_singlecyp.json"),
+        )
+    )
+    benchmark_datasets_env = os.environ.get("HYBRID_COLAB_BENCHMARK_DATASETS", "").strip()
+    if benchmark_datasets_env:
+        requested_benchmarks = [part.strip() for part in benchmark_datasets_env.split(",") if part.strip()]
+        resolved_benchmarks = [_resolve_dataset_path(part, benchmark_dir=benchmark_dir) for part in requested_benchmarks]
+        if any(not path.exists() for path in resolved_benchmarks):
+            _maybe_build_benchmark_sets(benchmark_dir=benchmark_dir, holdout_path=benchmark_holdout)
+            resolved_benchmarks = [_resolve_dataset_path(part, benchmark_dir=benchmark_dir) for part in requested_benchmarks]
+        missing = [str(path) for path in resolved_benchmarks if not path.exists()]
+        if missing:
+            raise FileNotFoundError(
+                "Benchmark dataset(s) not found. "
+                f"Missing: {', '.join(missing)}. "
+                f"Upload benchmark JSONs to {benchmark_dir} or upload the holdout to {benchmark_holdout}."
+            )
+        os.environ["HYBRID_COLAB_BENCHMARK_DATASETS"] = ",".join(str(path) for path in resolved_benchmarks)
 
     argv = [
         str(REPO_DIR / "scripts" / "train_hybrid_full_xtb.py"),
