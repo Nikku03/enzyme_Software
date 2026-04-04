@@ -231,7 +231,7 @@ def load_attnsom_sdf(path: Path, *, source_name: str) -> list[dict]:
     return records
 
 
-def merge_rows(base_rows: list[dict], imported_rows: list[dict]) -> tuple[list[dict], dict]:
+def merge_rows(base_rows: list[dict], imported_rows: list[dict], *, merge_policy: str = "union") -> tuple[list[dict], dict]:
     merged: dict[str, dict] = {}
     stats = {
         "base_rows": len(base_rows),
@@ -251,6 +251,18 @@ def merge_rows(base_rows: list[dict], imported_rows: list[dict]) -> tuple[list[d
             continue
         stats["overlap_rows"] += 1
         existing = merged[key]
+        if merge_policy == "base_priority":
+            details = sorted(
+                {
+                    str(v)
+                    for v in list(existing.get("source_details") or []) + list(row.get("source_details") or [])
+                    if str(v).strip()
+                }
+            )
+            if details != list(existing.get("source_details") or []):
+                stats["source_details_augmented"] += 1
+            existing["source_details"] = details
+            continue
         merged_sites = sorted(set(existing.get("site_atoms", [])) | set(row.get("site_atoms", [])))
         if merged_sites != list(existing.get("site_atoms", [])):
             stats["site_atoms_expanded"] += 1
@@ -310,6 +322,11 @@ def main() -> None:
         "--out",
         default="data/prepared_training/main8_cyp3a4_augmented.json",
     )
+    parser.add_argument(
+        "--merge-policy",
+        choices=("union", "base_priority"),
+        default="union",
+    )
     args = parser.parse_args()
 
     base_rows = load_main8_cyp3a4(ROOT / args.base_dataset)
@@ -333,7 +350,7 @@ def main() -> None:
         duplicate_source_match = False
 
     imported_rows = astra_rows + attn_rows
-    merged_rows, merge_stats = merge_rows(base_rows, imported_rows)
+    merged_rows, merge_stats = merge_rows(base_rows, imported_rows, merge_policy=args.merge_policy)
     summary = build_summary(merged_rows)
 
     payload = {
@@ -346,6 +363,7 @@ def main() -> None:
             "attnsom_rows": len(attn_rows),
             "attnsom_source_used": attn_source_used,
             "cyp_dbs_duplicate_of_attnsom": duplicate_source_match,
+            "merge_policy": args.merge_policy,
             **merge_stats,
         },
         "drugs": merged_rows,

@@ -349,7 +349,14 @@ def _summarize_xtb_validity(drugs: list[dict], cache_dir: Path) -> dict[str, obj
 def _best_history_entry(history: list[dict], metric_name: str) -> dict | None:
     if not history:
         return None
-    return max(history, key=lambda row: float((row.get("val") or {}).get(metric_name, float("-inf"))))
+    metric_alias = {
+        "site_top1": "site_top1_acc",
+        "site_top3": "site_top3_acc",
+        "site_top1_all": "site_top1_acc_all_molecules",
+        "site_top3_all": "site_top3_acc_all_molecules",
+    }
+    resolved = metric_alias.get(metric_name, metric_name)
+    return max(history, key=lambda row: float((row.get("val") or {}).get(resolved, float("-inf"))))
 
 
 def _nexus_diagnosis(history: list[dict]) -> dict[str, object]:
@@ -513,7 +520,7 @@ def _save_training_state(
     effective_split_summary = _effective_split_summary(split_summary)
     history_len = int(len(history))
     final_epoch = int(history[-1]["epoch"]) if history else 0
-    best_site_top1_entry = _best_history_entry(history, "site_top1_acc")
+    best_site_top1_entry = _best_history_entry(history, "site_top1_acc_all_molecules")
     best_monitor_entry = _best_history_entry(history, args.early_stopping_metric)
     best_epoch = int((best_site_top1_entry or {}).get("epoch") or 0)
     best_monitor_epoch = int((best_monitor_entry or {}).get("epoch") or 0)
@@ -636,7 +643,11 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--log-every", type=int, default=1)
     parser.add_argument("--early-stopping-patience", type=int, default=0)
-    parser.add_argument("--early-stopping-metric", choices=("site_top1", "site_top3"), default="site_top3")
+    parser.add_argument(
+        "--early-stopping-metric",
+        choices=("site_top1", "site_top3", "site_top1_all", "site_top3_all"),
+        default="site_top3",
+    )
     parser.add_argument("--output-dir", default="checkpoints/hybrid_full_xtb")
     parser.add_argument("--artifact-dir", default="artifacts/hybrid_full_xtb")
     parser.add_argument("--limit", type=int, default=None)
@@ -1063,11 +1074,20 @@ def main() -> None:
 
             val_top1 = float(val_metrics.get("site_top1_acc", 0.0))
             val_top3 = float(val_metrics.get("site_top3_acc", 0.0))
+            val_top1_all = float(val_metrics.get("site_top1_acc_all_molecules", val_top1))
+            val_top3_all = float(val_metrics.get("site_top3_acc_all_molecules", val_top3))
             monitor_name = args.early_stopping_metric
-            monitor_value = val_top1 if monitor_name == "site_top1" else val_top3
+            if monitor_name == "site_top1":
+                monitor_value = val_top1
+            elif monitor_name == "site_top3":
+                monitor_value = val_top3
+            elif monitor_name == "site_top1_all":
+                monitor_value = val_top1_all
+            else:
+                monitor_value = val_top3_all
             trainer.step_scheduler(monitor_value)
-            if val_top1 > best_val_top1:
-                best_val_top1 = val_top1
+            if val_top1_all > best_val_top1:
+                best_val_top1 = val_top1_all
             if monitor_value > best_val_monitor:
                 best_val_monitor = monitor_value
                 best_state = _initialized_state_dict(model)

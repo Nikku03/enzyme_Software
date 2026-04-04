@@ -539,10 +539,13 @@ if TORCH_AVAILABLE:
             log_var_cyp = self.log_var_cyp.clamp(min=-4.0, max=4.0)
             precision_site = torch.exp(-log_var_site)
             precision_cyp = torch.exp(-log_var_cyp)
-            total_loss = (
-                0.5 * precision_site * site_loss + 0.5 * log_var_site
-                + 0.5 * precision_cyp * cyp_loss + 0.5 * log_var_cyp
-            )
+            if cyp_supervision_mask is not None and not bool(cyp_mask.any()):
+                total_loss = 0.5 * precision_site * site_loss + 0.5 * log_var_site
+            else:
+                total_loss = (
+                    0.5 * precision_site * site_loss + 0.5 * log_var_site
+                    + 0.5 * precision_cyp * cyp_loss + 0.5 * log_var_cyp
+                )
             tau_reg_loss = torch.tensor(0.0, device=site_logits.device)
             if tau_history is not None and tau_init is not None:
                 valid = [F.mse_loss(tau, tau_init) for tau in tau_history if tau.shape == tau_init.shape]
