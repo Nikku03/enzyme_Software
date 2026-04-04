@@ -121,6 +121,9 @@ def _collect_model_overrides() -> dict[str, int | float]:
         "HYBRID_COLAB_DOMAIN_ADV_HIDDEN_DIM": (_env_int, "domain_adv_hidden_dim"),
         "HYBRID_COLAB_SOURCE_ALIGN_WEIGHT": (_env_float, "source_align_weight"),
         "HYBRID_COLAB_SOURCE_ALIGN_COV_WEIGHT": (_env_float, "source_align_cov_weight"),
+        "HYBRID_COLAB_USE_SOURCE_SITE_HEADS": (_env_int, "use_source_site_heads"),
+        "HYBRID_COLAB_SOURCE_SITE_AUX_WEIGHT": (_env_float, "source_site_aux_weight"),
+        "HYBRID_COLAB_SOURCE_SITE_BLEND_WEIGHT": (_env_float, "source_site_blend_weight"),
     }
     overrides: dict[str, int | float] = {}
     for env_name, (parser, field_name) in mapping.items():

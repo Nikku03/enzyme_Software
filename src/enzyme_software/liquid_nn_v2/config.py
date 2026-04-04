@@ -126,6 +126,17 @@ class ModelConfig:
     domain_adv_hidden_dim: int = 64
     source_align_weight: float = 0.0
     source_align_cov_weight: float = 0.5
+    use_source_site_heads: bool = False
+    source_site_aux_weight: float = 0.0
+    source_site_blend_weight: float = 0.0
+    source_site_head_names: Tuple[str, ...] = (
+        "drugbank",
+        "az120",
+        "metxbiodb",
+        "attnsom",
+        "cyp_dbs_external",
+        "literature",
+    )
     use_nexus_bridge: bool = True
     nexus_wave_hidden_dim: int = 64
     nexus_graph_dim: int = 48
@@ -256,6 +267,14 @@ class ModelConfig:
         self.nexus_wave_sideinfo_aux_weight = max(0.0, float(self.nexus_wave_sideinfo_aux_weight))
         self.nexus_analogical_sideinfo_aux_weight = max(0.0, float(self.nexus_analogical_sideinfo_aux_weight))
         self.nexus_analogical_cyp_aux_scale = max(0.0, float(self.nexus_analogical_cyp_aux_scale))
+        self.use_source_site_heads = bool(self.use_source_site_heads)
+        self.source_site_aux_weight = max(0.0, float(self.source_site_aux_weight))
+        self.source_site_blend_weight = min(max(float(self.source_site_blend_weight), 0.0), 1.0)
+        self.source_site_head_names = tuple(
+            str(name).strip().lower().replace("-", "_").replace(" ", "_")
+            for name in tuple(self.source_site_head_names or ())
+            if str(name).strip()
+        )
         self.cyp_site_condition_scale = max(0.0, float(self.cyp_site_condition_scale))
         self.site_logit_bias_warmup_epochs = max(0, int(self.site_logit_bias_warmup_epochs))
         self.site_logit_bias_weight = max(0.0, float(self.site_logit_bias_weight))

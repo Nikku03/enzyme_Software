@@ -21,6 +21,17 @@ from enzyme_software.liquid_nn_v2.model.priors import ManualEnginePriorEncoder, 
 from enzyme_software.liquid_nn_v2.model.steric_branch import Steric3DBranch
 
 
+def _normalize_source_head_name(value: str) -> str:
+    text = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "drugbank_existing": "drugbank",
+        "metxbiodb_atom_only": "metxbiodb",
+        "cyp_dbs_experimental": "cyp_dbs_external",
+        "literature_curation": "literature",
+    }
+    return aliases.get(text, text)
+
+
 if TORCH_AVAILABLE:
     class _BaseMetabolismPredictor(nn.Module):
         """Shared construction helpers for baseline and advanced predictors."""
@@ -82,6 +93,20 @@ if TORCH_AVAILABLE:
                 dropout=config.dropout,
                 prior_scale_init=config.manual_prior_init_scale,
             )
+            self.source_site_heads = nn.ModuleDict(
+                {
+                    str(name): ResidualFusionHead(
+                        input_dim=config.som_branch_dim,
+                        output_dim=1,
+                        prior_feature_dim=config.som_branch_dim if config.use_manual_engine_priors else 0,
+                        hidden_dim=config.som_head_hidden_dim,
+                        fusion_mode=config.manual_prior_fusion_mode,
+                        dropout=config.dropout,
+                        prior_scale_init=config.manual_prior_init_scale,
+                    )
+                    for name in tuple(config.source_site_head_names)
+                }
+            ) if config.use_source_site_heads and tuple(config.source_site_head_names) else None
             self.cyp_head = ResidualFusionHead(
                 input_dim=config.cyp_branch_dim,
                 output_dim=config.num_cyp_classes,
@@ -182,6 +207,40 @@ if TORCH_AVAILABLE:
             if float(bde_values.detach().abs().max().item()) > 2.0:
                 bde_values = ((bde_values - 250.0) / 250.0).clamp(0.0, 1.0)
             return site_logits + self.bde_prior(bde_values)
+
+        def _compute_source_site_logits(self, atom_features, prior_payload):
+            if self.source_site_heads is None:
+                return {}
+            prior_logits = prior_payload.get("atom_prior_logits") if self.config.use_manual_engine_priors else None
+            prior_features = prior_payload.get("atom_prior_embedding") if self.config.use_manual_engine_priors else None
+            outputs = {}
+            for source_name, head in self.source_site_heads.items():
+                source_logits, _source_residual = head(
+                    atom_features,
+                    prior_logits=prior_logits,
+                    prior_features=prior_features,
+                )
+                outputs[str(source_name)] = source_logits
+            return outputs
+
+        def _blend_source_site_logits(self, site_logits, source_site_logits, metadata, mol_batch):
+            if not source_site_logits:
+                return site_logits
+            blend_weight = float(getattr(self.config, "source_site_blend_weight", 0.0))
+            if blend_weight <= 0.0:
+                return site_logits
+            blended = site_logits.clone()
+            for mol_idx, meta in enumerate(list(metadata or [])):
+                source_name = _normalize_source_head_name(
+                    str((meta or {}).get("site_source") or (meta or {}).get("source") or "")
+                )
+                source_logits = source_site_logits.get(source_name)
+                if source_logits is None:
+                    continue
+                mask = mol_batch == int(mol_idx)
+                if bool(mask.any()):
+                    blended[mask] = ((1.0 - blend_weight) * site_logits[mask]) + (blend_weight * source_logits[mask])
+            return blended
 
         def _build_common_outputs(
             self,
@@ -284,7 +343,15 @@ if TORCH_AVAILABLE:
                 prior_features=encoded["prior_payload"].get("atom_prior_embedding") if self.config.use_manual_engine_priors else None,
             )
             site_logits = self._apply_bde_prior(site_logits, encoded.get("bde_values"))
-            return self._build_common_outputs(
+            source_site_logits = self._compute_source_site_logits(som_features, encoded["prior_payload"])
+            if source_site_logits:
+                site_logits = self._blend_source_site_logits(
+                    site_logits,
+                    source_site_logits,
+                    batch.get("graph_metadata"),
+                    encoded["batch"],
+                )
+            outputs = self._build_common_outputs(
                 encoded,
                 som_payload,
                 cyp_payload,
@@ -295,6 +362,9 @@ if TORCH_AVAILABLE:
                 final_atom_features=som_features,
                 extra={"model_variant": "baseline"},
             )
+            if source_site_logits:
+                outputs["source_site_logits"] = source_site_logits
+            return outputs
 
 
     class AdvancedLiquidMetabolismPredictor(_BaseMetabolismPredictor):
@@ -479,6 +549,14 @@ if TORCH_AVAILABLE:
             site_logits = self._apply_bde_prior(site_logits, encoded.get("bde_values"))
             if self.config.use_tunneling_module and self.config.use_tunneling_for_site_scores:
                 site_logits = site_logits + torch.log(tunneling_payload["tunnel_prob"].clamp(min=1.0e-6))
+            source_site_logits = self._compute_source_site_logits(conditioned_atom_features, encoded["prior_payload"])
+            if source_site_logits:
+                site_logits = self._blend_source_site_logits(
+                    site_logits,
+                    source_site_logits,
+                    batch.get("graph_metadata"),
+                    encoded["batch"],
+                )
 
             cyp_payload = dict(cyp_payload)
             cyp_payload["mol_features"] = final_mol_features
@@ -509,6 +587,8 @@ if TORCH_AVAILABLE:
                 final_atom_features=conditioned_atom_features,
                 extra=extra,
             )
+            if source_site_logits:
+                outputs["source_site_logits"] = source_site_logits
             outputs.update(
                 {
                     "energy_outputs": energy_payload,
@@ -595,6 +675,14 @@ if TORCH_AVAILABLE:
                 prior_features=encoded["prior_payload"].get("atom_prior_embedding") if self.config.use_manual_engine_priors else None,
             )
             site_logits = self._apply_bde_prior(site_logits, encoded.get("bde_values"))
+            source_site_logits = self._compute_source_site_logits(som_features, encoded["prior_payload"])
+            if source_site_logits:
+                site_logits = self._blend_source_site_logits(
+                    site_logits,
+                    source_site_logits,
+                    batch.get("graph_metadata"),
+                    encoded["batch"],
+                )
 
             tunneling_payload = {"barrier": None, "tunnel_prob": None, "stats": {}}
             tunnel_bias = torch.zeros_like(site_logits)
@@ -642,6 +730,8 @@ if TORCH_AVAILABLE:
                     },
                 },
             )
+            if source_site_logits:
+                outputs["source_site_logits"] = source_site_logits
             outputs.update(
                 {
                     "tunneling_outputs": tunneling_payload,

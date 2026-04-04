@@ -24,6 +24,16 @@ if TORCH_AVAILABLE:
         "other": 5,
     }
 
+    def _normalize_source_name(value: str) -> str:
+        text = str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
+        aliases = {
+            "drugbank_existing": "drugbank",
+            "metxbiodb_atom_only": "metxbiodb",
+            "cyp_dbs_experimental": "cyp_dbs_external",
+            "literature_curation": "literature",
+        }
+        return aliases.get(text, text)
+
     class _NoOpScheduler:
         def step(self, val_metric: float) -> None:
             return None
@@ -124,6 +134,7 @@ if TORCH_AVAILABLE:
                 "attnsom": float(getattr(model_config, "site_source_weight_attnsom", 1.0)),
                 "cyp_dbs_external": float(getattr(model_config, "site_source_weight_cyp_dbs_external", 1.0)),
             }
+            self.source_site_aux_weight = float(getattr(model_config, "source_site_aux_weight", 0.0))
             if self.cyp_class_weights is not None:
                 weights = self.cyp_class_weights.to(self.device) if hasattr(self.cyp_class_weights, "to") else torch.as_tensor(self.cyp_class_weights, dtype=torch.float32, device=self.device)
             self.loss_fn = AdaptiveLossV2(
@@ -337,7 +348,7 @@ if TORCH_AVAILABLE:
             weights = []
             changed = False
             for meta in metadata:
-                source = str((meta or {}).get("site_source") or (meta or {}).get("source") or "").strip().lower()
+                source = _normalize_source_name(str((meta or {}).get("site_source") or (meta or {}).get("source") or ""))
                 weight = float(self.site_source_weight_map.get(source, self.site_source_weight_default))
                 changed = changed or abs(weight - 1.0) > 1.0e-6
                 weights.append(weight)
@@ -378,7 +389,7 @@ if TORCH_AVAILABLE:
                 return None
             labels = []
             for meta in metadata:
-                source = str((meta or {}).get("site_source") or (meta or {}).get("source") or "").strip().lower().replace("-", "_").replace(" ", "_")
+                source = _normalize_source_name(str((meta or {}).get("site_source") or (meta or {}).get("source") or ""))
                 labels.append(int(_DOMAIN_SOURCE_TO_IDX.get(source, _DOMAIN_SOURCE_TO_IDX["other"])))
             return torch.tensor(labels, dtype=torch.long, device=self.device)
 
@@ -396,7 +407,7 @@ if TORCH_AVAILABLE:
             main_sources = {"drugbank", "az120", "metxbiodb", "metxbiodb"}
             hard_sources = {"attnsom", "cyp_dbs_external"}
             source_names = [
-                str((meta or {}).get("site_source") or (meta or {}).get("source") or "").strip().lower().replace("-", "_").replace(" ", "_")
+                _normalize_source_name(str((meta or {}).get("site_source") or (meta or {}).get("source") or ""))
                 for meta in metadata
             ]
             main_idx = [idx for idx, source in enumerate(source_names) if source in main_sources]
@@ -530,6 +541,57 @@ if TORCH_AVAILABLE:
                 return raw.sum() * 0.0
             denom = (mask * (node_weights if node_weights is not None else 1.0)).sum().clamp_min(1.0e-6) if node_weights is not None else mask.sum().clamp_min(1.0)
             return (raw * mask).sum() / denom
+
+        def _source_site_aux_loss(self, outputs: Dict[str, object], batch: Dict[str, object]):
+            if self.source_site_aux_weight <= 0.0:
+                return None
+            source_site_logits = outputs.get("source_site_logits")
+            if not isinstance(source_site_logits, dict) or not source_site_logits:
+                return None
+            metadata = list(batch.get("graph_metadata") or [])
+            batch_index = batch.get("batch")
+            if not metadata or batch_index is None:
+                return None
+            site_mask = batch.get("effective_site_supervision_mask", batch.get("site_supervision_mask"))
+            node_weights = batch.get("node_confidence_weights")
+            graph_weights = batch.get("graph_confidence_weights")
+            per_source_losses = []
+            used_sources = []
+            for source_name, logits in source_site_logits.items():
+                mol_indices = [
+                    idx for idx, meta in enumerate(metadata)
+                    if _normalize_source_name(str((meta or {}).get("site_source") or (meta or {}).get("source") or "")) == str(source_name)
+                ]
+                if not mol_indices:
+                    continue
+                atom_mask = torch.zeros_like(batch_index, dtype=torch.float32, device=batch_index.device)
+                for mol_idx in mol_indices:
+                    atom_mask = torch.maximum(atom_mask, (batch_index == int(mol_idx)).float())
+                atom_mask = atom_mask.view(-1, 1)
+                effective_mask = atom_mask if site_mask is None else atom_mask * site_mask.float().view_as(atom_mask)
+                if float(effective_mask.sum().detach().item()) < 1.0e-6:
+                    continue
+                loss_value, _ = self.loss_fn.site_loss(
+                    self._sanitize_aux_logits(logits),
+                    batch["site_labels"],
+                    batch_index,
+                    supervision_mask=effective_mask,
+                    node_weights=node_weights,
+                    graph_weights=graph_weights,
+                )
+                per_source_losses.append(loss_value)
+                used_sources.append((str(source_name), len(mol_indices)))
+            if not per_source_losses:
+                return None
+            total = torch.stack(per_source_losses).mean()
+            stats = {
+                "source_site_aux_loss": float(total.detach().item()),
+                "source_site_aux_weight": float(self.source_site_aux_weight),
+                "source_site_aux_sources": float(len(used_sources)),
+            }
+            for source_name, count in used_sources:
+                stats[f"source_site_aux_count_{source_name}"] = float(count)
+            return (self.source_site_aux_weight * total), stats
 
         def compute_loss(self, batch: Dict[str, object], outputs: Dict[str, object]):
             site_mask = batch.get("site_supervision_mask")
@@ -737,6 +799,11 @@ if TORCH_AVAILABLE:
                 align_loss, align_stats = source_align
                 loss = loss + align_loss
                 stats.update(align_stats)
+            source_site_aux = self._source_site_aux_loss(outputs, batch)
+            if source_site_aux is not None:
+                aux_loss, aux_stats = source_site_aux
+                loss = loss + aux_loss
+                stats.update(aux_stats)
             stats.update(self._collect_output_stats(outputs))
             weighted_loss = self._apply_confidence_weights(loss, batch)
             if weighted_loss is not loss:
