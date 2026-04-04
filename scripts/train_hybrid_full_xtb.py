@@ -126,6 +126,31 @@ def _collect_model_overrides() -> dict[str, int | float]:
     return overrides
 
 
+def _reconfigure_reranker_param_groups(trainer, model, *, base_lr: float, weight_decay: float, lr_scale: float) -> bool:
+    reranker = getattr(model, "topk_reranker", None)
+    if reranker is None or lr_scale <= 1.0:
+        return False
+    reranker_params = [param for param in reranker.parameters() if param.requires_grad]
+    if not reranker_params:
+        return False
+    reranker_ids = {id(param) for param in reranker_params}
+    updated_groups = []
+    for group in trainer.optimizer.param_groups:
+        group_params = [param for param in group["params"] if id(param) not in reranker_ids]
+        if not group_params:
+            continue
+        new_group = dict(group)
+        new_group["params"] = group_params
+        updated_groups.append(new_group)
+    ref_group = dict(updated_groups[0] if updated_groups else trainer.optimizer.param_groups[0])
+    ref_group["params"] = reranker_params
+    ref_group["lr"] = float(base_lr) * float(lr_scale)
+    ref_group["weight_decay"] = float(weight_decay)
+    updated_groups.append(ref_group)
+    trainer.optimizer.param_groups[:] = updated_groups
+    return True
+
+
 def _load_drugs(path: Path) -> list[dict]:
     payload = json.loads(path.read_text())
     return list(payload.get("drugs", payload))
@@ -1008,6 +1033,18 @@ def main() -> None:
         device=device,
         episode_logger=episode_logger,
     )
+    reranker_lr_scale = float(_env_float("HYBRID_COLAB_TOPK_RERANKER_LR_SCALE") or 1.0)
+    if _reconfigure_reranker_param_groups(
+        trainer,
+        model,
+        base_lr=args.learning_rate,
+        weight_decay=args.weight_decay,
+        lr_scale=reranker_lr_scale,
+    ):
+        print(
+            f"topk_reranker lr scale enabled: {reranker_lr_scale:.2f}x base lr",
+            flush=True,
+        )
 
     history = []
     best_val_top1 = -1.0
@@ -1016,6 +1053,10 @@ def main() -> None:
     epochs_without_improvement = 0
     train_start = time.perf_counter()
     backbone_freeze_epochs = max(0, int(args.backbone_freeze_epochs))
+    if bool(getattr(base_config, "use_topk_reranker", False)):
+        reranker_headstart_epochs = int(_env_int("HYBRID_COLAB_TOPK_RERANKER_HEADSTART_EPOCHS") or 0)
+        if reranker_headstart_epochs > backbone_freeze_epochs:
+            backbone_freeze_epochs = reranker_headstart_epochs
     backbone_thaw_lr_scale = min(max(float(args.backbone_thaw_lr_scale), 0.0), 1.0)
     _backbone_frozen = False
 

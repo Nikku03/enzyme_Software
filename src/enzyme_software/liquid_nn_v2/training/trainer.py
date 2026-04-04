@@ -808,6 +808,13 @@ if TORCH_AVAILABLE:
                             metrics[f"nexus_{key}"] = float(value)
                         except Exception:
                             continue
+                reranker_stats = diagnostics.get("topk_reranker")
+                if isinstance(reranker_stats, dict):
+                    for key, value in reranker_stats.items():
+                        try:
+                            metrics[f"topk_reranker_{key}"] = float(value)
+                        except Exception:
+                            continue
                 hidden_norms = diagnostics.get("hidden_norms")
                 if isinstance(hidden_norms, dict):
                     metrics["som_hidden_norm_mean"] = float(hidden_norms.get("som_features_mean", 0.0))
