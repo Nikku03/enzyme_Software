@@ -148,6 +148,11 @@ LOCKED_PRESET_KEYS = {
     "HYBRID_COLAB_TOPK_RERANKER_RESIDUAL_SCALE",
     "HYBRID_COLAB_TOPK_RERANKER_LR_SCALE",
     "HYBRID_COLAB_TOPK_RERANKER_HEADSTART_EPOCHS",
+    "HYBRID_COLAB_BENCHMARK_DATASETS",
+    "HYBRID_COLAB_BENCHMARK_BATCH_SIZE",
+    "HYBRID_COLAB_BENCHMARK_EVERY",
+    "HYBRID_COLAB_BENCHMARK_SELECTION_METRIC",
+    "HYBRID_COLAB_BENCHMARK_SELECTION_WEIGHT",
 }
 
 
@@ -521,6 +526,55 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_NEXUS_LIVE_ANALOGICAL_VOTE_GRAD_SCALE": "0.10",
         "HYBRID_COLAB_NEXUS_WAVE_SIDEINFO_AUX_WEIGHT": "0.03",
         "HYBRID_COLAB_NEXUS_ANALOGICAL_SIDEINFO_AUX_WEIGHT": "0.05",
+    },
+    "multicyp_sideinfo_fullrank_benchmark_ready": {
+        "HYBRID_COLAB_DATASET": "data/prepared_training/main8_multicyp_attnsom_sourceaware.json",
+        "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
+        "HYBRID_COLAB_EPOCHS": "20",
+        "HYBRID_COLAB_BATCH_SIZE": "16",
+        "HYBRID_COLAB_LR": "2e-5",
+        "HYBRID_COLAB_WD": "1e-4",
+        "HYBRID_COLAB_SPLIT_MODE": "scaffold_source_size",
+        "HYBRID_COLAB_LIMIT": "0",
+        "HYBRID_COLAB_COMPUTE_XTB_IF_MISSING": "0",
+        "HYBRID_COLAB_SITE_LABELED_ONLY": "1",
+        "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "0",
+        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "6",
+        "HYBRID_COLAB_EARLY_STOPPING_METRIC": "site_top1_all",
+        "HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS": "2",
+        "HYBRID_COLAB_INCLUDE_XENOSITE": "0",
+        "HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK": "1",
+        "HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS": "0",
+        "HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS": "0",
+        "HYBRID_COLAB_SEED": "42",
+        "HYBRID_COLAB_TRAIN_RATIO": "0.80",
+        "HYBRID_COLAB_VAL_RATIO": "0.10",
+        "HYBRID_COLAB_NEXUS_SIDEINFO_ONLY": "1",
+        "HYBRID_COLAB_USE_CANDIDATE_MASK": "0",
+        "HYBRID_COLAB_BALANCE_TRAIN_SOURCES": "1",
+        "HYBRID_COLAB_SITE_ONLY_TARGET_CYP": "0",
+        "HYBRID_COLAB_SITE_RANKING_WEIGHT": "0.80",
+        "HYBRID_COLAB_SITE_HARD_NEGATIVE_FRACTION": "0.70",
+        "HYBRID_COLAB_SITE_TOP1_MARGIN_TOPK": "2",
+        "HYBRID_COLAB_SITE_TOP1_MARGIN_DECAY": "0.85",
+        "HYBRID_COLAB_SITE_SOURCE_WEIGHT_DEFAULT": "1.0",
+        "HYBRID_COLAB_SITE_SOURCE_WEIGHT_DRUGBANK": "1.0",
+        "HYBRID_COLAB_SITE_SOURCE_WEIGHT_AZ120": "1.0",
+        "HYBRID_COLAB_SITE_SOURCE_WEIGHT_METXBIODB": "1.05",
+        "HYBRID_COLAB_SITE_SOURCE_WEIGHT_ATTNSOM": "1.10",
+        "HYBRID_COLAB_SITE_SOURCE_WEIGHT_CYP_DBS_EXTERNAL": "1.20",
+        "HYBRID_COLAB_DOMAIN_ADV_WEIGHT": "0.0",
+        "HYBRID_COLAB_SOURCE_ALIGN_WEIGHT": "0.0",
+        "HYBRID_COLAB_SOURCE_ALIGN_COV_WEIGHT": "0.0",
+        "HYBRID_COLAB_NEXUS_LIVE_WAVE_VOTE_GRAD_SCALE": "0.10",
+        "HYBRID_COLAB_NEXUS_LIVE_ANALOGICAL_VOTE_GRAD_SCALE": "0.10",
+        "HYBRID_COLAB_NEXUS_WAVE_SIDEINFO_AUX_WEIGHT": "0.03",
+        "HYBRID_COLAB_NEXUS_ANALOGICAL_SIDEINFO_AUX_WEIGHT": "0.05",
+        "HYBRID_COLAB_BENCHMARK_DATASETS": "data/prepared_training/main8_benchmark_a_row_level_singlecyp.json,data/prepared_training/main8_benchmark_b_unique_molecules.json,data/prepared_training/main8_benchmark_c_high_confidence.json",
+        "HYBRID_COLAB_BENCHMARK_BATCH_SIZE": "16",
+        "HYBRID_COLAB_BENCHMARK_EVERY": "1",
+        "HYBRID_COLAB_BENCHMARK_SELECTION_METRIC": "site_top1_acc_all_molecules",
+        "HYBRID_COLAB_BENCHMARK_SELECTION_WEIGHT": "0.75",
     },
     "cyp3a4_sideinfo_fullrank_from_multicyp": {
         "HYBRID_COLAB_DATASET": "data/prepared_training/main8_cyp3a4_augmented.json",
@@ -951,6 +1005,21 @@ def main() -> None:
     freeze_base_modules = os.environ.get("HYBRID_COLAB_FREEZE_BASE_MODULES", "").strip()
     if freeze_base_modules:
         argv.extend(["--freeze-base-modules", freeze_base_modules])
+    benchmark_datasets = os.environ.get("HYBRID_COLAB_BENCHMARK_DATASETS", "").strip()
+    if benchmark_datasets:
+        argv.extend(["--benchmark-datasets", benchmark_datasets])
+    benchmark_batch_size = os.environ.get("HYBRID_COLAB_BENCHMARK_BATCH_SIZE", "").strip()
+    if benchmark_batch_size:
+        argv.extend(["--benchmark-batch-size", benchmark_batch_size])
+    benchmark_every = os.environ.get("HYBRID_COLAB_BENCHMARK_EVERY", "").strip()
+    if benchmark_every:
+        argv.extend(["--benchmark-every", benchmark_every])
+    benchmark_selection_metric = os.environ.get("HYBRID_COLAB_BENCHMARK_SELECTION_METRIC", "").strip()
+    if benchmark_selection_metric:
+        argv.extend(["--benchmark-selection-metric", benchmark_selection_metric])
+    benchmark_selection_weight = os.environ.get("HYBRID_COLAB_BENCHMARK_SELECTION_WEIGHT", "").strip()
+    if benchmark_selection_weight:
+        argv.extend(["--benchmark-selection-weight", benchmark_selection_weight])
     if precedent_logbook:
         argv.extend(["--precedent-logbook", precedent_logbook])
 
@@ -973,6 +1042,10 @@ def main() -> None:
         print(f"disable_precedent_logbook={effective_disable_precedent_logbook}")
         print(f"live_wave_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS', '0')}")
         print(f"live_analogical_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS', '0')}")
+        if benchmark_datasets:
+            print(f"benchmark_datasets={benchmark_datasets}")
+            print(f"benchmark_selection_metric={benchmark_selection_metric or 'site_top1_acc_all_molecules'}")
+            print(f"benchmark_selection_weight={benchmark_selection_weight or '0'}")
         print(f"TORCHDYNAMO_DISABLE={os.environ.get('TORCHDYNAMO_DISABLE', '')}")
         print(f"TORCH_COMPILE_DISABLE={os.environ.get('TORCH_COMPILE_DISABLE', '')}")
         print(f"HYBRID_FORCE_MANUAL_OPTIMIZER={os.environ.get('HYBRID_FORCE_MANUAL_OPTIMIZER', '')}")

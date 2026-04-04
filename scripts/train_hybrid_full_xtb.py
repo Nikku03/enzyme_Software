@@ -21,11 +21,15 @@ if str(SRC) not in sys.path:
 
 from enzyme_software.liquid_nn_v2 import HybridLNNModel, LiquidMetabolismNetV2, ModelConfig, TrainingConfig
 from enzyme_software.liquid_nn_v2._compat import require_torch, torch
+from enzyme_software.liquid_nn_v2.data.cyp_classes import MAJOR_CYP_CLASSES
+from enzyme_software.liquid_nn_v2.data.dataset_loader import collate_fn
 from enzyme_software.liquid_nn_v2.experiments.hybrid_full_xtb import (
+    FullXTBHybridDataset,
     create_full_xtb_dataloaders_from_drugs,
     load_full_xtb_warm_start,
     split_drugs,
 )
+from enzyme_software.liquid_nn_v2.features.steric_features import StructureLibrary
 from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM
 from enzyme_software.liquid_nn_v2.training.episode_logger import EpisodeLogger
 from enzyme_software.liquid_nn_v2.training.trainer import Trainer
@@ -156,6 +160,13 @@ def _load_drugs(path: Path) -> list[dict]:
     return list(payload.get("drugs", payload))
 
 
+def _json_rows(path: Path) -> list[dict]:
+    payload = json.loads(path.read_text())
+    if isinstance(payload, dict):
+        return list(payload.get("drugs", payload))
+    return list(payload)
+
+
 def _has_site_labels(drug: dict) -> bool:
     return bool(drug.get("som") or drug.get("site_atoms") or drug.get("site_atom_indices") or drug.get("metabolism_sites"))
 
@@ -168,8 +179,21 @@ def _primary_cyp(drug: dict) -> str:
     return str(all_cyps[0]).strip() if all_cyps else ""
 
 
+def _supports_cyp(drug: dict) -> bool:
+    return _primary_cyp(drug) in set(MAJOR_CYP_CLASSES)
+
+
 def _parse_csv_tokens(raw: str) -> list[str]:
     return [token.strip() for token in str(raw or "").split(",") if token.strip()]
+
+
+def _benchmark_row(drug: dict) -> dict:
+    row = dict(drug)
+    row.setdefault("source", "benchmark")
+    row.setdefault("confidence", "validated")
+    if "cyp" not in row and row.get("primary_cyp"):
+        row["cyp"] = row["primary_cyp"]
+    return row
 
 
 def _normalize_source_name(value: str) -> str:
@@ -278,6 +302,78 @@ def _filter_by_sources(items: list[dict], allowlist: list[str]) -> list[dict]:
         return list(items)
     allowed = {_normalize_source_name(token) for token in allowlist}
     return [drug for drug in items if _normalize_source_name(_provenance_source(drug)) in allowed]
+
+
+def _build_benchmark_loaders(
+    dataset_paths: list[Path],
+    *,
+    structure_sdf: str | None,
+    xtb_cache_dir: str,
+    batch_size: int,
+) -> dict[str, object]:
+    benchmark_loaders: dict[str, object] = {}
+    structure_library = StructureLibrary.from_sdf(structure_sdf) if structure_sdf else None
+    for dataset_path in dataset_paths:
+        if not dataset_path.exists():
+            raise FileNotFoundError(f"Benchmark dataset not found: {dataset_path}")
+        rows = [_benchmark_row(row) for row in _json_rows(dataset_path)]
+        rows = [row for row in rows if _has_site_labels(row) and _supports_cyp(row)]
+        dataset = FullXTBHybridDataset(
+            split="benchmark",
+            augment=False,
+            drugs=rows,
+            structure_library=structure_library,
+            use_manual_engine_features=True,
+            full_xtb_cache_dir=xtb_cache_dir,
+            compute_full_xtb_if_missing=False,
+            drop_failed=True,
+        )
+        dataset.precompute()
+        loader = torch.utils.data.DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            collate_fn=collate_fn,
+            num_workers=0,
+            pin_memory=False,
+        )
+        loader._split_name = f"benchmark:{dataset_path.name}"
+        loader._current_epoch = 0
+        benchmark_loaders[str(dataset_path)] = loader
+    return benchmark_loaders
+
+
+def _evaluate_benchmarks(
+    *,
+    model,
+    device,
+    benchmark_loaders: dict[str, object],
+) -> dict[str, object]:
+    if not benchmark_loaders:
+        return {}
+    evaluator = Trainer(model=model, config=TrainingConfig(), device=device, episode_logger=None)
+    report: dict[str, object] = {}
+    for dataset_name, loader in benchmark_loaders.items():
+        report[dataset_name] = evaluator.evaluate_loader(loader)
+    return report
+
+
+def _aggregate_benchmark_metrics(
+    benchmark_metrics: dict[str, object],
+    metric_name: str,
+) -> dict[str, float]:
+    values: list[float] = []
+    for metrics in benchmark_metrics.values():
+        if isinstance(metrics, dict) and metric_name in metrics:
+            values.append(float(metrics.get(metric_name, 0.0)))
+    if not values:
+        return {}
+    return {
+        metric_name: float(sum(values) / float(len(values))),
+        "count": float(len(values)),
+        "min": float(min(values)),
+        "max": float(max(values)),
+    }
 
 
 def _episode_source_breakdown(path: Path | None) -> dict[str, dict[str, float]]:
@@ -580,6 +676,11 @@ def _save_training_state(
     split_summary: dict[str, object],
     episode_log_path: Path | None = None,
     test_metrics=None,
+    benchmark_datasets: list[str] | None = None,
+    benchmark_selection_metric: str = "",
+    benchmark_selection_weight: float = 0.0,
+    benchmark_history: list[dict] | None = None,
+    best_benchmark_metric: float | None = None,
     status: str = "running",
 ):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -598,6 +699,18 @@ def _save_training_state(
     last_val_metrics = dict(history[-1].get("val") or {}) if history else {}
     best_val_metrics = dict((best_site_top1_entry or {}).get("val") or {})
     best_train_metrics = dict((best_site_top1_entry or {}).get("train") or {})
+    benchmark_history = list(benchmark_history or [])
+    last_benchmark_metrics = dict(benchmark_history[-1].get("metrics") or {}) if benchmark_history else {}
+    last_benchmark_aggregate = dict(benchmark_history[-1].get("aggregate") or {}) if benchmark_history else {}
+    benchmark_selection_entry = None
+    if benchmark_history and benchmark_selection_metric:
+        benchmark_selection_entry = max(
+            benchmark_history,
+            key=lambda row: float((row.get("aggregate") or {}).get(benchmark_selection_metric, float("-inf"))),
+        )
+    best_benchmark_epoch = int((benchmark_selection_entry or {}).get("epoch") or 0)
+    best_benchmark_metrics = dict((benchmark_selection_entry or {}).get("metrics") or {}) if benchmark_selection_entry else {}
+    best_benchmark_aggregate = dict((benchmark_selection_entry or {}).get("aggregate") or {}) if benchmark_selection_entry else {}
     nexus_diagnosis = _nexus_diagnosis(history)
     source_breakdown = _episode_source_breakdown(episode_log_path)
     checkpoint = {
@@ -617,11 +730,21 @@ def _save_training_state(
         "best_val_monitor": best_val_monitor,
         "best_epoch": best_epoch,
         "best_monitor_epoch": best_monitor_epoch,
+        "best_benchmark_epoch": best_benchmark_epoch,
         "history_len": history_len,
         "final_epoch": final_epoch,
         "early_stopping_metric": args.early_stopping_metric,
         "test_metrics": test_metrics,
         "history": history,
+        "benchmark_datasets": list(benchmark_datasets or []),
+        "benchmark_selection_metric": benchmark_selection_metric,
+        "benchmark_selection_weight": float(benchmark_selection_weight),
+        "benchmark_history": benchmark_history,
+        "best_benchmark_metric": best_benchmark_metric,
+        "last_benchmark_metrics": last_benchmark_metrics,
+        "last_benchmark_aggregate": last_benchmark_aggregate,
+        "best_benchmark_metrics": best_benchmark_metrics,
+        "best_benchmark_aggregate": best_benchmark_aggregate,
         "xtb_feature_dim": FULL_XTB_FEATURE_DIM,
         "xtb_cache_dir": str(xtb_cache_dir),
         "xtb_validity": xtb_validity_summary,
@@ -663,10 +786,20 @@ def _save_training_state(
                 "best_val_monitor": best_val_monitor,
                 "best_epoch": best_epoch,
                 "best_monitor_epoch": best_monitor_epoch,
+                "best_benchmark_epoch": best_benchmark_epoch,
                 "history_len": history_len,
                 "final_epoch": final_epoch,
                 "early_stopping_metric": args.early_stopping_metric,
                 "test_metrics": test_metrics,
+                "benchmark_datasets": list(benchmark_datasets or []),
+                "benchmark_selection_metric": benchmark_selection_metric,
+                "benchmark_selection_weight": float(benchmark_selection_weight),
+                "benchmark_history": benchmark_history,
+                "best_benchmark_metric": best_benchmark_metric,
+                "last_benchmark_metrics": last_benchmark_metrics,
+                "last_benchmark_aggregate": last_benchmark_aggregate,
+                "best_benchmark_metrics": best_benchmark_metrics,
+                "best_benchmark_aggregate": best_benchmark_aggregate,
                 "xtb_feature_dim": FULL_XTB_FEATURE_DIM,
                 "xtb_validity": xtb_validity_summary,
                 "split_mode": split_mode,
@@ -758,6 +891,15 @@ def main() -> None:
     parser.add_argument("--freeze-base-modules", default="")
     parser.add_argument("--backbone-thaw-lr-scale", type=float, default=0.1)
     parser.add_argument("--site-only-target-cyp", action="store_true")
+    parser.add_argument("--benchmark-datasets", default="")
+    parser.add_argument("--benchmark-batch-size", type=int, default=16)
+    parser.add_argument("--benchmark-every", type=int, default=1)
+    parser.add_argument(
+        "--benchmark-selection-metric",
+        choices=("site_top1_acc_all_molecules", "site_top3_acc_all_molecules"),
+        default="site_top1_acc_all_molecules",
+    )
+    parser.add_argument("--benchmark-selection-weight", type=float, default=0.0)
     args = parser.parse_args()
     freeze_base_modules = _parse_csv_tokens(args.freeze_base_modules)
     early_stopping_patience = int(args.early_stopping_patience)
@@ -923,6 +1065,28 @@ def main() -> None:
         print(
             f"{split_name} effective: total={summary.get('effective_total', summary.get('total'))} | "
             f"invalid={summary.get('invalid_count', 0)} | invalid_reasons={summary.get('invalid_reasons', {})}",
+            flush=True,
+        )
+
+    benchmark_dataset_paths = [Path(part) for part in _parse_csv_tokens(args.benchmark_datasets)]
+    benchmark_selection_weight = min(max(float(args.benchmark_selection_weight), 0.0), 1.0)
+    benchmark_history: list[dict] = []
+    best_benchmark_metric = float("-inf")
+    benchmark_loaders: dict[str, object] = {}
+    if benchmark_dataset_paths:
+        benchmark_structure_sdf = args.structure_sdf if args.structure_sdf and Path(args.structure_sdf).exists() else None
+        benchmark_loaders = _build_benchmark_loaders(
+            benchmark_dataset_paths,
+            structure_sdf=benchmark_structure_sdf,
+            xtb_cache_dir=str(xtb_cache_dir),
+            batch_size=int(args.benchmark_batch_size),
+        )
+        print(
+            "benchmark_selection=1 | "
+            f"datasets={[path.name for path in benchmark_dataset_paths]} | "
+            f"metric={args.benchmark_selection_metric} | "
+            f"weight={benchmark_selection_weight:.2f} | "
+            f"every={max(1, int(args.benchmark_every))}",
             flush=True,
         )
 
@@ -1159,7 +1323,40 @@ def main() -> None:
             val_metrics = trainer.evaluate_loader(val_loader)
             epoch_seconds = time.perf_counter() - epoch_start
             elapsed_seconds = time.perf_counter() - train_start
-            history.append({"epoch": epoch + 1, "train": train_stats, "val": val_metrics})
+            benchmark_metrics: dict[str, object] = {}
+            benchmark_aggregate: dict[str, float] = {}
+            benchmark_metric_value = float("-inf")
+            if benchmark_loaders and ((epoch + 1) % max(1, int(args.benchmark_every)) == 0):
+                benchmark_metrics = _evaluate_benchmarks(
+                    model=model,
+                    device=device,
+                    benchmark_loaders=benchmark_loaders,
+                )
+                benchmark_aggregate = _aggregate_benchmark_metrics(
+                    benchmark_metrics,
+                    args.benchmark_selection_metric,
+                )
+                benchmark_metric_value = float(
+                    benchmark_aggregate.get(args.benchmark_selection_metric, float("-inf"))
+                )
+                benchmark_history.append(
+                    {
+                        "epoch": epoch + 1,
+                        "metrics": benchmark_metrics,
+                        "aggregate": benchmark_aggregate,
+                    }
+                )
+                if benchmark_metric_value > best_benchmark_metric:
+                    best_benchmark_metric = benchmark_metric_value
+            history.append(
+                {
+                    "epoch": epoch + 1,
+                    "train": train_stats,
+                    "val": val_metrics,
+                    "benchmark": benchmark_metrics,
+                    "benchmark_aggregate": benchmark_aggregate,
+                }
+            )
 
             val_top1 = float(val_metrics.get("site_top1_acc", 0.0))
             val_top3 = float(val_metrics.get("site_top3_acc", 0.0))
@@ -1175,10 +1372,16 @@ def main() -> None:
             else:
                 monitor_value = val_top3_all
             trainer.step_scheduler(monitor_value)
+            selection_value = monitor_value
+            if benchmark_loaders and benchmark_selection_weight > 0.0 and benchmark_metric_value != float("-inf"):
+                selection_value = (
+                    (1.0 - benchmark_selection_weight) * float(monitor_value)
+                    + benchmark_selection_weight * benchmark_metric_value
+                )
             if val_top1_all > best_val_top1:
                 best_val_top1 = val_top1_all
-            if monitor_value > best_val_monitor:
-                best_val_monitor = monitor_value
+            if selection_value > best_val_monitor:
+                best_val_monitor = selection_value
                 best_state = _initialized_state_dict(model)
                 epochs_without_improvement = 0
             else:
@@ -1193,9 +1396,11 @@ def main() -> None:
                     f"cyp_loss={train_stats.get('cyp_loss', float('nan')):.4f} | "
                     f"site_top1={val_metrics.get('site_top1_acc', 0.0):.3f} | "
                     f"site_top3={val_metrics.get('site_top3_acc', 0.0):.3f} | "
+                    f"site_top1_all={val_metrics.get('site_top1_acc_all_molecules', 0.0):.3f} | "
                     f"cyp_acc={val_metrics.get('accuracy', 0.0):.3f} | "
                     f"cyp_f1={val_metrics.get('f1_macro', 0.0):.3f} | "
                     f"physics_gate={train_stats.get('physics_gate_mean', 0.0):.3f} | "
+                    f"benchmark_top1={benchmark_metric_value if benchmark_metric_value != float('-inf') else float('nan'):.3f} | "
                     f"epoch_time={epoch_seconds:.1f}s | "
                     f"elapsed={elapsed_seconds / 60.0:.1f}m | "
                     f"eta={eta_seconds / 60.0:.1f}m",
@@ -1218,6 +1423,11 @@ def main() -> None:
                 split_summary=split_summary,
                 episode_log_path=episode_log_path,
                 test_metrics=None,
+                benchmark_datasets=[str(path) for path in benchmark_dataset_paths],
+                benchmark_selection_metric=args.benchmark_selection_metric,
+                benchmark_selection_weight=benchmark_selection_weight,
+                benchmark_history=benchmark_history,
+                best_benchmark_metric=None if best_benchmark_metric == float("-inf") else best_benchmark_metric,
                 status="running",
             )
 
@@ -1246,6 +1456,11 @@ def main() -> None:
             split_summary=split_summary,
             episode_log_path=episode_log_path,
             test_metrics=None,
+            benchmark_datasets=[str(path) for path in benchmark_dataset_paths],
+            benchmark_selection_metric=args.benchmark_selection_metric,
+            benchmark_selection_weight=benchmark_selection_weight,
+            benchmark_history=benchmark_history,
+            best_benchmark_metric=None if best_benchmark_metric == float("-inf") else best_benchmark_metric,
             status="interrupted",
         )
         print(f"Saved latest checkpoint: {latest_path}", flush=True)
@@ -1263,6 +1478,25 @@ def main() -> None:
     setattr(test_loader, "_split_name", "test")
     test_metrics = trainer.evaluate_loader(test_loader)
     print(json.dumps(test_metrics, indent=2), flush=True)
+    if benchmark_loaders:
+        final_benchmark_metrics = _evaluate_benchmarks(
+            model=model,
+            device=device,
+            benchmark_loaders=benchmark_loaders,
+        )
+        final_benchmark_aggregate = _aggregate_benchmark_metrics(
+            final_benchmark_metrics,
+            args.benchmark_selection_metric,
+        )
+        benchmark_history.append(
+            {
+                "epoch": int(len(history)),
+                "phase": "final_best_state",
+                "metrics": final_benchmark_metrics,
+                "aggregate": final_benchmark_aggregate,
+            }
+        )
+        print(json.dumps({"benchmark_metrics": final_benchmark_aggregate}, indent=2), flush=True)
 
     latest_path, best_path, archive_path, report_path = _save_training_state(
         model=model,
@@ -1280,6 +1514,11 @@ def main() -> None:
         split_summary=split_summary,
         episode_log_path=episode_log_path,
         test_metrics=test_metrics,
+        benchmark_datasets=[str(path) for path in benchmark_dataset_paths],
+        benchmark_selection_metric=args.benchmark_selection_metric,
+        benchmark_selection_weight=benchmark_selection_weight,
+        benchmark_history=benchmark_history,
+        best_benchmark_metric=None if best_benchmark_metric == float("-inf") else best_benchmark_metric,
         status="completed",
     )
     print(f"\nSaved checkpoint: {archive_path}", flush=True)
