@@ -669,7 +669,15 @@ def main() -> None:
     if os.environ.get("HYBRID_COLAB_INCLUDE_XENOSITE", "1").strip().lower() in {"1", "true", "yes", "on"}:
         argv.extend(["--xenosite-manifest", xenosite_manifest])
         argv.extend(["--xenosite-topk", os.environ["HYBRID_COLAB_XENOSITE_TOPK"]])
-    if os.environ.get("HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK", "1").strip().lower() in {"1", "true", "yes", "on"}:
+    precedent_logbook = os.environ.get("HYBRID_COLAB_PRECEDENT_LOGBOOK", "").strip()
+    disable_precedent_logbook = os.environ.get("HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK", "1").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    # An explicit logbook path should win over the preset default disable flag.
+    if disable_precedent_logbook and not precedent_logbook:
         argv.append("--disable-precedent-logbook")
     target_cyp = os.environ.get("HYBRID_COLAB_TARGET_CYP", "").strip()
     if target_cyp:
@@ -699,7 +707,6 @@ def main() -> None:
     freeze_base_modules = os.environ.get("HYBRID_COLAB_FREEZE_BASE_MODULES", "").strip()
     if freeze_base_modules:
         argv.extend(["--freeze-base-modules", freeze_base_modules])
-    precedent_logbook = os.environ.get("HYBRID_COLAB_PRECEDENT_LOGBOOK", "").strip()
     if precedent_logbook:
         argv.extend(["--precedent-logbook", precedent_logbook])
 
@@ -718,7 +725,8 @@ def main() -> None:
         print(f"warm_start_mode={os.environ.get('HYBRID_COLAB_WARM_START_MODE', 'best')}")
         print(f"split_mode={os.environ.get('HYBRID_COLAB_SPLIT_MODE', 'scaffold_source_size')}")
         print(f"lock_preset_policy={int(_env_flag('HYBRID_COLAB_LOCK_PRESET_POLICY', True))}")
-        print(f"disable_precedent_logbook={os.environ.get('HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK', '1')}")
+        effective_disable_precedent_logbook = "0" if precedent_logbook else os.environ.get("HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK", "1")
+        print(f"disable_precedent_logbook={effective_disable_precedent_logbook}")
         print(f"live_wave_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS', '0')}")
         print(f"live_analogical_vote_inputs={os.environ.get('HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS', '0')}")
         print(f"TORCHDYNAMO_DISABLE={os.environ.get('TORCHDYNAMO_DISABLE', '')}")
