@@ -114,6 +114,13 @@ class ModelConfig:
     disable_cyp_task: bool = False
     fixed_cyp_index: int = -1
     fixed_cyp_logit: float = 8.0
+    use_topk_reranker: bool = False
+    topk_reranker_k: int = 8
+    topk_reranker_hidden_dim: int = 128
+    topk_reranker_heads: int = 4
+    topk_reranker_layers: int = 2
+    topk_reranker_dropout: float = 0.10
+    topk_reranker_residual_scale: float = 0.75
     domain_adv_weight: float = 0.0
     domain_adv_grad_scale: float = 0.1
     domain_adv_hidden_dim: int = 64
@@ -269,6 +276,13 @@ class ModelConfig:
         self.disable_cyp_task = bool(self.disable_cyp_task)
         self.fixed_cyp_index = int(self.fixed_cyp_index)
         self.fixed_cyp_logit = float(self.fixed_cyp_logit)
+        self.use_topk_reranker = bool(self.use_topk_reranker)
+        self.topk_reranker_k = max(2, int(self.topk_reranker_k))
+        self.topk_reranker_hidden_dim = max(32, int(self.topk_reranker_hidden_dim))
+        self.topk_reranker_heads = max(1, int(self.topk_reranker_heads))
+        self.topk_reranker_layers = max(1, int(self.topk_reranker_layers))
+        self.topk_reranker_dropout = min(max(float(self.topk_reranker_dropout), 0.0), 0.5)
+        self.topk_reranker_residual_scale = max(0.0, float(self.topk_reranker_residual_scale))
         self.domain_adv_weight = max(0.0, float(self.domain_adv_weight))
         self.domain_adv_grad_scale = max(0.0, float(self.domain_adv_grad_scale))
         self.domain_adv_hidden_dim = max(16, int(self.domain_adv_hidden_dim))

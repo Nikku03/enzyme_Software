@@ -5,6 +5,7 @@ from typing import Dict, Optional
 from enzyme_software.liquid_nn_v2._compat import TORCH_AVAILABLE, nn, require_torch, torch
 from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM
 from enzyme_software.liquid_nn_v2.features.route_prior import combine_lnn_with_prior
+from enzyme_software.liquid_nn_v2.model.hybrid_modules import TopKCrossAtomReranker
 from enzyme_software.liquid_nn_v2.model.nexus_bridge import NexusHybridBridge
 from enzyme_software.liquid_nn_v2.model.precedent_logbook import AuditedEpisodeLogbook
 from enzyme_software.liquid_nn_v2.model.wave_field import WholeMoleculeWaveField
@@ -27,6 +28,7 @@ if TORCH_AVAILABLE:
             self.nexus_sideinfo_proj = None
             self.nexus_sideinfo_gate = None
             self.nexus_sideinfo_scale_logit = None
+            self.topk_reranker = None
             self.domain_adv_head = None
             domain_adv_weight = float(getattr(self.config, "domain_adv_weight", 0.0))
             if domain_adv_weight > 0.0:
@@ -165,6 +167,21 @@ if TORCH_AVAILABLE:
                     nn.init.zeros_(self.site_arbiter_head[-1].weight)
                     nn.init.zeros_(self.site_arbiter_head[-1].bias)
                     self.site_arbiter_uses_bridge = True
+            if bool(getattr(self.config, "use_topk_reranker", False)):
+                atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
+                mol_dim = int(getattr(self.config, "cyp_branch_dim", getattr(self.config, "mol_dim", 128)))
+                extra_dim = 6
+                self.topk_reranker = TopKCrossAtomReranker(
+                    atom_dim=atom_dim,
+                    mol_dim=mol_dim,
+                    extra_dim=extra_dim,
+                    hidden_dim=int(getattr(self.config, "topk_reranker_hidden_dim", atom_dim)),
+                    top_k=int(getattr(self.config, "topk_reranker_k", 8)),
+                    num_heads=int(getattr(self.config, "topk_reranker_heads", 4)),
+                    num_layers=int(getattr(self.config, "topk_reranker_layers", 2)),
+                    dropout=float(getattr(self.config, "topk_reranker_dropout", 0.10)),
+                    residual_scale=float(getattr(self.config, "topk_reranker_residual_scale", 0.75)),
+                )
 
         def _optional_feature(self, value, rows: int, width: int, *, device, dtype) -> torch.Tensor:
             if width <= 0:
@@ -254,6 +271,59 @@ if TORCH_AVAILABLE:
             nexus_stats = dict(diagnostics.get("nexus_bridge") or {})
             nexus_stats["candidate_fraction"] = float(mask.detach().mean().item())
             diagnostics["nexus_bridge"] = nexus_stats
+            result["diagnostics"] = diagnostics
+            return result
+
+        def _topk_reranker_features(
+            self,
+            outputs: Dict[str, object],
+            batch: Dict[str, object],
+        ) -> torch.Tensor:
+            site_logits = outputs["site_logits"]
+            rows = int(site_logits.size(0))
+            device = site_logits.device
+            dtype = site_logits.dtype
+            bridge = outputs.get("nexus_bridge_outputs") or {}
+            pieces = [
+                self._optional_feature(bridge.get("wave_site_bias"), rows, 1, device=device, dtype=dtype),
+                self._optional_feature(bridge.get("analogical_site_bias"), rows, 1, device=device, dtype=dtype),
+                self._optional_feature(bridge.get("wave_reliability"), rows, 1, device=device, dtype=dtype),
+                self._optional_feature(bridge.get("analogical_confidence"), rows, 1, device=device, dtype=dtype),
+                self._optional_feature(bridge.get("analogical_gate"), rows, 1, device=device, dtype=dtype),
+                self._optional_feature(batch.get("candidate_mask"), rows, 1, device=device, dtype=dtype),
+            ]
+            return torch.cat(pieces, dim=-1)
+
+        def _apply_topk_reranker(
+            self,
+            outputs: Dict[str, object],
+            batch: Dict[str, object],
+        ) -> Dict[str, object]:
+            if self.topk_reranker is None:
+                return outputs
+            site_logits = outputs.get("site_logits")
+            atom_features = outputs.get("atom_features")
+            batch_index = batch.get("batch")
+            if site_logits is None or atom_features is None or batch_index is None:
+                return outputs
+            if not getattr(site_logits, "numel", lambda: 0)() or not getattr(batch_index, "numel", lambda: 0)():
+                return outputs
+            reranked_logits, reranker = self.topk_reranker(
+                atom_features=atom_features,
+                site_logits=site_logits,
+                batch_index=batch_index,
+                mol_features=outputs.get("mol_features"),
+                extra_features=self._topk_reranker_features(outputs, batch),
+            )
+            reranked_logits = torch.nan_to_num(reranked_logits, nan=0.0, posinf=20.0, neginf=-20.0).clamp(-20.0, 20.0)
+            result = dict(outputs)
+            result.setdefault("site_logits_base", site_logits)
+            result["site_logits"] = reranked_logits
+            result["reranked_site_logits"] = reranked_logits
+            result["site_scores"] = torch.sigmoid(reranked_logits)
+            result["topk_reranker_outputs"] = reranker
+            diagnostics = dict(result.get("diagnostics") or {})
+            diagnostics["topk_reranker"] = dict(reranker.get("stats") or {})
             result["diagnostics"] = diagnostics
             return result
 
@@ -768,6 +838,7 @@ if TORCH_AVAILABLE:
                     )
                     outputs["domain_logits"] = self.domain_adv_head(rev)
             outputs = self._apply_nexus_bridge(outputs, batch)
+            outputs = self._apply_topk_reranker(outputs, batch)
             outputs = self._apply_candidate_mask(outputs, batch)
             prior = route_prior
             if prior is None:
