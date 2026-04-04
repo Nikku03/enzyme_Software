@@ -409,6 +409,16 @@ if TORCH_AVAILABLE:
                 prior_features=prior_payload.get("atom_prior_embedding") if getattr(self.base_lnn.config, "use_manual_engine_priors", False) else None,
             )
             site_logits = base_impl._apply_bde_prior(site_logits, (batch.get("physics_features") or {}).get("bde_values"))
+            source_site_logits = {}
+            if hasattr(base_impl, "_compute_source_site_logits"):
+                source_site_logits = base_impl._compute_source_site_logits(fused_atom_features, prior_payload) or {}
+            if source_site_logits and hasattr(base_impl, "_blend_source_site_logits"):
+                site_logits = base_impl._blend_source_site_logits(
+                    site_logits,
+                    source_site_logits,
+                    batch.get("graph_metadata"),
+                    batch.get("batch"),
+                )
             sideinfo_diag = {
                 "fused_atom_features": fused_atom_features,
                 "sideinfo_inputs": sideinfo,
@@ -416,6 +426,8 @@ if TORCH_AVAILABLE:
                 "sideinfo_gate": sideinfo_gate,
                 "sideinfo_scale": sideinfo_scale.view(1, 1),
             }
+            if source_site_logits:
+                sideinfo_diag["source_site_logits"] = source_site_logits
             return site_logits.clamp(-20.0, 20.0), sideinfo_diag
 
         def _site_logits_from_arbiter(
@@ -765,6 +777,7 @@ if TORCH_AVAILABLE:
                     "atom_multivectors": bridge["atom_multivectors"],
                     "site_vote_heads": council,
                     "nexus_sideinfo": sideinfo,
+                    "source_site_logits": sideinfo.get("source_site_logits") if sideinfo else outputs.get("source_site_logits"),
                     "diagnostics": diagnostics,
                 }
             )
