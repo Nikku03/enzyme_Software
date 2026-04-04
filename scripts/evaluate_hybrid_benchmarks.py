@@ -18,7 +18,7 @@ if str(SRC) not in sys.path:
 from enzyme_software.liquid_nn_v2 import HybridLNNModel, LiquidMetabolismNetV2, ModelConfig, TrainingConfig
 from enzyme_software.liquid_nn_v2._compat import require_torch, torch
 from enzyme_software.liquid_nn_v2.data.cyp_classes import MAJOR_CYP_CLASSES
-from enzyme_software.liquid_nn_v2.experiments.hybrid_full_xtb import FullXTBHybridDataset
+from enzyme_software.liquid_nn_v2.experiments.hybrid_full_xtb import FullXTBHybridDataset, load_full_xtb_warm_start
 from enzyme_software.liquid_nn_v2.features.steric_features import StructureLibrary
 from enzyme_software.liquid_nn_v2.features.xtb_features import (
     load_or_compute_full_xtb_features,
@@ -151,8 +151,13 @@ def _load_model(checkpoint_path: Path, device):
             return_intermediate_stats=True,
         )
     model = HybridLNNModel(LiquidMetabolismNetV2(base_config))
-    state_dict = payload.get("model_state_dict") or payload
-    model.load_state_dict(state_dict, strict=False)
+    load_full_xtb_warm_start(
+        model,
+        checkpoint_path,
+        device=device,
+        new_manual_atom_dim=int(getattr(base_config, "manual_atom_feature_dim", 40)),
+        new_atom_input_dim=int(getattr(base_config, "atom_input_dim", 148)),
+    )
     model.to(device)
     model.eval()
     return model, payload
