@@ -214,6 +214,82 @@ def compute_site_metrics_v2(scores, labels, batch, threshold: float = 0.5, super
     }
 
 
+def compute_reranker_metrics(
+    final_scores,
+    proposal_scores,
+    labels,
+    batch,
+    proposal_mask,
+    supervision_mask=None,
+) -> Dict[str, float]:
+    final_np = _to_numpy(final_scores).reshape(-1)
+    proposal_np = _to_numpy(proposal_scores).reshape(-1)
+    labels_np = _to_numpy(labels).reshape(-1)
+    batch_np = _to_numpy(batch).reshape(-1)
+    proposal_mask_np = _to_numpy(proposal_mask).reshape(-1) > 0.5
+    supervision_np = _to_numpy(supervision_mask).reshape(-1) > 0.5 if supervision_mask is not None else None
+    if batch_np.size == 0:
+        return {}
+    corrected = 0
+    harmed = 0
+    unchanged = 0
+    proposal_hit_molecules = 0
+    proposal_positive_total = 0
+    proposal_positive_hit = 0
+    true_deltas = []
+    false_deltas = []
+    total = 0
+    num_molecules = int(batch_np.max()) + 1
+    for mol_idx in range(num_molecules):
+        mol_mask = batch_np == mol_idx
+        if supervision_np is not None:
+            mol_mask = mol_mask & supervision_np
+        if not np.any(mol_mask):
+            continue
+        mol_labels = labels_np[mol_mask]
+        if not np.any(mol_labels == 1):
+            continue
+        total += 1
+        mol_proposal_mask = proposal_mask_np[mol_mask]
+        if np.any((mol_labels == 1) & mol_proposal_mask):
+            proposal_hit_molecules += 1
+        proposal_positive_total += int(np.sum(mol_labels == 1))
+        proposal_positive_hit += int(np.sum((mol_labels == 1) & mol_proposal_mask))
+        mol_final = final_np[mol_mask]
+        mol_proposal = proposal_np[mol_mask]
+        proposal_top = int(np.argmax(mol_proposal))
+        final_top = int(np.argmax(mol_final))
+        proposal_hit = bool(mol_labels[proposal_top] == 1)
+        final_hit = bool(mol_labels[final_top] == 1)
+        if (not proposal_hit) and final_hit:
+            corrected += 1
+        elif proposal_hit and (not final_hit):
+            harmed += 1
+        else:
+            unchanged += 1
+        if np.any(mol_proposal_mask):
+            true_mask = (mol_labels == 1) & mol_proposal_mask
+            false_mask = (mol_labels == 0) & mol_proposal_mask
+            if np.any(true_mask):
+                true_deltas.extend((mol_final[true_mask] - mol_proposal[true_mask]).tolist())
+            if np.any(false_mask):
+                false_deltas.extend((mol_final[false_mask] - mol_proposal[false_mask]).tolist())
+    if total == 0:
+        return {}
+    return {
+        "proposal_molecule_recall_at_k": float(proposal_hit_molecules) / float(total),
+        "proposal_recall_at_k": float(proposal_positive_hit) / float(proposal_positive_total) if proposal_positive_total > 0 else 0.0,
+        "reranker_corrected_count": float(corrected),
+        "reranker_harmed_count": float(harmed),
+        "reranker_top1_unchanged_count": float(unchanged),
+        "reranker_corrected_fraction": float(corrected) / float(total),
+        "reranker_harmed_fraction": float(harmed) / float(total),
+        "reranker_top1_unchanged_fraction": float(unchanged) / float(total),
+        "reranker_delta_true_mean": float(np.mean(true_deltas)) if true_deltas else 0.0,
+        "reranker_delta_false_mean": float(np.mean(false_deltas)) if false_deltas else 0.0,
+    }
+
+
 def compute_site_metrics(predictions, labels, batch=None, threshold: float = 0.5) -> Dict[str, float]:
     if batch is None:
         preds = _to_numpy(predictions).reshape(-1)

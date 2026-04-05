@@ -9,8 +9,8 @@ import numpy as np
 from enzyme_software.liquid_nn_v2._compat import F, TORCH_AVAILABLE, require_torch, torch
 from enzyme_software.liquid_nn_v2.config import TrainingConfig
 from enzyme_software.liquid_nn_v2.training.episode_logger import EpisodeLogger
-from enzyme_software.liquid_nn_v2.training.loss import AdaptiveLossV2
-from enzyme_software.liquid_nn_v2.training.metrics import compute_cyp_metrics, compute_site_metrics_v2
+from enzyme_software.liquid_nn_v2.training.loss import AdaptiveLossV2, CandidateRerankLoss
+from enzyme_software.liquid_nn_v2.training.metrics import compute_cyp_metrics, compute_reranker_metrics, compute_site_metrics_v2
 from enzyme_software.liquid_nn_v2.training.utils import collate_molecule_graphs, move_to_device
 
 
@@ -153,6 +153,11 @@ if TORCH_AVAILABLE:
                 site_top1_margin_decay=float(getattr(model_config, "site_top1_margin_decay", 1.0)),
             )
             self.loss_fn.to(self.device)
+            self.reranker_loss = CandidateRerankLoss(
+                ce_weight=float(getattr(model_config, "topk_reranker_ce_weight", 0.25)),
+                margin_weight=float(getattr(model_config, "topk_reranker_margin_weight", 0.25)),
+                margin_value=float(getattr(model_config, "topk_reranker_margin_value", 0.30)),
+            ).to(self.device)
             trainable_params = self._trainable_parameters()
             force_manual = os.environ.get("HYBRID_FORCE_MANUAL_OPTIMIZER", "").strip().lower() in {
                 "1", "true", "yes", "on",
@@ -804,6 +809,22 @@ if TORCH_AVAILABLE:
                 aux_loss, aux_stats = source_site_aux
                 loss = loss + aux_loss
                 stats.update(aux_stats)
+            reranker_outputs = outputs.get("topk_reranker_outputs") or {}
+            proposal_mask = reranker_outputs.get("selected_mask") if isinstance(reranker_outputs, dict) else None
+            if proposal_mask is not None and (
+                getattr(self.reranker_loss, "ce_weight", 0.0) > 0.0
+                or getattr(self.reranker_loss, "margin_weight", 0.0) > 0.0
+            ):
+                rerank_loss, rerank_stats = self.reranker_loss(
+                    outputs["site_logits"],
+                    batch["site_labels"],
+                    batch["batch"],
+                    proposal_mask,
+                    supervision_mask=site_mask,
+                    graph_weights=batch.get("graph_confidence_weights"),
+                )
+                loss = loss + rerank_loss
+                stats.update(rerank_stats)
             stats.update(self._collect_output_stats(outputs))
             weighted_loss = self._apply_confidence_weights(loss, batch)
             if weighted_loss is not loss:
@@ -995,6 +1016,19 @@ if TORCH_AVAILABLE:
                 supervision_mask=batch.get("site_supervision_mask"),
                 ranking_mask=batch.get("candidate_mask"),
             )
+            proposal_scores = outputs.get("site_scores_proposal")
+            reranker_outputs = outputs.get("topk_reranker_outputs") or {}
+            if proposal_scores is not None and reranker_outputs.get("selected_mask") is not None:
+                site_metrics.update(
+                    compute_reranker_metrics(
+                        outputs["site_scores"],
+                        proposal_scores,
+                        batch["site_labels"],
+                        batch["batch"],
+                        reranker_outputs["selected_mask"],
+                        supervision_mask=batch.get("site_supervision_mask"),
+                    )
+                )
             cyp_metrics = compute_cyp_metrics(
                 outputs["cyp_logits"],
                 batch["cyp_labels"],
@@ -1060,9 +1094,11 @@ if TORCH_AVAILABLE:
         def evaluate_loader(self, loader) -> Dict[str, object]:
             self.model.eval()
             site_scores = []
+            proposal_site_scores = []
             site_labels = []
             site_supervision_masks = []
             candidate_masks = []
+            proposal_masks = []
             site_batch = []
             cyp_logits = []
             cyp_labels = []
@@ -1093,12 +1129,19 @@ if TORCH_AVAILABLE:
                             stats=None,
                         )
                     site_scores.append(outputs["site_scores"].detach().cpu())
+                    proposal_site_scores.append(
+                        outputs.get("site_scores_proposal", outputs["site_scores"]).detach().cpu()
+                    )
                     site_labels.append(batch["site_labels"].detach().cpu())
                     site_supervision_masks.append(
                         batch.get("site_supervision_mask", torch.ones_like(batch["site_labels"])).detach().cpu()
                     )
                     candidate_masks.append(
                         batch.get("candidate_mask", torch.ones_like(batch["site_labels"])).detach().cpu()
+                    )
+                    reranker_outputs = outputs.get("topk_reranker_outputs") or {}
+                    proposal_masks.append(
+                        reranker_outputs.get("selected_mask", torch.zeros_like(batch["site_labels"])).detach().cpu()
                     )
                     site_batch.append(batch["batch"].detach().cpu() + batch_offset)
                     cyp_logits.append(outputs["cyp_logits"].detach().cpu())
@@ -1110,9 +1153,11 @@ if TORCH_AVAILABLE:
             if not site_scores:
                 return {}
             merged_site_scores = torch.cat(site_scores, dim=0)
+            merged_proposal_site_scores = torch.cat(proposal_site_scores, dim=0)
             merged_site_labels = torch.cat(site_labels, dim=0)
             merged_site_supervision_mask = torch.cat(site_supervision_masks, dim=0)
             merged_candidate_mask = torch.cat(candidate_masks, dim=0)
+            merged_proposal_mask = torch.cat(proposal_masks, dim=0)
             merged_site_batch = torch.cat(site_batch, dim=0)
             merged_cyp_logits = torch.cat(cyp_logits, dim=0)
             merged_cyp_labels = torch.cat(cyp_labels, dim=0)
@@ -1123,6 +1168,16 @@ if TORCH_AVAILABLE:
                 merged_site_batch,
                 supervision_mask=merged_site_supervision_mask,
                 ranking_mask=merged_candidate_mask,
+            )
+            site_metrics.update(
+                compute_reranker_metrics(
+                    merged_site_scores,
+                    merged_proposal_site_scores,
+                    merged_site_labels,
+                    merged_site_batch,
+                    merged_proposal_mask,
+                    supervision_mask=merged_site_supervision_mask,
+                )
             )
             cyp_metrics = compute_cyp_metrics(
                 merged_cyp_logits,

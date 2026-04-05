@@ -430,6 +430,101 @@ if TORCH_AVAILABLE:
             }
 
 
+    class CandidateRerankLoss(nn.Module):
+        """Candidate-local reranker objective over the proposal top-k set."""
+
+        def __init__(
+            self,
+            ce_weight: float = 0.25,
+            margin_weight: float = 0.25,
+            margin_value: float = 0.30,
+        ):
+            super().__init__()
+            self.ce_weight = float(ce_weight)
+            self.margin_weight = float(margin_weight)
+            self.margin_value = float(margin_value)
+
+        def forward(
+            self,
+            logits,
+            labels,
+            batch,
+            proposal_mask,
+            supervision_mask=None,
+            graph_weights=None,
+        ):
+            logits = logits.view(-1)
+            labels = labels.view(-1)
+            proposal_mask = proposal_mask.view(-1)
+            if supervision_mask is not None:
+                supervision_mask = supervision_mask.view(-1)
+            num_molecules = int(batch.max().item()) + 1 if batch.numel() else 0
+            per_molecule = []
+            per_weights = []
+            ce_values = []
+            margin_values = []
+            active = 0
+            for mol_idx in range(num_molecules):
+                mol_mask = batch == mol_idx
+                if supervision_mask is not None:
+                    mol_mask = mol_mask & (supervision_mask > 0.5)
+                mol_mask = mol_mask & (proposal_mask > 0.5)
+                if not bool(mol_mask.any()):
+                    continue
+                mol_logits = logits[mol_mask]
+                mol_labels = labels[mol_mask]
+                pos_mask = mol_labels > 0.5
+                neg_mask = ~pos_mask
+                if not bool(pos_mask.any()) or not bool(neg_mask.any()):
+                    continue
+                loss_parts = []
+                ce_loss = logits.sum() * 0.0
+                if self.ce_weight > 0.0:
+                    target = pos_mask.float()
+                    target = target / target.sum().clamp_min(1.0)
+                    ce_loss = -(target * F.log_softmax(mol_logits, dim=0)).sum()
+                    loss_parts.append(self.ce_weight * ce_loss)
+                margin_loss = logits.sum() * 0.0
+                if self.margin_weight > 0.0:
+                    best_pos = mol_logits[pos_mask].max()
+                    neg_logits = mol_logits[neg_mask]
+                    margin_loss = torch.relu(self.margin_value - (best_pos - neg_logits)).mean()
+                    loss_parts.append(self.margin_weight * margin_loss)
+                if not loss_parts:
+                    continue
+                mol_loss = torch.stack(loss_parts).sum()
+                per_molecule.append(mol_loss)
+                ce_values.append(ce_loss.detach())
+                margin_values.append(margin_loss.detach())
+                active += 1
+                if graph_weights is not None and mol_idx < int(graph_weights.numel()):
+                    per_weights.append(graph_weights[mol_idx].to(dtype=mol_loss.dtype, device=mol_loss.device))
+                else:
+                    per_weights.append(torch.tensor(1.0, dtype=mol_loss.dtype, device=mol_loss.device))
+            if not per_molecule:
+                zero = logits.sum() * 0.0
+                return zero, {
+                    "candidate_rerank_loss": 0.0,
+                    "candidate_rerank_ce_loss": 0.0,
+                    "candidate_rerank_margin_loss": 0.0,
+                    "candidate_rerank_active_molecules": 0.0,
+                    "candidate_rerank_ce_weight": float(self.ce_weight),
+                    "candidate_rerank_margin_weight": float(self.margin_weight),
+                }
+            stacked_losses = torch.stack(per_molecule)
+            stacked_weights = torch.stack(per_weights)
+            denom = stacked_weights.sum().clamp_min(1.0e-6)
+            total = (stacked_losses * stacked_weights).sum() / denom
+            return total, {
+                "candidate_rerank_loss": float(total.detach().item()),
+                "candidate_rerank_ce_loss": float(torch.stack(ce_values).mean().item()) if ce_values else 0.0,
+                "candidate_rerank_margin_loss": float(torch.stack(margin_values).mean().item()) if margin_values else 0.0,
+                "candidate_rerank_active_molecules": float(active),
+                "candidate_rerank_ce_weight": float(self.ce_weight),
+                "candidate_rerank_margin_weight": float(self.margin_weight),
+            }
+
+
     class AdaptiveLossV2(nn.Module):
         """Improved multi-task loss with focal + ranking site loss."""
 
@@ -644,6 +739,10 @@ else:  # pragma: no cover
             require_torch()
 
     class SiteOfMetabolismLoss:  # type: ignore[override]
+        def __init__(self, *args, **kwargs):
+            require_torch()
+
+    class CandidateRerankLoss:  # type: ignore[override]
         def __init__(self, *args, **kwargs):
             require_torch()
 

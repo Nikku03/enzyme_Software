@@ -94,10 +94,16 @@ class EpisodeLogger:
         site_logits = outputs["site_logits"].detach().cpu().view(-1)
         site_logits_base = outputs.get("site_logits_base")
         site_logits_base_cpu = site_logits_base.detach().cpu().view(-1) if site_logits_base is not None else None
+        site_logits_proposal = outputs.get("site_logits_proposal")
+        site_logits_proposal_cpu = site_logits_proposal.detach().cpu().view(-1) if site_logits_proposal is not None else None
         site_scores = outputs.get("site_scores")
         if site_scores is None:
             site_scores = torch.sigmoid(outputs["site_logits"])
         site_scores = site_scores.detach().cpu().view(-1)
+        site_scores_proposal = outputs.get("site_scores_proposal")
+        if site_scores_proposal is None and site_logits_proposal is not None:
+            site_scores_proposal = torch.sigmoid(site_logits_proposal)
+        site_scores_proposal_cpu = site_scores_proposal.detach().cpu().view(-1) if site_scores_proposal is not None else None
         site_labels = batch.get("site_labels")
         site_labels_cpu = site_labels.detach().cpu().view(-1) if site_labels is not None else None
         site_mask = batch.get("site_supervision_mask")
@@ -194,6 +200,9 @@ class EpisodeLogger:
         phase2_access_cost_cpu = phase2_access_cost.detach().cpu() if phase2_access_cost is not None else None
         phase2_barrier = phase2.get("barrier_score")
         phase2_barrier_cpu = phase2_barrier.detach().cpu() if phase2_barrier is not None else None
+        topk_reranker = outputs.get("topk_reranker_outputs") or {}
+        reranker_selected = topk_reranker.get("selected_mask")
+        reranker_selected_cpu = reranker_selected.detach().cpu().view(-1) if reranker_selected is not None else None
 
         def _slice_vote_head(name: str, *, start_idx: int, end_idx: int):
             value = vote_heads_cpu.get(name)
@@ -217,6 +226,14 @@ class EpisodeLogger:
             top5 = [int(v) for v in predicted_order[:top5_count].tolist()]
             top3 = top5[: min(3, len(top5))]
             top1 = top5[0] if top5 else None
+            proposal_order = (
+                torch.argsort(site_scores_proposal_cpu[start:end], descending=True)
+                if site_scores_proposal_cpu is not None
+                else predicted_order
+            )
+            proposal_top5 = [int(v) for v in proposal_order[:top5_count].tolist()]
+            proposal_top3 = proposal_top5[: min(3, len(proposal_top5))]
+            proposal_top1 = proposal_top5[0] if proposal_top5 else None
             true_site_atoms = list(meta.get("site_atoms", []))
             if site_labels_cpu is not None:
                 true_site_atoms = [
@@ -229,6 +246,7 @@ class EpisodeLogger:
             top1_hit = bool(top1 in true_site_set) if top1 is not None else False
             top3_hit = bool(true_site_set.intersection(top3))
             top5_hit = bool(true_site_set.intersection(top5))
+            proposal_top1_hit = bool(proposal_top1 in true_site_set) if proposal_top1 is not None else False
 
             record = {
                 "record_type": "episode",
@@ -267,7 +285,9 @@ class EpisodeLogger:
                 "output": {
                     "site_logits": _to_serializable(site_logits[start:end]),
                     "site_logits_base": _to_serializable(site_logits_base_cpu[start:end]) if site_logits_base_cpu is not None else None,
+                    "site_logits_proposal": _to_serializable(site_logits_proposal_cpu[start:end]) if site_logits_proposal_cpu is not None else None,
                     "site_scores": _to_serializable(site_scores[start:end]),
+                    "site_scores_proposal": _to_serializable(site_scores_proposal_cpu[start:end]) if site_scores_proposal_cpu is not None else None,
                     "candidate_mask": _to_serializable(candidate_mask_cpu[start:end]),
                     "cyp_logits": _to_serializable(cyp_logits_cpu[graph_idx]) if cyp_logits_cpu is not None else None,
                     "cyp_probs": _to_serializable(cyp_probs_cpu[graph_idx]) if cyp_probs_cpu is not None else None,
@@ -324,6 +344,20 @@ class EpisodeLogger:
                     "access_score": _to_serializable(phase2_access_score_cpu[start:end]) if phase2_access_score_cpu is not None else None,
                     "access_cost": _to_serializable(phase2_access_cost_cpu[start:end]) if phase2_access_cost_cpu is not None else None,
                     "barrier_score": _to_serializable(phase2_barrier_cpu[start:end]) if phase2_barrier_cpu is not None else None,
+                },
+                "reranker": {
+                    "selected_mask": _to_serializable(reranker_selected_cpu[start:end]) if reranker_selected_cpu is not None else None,
+                    "selected_atom_indices": [
+                        int(local_idx)
+                        for local_idx in range(num_atoms)
+                        if reranker_selected_cpu is not None and float(reranker_selected_cpu[start + local_idx].item()) > 0.5
+                    ],
+                    "proposal_top1_atom": proposal_top1,
+                    "proposal_top3_atoms": proposal_top3,
+                    "proposal_top5_atoms": proposal_top5,
+                    "proposal_top1_hit": proposal_top1_hit,
+                    "corrected_top1": bool((not proposal_top1_hit) and top1_hit),
+                    "harmed_top1": bool(proposal_top1_hit and (not top1_hit)),
                 },
                 "decision": {
                     "top1_atom": top1,

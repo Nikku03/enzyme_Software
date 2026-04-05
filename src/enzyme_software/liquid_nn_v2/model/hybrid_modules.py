@@ -103,7 +103,7 @@ if TORCH_AVAILABLE:
             self.mol_dim = max(0, int(mol_dim))
             self.extra_dim = max(0, int(extra_dim))
             self.residual_scale = max(0.0, float(residual_scale))
-            input_dim = int(atom_dim) + self.mol_dim + self.extra_dim + 1
+            input_dim = int(atom_dim) + self.mol_dim + self.extra_dim + 3
             heads = max(1, min(int(num_heads), self.hidden_dim))
             while self.hidden_dim % heads != 0 and heads > 1:
                 heads -= 1
@@ -139,6 +139,14 @@ if TORCH_AVAILABLE:
                 nn.SiLU(),
                 nn.Dropout(dropout),
                 nn.Linear(self.hidden_dim, 1),
+            )
+            self.context_score = nn.Linear(self.hidden_dim, 1)
+            self.context_refine = nn.Sequential(
+                nn.Linear(self.hidden_dim * 3, self.hidden_dim),
+                nn.SiLU(),
+                nn.Dropout(dropout),
+                nn.Linear(self.hidden_dim, self.hidden_dim),
+                nn.SiLU(),
             )
             self.gate_head = nn.Sequential(
                 nn.Linear(self.hidden_dim, max(16, self.hidden_dim // 2)),
@@ -186,9 +194,19 @@ if TORCH_AVAILABLE:
                     continue
                 top_order = torch.topk(mol_logits, k=k, largest=True).indices
                 top_global = global_indices[top_order]
+                top_logits = site_logits[top_global].view(-1)
+                rank_feature = torch.linspace(1.0, 0.0, steps=k, device=site_logits.device, dtype=site_logits.dtype).unsqueeze(-1)
+                if k > 1:
+                    next_logits = torch.cat([top_logits[1:], top_logits[-1:]], dim=0)
+                    gap_feature = (top_logits - next_logits).unsqueeze(-1)
+                    gap_feature[-1] = 0.0
+                else:
+                    gap_feature = top_logits.new_zeros((k, 1))
                 pieces = [
                     atom_features[top_global],
-                    site_logits[top_global],
+                    top_logits.unsqueeze(-1),
+                    rank_feature,
+                    gap_feature,
                 ]
                 if mol_features is not None and int(mol_features.shape[0]) > mol_idx:
                     mol_context = mol_features[mol_idx].unsqueeze(0).expand(k, -1)
@@ -207,8 +225,11 @@ if TORCH_AVAILABLE:
                     ff_out = layer["ff"](hidden)
                     hidden = layer["norm2"](hidden + ff_out)
                 hidden = hidden.squeeze(0)
-                delta = torch.tanh(self.delta_head(hidden))
-                gate = torch.sigmoid(self.gate_head(hidden))
+                context_alpha = torch.softmax(self.context_score(hidden).view(-1), dim=0).unsqueeze(-1)
+                context = torch.sum(context_alpha * hidden, dim=0, keepdim=True).expand_as(hidden)
+                refined_hidden = self.context_refine(torch.cat([hidden, context, hidden - context], dim=-1))
+                delta = torch.tanh(self.delta_head(refined_hidden))
+                gate = torch.sigmoid(self.gate_head(refined_hidden))
                 refined = site_logits[top_global] + (self.residual_scale * gate * delta)
                 reranked[top_global] = refined
                 selected_mask[top_global] = 1.0

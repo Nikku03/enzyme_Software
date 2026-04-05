@@ -275,7 +275,7 @@ if TORCH_AVAILABLE:
             if bool(getattr(self.config, "use_topk_reranker", False)):
                 atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
                 mol_dim = int(getattr(self.config, "cyp_branch_dim", getattr(self.config, "mol_dim", 128)))
-                extra_dim = 6
+                extra_dim = 17
                 self.topk_reranker = TopKCrossAtomReranker(
                     atom_dim=atom_dim,
                     mol_dim=mol_dim,
@@ -566,13 +566,23 @@ if TORCH_AVAILABLE:
             rows = int(site_logits.size(0))
             device = site_logits.device
             dtype = site_logits.dtype
-            bridge = outputs.get("nexus_bridge_outputs") or {}
+            batch_index = batch.get("batch")
+            num_molecules = int(outputs["cyp_logits"].size(0)) if outputs.get("cyp_logits") is not None else 0
+            anomaly_score = batch.get("local_anomaly_score_normalized")
+            anomaly_atom = (
+                self._optional_feature(anomaly_score, num_molecules, 1, device=device, dtype=dtype)[batch_index]
+                if batch_index is not None and num_molecules > 0
+                else torch.zeros(rows, 1, device=device, dtype=dtype)
+            )
+            phase2 = outputs.get("phase2_context_outputs") or {}
+            bde_values = ((batch.get("physics_features") or {}).get("bde_values") if isinstance(batch.get("physics_features"), dict) else None)
             pieces = [
-                self._optional_feature(bridge.get("wave_site_bias"), rows, 1, device=device, dtype=dtype),
-                self._optional_feature(bridge.get("analogical_site_bias"), rows, 1, device=device, dtype=dtype),
-                self._optional_feature(bridge.get("wave_reliability"), rows, 1, device=device, dtype=dtype),
-                self._optional_feature(bridge.get("analogical_confidence"), rows, 1, device=device, dtype=dtype),
-                self._optional_feature(bridge.get("analogical_gate"), rows, 1, device=device, dtype=dtype),
+                self._optional_feature(batch.get("local_chem_features"), rows, 11, device=device, dtype=dtype),
+                anomaly_atom,
+                self._optional_feature(phase2.get("event_strain"), rows, 1, device=device, dtype=dtype),
+                self._optional_feature(phase2.get("access_score"), rows, 1, device=device, dtype=dtype),
+                self._optional_feature(phase2.get("barrier_score"), rows, 1, device=device, dtype=dtype),
+                self._optional_feature(bde_values, rows, 1, device=device, dtype=dtype),
                 self._optional_feature(batch.get("candidate_mask"), rows, 1, device=device, dtype=dtype),
             ]
             return torch.cat(pieces, dim=-1)
@@ -591,16 +601,19 @@ if TORCH_AVAILABLE:
                 return outputs
             if not getattr(site_logits, "numel", lambda: 0)() or not getattr(batch_index, "numel", lambda: 0)():
                 return outputs
+            proposal_logits = site_logits
             reranked_logits, reranker = self.topk_reranker(
                 atom_features=atom_features,
-                site_logits=site_logits,
+                site_logits=proposal_logits,
                 batch_index=batch_index,
                 mol_features=outputs.get("mol_features"),
                 extra_features=self._topk_reranker_features(outputs, batch),
             )
             reranked_logits = torch.nan_to_num(reranked_logits, nan=0.0, posinf=20.0, neginf=-20.0).clamp(-20.0, 20.0)
             result = dict(outputs)
-            result.setdefault("site_logits_base", site_logits)
+            result.setdefault("site_logits_base", proposal_logits)
+            result["site_logits_proposal"] = proposal_logits
+            result["site_scores_proposal"] = torch.sigmoid(proposal_logits)
             result["site_logits"] = reranked_logits
             result["reranked_site_logits"] = reranked_logits
             result["site_scores"] = torch.sigmoid(reranked_logits)
