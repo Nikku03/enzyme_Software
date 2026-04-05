@@ -96,6 +96,7 @@ if TORCH_AVAILABLE:
             num_layers: int = 2,
             dropout: float = 0.1,
             residual_scale: float = 0.75,
+            gate_bias: float = -2.0,
         ):
             super().__init__()
             self.top_k = max(2, int(top_k))
@@ -156,7 +157,7 @@ if TORCH_AVAILABLE:
             nn.init.zeros_(self.delta_head[-1].weight)
             nn.init.zeros_(self.delta_head[-1].bias)
             nn.init.zeros_(self.gate_head[-1].weight)
-            nn.init.constant_(self.gate_head[-1].bias, -2.0)
+            nn.init.constant_(self.gate_head[-1].bias, float(gate_bias))
 
         def forward(
             self,
