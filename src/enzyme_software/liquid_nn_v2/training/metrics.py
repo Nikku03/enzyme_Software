@@ -290,6 +290,53 @@ def compute_reranker_metrics(
     }
 
 
+def compute_candidate_winner_metrics(
+    winner_logits,
+    target_mask,
+    candidate_mask,
+    *,
+    proposal_top1_is_true=None,
+    total_molecule_count: int | None = None,
+    proposal_hit_count: int | None = None,
+) -> Dict[str, float]:
+    logits_np = _to_numpy(winner_logits)
+    target_np = _to_numpy(target_mask)
+    mask_np = _to_numpy(candidate_mask) > 0.5
+    if logits_np.size == 0:
+        return {
+            "winner_acc_given_proposal": 0.0,
+            "proposal_top1_acc_given_proposal": 0.0,
+            "winner_corrected_count": 0.0,
+            "winner_harmed_count": 0.0,
+            "winner_corrected_fraction": 0.0,
+            "winner_harmed_fraction": 0.0,
+            "proposal_molecule_recall_at_k": 0.0,
+            "end_to_end_top1": 0.0,
+        }
+    pred_idx = np.argmax(logits_np, axis=1)
+    winner_hits = np.asarray([bool(target_np[i, pred_idx[i]] > 0.5) for i in range(logits_np.shape[0])], dtype=np.float32)
+    proposal_hits = _to_numpy(proposal_top1_is_true).reshape(-1).astype(np.float32) if proposal_top1_is_true is not None else np.zeros_like(winner_hits)
+    corrected = float(np.sum((proposal_hits < 0.5) & (winner_hits > 0.5)))
+    harmed = float(np.sum((proposal_hits > 0.5) & (winner_hits < 0.5)))
+    n = float(logits_np.shape[0])
+    conditional_acc = float(winner_hits.mean()) if n > 0 else 0.0
+    proposal_conditional = float(proposal_hits.mean()) if n > 0 else 0.0
+    prop_hit_count = int(proposal_hit_count if proposal_hit_count is not None else logits_np.shape[0])
+    total_count = int(total_molecule_count if total_molecule_count is not None else prop_hit_count)
+    proposal_recall = float(prop_hit_count) / float(total_count) if total_count > 0 else 0.0
+    return {
+        "winner_acc_given_proposal": conditional_acc,
+        "proposal_top1_acc_given_proposal": proposal_conditional,
+        "winner_corrected_count": corrected,
+        "winner_harmed_count": harmed,
+        "winner_corrected_fraction": corrected / n if n > 0 else 0.0,
+        "winner_harmed_fraction": harmed / n if n > 0 else 0.0,
+        "proposal_molecule_recall_at_k": proposal_recall,
+        "end_to_end_top1": proposal_recall * conditional_acc,
+        "candidate_set_size_mean": float(mask_np.sum(axis=1).mean()) if mask_np.size else 0.0,
+    }
+
+
 def compute_site_metrics(predictions, labels, batch=None, threshold: float = 0.5) -> Dict[str, float]:
     if batch is None:
         preds = _to_numpy(predictions).reshape(-1)
