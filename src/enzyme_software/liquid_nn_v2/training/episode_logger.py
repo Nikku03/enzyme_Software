@@ -165,6 +165,16 @@ class EpisodeLogger:
         wave_reliability = bridge.get("wave_reliability")
         wave_reliability_cpu = wave_reliability.detach().cpu() if wave_reliability is not None else None
         bridge_metrics = _to_serializable(bridge.get("metrics") or {})
+        local_chem = batch.get("local_chem_features")
+        local_chem_cpu = local_chem.detach().cpu() if local_chem is not None else None
+        local_charge = batch.get("local_charge_updated")
+        local_charge_cpu = local_charge.detach().cpu() if local_charge is not None else None
+        local_etn = batch.get("local_etn_prior")
+        local_etn_cpu = local_etn.detach().cpu() if local_etn is not None else None
+        anomaly_score = batch.get("local_anomaly_score")
+        anomaly_score_cpu = anomaly_score.detach().cpu() if anomaly_score is not None else None
+        anomaly_flag = batch.get("local_anomaly_flag")
+        anomaly_flag_cpu = anomaly_flag.detach().cpu() if anomaly_flag is not None else None
 
         def _slice_vote_head(name: str, *, start_idx: int, end_idx: int):
             value = vote_heads_cpu.get(name)
@@ -277,6 +287,13 @@ class EpisodeLogger:
                     "cyp_prior": _to_serializable(analogical_cyp_prior_cpu[graph_idx]) if analogical_cyp_prior_cpu is not None else None,
                     "cyp_bias": _to_serializable(analogical_cyp_bias_cpu[graph_idx]) if analogical_cyp_bias_cpu is not None else None,
                     "bridge_metrics": bridge_metrics,
+                },
+                "chemistry": {
+                    "local_chem_features": _to_serializable(local_chem_cpu[start:end]) if local_chem_cpu is not None else None,
+                    "updated_charge": _to_serializable(local_charge_cpu[start:end]) if local_charge_cpu is not None else None,
+                    "etn_prior": _to_serializable(local_etn_cpu[start:end]) if local_etn_cpu is not None else None,
+                    "anomaly_score": _to_serializable(anomaly_score_cpu[graph_idx]) if anomaly_score_cpu is not None else None,
+                    "anomaly_flag": _to_serializable(anomaly_flag_cpu[graph_idx]) if anomaly_flag_cpu is not None else None,
                 },
                 "decision": {
                     "top1_atom": top1,

@@ -13,8 +13,12 @@ except Exception:  # pragma: no cover - optional dependency
 
 from enzyme_software.liquid_nn_v2.data.bde_table import bde_to_tau_init
 from enzyme_software.liquid_nn_v2.data.drug_database import CYP_CLASSES
+from enzyme_software.liquid_nn_v2.features.anomaly import compute_anomaly_features
 from enzyme_software.liquid_nn_v2.features.atom_features import extract_atom_features
+from enzyme_software.liquid_nn_v2.features.charge_update import update_local_charges_eem
+from enzyme_software.liquid_nn_v2.features.chemistry_prior import compute_etn_prior_scores
 from enzyme_software.liquid_nn_v2.features.group_detector import detect_functional_groups
+from enzyme_software.liquid_nn_v2.features.local_field import compute_local_field_features, resolve_atom_coordinates
 from enzyme_software.liquid_nn_v2.features.physics_features import compute_molecule_physics_features
 from enzyme_software.liquid_nn_v2.features.steric_features import compute_atom_3d_features, compute_atom_3d_features_for_smiles
 from enzyme_software.liquid_nn_v2.utils.mol_preprocessing import prepare_mol
@@ -55,6 +59,13 @@ class MoleculeGraph:
     topology_atom_features: Optional[np.ndarray] = None
     topology_atom_valid_mask: Optional[np.ndarray] = None
     topology_mol_valid: Optional[np.ndarray] = None
+    atom_coordinates: Optional[np.ndarray] = None
+    local_chem_features: Optional[np.ndarray] = None
+    local_charge_updated: Optional[np.ndarray] = None
+    local_etn_prior: Optional[np.ndarray] = None
+    local_anomaly_features: Optional[np.ndarray] = None
+    local_anomaly_score: Optional[np.ndarray] = None
+    local_anomaly_flag: Optional[np.ndarray] = None
     parsing_status: str = "ok"
     repaired: bool = False
     aggressive_repair: bool = False
@@ -148,6 +159,33 @@ def smiles_to_graph(
         site_supervision_mask = np.zeros((mol.GetNumAtoms(), 1), dtype=np.float32)
 
     cyp_index = CYP_TO_INDEX.get(cyp_label) if cyp_label else None
+    atom_coordinates = resolve_atom_coordinates(mol, structure_mol=structure_mol)
+    atomic_numbers = np.asarray([int(atom.GetAtomicNum()) for atom in mol.GetAtoms()], dtype=np.int64)
+    formal_charges = np.asarray([float(atom.GetFormalCharge()) for atom in mol.GetAtoms()], dtype=np.float32).reshape(-1, 1)
+    field_payload = compute_local_field_features(atom_coordinates, atomic_numbers, formal_charges)
+    updated_charges = update_local_charges_eem(atom_coordinates, atomic_numbers, formal_charges)
+    etn_payload = compute_etn_prior_scores(
+        atom_coordinates,
+        updated_charges,
+        field_payload["field_score"],
+        field_payload["access_proxy"],
+        field_payload["crowding"],
+        np.asarray(physics_features["bde_values"], dtype=np.float32),
+        edge_index,
+    )
+    anomaly_payload = compute_anomaly_features(mol, num_atoms=mol.GetNumAtoms())
+    local_chem_features = np.concatenate(
+        [
+            field_payload["steric_score"],
+            field_payload["electro_score"],
+            field_payload["field_score"],
+            field_payload["access_proxy"],
+            field_payload["crowding"],
+            updated_charges.astype(np.float32),
+            etn_payload["prior_score"],
+        ],
+        axis=1,
+    ).astype(np.float32)
     atom_3d_features = None
     atom_3d_source = np.asarray([[0.0, 0.0, 1.0]], dtype=np.float32)
     if structure_mol is not None:
@@ -181,6 +219,13 @@ def smiles_to_graph(
         manual_engine_status=np.asarray([0.0, 0.0, 1.0], dtype=np.float32),
         topology_atom_valid_mask=np.zeros((mol.GetNumAtoms(), 1), dtype=np.float32),
         topology_mol_valid=np.asarray([[0.0]], dtype=np.float32),
+        atom_coordinates=atom_coordinates.astype(np.float32) if atom_coordinates is not None else np.zeros((mol.GetNumAtoms(), 3), dtype=np.float32),
+        local_chem_features=local_chem_features,
+        local_charge_updated=updated_charges.astype(np.float32),
+        local_etn_prior=etn_payload["prior_score"].astype(np.float32),
+        local_anomaly_features=anomaly_payload["features"].astype(np.float32),
+        local_anomaly_score=anomaly_payload["score"].astype(np.float32),
+        local_anomaly_flag=anomaly_payload["flag"].astype(np.float32),
         parsing_status=prep.status,
         repaired=prep.repaired,
         aggressive_repair=prep.aggressive_repair,

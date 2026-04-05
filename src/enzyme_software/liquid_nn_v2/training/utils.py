@@ -60,6 +60,13 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
     topology_atom_parts: List[object] = []
     topology_atom_valid_parts: List[object] = []
     topology_mol_valid_parts: List[object] = []
+    atom_coord_parts: List[object] = []
+    local_chem_parts: List[object] = []
+    local_charge_parts: List[object] = []
+    local_etn_parts: List[object] = []
+    anomaly_feature_parts: List[object] = []
+    anomaly_score_parts: List[object] = []
+    anomaly_flag_parts: List[object] = []
     parsing_statuses: List[str] = []
     canonical_smiles: List[str] = []
     repaired_flags: List[bool] = []
@@ -137,6 +144,13 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
             if getattr(graph, "topology_mol_valid", None) is not None
             else torch.zeros((1, 1), dtype=torch.float32)
         )
+        atom_coord_parts.append(_tensor(graph.atom_coordinates, dtype=torch.float32) if getattr(graph, "atom_coordinates", None) is not None else None)
+        local_chem_parts.append(_tensor(graph.local_chem_features, dtype=torch.float32) if getattr(graph, "local_chem_features", None) is not None else None)
+        local_charge_parts.append(_tensor(graph.local_charge_updated, dtype=torch.float32) if getattr(graph, "local_charge_updated", None) is not None else None)
+        local_etn_parts.append(_tensor(graph.local_etn_prior, dtype=torch.float32) if getattr(graph, "local_etn_prior", None) is not None else None)
+        anomaly_feature_parts.append(_tensor(graph.local_anomaly_features, dtype=torch.float32) if getattr(graph, "local_anomaly_features", None) is not None else None)
+        anomaly_score_parts.append(_tensor(graph.local_anomaly_score, dtype=torch.float32) if getattr(graph, "local_anomaly_score", None) is not None else None)
+        anomaly_flag_parts.append(_tensor(graph.local_anomaly_flag, dtype=torch.float32) if getattr(graph, "local_anomaly_flag", None) is not None else None)
         parsing_statuses.append(str(getattr(graph, "parsing_status", "unknown")))
         canonical_smiles.append(str(getattr(graph, "canonical_smiles", graph.smiles)))
         repaired_flags.append(bool(getattr(graph, "repaired", False)))
@@ -234,6 +248,13 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
     topology_atom = _stack_optional(topology_atom_parts, atom_counts, name="topology_atom_features")
     topology_atom_valid = _stack_optional(topology_atom_valid_parts, atom_counts, name="topology_atom_valid_mask")
     topology_mol_valid = _stack_optional(topology_mol_valid_parts, mol_counts, name="topology_mol_valid")
+    atom_coords = _stack_optional(atom_coord_parts, atom_counts, name="atom_coordinates")
+    local_chem = _stack_optional(local_chem_parts, atom_counts, name="local_chem_features")
+    local_charge = _stack_optional(local_charge_parts, atom_counts, name="local_charge_updated")
+    local_etn = _stack_optional(local_etn_parts, atom_counts, name="local_etn_prior")
+    anomaly_features = _stack_optional(anomaly_feature_parts, mol_counts, name="local_anomaly_features")
+    anomaly_score = _stack_optional(anomaly_score_parts, mol_counts, name="local_anomaly_score")
+    anomaly_flag = _stack_optional(anomaly_flag_parts, mol_counts, name="local_anomaly_flag")
     if manual_atom is not None:
         batch["manual_engine_atom_features"] = manual_atom
     if manual_mol is not None:
@@ -266,6 +287,20 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
         batch["topology_atom_valid_mask"] = topology_atom_valid
     if topology_mol_valid is not None:
         batch["topology_mol_valid"] = topology_mol_valid
+    if atom_coords is not None:
+        batch["atom_coordinates"] = atom_coords
+    if local_chem is not None:
+        batch["local_chem_features"] = local_chem
+    if local_charge is not None:
+        batch["local_charge_updated"] = local_charge
+    if local_etn is not None:
+        batch["local_etn_prior"] = local_etn
+    if anomaly_features is not None:
+        batch["local_anomaly_features"] = anomaly_features
+    if anomaly_score is not None:
+        batch["local_anomaly_score"] = anomaly_score
+    if anomaly_flag is not None:
+        batch["local_anomaly_flag"] = anomaly_flag
     if os.environ.get("LNN_DEBUG_COLLATE", "").strip().lower() in {"1", "true", "yes", "on"} and "site_labels" in batch:
         print(f"DEBUG collate: site_labels sum = {batch['site_labels'].sum().item()}")
     return batch
