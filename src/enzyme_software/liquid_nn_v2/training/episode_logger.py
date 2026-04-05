@@ -203,6 +203,12 @@ class EpisodeLogger:
         topk_reranker = outputs.get("topk_reranker_outputs") or {}
         reranker_selected = topk_reranker.get("selected_mask")
         reranker_selected_cpu = reranker_selected.detach().cpu().view(-1) if reranker_selected is not None else None
+        reranker_raw_delta = topk_reranker.get("raw_delta")
+        reranker_raw_delta_cpu = reranker_raw_delta.detach().cpu().view(-1) if reranker_raw_delta is not None else None
+        reranker_gate = topk_reranker.get("gate")
+        reranker_gate_cpu = reranker_gate.detach().cpu().view(-1) if reranker_gate is not None else None
+        reranker_applied_delta = topk_reranker.get("applied_delta")
+        reranker_applied_delta_cpu = reranker_applied_delta.detach().cpu().view(-1) if reranker_applied_delta is not None else None
 
         def _slice_vote_head(name: str, *, start_idx: int, end_idx: int):
             value = vote_heads_cpu.get(name)
@@ -347,6 +353,9 @@ class EpisodeLogger:
                 },
                 "reranker": {
                     "selected_mask": _to_serializable(reranker_selected_cpu[start:end]) if reranker_selected_cpu is not None else None,
+                    "raw_delta": _to_serializable(reranker_raw_delta_cpu[start:end]) if reranker_raw_delta_cpu is not None else None,
+                    "gate": _to_serializable(reranker_gate_cpu[start:end]) if reranker_gate_cpu is not None else None,
+                    "applied_delta": _to_serializable(reranker_applied_delta_cpu[start:end]) if reranker_applied_delta_cpu is not None else None,
                     "selected_atom_indices": [
                         int(local_idx)
                         for local_idx in range(num_atoms)

@@ -116,6 +116,7 @@ def _collect_model_overrides() -> dict[str, int | float]:
         "HYBRID_COLAB_TOPK_RERANKER_LAYERS": (_env_int, "topk_reranker_layers"),
         "HYBRID_COLAB_TOPK_RERANKER_DROPOUT": (_env_float, "topk_reranker_dropout"),
         "HYBRID_COLAB_TOPK_RERANKER_RESIDUAL_SCALE": (_env_float, "topk_reranker_residual_scale"),
+        "HYBRID_COLAB_TOPK_RERANKER_USE_GATE": (_env_int, "topk_reranker_use_gate"),
         "HYBRID_COLAB_TOPK_RERANKER_GATE_BIAS": (_env_float, "topk_reranker_gate_bias"),
         "HYBRID_COLAB_TOPK_RERANKER_CE_WEIGHT": (_env_float, "topk_reranker_ce_weight"),
         "HYBRID_COLAB_TOPK_RERANKER_MARGIN_WEIGHT": (_env_float, "topk_reranker_margin_weight"),

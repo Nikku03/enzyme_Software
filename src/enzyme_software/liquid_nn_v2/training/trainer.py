@@ -825,6 +825,26 @@ if TORCH_AVAILABLE:
                 )
                 loss = loss + rerank_loss
                 stats.update(rerank_stats)
+                raw_delta = reranker_outputs.get("raw_delta")
+                applied_delta = reranker_outputs.get("applied_delta")
+                labels = batch["site_labels"].view(-1)
+                prop_mask = proposal_mask.view(-1) > 0.5
+                if raw_delta is not None:
+                    raw_delta = raw_delta.view(-1)
+                    true_mask = prop_mask & (labels > 0.5)
+                    false_mask = prop_mask & ~(labels > 0.5)
+                    if bool(true_mask.any()):
+                        stats["candidate_rerank_raw_true_mean"] = float(raw_delta[true_mask].detach().mean().item())
+                    if bool(false_mask.any()):
+                        stats["candidate_rerank_raw_false_mean"] = float(raw_delta[false_mask].detach().mean().item())
+                if applied_delta is not None:
+                    applied_delta = applied_delta.view(-1)
+                    true_mask = prop_mask & (labels > 0.5)
+                    false_mask = prop_mask & ~(labels > 0.5)
+                    if bool(true_mask.any()):
+                        stats["candidate_rerank_applied_true_mean"] = float(applied_delta[true_mask].detach().mean().item())
+                    if bool(false_mask.any()):
+                        stats["candidate_rerank_applied_false_mean"] = float(applied_delta[false_mask].detach().mean().item())
             stats.update(self._collect_output_stats(outputs))
             weighted_loss = self._apply_confidence_weights(loss, batch)
             if weighted_loss is not loss:

@@ -286,6 +286,7 @@ if TORCH_AVAILABLE:
                     num_layers=int(getattr(self.config, "topk_reranker_layers", 2)),
                     dropout=float(getattr(self.config, "topk_reranker_dropout", 0.10)),
                     residual_scale=float(getattr(self.config, "topk_reranker_residual_scale", 0.75)),
+                    use_gate=bool(getattr(self.config, "topk_reranker_use_gate", True)),
                     gate_bias=float(getattr(self.config, "topk_reranker_gate_bias", -2.0)),
                 )
 

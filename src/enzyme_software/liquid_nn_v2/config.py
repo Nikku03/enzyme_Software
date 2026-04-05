@@ -137,6 +137,7 @@ class ModelConfig:
     topk_reranker_layers: int = 2
     topk_reranker_dropout: float = 0.10
     topk_reranker_residual_scale: float = 0.75
+    topk_reranker_use_gate: bool = True
     topk_reranker_gate_bias: float = -2.0
     topk_reranker_ce_weight: float = 0.25
     topk_reranker_margin_weight: float = 0.25
@@ -338,6 +339,7 @@ class ModelConfig:
         self.topk_reranker_layers = max(1, int(self.topk_reranker_layers))
         self.topk_reranker_dropout = min(max(float(self.topk_reranker_dropout), 0.0), 0.5)
         self.topk_reranker_residual_scale = max(0.0, float(self.topk_reranker_residual_scale))
+        self.topk_reranker_use_gate = bool(self.topk_reranker_use_gate)
         self.topk_reranker_gate_bias = float(self.topk_reranker_gate_bias)
         self.topk_reranker_ce_weight = max(0.0, float(self.topk_reranker_ce_weight))
         self.topk_reranker_margin_weight = max(0.0, float(self.topk_reranker_margin_weight))

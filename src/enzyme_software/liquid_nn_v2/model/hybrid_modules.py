@@ -96,6 +96,7 @@ if TORCH_AVAILABLE:
             num_layers: int = 2,
             dropout: float = 0.1,
             residual_scale: float = 0.75,
+            use_gate: bool = True,
             gate_bias: float = -2.0,
         ):
             super().__init__()
@@ -104,6 +105,7 @@ if TORCH_AVAILABLE:
             self.mol_dim = max(0, int(mol_dim))
             self.extra_dim = max(0, int(extra_dim))
             self.residual_scale = max(0.0, float(residual_scale))
+            self.use_gate = bool(use_gate)
             input_dim = int(atom_dim) + self.mol_dim + self.extra_dim + 3
             heads = max(1, min(int(num_heads), self.hidden_dim))
             while self.hidden_dim % heads != 0 and heads > 1:
@@ -181,8 +183,12 @@ if TORCH_AVAILABLE:
                 }
             reranked = site_logits.clone()
             selected_mask = torch.zeros_like(site_logits)
+            raw_delta_tensor = torch.zeros_like(site_logits)
+            gate_tensor = torch.zeros_like(site_logits)
+            applied_delta_tensor = torch.zeros_like(site_logits)
             gate_values = []
             delta_values = []
+            applied_values = []
             num_molecules = int(batch_index.max().item()) + 1 if batch_index.numel() else 0
             for mol_idx in range(num_molecules):
                 mol_mask = batch_index == mol_idx
@@ -230,31 +236,53 @@ if TORCH_AVAILABLE:
                 context = torch.sum(context_alpha * hidden, dim=0, keepdim=True).expand_as(hidden)
                 refined_hidden = self.context_refine(torch.cat([hidden, context, hidden - context], dim=-1))
                 delta = torch.tanh(self.delta_head(refined_hidden))
-                gate = torch.sigmoid(self.gate_head(refined_hidden))
-                refined = site_logits[top_global] + (self.residual_scale * gate * delta)
+                gate = torch.sigmoid(self.gate_head(refined_hidden)) if self.use_gate else torch.ones_like(delta)
+                applied_delta = self.residual_scale * gate * delta
+                refined = site_logits[top_global] + applied_delta
                 reranked[top_global] = refined
                 selected_mask[top_global] = 1.0
+                raw_delta_tensor[top_global] = delta
+                gate_tensor[top_global] = gate
+                applied_delta_tensor[top_global] = applied_delta
                 gate_values.append(gate.view(-1))
                 delta_values.append(delta.view(-1))
+                applied_values.append(applied_delta.view(-1))
             if gate_values:
                 gate_cat = torch.cat(gate_values, dim=0)
                 delta_cat = torch.cat(delta_values, dim=0)
+                applied_cat = torch.cat(applied_values, dim=0)
                 stats = {
                     "enabled": 1.0,
+                    "use_gate": 1.0 if self.use_gate else 0.0,
                     "selected_fraction": float(selected_mask.detach().mean().item()),
                     "gate_mean": float(gate_cat.detach().mean().item()),
                     "delta_mean": float(delta_cat.detach().mean().item()),
+                    "delta_std": float(delta_cat.detach().std().item()) if delta_cat.numel() > 1 else 0.0,
                     "delta_max": float(delta_cat.detach().abs().max().item()),
+                    "applied_delta_mean": float(applied_cat.detach().mean().item()),
+                    "applied_delta_std": float(applied_cat.detach().std().item()) if applied_cat.numel() > 1 else 0.0,
+                    "applied_delta_max": float(applied_cat.detach().abs().max().item()),
                 }
             else:
                 stats = {
                     "enabled": 1.0,
+                    "use_gate": 1.0 if self.use_gate else 0.0,
                     "selected_fraction": 0.0,
                     "gate_mean": 0.0,
                     "delta_mean": 0.0,
+                    "delta_std": 0.0,
                     "delta_max": 0.0,
+                    "applied_delta_mean": 0.0,
+                    "applied_delta_std": 0.0,
+                    "applied_delta_max": 0.0,
                 }
-            return reranked, {"selected_mask": selected_mask, "stats": stats}
+            return reranked, {
+                "selected_mask": selected_mask,
+                "raw_delta": raw_delta_tensor,
+                "gate": gate_tensor,
+                "applied_delta": applied_delta_tensor,
+                "stats": stats,
+            }
 else:  # pragma: no cover
     class LocalTunnelingBias:  # type: ignore[override]
         def __init__(self, *args, **kwargs):
