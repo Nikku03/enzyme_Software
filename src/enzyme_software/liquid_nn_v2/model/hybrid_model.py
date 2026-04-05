@@ -5,6 +5,9 @@ from typing import Dict, Optional
 from enzyme_software.liquid_nn_v2._compat import TORCH_AVAILABLE, nn, require_torch, torch
 from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM
 from enzyme_software.liquid_nn_v2.features.route_prior import combine_lnn_with_prior
+from enzyme_software.liquid_nn_v2.model.accessibility import AccessibilityHead
+from enzyme_software.liquid_nn_v2.model.barrier import BarrierHead
+from enzyme_software.liquid_nn_v2.model.event_context import SparseEventContext
 from enzyme_software.liquid_nn_v2.model.hybrid_modules import TopKCrossAtomReranker
 from enzyme_software.liquid_nn_v2.model.nexus_bridge import NexusHybridBridge
 from enzyme_software.liquid_nn_v2.model.precedent_logbook import AuditedEpisodeLogbook
@@ -33,6 +36,14 @@ if TORCH_AVAILABLE:
             self.local_chem_scale_logit = None
             self.local_chem_logit_head = None
             self.local_chem_logit_scale_logit = None
+            self.event_context_module = None
+            self.accessibility_head = None
+            self.barrier_head = None
+            self.phase2_context_proj = None
+            self.phase2_context_gate = None
+            self.phase2_context_scale_logit = None
+            self.phase2_context_logit_head = None
+            self.phase2_context_logit_scale_logit = None
             self.topk_reranker = None
             self.domain_adv_head = None
             domain_adv_weight = float(getattr(self.config, "domain_adv_weight", 0.0))
@@ -205,6 +216,62 @@ if TORCH_AVAILABLE:
                 gate_linear = self.local_chem_gate[-2]
                 if hasattr(gate_linear, "bias") and gate_linear.bias is not None:
                     nn.init.constant_(gate_linear.bias, -1.0)
+            if any(
+                bool(getattr(self.config, flag, False))
+                for flag in ("use_event_context", "use_accessibility_head", "use_barrier_head")
+            ):
+                atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
+                phase2_hidden = int(getattr(self.config, "phase2_context_hidden_dim", atom_dim))
+                phase2_dropout = float(getattr(self.config, "phase2_context_dropout", 0.05))
+                ctx_parts = 11 + 1  # local chem + normalized anomaly
+                if bool(getattr(self.config, "use_event_context", False)):
+                    self.event_context_module = SparseEventContext(
+                        atom_dim=atom_dim,
+                        hidden_dim=int(getattr(self.config, "event_context_hidden_dim", 24)),
+                        rounds=int(getattr(self.config, "event_context_rounds", 3)),
+                        dropout=phase2_dropout,
+                    )
+                    ctx_parts += int(getattr(self.event_context_module, "output_dim", 0))
+                if bool(getattr(self.config, "use_accessibility_head", False)):
+                    self.accessibility_head = AccessibilityHead(
+                        hidden_dim=int(getattr(self.config, "accessibility_hidden_dim", 16)),
+                        dropout=phase2_dropout,
+                    )
+                    ctx_parts += int(getattr(self.accessibility_head, "output_dim", 0))
+                if bool(getattr(self.config, "use_barrier_head", False)):
+                    self.barrier_head = BarrierHead(
+                        hidden_dim=int(getattr(self.config, "barrier_hidden_dim", 32)),
+                        dropout=phase2_dropout,
+                    )
+                    ctx_parts += int(getattr(self.barrier_head, "output_dim", 0))
+                self.phase2_context_proj = nn.Sequential(
+                    nn.Linear(ctx_parts, phase2_hidden),
+                    nn.SiLU(),
+                    nn.Dropout(phase2_dropout),
+                    nn.Linear(phase2_hidden, atom_dim),
+                )
+                self.phase2_context_gate = nn.Sequential(
+                    nn.Linear(atom_dim + ctx_parts, max(32, phase2_hidden // 2)),
+                    nn.SiLU(),
+                    nn.Dropout(phase2_dropout),
+                    nn.Linear(max(32, phase2_hidden // 2), 1),
+                    nn.Sigmoid(),
+                )
+                self.phase2_context_logit_head = nn.Sequential(
+                    nn.Linear(ctx_parts, max(16, phase2_hidden // 2)),
+                    nn.SiLU(),
+                    nn.Dropout(phase2_dropout),
+                    nn.Linear(max(16, phase2_hidden // 2), 1),
+                )
+                self.phase2_context_scale_logit = nn.Parameter(
+                    torch.logit(torch.tensor(float(getattr(self.config, "phase2_context_init_scale", 0.10))))
+                )
+                self.phase2_context_logit_scale_logit = nn.Parameter(
+                    torch.logit(torch.tensor(float(getattr(self.config, "phase2_context_logit_scale", 0.05))))
+                )
+                phase2_gate_linear = self.phase2_context_gate[-2]
+                if hasattr(phase2_gate_linear, "bias") and phase2_gate_linear.bias is not None:
+                    nn.init.constant_(phase2_gate_linear.bias, -1.0)
             if bool(getattr(self.config, "use_topk_reranker", False)):
                 atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
                 mol_dim = int(getattr(self.config, "cyp_branch_dim", getattr(self.config, "mol_dim", 128)))
@@ -374,6 +441,116 @@ if TORCH_AVAILABLE:
                 "chem_logit_std": float(chem_logit_residual.detach().std().item()) if chem_logit_residual.numel() > 1 else 0.0,
                 "chem_feature_mean": float(chem_atom.detach().mean().item()) if chem_atom.numel() else 0.0,
                 "anomaly_score_mean": float(mol_score.detach().mean().item()) if mol_score.numel() else 0.0,
+            }
+            result["diagnostics"] = diagnostics
+            if source_site_logits:
+                result["source_site_logits"] = source_site_logits
+            return result
+
+        def _apply_phase2_context(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
+            if self.phase2_context_proj is None or self.phase2_context_gate is None:
+                return outputs
+            atom_features = outputs.get("atom_features")
+            batch_index = batch.get("batch")
+            local_chem = batch.get("local_chem_features")
+            anomaly_score = batch.get("local_anomaly_score_normalized")
+            atom_coords = batch.get("atom_coordinates")
+            candidate_mask = batch.get("candidate_mask")
+            edge_index = batch.get("edge_index")
+            if atom_features is None or batch_index is None or local_chem is None:
+                return outputs
+            device = atom_features.device
+            dtype = atom_features.dtype
+            rows = int(atom_features.size(0))
+            num_molecules = int(outputs["cyp_logits"].size(0))
+            chem_atom = local_chem.to(device=device, dtype=dtype)
+            mol_score = self._optional_feature(anomaly_score, num_molecules, 1, device=device, dtype=dtype)
+
+            event_outputs = None
+            ctx_parts = [chem_atom, mol_score[batch_index]]
+            if self.event_context_module is not None:
+                event_outputs = self.event_context_module(
+                    atom_features=atom_features,
+                    edge_index=edge_index,
+                    atom_coords=atom_coords,
+                    local_chem_features=chem_atom,
+                    candidate_mask=candidate_mask,
+                )
+                ctx_parts.append(event_outputs["features"])
+            access_outputs = None
+            if self.accessibility_head is not None:
+                access_outputs = self.accessibility_head(
+                    atom_coords=atom_coords,
+                    batch_index=batch_index,
+                    local_chem_features=chem_atom,
+                    candidate_mask=candidate_mask,
+                    event_outputs=event_outputs,
+                )
+                ctx_parts.append(access_outputs["features"])
+            barrier_outputs = None
+            if self.barrier_head is not None:
+                barrier_outputs = self.barrier_head(
+                    local_chem_features=chem_atom,
+                    accessibility_outputs=access_outputs,
+                    event_outputs=event_outputs,
+                )
+                ctx_parts.append(barrier_outputs["features"])
+
+            z_ctx = torch.cat(ctx_parts, dim=-1)
+            residual = torch.tanh(self.phase2_context_proj(z_ctx))
+            gate = self.phase2_context_gate(torch.cat([atom_features, z_ctx], dim=-1))
+            scale = torch.sigmoid(self.phase2_context_scale_logit).to(device=device, dtype=dtype)
+            logit_scale = torch.sigmoid(self.phase2_context_logit_scale_logit).to(device=device, dtype=dtype)
+            fused_atom_features = atom_features + (scale * gate * residual)
+
+            base_impl = self._base_impl()
+            prior_payload = base_impl.manual_priors(
+                batch,
+                num_atoms=rows,
+                num_molecules=num_molecules,
+                device=device,
+            )
+            site_logits, _site_residual = base_impl.site_head(
+                fused_atom_features,
+                prior_logits=prior_payload.get("atom_prior_logits") if getattr(self.base_lnn.config, "use_manual_engine_priors", False) else None,
+                prior_features=prior_payload.get("atom_prior_embedding") if getattr(self.base_lnn.config, "use_manual_engine_priors", False) else None,
+            )
+            site_logits = base_impl._apply_bde_prior(site_logits, (batch.get("physics_features") or {}).get("bde_values"))
+            logit_residual = self.phase2_context_logit_head(z_ctx) if self.phase2_context_logit_head is not None else torch.zeros_like(site_logits)
+            site_logits = site_logits + (logit_scale * gate * logit_residual)
+            source_site_logits = {}
+            if hasattr(base_impl, "_compute_source_site_logits"):
+                source_site_logits = base_impl._compute_source_site_logits(fused_atom_features, prior_payload) or {}
+            if source_site_logits and hasattr(base_impl, "_blend_source_site_logits"):
+                site_logits = base_impl._blend_source_site_logits(
+                    site_logits,
+                    source_site_logits,
+                    batch.get("graph_metadata"),
+                    batch.get("batch"),
+                )
+
+            result = dict(outputs)
+            result.setdefault("site_logits_phase2_base", outputs.get("site_logits"))
+            result["site_logits"] = site_logits.clamp(-20.0, 20.0)
+            result["site_scores"] = torch.sigmoid(result["site_logits"])
+            result["atom_features"] = fused_atom_features
+            result["phase2_context_outputs"] = {
+                "event_strain": None if event_outputs is None else event_outputs["strain"],
+                "event_active_neighbor_count": None if event_outputs is None else event_outputs["active_neighbor_count"],
+                "event_depth": None if event_outputs is None else event_outputs["event_depth"],
+                "access_score": None if access_outputs is None else access_outputs["score"],
+                "access_cost": None if access_outputs is None else access_outputs["cost"],
+                "barrier_score": None if barrier_outputs is None else barrier_outputs["score"],
+            }
+            diagnostics = dict(result.get("diagnostics") or {})
+            diagnostics["phase2_context"] = {
+                "ctx_scale": float(scale.detach().item()),
+                "ctx_logit_scale": float(logit_scale.detach().item()),
+                "ctx_gate_mean": float(gate.detach().mean().item()) if gate.numel() else 0.0,
+                "ctx_residual_norm_mean": float(residual.detach().norm(dim=-1).mean().item()) if residual.numel() else 0.0,
+                "event_strain_mean": float(event_outputs["strain"].detach().mean().item()) if event_outputs is not None else 0.0,
+                "access_score_mean": float(access_outputs["score"].detach().mean().item()) if access_outputs is not None else 0.0,
+                "barrier_score_mean": float(barrier_outputs["score"].detach().mean().item()) if barrier_outputs is not None else 0.0,
             }
             result["diagnostics"] = diagnostics
             if source_site_logits:
@@ -949,6 +1126,7 @@ if TORCH_AVAILABLE:
             outputs = dict(self.base_lnn(batch))
             outputs = self._apply_fixed_cyp_context(outputs)
             outputs = self._apply_local_chemistry(outputs, batch)
+            outputs = self._apply_phase2_context(outputs, batch)
             if self.domain_adv_head is not None:
                 mol_features = outputs.get("mol_features")
                 if mol_features is not None and getattr(mol_features, "numel", lambda: 0)():

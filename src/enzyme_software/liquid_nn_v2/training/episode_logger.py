@@ -181,6 +181,19 @@ class EpisodeLogger:
         anomaly_score_norm_cpu = anomaly_score_norm.detach().cpu() if anomaly_score_norm is not None else None
         anomaly_flag = batch.get("local_anomaly_flag")
         anomaly_flag_cpu = anomaly_flag.detach().cpu() if anomaly_flag is not None else None
+        phase2 = outputs.get("phase2_context_outputs") or {}
+        phase2_event_strain = phase2.get("event_strain")
+        phase2_event_strain_cpu = phase2_event_strain.detach().cpu() if phase2_event_strain is not None else None
+        phase2_event_neighbors = phase2.get("event_active_neighbor_count")
+        phase2_event_neighbors_cpu = phase2_event_neighbors.detach().cpu() if phase2_event_neighbors is not None else None
+        phase2_event_depth = phase2.get("event_depth")
+        phase2_event_depth_cpu = phase2_event_depth.detach().cpu() if phase2_event_depth is not None else None
+        phase2_access_score = phase2.get("access_score")
+        phase2_access_score_cpu = phase2_access_score.detach().cpu() if phase2_access_score is not None else None
+        phase2_access_cost = phase2.get("access_cost")
+        phase2_access_cost_cpu = phase2_access_cost.detach().cpu() if phase2_access_cost is not None else None
+        phase2_barrier = phase2.get("barrier_score")
+        phase2_barrier_cpu = phase2_barrier.detach().cpu() if phase2_barrier is not None else None
 
         def _slice_vote_head(name: str, *, start_idx: int, end_idx: int):
             value = vote_heads_cpu.get(name)
@@ -303,6 +316,14 @@ class EpisodeLogger:
                     "anomaly_score": _to_serializable(anomaly_score_cpu[graph_idx]) if anomaly_score_cpu is not None else None,
                     "anomaly_score_normalized": _to_serializable(anomaly_score_norm_cpu[graph_idx]) if anomaly_score_norm_cpu is not None else None,
                     "anomaly_flag": _to_serializable(anomaly_flag_cpu[graph_idx]) if anomaly_flag_cpu is not None else None,
+                },
+                "phase2": {
+                    "event_strain": _to_serializable(phase2_event_strain_cpu[start:end]) if phase2_event_strain_cpu is not None else None,
+                    "event_active_neighbor_count": _to_serializable(phase2_event_neighbors_cpu[start:end]) if phase2_event_neighbors_cpu is not None else None,
+                    "event_depth": _to_serializable(phase2_event_depth_cpu[start:end]) if phase2_event_depth_cpu is not None else None,
+                    "access_score": _to_serializable(phase2_access_score_cpu[start:end]) if phase2_access_score_cpu is not None else None,
+                    "access_cost": _to_serializable(phase2_access_cost_cpu[start:end]) if phase2_access_cost_cpu is not None else None,
+                    "barrier_score": _to_serializable(phase2_barrier_cpu[start:end]) if phase2_barrier_cpu is not None else None,
                 },
                 "decision": {
                     "top1_atom": top1,
