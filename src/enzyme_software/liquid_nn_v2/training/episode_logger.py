@@ -169,10 +169,16 @@ class EpisodeLogger:
         local_chem_cpu = local_chem.detach().cpu() if local_chem is not None else None
         local_charge = batch.get("local_charge_updated")
         local_charge_cpu = local_charge.detach().cpu() if local_charge is not None else None
+        local_charge_delta = batch.get("local_charge_delta")
+        local_charge_delta_cpu = local_charge_delta.detach().cpu() if local_charge_delta is not None else None
         local_etn = batch.get("local_etn_prior")
         local_etn_cpu = local_etn.detach().cpu() if local_etn is not None else None
+        local_etn_features = batch.get("local_etn_features")
+        local_etn_features_cpu = local_etn_features.detach().cpu() if local_etn_features is not None else None
         anomaly_score = batch.get("local_anomaly_score")
         anomaly_score_cpu = anomaly_score.detach().cpu() if anomaly_score is not None else None
+        anomaly_score_norm = batch.get("local_anomaly_score_normalized")
+        anomaly_score_norm_cpu = anomaly_score_norm.detach().cpu() if anomaly_score_norm is not None else None
         anomaly_flag = batch.get("local_anomaly_flag")
         anomaly_flag_cpu = anomaly_flag.detach().cpu() if anomaly_flag is not None else None
 
@@ -291,8 +297,11 @@ class EpisodeLogger:
                 "chemistry": {
                     "local_chem_features": _to_serializable(local_chem_cpu[start:end]) if local_chem_cpu is not None else None,
                     "updated_charge": _to_serializable(local_charge_cpu[start:end]) if local_charge_cpu is not None else None,
+                    "charge_delta": _to_serializable(local_charge_delta_cpu[start:end]) if local_charge_delta_cpu is not None else None,
                     "etn_prior": _to_serializable(local_etn_cpu[start:end]) if local_etn_cpu is not None else None,
+                    "etn_features": _to_serializable(local_etn_features_cpu[start:end]) if local_etn_features_cpu is not None else None,
                     "anomaly_score": _to_serializable(anomaly_score_cpu[graph_idx]) if anomaly_score_cpu is not None else None,
+                    "anomaly_score_normalized": _to_serializable(anomaly_score_norm_cpu[graph_idx]) if anomaly_score_norm_cpu is not None else None,
                     "anomaly_flag": _to_serializable(anomaly_flag_cpu[graph_idx]) if anomaly_flag_cpu is not None else None,
                 },
                 "decision": {

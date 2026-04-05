@@ -123,6 +123,7 @@ def _collect_model_overrides() -> dict[str, int | float]:
         "HYBRID_COLAB_LOCAL_CHEM_HIDDEN_DIM": (_env_int, "local_chem_hidden_dim"),
         "HYBRID_COLAB_LOCAL_CHEM_DROPOUT": (_env_float, "local_chem_dropout"),
         "HYBRID_COLAB_LOCAL_CHEM_INIT_SCALE": (_env_float, "local_chem_init_scale"),
+        "HYBRID_COLAB_LOCAL_CHEM_LOGIT_SCALE": (_env_float, "local_chem_logit_scale"),
         "HYBRID_COLAB_SOURCE_ALIGN_WEIGHT": (_env_float, "source_align_weight"),
         "HYBRID_COLAB_SOURCE_ALIGN_COV_WEIGHT": (_env_float, "source_align_cov_weight"),
         "HYBRID_COLAB_USE_SOURCE_SITE_HEADS": (_env_int, "use_source_site_heads"),

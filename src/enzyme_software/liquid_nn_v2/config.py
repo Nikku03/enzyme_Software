@@ -117,7 +117,8 @@ class ModelConfig:
     use_local_chemistry_path: bool = False
     local_chem_hidden_dim: int = 64
     local_chem_dropout: float = 0.05
-    local_chem_init_scale: float = 0.20
+    local_chem_init_scale: float = 0.08
+    local_chem_logit_scale: float = 0.05
     use_topk_reranker: bool = False
     topk_reranker_k: int = 8
     topk_reranker_hidden_dim: int = 128
@@ -303,6 +304,7 @@ class ModelConfig:
         self.local_chem_hidden_dim = max(16, int(self.local_chem_hidden_dim))
         self.local_chem_dropout = min(max(float(self.local_chem_dropout), 0.0), 0.5)
         self.local_chem_init_scale = min(max(float(self.local_chem_init_scale), 1.0e-3), 1.0)
+        self.local_chem_logit_scale = min(max(float(self.local_chem_logit_scale), 1.0e-3), 1.0)
         self.use_topk_reranker = bool(self.use_topk_reranker)
         self.topk_reranker_k = max(2, int(self.topk_reranker_k))
         self.topk_reranker_hidden_dim = max(32, int(self.topk_reranker_hidden_dim))

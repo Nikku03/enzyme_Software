@@ -37,7 +37,45 @@ def compute_etn_prior_scores(
     num_atoms = int(charges.size)
     zeros = np.zeros((num_atoms, 1), dtype=np.float32)
     if num_atoms == 0:
-        return {"prior_score": zeros, "energy": zeros, "gamma": zeros, "yield": zeros}
+        return {
+            "prior_score": zeros,
+            "energy": zeros,
+            "gamma": zeros,
+            "yield": zeros,
+            "rank": zeros,
+            "top_gap": zeros,
+            "zscore": zeros,
+        }
+
+    def _pack_features(yield_values: np.ndarray, prior_values: np.ndarray) -> dict[str, np.ndarray]:
+        values = np.asarray(yield_values, dtype=np.float32).reshape(-1)
+        prior = np.asarray(prior_values, dtype=np.float32).reshape(-1)
+        if values.size <= 1:
+            rank = np.ones_like(values, dtype=np.float32)
+            top_gap = values.copy()
+            zscore = np.zeros_like(values, dtype=np.float32)
+        else:
+            order = np.argsort(-values)
+            rank_position = np.empty_like(order)
+            rank_position[order] = np.arange(values.size, dtype=np.int64)
+            rank = 1.0 - (rank_position.astype(np.float32) / float(max(values.size - 1, 1)))
+            leader = float(values[order[0]])
+            runner_up = float(values[order[1]])
+            max_other = np.full_like(values, leader, dtype=np.float32)
+            max_other[int(order[0])] = runner_up
+            top_gap = values - max_other
+            mean = float(values.mean())
+            std = float(values.std())
+            zscore = (values - mean) / max(std, 1.0e-4)
+        return {
+            "prior_score": prior.reshape(-1, 1).astype(np.float32),
+            "energy": energy.reshape(-1, 1).astype(np.float32),
+            "gamma": gamma.reshape(-1, 1).astype(np.float32),
+            "yield": values.reshape(-1, 1).astype(np.float32),
+            "rank": rank.reshape(-1, 1).astype(np.float32),
+            "top_gap": top_gap.reshape(-1, 1).astype(np.float32),
+            "zscore": zscore.reshape(-1, 1).astype(np.float32),
+        }
 
     bde_norm = np.clip((bde - 250.0) / 250.0, 0.0, 1.5)
     energy = (0.65 * bde_norm) + (0.20 * charges) + (0.25 * field)
@@ -45,13 +83,9 @@ def compute_etn_prior_scores(
     gamma = np.clip(gamma, 1.0e-4, 3.0)
 
     if atom_coords is None or num_atoms <= 1:
-        prior = 1.0 / (1.0 + np.exp(energy - gamma))
-        return {
-            "prior_score": prior.reshape(-1, 1).astype(np.float32),
-            "energy": energy.reshape(-1, 1).astype(np.float32),
-            "gamma": gamma.reshape(-1, 1).astype(np.float32),
-            "yield": prior.reshape(-1, 1).astype(np.float32),
-        }
+        yields = 1.0 / (1.0 + np.exp(energy - gamma))
+        prior = np.clip(0.40 * yields + 0.60 * (1.0 / (1.0 + np.exp(energy - gamma))), 0.0, 1.0)
+        return _pack_features(yields, prior)
 
     coords = np.asarray(atom_coords, dtype=np.float32).reshape(num_atoms, 3)
     ranking = np.argsort(-(field + access - crowd))[: min(max_sites, num_atoms)]
@@ -82,10 +116,6 @@ def compute_etn_prior_scores(
 
     full_yield = np.zeros((num_atoms,), dtype=np.float32)
     full_yield[ranking] = yields.astype(np.float32)
-    prior = np.clip(0.65 * full_yield + 0.35 * (1.0 / (1.0 + np.exp(energy - gamma))), 0.0, 1.0)
-    return {
-        "prior_score": prior.reshape(-1, 1).astype(np.float32),
-        "energy": energy.reshape(-1, 1).astype(np.float32),
-        "gamma": gamma.reshape(-1, 1).astype(np.float32),
-        "yield": full_yield.reshape(-1, 1).astype(np.float32),
-    }
+    logistic_prior = 1.0 / (1.0 + np.exp(energy - gamma))
+    prior = np.clip(0.80 * full_yield + 0.20 * logistic_prior, 0.0, 1.0)
+    return _pack_features(full_yield, prior)

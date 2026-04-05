@@ -31,6 +31,8 @@ if TORCH_AVAILABLE:
             self.local_chem_proj = None
             self.local_chem_gate = None
             self.local_chem_scale_logit = None
+            self.local_chem_logit_head = None
+            self.local_chem_logit_scale_logit = None
             self.topk_reranker = None
             self.domain_adv_head = None
             domain_adv_weight = float(getattr(self.config, "domain_adv_weight", 0.0))
@@ -172,7 +174,7 @@ if TORCH_AVAILABLE:
                     self.site_arbiter_uses_bridge = True
             if bool(getattr(self.config, "use_local_chemistry_path", False)):
                 atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
-                chem_dim = 7 + 7 + 1
+                chem_dim = 11 + 7 + 1
                 chem_hidden = int(getattr(self.config, "local_chem_hidden_dim", atom_dim))
                 chem_dropout = float(getattr(self.config, "local_chem_dropout", 0.05))
                 self.local_chem_proj = nn.Sequential(
@@ -188,9 +190,21 @@ if TORCH_AVAILABLE:
                     nn.Linear(max(32, chem_hidden // 2), 1),
                     nn.Sigmoid(),
                 )
-                self.local_chem_scale_logit = nn.Parameter(
-                    torch.logit(torch.tensor(float(getattr(self.config, "local_chem_init_scale", 0.20))))
+                self.local_chem_logit_head = nn.Sequential(
+                    nn.Linear(chem_dim, max(16, chem_hidden // 2)),
+                    nn.SiLU(),
+                    nn.Dropout(chem_dropout),
+                    nn.Linear(max(16, chem_hidden // 2), 1),
                 )
+                self.local_chem_scale_logit = nn.Parameter(
+                    torch.logit(torch.tensor(float(getattr(self.config, "local_chem_init_scale", 0.08))))
+                )
+                self.local_chem_logit_scale_logit = nn.Parameter(
+                    torch.logit(torch.tensor(float(getattr(self.config, "local_chem_logit_scale", 0.05))))
+                )
+                gate_linear = self.local_chem_gate[-2]
+                if hasattr(gate_linear, "bias") and gate_linear.bias is not None:
+                    nn.init.constant_(gate_linear.bias, -1.0)
             if bool(getattr(self.config, "use_topk_reranker", False)):
                 atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
                 mol_dim = int(getattr(self.config, "cyp_branch_dim", getattr(self.config, "mol_dim", 128)))
@@ -305,7 +319,7 @@ if TORCH_AVAILABLE:
             batch_index = batch.get("batch")
             local_chem = batch.get("local_chem_features")
             anomaly_features = batch.get("local_anomaly_features")
-            anomaly_score = batch.get("local_anomaly_score")
+            anomaly_score = batch.get("local_anomaly_score_normalized")
             if atom_features is None or batch_index is None or local_chem is None:
                 return outputs
             device = atom_features.device
@@ -318,6 +332,7 @@ if TORCH_AVAILABLE:
             residual = torch.tanh(self.local_chem_proj(z))
             gate = self.local_chem_gate(torch.cat([atom_features, z], dim=-1))
             scale = torch.sigmoid(self.local_chem_scale_logit).to(device=device, dtype=dtype)
+            chem_logit_scale = torch.sigmoid(self.local_chem_logit_scale_logit).to(device=device, dtype=dtype)
             fused_atom_features = atom_features + (scale * gate * residual)
             base_impl = self._base_impl()
             prior_payload = base_impl.manual_priors(
@@ -332,6 +347,8 @@ if TORCH_AVAILABLE:
                 prior_features=prior_payload.get("atom_prior_embedding") if getattr(self.base_lnn.config, "use_manual_engine_priors", False) else None,
             )
             site_logits = base_impl._apply_bde_prior(site_logits, (batch.get("physics_features") or {}).get("bde_values"))
+            chem_logit_residual = self.local_chem_logit_head(z) if self.local_chem_logit_head is not None else torch.zeros_like(site_logits)
+            site_logits = site_logits + (chem_logit_scale * gate * chem_logit_residual)
             source_site_logits = {}
             if hasattr(base_impl, "_compute_source_site_logits"):
                 source_site_logits = base_impl._compute_source_site_logits(fused_atom_features, prior_payload) or {}
@@ -350,8 +367,11 @@ if TORCH_AVAILABLE:
             diagnostics = dict(result.get("diagnostics") or {})
             diagnostics["local_chemistry"] = {
                 "chem_scale": float(scale.detach().item()),
+                "chem_logit_scale": float(chem_logit_scale.detach().item()),
                 "chem_gate_mean": float(gate.detach().mean().item()),
                 "chem_residual_norm_mean": float(residual.detach().norm(dim=-1).mean().item()) if residual.numel() else 0.0,
+                "chem_logit_mean": float(chem_logit_residual.detach().mean().item()) if chem_logit_residual.numel() else 0.0,
+                "chem_logit_std": float(chem_logit_residual.detach().std().item()) if chem_logit_residual.numel() > 1 else 0.0,
                 "chem_feature_mean": float(chem_atom.detach().mean().item()) if chem_atom.numel() else 0.0,
                 "anomaly_score_mean": float(mol_score.detach().mean().item()) if mol_score.numel() else 0.0,
             }

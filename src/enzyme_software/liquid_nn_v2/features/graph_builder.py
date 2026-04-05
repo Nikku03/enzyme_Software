@@ -62,9 +62,12 @@ class MoleculeGraph:
     atom_coordinates: Optional[np.ndarray] = None
     local_chem_features: Optional[np.ndarray] = None
     local_charge_updated: Optional[np.ndarray] = None
+    local_charge_delta: Optional[np.ndarray] = None
     local_etn_prior: Optional[np.ndarray] = None
+    local_etn_features: Optional[np.ndarray] = None
     local_anomaly_features: Optional[np.ndarray] = None
     local_anomaly_score: Optional[np.ndarray] = None
+    local_anomaly_score_normalized: Optional[np.ndarray] = None
     local_anomaly_flag: Optional[np.ndarray] = None
     parsing_status: str = "ok"
     repaired: bool = False
@@ -164,6 +167,8 @@ def smiles_to_graph(
     formal_charges = np.asarray([float(atom.GetFormalCharge()) for atom in mol.GetAtoms()], dtype=np.float32).reshape(-1, 1)
     field_payload = compute_local_field_features(atom_coordinates, atomic_numbers, formal_charges)
     updated_charges = update_local_charges_eem(atom_coordinates, atomic_numbers, formal_charges)
+    charge_delta = updated_charges.astype(np.float32) - formal_charges.astype(np.float32)
+    abs_charge_delta = np.abs(charge_delta).astype(np.float32)
     etn_payload = compute_etn_prior_scores(
         atom_coordinates,
         updated_charges,
@@ -174,6 +179,15 @@ def smiles_to_graph(
         edge_index,
     )
     anomaly_payload = compute_anomaly_features(mol, num_atoms=mol.GetNumAtoms())
+    etn_features = np.concatenate(
+        [
+            etn_payload["yield"],
+            etn_payload["rank"],
+            etn_payload["top_gap"],
+            etn_payload["zscore"],
+        ],
+        axis=1,
+    ).astype(np.float32)
     local_chem_features = np.concatenate(
         [
             field_payload["steric_score"],
@@ -181,8 +195,9 @@ def smiles_to_graph(
             field_payload["field_score"],
             field_payload["access_proxy"],
             field_payload["crowding"],
-            updated_charges.astype(np.float32),
-            etn_payload["prior_score"],
+            charge_delta,
+            abs_charge_delta,
+            etn_features,
         ],
         axis=1,
     ).astype(np.float32)
@@ -222,9 +237,12 @@ def smiles_to_graph(
         atom_coordinates=atom_coordinates.astype(np.float32) if atom_coordinates is not None else np.zeros((mol.GetNumAtoms(), 3), dtype=np.float32),
         local_chem_features=local_chem_features,
         local_charge_updated=updated_charges.astype(np.float32),
+        local_charge_delta=charge_delta.astype(np.float32),
         local_etn_prior=etn_payload["prior_score"].astype(np.float32),
+        local_etn_features=etn_features.astype(np.float32),
         local_anomaly_features=anomaly_payload["features"].astype(np.float32),
         local_anomaly_score=anomaly_payload["score"].astype(np.float32),
+        local_anomaly_score_normalized=anomaly_payload["score_normalized"].astype(np.float32),
         local_anomaly_flag=anomaly_payload["flag"].astype(np.float32),
         parsing_status=prep.status,
         repaired=prep.repaired,

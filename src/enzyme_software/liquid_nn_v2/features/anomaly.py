@@ -18,6 +18,7 @@ def compute_anomaly_features(mol, *, num_atoms: int) -> dict[str, np.ndarray]:
         return {
             "features": zeros,
             "score": np.zeros((1, 1), dtype=np.float32),
+            "score_normalized": np.zeros((1, 1), dtype=np.float32),
             "flag": np.zeros((1, 1), dtype=np.float32),
         }
 
@@ -37,5 +38,7 @@ def compute_anomaly_features(mol, *, num_atoms: int) -> dict[str, np.ndarray]:
     sigma = np.asarray([[1.5, 0.8, 0.8, 0.3, 0.20, 10.0, 1.5]], dtype=np.float32)
     z = (features - mu) / np.clip(sigma, 1.0e-3, None)
     score = np.sum(np.square(z), axis=1, keepdims=True).astype(np.float32)
+    score_log = np.log1p(np.clip(score, 0.0, None))
+    score_normalized = np.clip((score_log - 2.0) / 1.0, -3.0, 3.0).astype(np.float32)
     flag = (score > 12.0).astype(np.float32)
-    return {"features": features, "score": score, "flag": flag}
+    return {"features": features, "score": score, "score_normalized": score_normalized, "flag": flag}
