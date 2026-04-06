@@ -46,9 +46,10 @@ def compute_boundary_field_features(
     cyp_profile: Dict[str, np.ndarray | float],
     access_proxy: np.ndarray | None = None,
     crowding: np.ndarray | None = None,
+    num_atoms: int | None = None,
 ) -> Dict[str, np.ndarray]:
-    count = 0
-    if atom_coordinates is not None:
+    count = int(num_atoms) if num_atoms is not None else 0
+    if count <= 0 and atom_coordinates is not None:
         raw_coords = np.asarray(atom_coordinates)
         if raw_coords.ndim >= 1:
             count = int(raw_coords.shape[0])
@@ -106,9 +107,10 @@ def compute_accessibility_features(
     boundary_scalar: np.ndarray | None = None,
     heme_distance: np.ndarray | None = None,
     cyp_profile: Dict[str, np.ndarray | float],
+    num_atoms: int | None = None,
 ) -> Dict[str, np.ndarray]:
-    count = 0
-    if atom_coordinates is not None:
+    count = int(num_atoms) if num_atoms is not None else 0
+    if count <= 0 and atom_coordinates is not None:
         raw_coords = np.asarray(atom_coordinates)
         if raw_coords.ndim >= 1:
             count = int(raw_coords.shape[0])

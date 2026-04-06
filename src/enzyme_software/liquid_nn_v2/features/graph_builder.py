@@ -177,6 +177,7 @@ def smiles_to_graph(
         cyp_profile=cyp_profile_payload,
         access_proxy=field_payload["access_proxy"],
         crowding=field_payload["crowding"],
+        num_atoms=mol.GetNumAtoms(),
     )
     access_payload = compute_accessibility_features(
         atom_coordinates,
@@ -186,6 +187,7 @@ def smiles_to_graph(
         boundary_scalar=boundary_payload["scalar"],
         heme_distance=boundary_payload["heme_distance"],
         cyp_profile=cyp_profile_payload,
+        num_atoms=mol.GetNumAtoms(),
     )
     updated_charges = update_local_charges_eem(atom_coordinates, atomic_numbers, formal_charges)
     charge_delta = updated_charges.astype(np.float32) - formal_charges.astype(np.float32)
