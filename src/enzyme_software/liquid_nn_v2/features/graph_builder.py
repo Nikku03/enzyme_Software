@@ -15,8 +15,10 @@ from enzyme_software.liquid_nn_v2.data.bde_table import bde_to_tau_init
 from enzyme_software.liquid_nn_v2.data.drug_database import CYP_CLASSES
 from enzyme_software.liquid_nn_v2.features.anomaly import compute_anomaly_features
 from enzyme_software.liquid_nn_v2.features.atom_features import extract_atom_features
+from enzyme_software.liquid_nn_v2.features.boundary_field import compute_accessibility_features, compute_boundary_field_features
 from enzyme_software.liquid_nn_v2.features.charge_update import update_local_charges_eem
 from enzyme_software.liquid_nn_v2.features.chemistry_prior import compute_etn_prior_scores
+from enzyme_software.liquid_nn_v2.features.cyp_profile import get_cyp_profile
 from enzyme_software.liquid_nn_v2.features.group_detector import detect_functional_groups
 from enzyme_software.liquid_nn_v2.features.local_field import compute_local_field_features, resolve_atom_coordinates
 from enzyme_software.liquid_nn_v2.features.physics_features import compute_molecule_physics_features
@@ -69,6 +71,9 @@ class MoleculeGraph:
     local_anomaly_score: Optional[np.ndarray] = None
     local_anomaly_score_normalized: Optional[np.ndarray] = None
     local_anomaly_flag: Optional[np.ndarray] = None
+    phase5_atom_features: Optional[np.ndarray] = None
+    phase5_cyp_profile: Optional[np.ndarray] = None
+    phase5_heme_center: Optional[np.ndarray] = None
     parsing_status: str = "ok"
     repaired: bool = False
     aggressive_repair: bool = False
@@ -166,6 +171,22 @@ def smiles_to_graph(
     atomic_numbers = np.asarray([int(atom.GetAtomicNum()) for atom in mol.GetAtoms()], dtype=np.int64)
     formal_charges = np.asarray([float(atom.GetFormalCharge()) for atom in mol.GetAtoms()], dtype=np.float32).reshape(-1, 1)
     field_payload = compute_local_field_features(atom_coordinates, atomic_numbers, formal_charges)
+    cyp_profile_payload = get_cyp_profile(cyp_label)
+    boundary_payload = compute_boundary_field_features(
+        atom_coordinates,
+        cyp_profile=cyp_profile_payload,
+        access_proxy=field_payload["access_proxy"],
+        crowding=field_payload["crowding"],
+    )
+    access_payload = compute_accessibility_features(
+        atom_coordinates,
+        edge_index,
+        steric_score=field_payload["steric_score"],
+        crowding=field_payload["crowding"],
+        boundary_scalar=boundary_payload["scalar"],
+        heme_distance=boundary_payload["heme_distance"],
+        cyp_profile=cyp_profile_payload,
+    )
     updated_charges = update_local_charges_eem(atom_coordinates, atomic_numbers, formal_charges)
     charge_delta = updated_charges.astype(np.float32) - formal_charges.astype(np.float32)
     abs_charge_delta = np.abs(charge_delta).astype(np.float32)
@@ -198,6 +219,20 @@ def smiles_to_graph(
             charge_delta,
             abs_charge_delta,
             etn_features,
+        ],
+        axis=1,
+    ).astype(np.float32)
+    phase5_atom_features = np.concatenate(
+        [
+            boundary_payload["scalar"],
+            boundary_payload["vector"],
+            boundary_payload["heme_distance"],
+            boundary_payload["axis_cosine"],
+            boundary_payload["radial_gate"],
+            access_payload["cost"],
+            access_payload["score"],
+            access_payload["blockage"],
+            boundary_payload["profile"],
         ],
         axis=1,
     ).astype(np.float32)
@@ -244,6 +279,9 @@ def smiles_to_graph(
         local_anomaly_score=anomaly_payload["score"].astype(np.float32),
         local_anomaly_score_normalized=anomaly_payload["score_normalized"].astype(np.float32),
         local_anomaly_flag=anomaly_payload["flag"].astype(np.float32),
+        phase5_atom_features=phase5_atom_features,
+        phase5_cyp_profile=np.asarray(cyp_profile_payload["profile"], dtype=np.float32),
+        phase5_heme_center=np.asarray(boundary_payload["heme_center"], dtype=np.float32),
         parsing_status=prep.status,
         repaired=prep.repaired,
         aggressive_repair=prep.aggressive_repair,

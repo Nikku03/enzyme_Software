@@ -70,6 +70,9 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
     anomaly_score_parts: List[object] = []
     anomaly_score_norm_parts: List[object] = []
     anomaly_flag_parts: List[object] = []
+    phase5_atom_parts: List[object] = []
+    phase5_cyp_profile_parts: List[object] = []
+    phase5_heme_center_parts: List[object] = []
     parsing_statuses: List[str] = []
     canonical_smiles: List[str] = []
     repaired_flags: List[bool] = []
@@ -157,6 +160,9 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
         anomaly_score_parts.append(_tensor(graph.local_anomaly_score, dtype=torch.float32) if getattr(graph, "local_anomaly_score", None) is not None else None)
         anomaly_score_norm_parts.append(_tensor(graph.local_anomaly_score_normalized, dtype=torch.float32) if getattr(graph, "local_anomaly_score_normalized", None) is not None else None)
         anomaly_flag_parts.append(_tensor(graph.local_anomaly_flag, dtype=torch.float32) if getattr(graph, "local_anomaly_flag", None) is not None else None)
+        phase5_atom_parts.append(_tensor(graph.phase5_atom_features, dtype=torch.float32) if getattr(graph, "phase5_atom_features", None) is not None else None)
+        phase5_cyp_profile_parts.append(_tensor(graph.phase5_cyp_profile, dtype=torch.float32) if getattr(graph, "phase5_cyp_profile", None) is not None else None)
+        phase5_heme_center_parts.append(_tensor(graph.phase5_heme_center, dtype=torch.float32) if getattr(graph, "phase5_heme_center", None) is not None else None)
         parsing_statuses.append(str(getattr(graph, "parsing_status", "unknown")))
         canonical_smiles.append(str(getattr(graph, "canonical_smiles", graph.smiles)))
         repaired_flags.append(bool(getattr(graph, "repaired", False)))
@@ -264,6 +270,9 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
     anomaly_score = _stack_optional(anomaly_score_parts, mol_counts, name="local_anomaly_score")
     anomaly_score_normalized = _stack_optional(anomaly_score_norm_parts, mol_counts, name="local_anomaly_score_normalized")
     anomaly_flag = _stack_optional(anomaly_flag_parts, mol_counts, name="local_anomaly_flag")
+    phase5_atom = _stack_optional(phase5_atom_parts, atom_counts, name="phase5_atom_features")
+    phase5_cyp_profile = _stack_optional(phase5_cyp_profile_parts, mol_counts, name="phase5_cyp_profile")
+    phase5_heme_center = _stack_optional(phase5_heme_center_parts, mol_counts, name="phase5_heme_center")
     if manual_atom is not None:
         batch["manual_engine_atom_features"] = manual_atom
     if manual_mol is not None:
@@ -316,6 +325,12 @@ def collate_molecule_graphs(graphs: Iterable) -> Dict[str, object]:
         batch["local_anomaly_score_normalized"] = anomaly_score_normalized
     if anomaly_flag is not None:
         batch["local_anomaly_flag"] = anomaly_flag
+    if phase5_atom is not None:
+        batch["phase5_atom_features"] = phase5_atom
+    if phase5_cyp_profile is not None:
+        batch["phase5_cyp_profile"] = phase5_cyp_profile
+    if phase5_heme_center is not None:
+        batch["phase5_heme_center"] = phase5_heme_center
     if os.environ.get("LNN_DEBUG_COLLATE", "").strip().lower() in {"1", "true", "yes", "on"} and "site_labels" in batch:
         print(f"DEBUG collate: site_labels sum = {batch['site_labels'].sum().item()}")
     return batch

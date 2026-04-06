@@ -44,6 +44,11 @@ if TORCH_AVAILABLE:
             self.phase2_context_scale_logit = None
             self.phase2_context_logit_head = None
             self.phase2_context_logit_scale_logit = None
+            self.phase5_proposer_proj = None
+            self.phase5_proposer_gate = None
+            self.phase5_proposer_scale_logit = None
+            self.phase5_proposer_logit_head = None
+            self.phase5_proposer_logit_scale_logit = None
             self.topk_reranker = None
             self.domain_adv_head = None
             domain_adv_weight = float(getattr(self.config, "domain_adv_weight", 0.0))
@@ -272,6 +277,42 @@ if TORCH_AVAILABLE:
                 phase2_gate_linear = self.phase2_context_gate[-2]
                 if hasattr(phase2_gate_linear, "bias") and phase2_gate_linear.bias is not None:
                     nn.init.constant_(phase2_gate_linear.bias, -1.0)
+            if any(
+                bool(getattr(self.config, flag, False))
+                for flag in ("use_phase5_boundary_field", "use_phase5_accessibility", "use_phase5_cyp_profile")
+            ):
+                atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
+                phase5_in = 18
+                phase5_hidden = int(getattr(self.config, "phase5_proposer_hidden_dim", atom_dim))
+                phase5_dropout = float(getattr(self.config, "phase5_proposer_dropout", 0.05))
+                self.phase5_proposer_proj = nn.Sequential(
+                    nn.Linear(phase5_in, phase5_hidden),
+                    nn.SiLU(),
+                    nn.Dropout(phase5_dropout),
+                    nn.Linear(phase5_hidden, atom_dim),
+                )
+                self.phase5_proposer_gate = nn.Sequential(
+                    nn.Linear(atom_dim + phase5_in, max(32, phase5_hidden // 2)),
+                    nn.SiLU(),
+                    nn.Dropout(phase5_dropout),
+                    nn.Linear(max(32, phase5_hidden // 2), 1),
+                    nn.Sigmoid(),
+                )
+                self.phase5_proposer_logit_head = nn.Sequential(
+                    nn.Linear(phase5_in, max(16, phase5_hidden // 2)),
+                    nn.SiLU(),
+                    nn.Dropout(phase5_dropout),
+                    nn.Linear(max(16, phase5_hidden // 2), 1),
+                )
+                self.phase5_proposer_scale_logit = nn.Parameter(
+                    torch.logit(torch.tensor(float(getattr(self.config, "phase5_proposer_init_scale", 0.10))))
+                )
+                self.phase5_proposer_logit_scale_logit = nn.Parameter(
+                    torch.logit(torch.tensor(float(getattr(self.config, "phase5_proposer_logit_scale", 0.06))))
+                )
+                phase5_gate_linear = self.phase5_proposer_gate[-2]
+                if hasattr(phase5_gate_linear, "bias") and phase5_gate_linear.bias is not None:
+                    nn.init.constant_(phase5_gate_linear.bias, -0.75)
             if bool(getattr(self.config, "use_topk_reranker", False)):
                 atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
                 mol_dim = int(getattr(self.config, "cyp_branch_dim", getattr(self.config, "mol_dim", 128)))
@@ -443,6 +484,85 @@ if TORCH_AVAILABLE:
                 "chem_logit_std": float(chem_logit_residual.detach().std().item()) if chem_logit_residual.numel() > 1 else 0.0,
                 "chem_feature_mean": float(chem_atom.detach().mean().item()) if chem_atom.numel() else 0.0,
                 "anomaly_score_mean": float(mol_score.detach().mean().item()) if mol_score.numel() else 0.0,
+            }
+            result["diagnostics"] = diagnostics
+            if source_site_logits:
+                result["source_site_logits"] = source_site_logits
+            return result
+
+        def _apply_phase5_proposer(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
+            if self.phase5_proposer_proj is None or self.phase5_proposer_gate is None:
+                return outputs
+            atom_features = outputs.get("atom_features")
+            phase5_atom = batch.get("phase5_atom_features")
+            if atom_features is None or phase5_atom is None:
+                return outputs
+            device = atom_features.device
+            dtype = atom_features.dtype
+            z_full = phase5_atom.to(device=device, dtype=dtype)
+            pieces = []
+            cursor = 0
+            if bool(getattr(self.config, "use_phase5_boundary_field", False)):
+                pieces.append(z_full[:, cursor : cursor + 8])
+            cursor += 8
+            if bool(getattr(self.config, "use_phase5_accessibility", False)):
+                pieces.append(z_full[:, cursor : cursor + 3])
+            cursor += 3
+            if bool(getattr(self.config, "use_phase5_cyp_profile", False)):
+                pieces.append(z_full[:, cursor : cursor + 8])
+            if not pieces:
+                return outputs
+            z = torch.cat(pieces, dim=-1)
+            z = self._match_last_dim(z, int(self.phase5_proposer_proj[0].in_features))
+            residual = torch.tanh(self.phase5_proposer_proj(z))
+            gate_in = torch.cat([atom_features, z], dim=-1)
+            gate_in = self._match_last_dim(gate_in, int(self.phase5_proposer_gate[0].in_features))
+            gate = self.phase5_proposer_gate(gate_in)
+            scale = torch.sigmoid(self.phase5_proposer_scale_logit).to(device=device, dtype=dtype)
+            logit_scale = torch.sigmoid(self.phase5_proposer_logit_scale_logit).to(device=device, dtype=dtype)
+            fused_atom_features = atom_features + (scale * gate * residual)
+            base_impl = self._base_impl()
+            num_molecules = int(outputs["cyp_logits"].size(0))
+            prior_payload = base_impl.manual_priors(
+                batch,
+                num_atoms=int(atom_features.size(0)),
+                num_molecules=num_molecules,
+                device=device,
+            )
+            site_logits, _site_residual = base_impl.site_head(
+                fused_atom_features,
+                prior_logits=prior_payload.get("atom_prior_logits") if getattr(self.base_lnn.config, "use_manual_engine_priors", False) else None,
+                prior_features=prior_payload.get("atom_prior_embedding") if getattr(self.base_lnn.config, "use_manual_engine_priors", False) else None,
+            )
+            site_logits = base_impl._apply_bde_prior(site_logits, (batch.get("physics_features") or {}).get("bde_values"))
+            logit_residual = self.phase5_proposer_logit_head(z) if self.phase5_proposer_logit_head is not None else torch.zeros_like(site_logits)
+            site_logits = site_logits + (logit_scale * gate * logit_residual)
+            source_site_logits = {}
+            if hasattr(base_impl, "_compute_source_site_logits"):
+                source_site_logits = base_impl._compute_source_site_logits(fused_atom_features, prior_payload) or {}
+            if source_site_logits and hasattr(base_impl, "_blend_source_site_logits"):
+                site_logits = base_impl._blend_source_site_logits(
+                    site_logits,
+                    source_site_logits,
+                    batch.get("graph_metadata"),
+                    batch.get("batch"),
+                )
+            result = dict(outputs)
+            result.setdefault("site_logits_phase5_base", outputs.get("site_logits"))
+            result["site_logits"] = site_logits.clamp(-20.0, 20.0)
+            result["site_scores"] = torch.sigmoid(result["site_logits"])
+            result["atom_features"] = fused_atom_features
+            diagnostics = dict(result.get("diagnostics") or {})
+            diagnostics["phase5_proposer"] = {
+                "p5_scale": float(scale.detach().item()),
+                "p5_logit_scale": float(logit_scale.detach().item()),
+                "p5_gate_mean": float(gate.detach().mean().item()) if gate.numel() else 0.0,
+                "p5_residual_norm_mean": float(residual.detach().norm(dim=-1).mean().item()) if residual.numel() else 0.0,
+                "p5_feature_mean": float(z.detach().mean().item()) if z.numel() else 0.0,
+                "p5_boundary_mean": float(z_full[:, 0:1].detach().mean().item()) if z_full.numel() else 0.0,
+                "p5_access_mean": float(z_full[:, 9:10].detach().mean().item()) if z_full.size(-1) >= 10 else 0.0,
+                "p5_heme_distance_mean": float(z_full[:, 4:5].detach().mean().item()) if z_full.size(-1) >= 5 else 0.0,
+                "p5_profile_norm_mean": float(z_full[:, -8:].detach().norm(dim=-1).mean().item()) if z_full.size(-1) >= 8 else 0.0,
             }
             result["diagnostics"] = diagnostics
             if source_site_logits:
@@ -1140,6 +1260,7 @@ if TORCH_AVAILABLE:
         ) -> Dict[str, object]:
             outputs = dict(self.base_lnn(batch))
             outputs = self._apply_fixed_cyp_context(outputs)
+            outputs = self._apply_phase5_proposer(outputs, batch)
             outputs = self._apply_local_chemistry(outputs, batch)
             outputs = self._apply_phase2_context(outputs, batch)
             if self.domain_adv_head is not None:
