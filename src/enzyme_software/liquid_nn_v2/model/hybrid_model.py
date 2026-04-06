@@ -727,9 +727,10 @@ if TORCH_AVAILABLE:
             state_payload = score_molecule_against_states(
                 atom_coords=atom_coords,
                 batch_index=batch_index,
+                edge_index=batch.get("edge_index"),
                 edge_attr=batch.get("edge_attr"),
                 phase5_atom_features=batch.get("phase5_atom_features"),
-                site_logits=site_logits.view(-1),
+                local_chem_features=batch.get("local_chem_features"),
                 states=states,
             )
             state_features = build_state_conditioned_features(
@@ -771,6 +772,10 @@ if TORCH_AVAILABLE:
                 "access": state_features["access"],
                 "electronic": state_features["electronic"],
                 "path_cost": state_features["path_cost"],
+                "channel_pref": state_features["channel_pref"],
+                "radial_overflow": state_features["radial_overflow"],
+                "filter_penalty": state_features["filter_penalty"],
+                "normalized_distance": state_features["normalized_distance"],
             }
             diagnostics = dict(result.get("diagnostics") or {})
             diagnostics["cyp3a4_state_rescorer"] = {
@@ -782,6 +787,10 @@ if TORCH_AVAILABLE:
                 "orientation_mean": float(state_features["orientation"].detach().mean().item()) if state_features["orientation"].numel() else 0.0,
                 "access_mean": float(state_features["access"].detach().mean().item()) if state_features["access"].numel() else 0.0,
                 "electronic_mean": float(state_features["electronic"].detach().mean().item()) if state_features["electronic"].numel() else 0.0,
+                "channel_pref_mean": float(state_features["channel_pref"].detach().mean().item()) if state_features["channel_pref"].numel() else 0.0,
+                "radial_overflow_mean": float(state_features["radial_overflow"].detach().mean().item()) if state_features["radial_overflow"].numel() else 0.0,
+                "filter_penalty_mean": float(state_features["filter_penalty"].detach().mean().item()) if state_features["filter_penalty"].numel() else 0.0,
+                "normalized_distance_mean": float(state_features["normalized_distance"].detach().mean().item()) if state_features["normalized_distance"].numel() else 0.0,
                 "rescored_logit_mean": float(result["site_logits"].detach().mean().item()) if result["site_logits"].numel() else 0.0,
             }
             result["diagnostics"] = diagnostics

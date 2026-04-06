@@ -9,18 +9,18 @@ if TORCH_AVAILABLE:
     CYP3A4_STATES: List[Dict[str, object]] = [
         {
             "name": "closed_restrictive",
-            "heme_center": [0.00, 0.00, 0.00],
-            "oxo_axis": [0.00, 0.00, 1.00],
+            "heme_center": [-0.35, 0.20, -0.10],
+            "oxo_axis": [-0.08, 0.16, 0.98],
             "gate_openness": 0.25,
             "pocket_radius": 6.50,
             "phe_filter_strength": 0.90,
-            "channel_bias": [0.70, 0.20, 0.20],
+            "channel_bias": [0.82, 0.18, 0.10],
             "allosteric_pressure": 0.00,
         },
         {
             "name": "open_productive",
-            "heme_center": [0.00, 0.00, 0.00],
-            "oxo_axis": [0.00, 0.00, 1.00],
+            "heme_center": [0.00, -0.15, 0.12],
+            "oxo_axis": [0.12, -0.05, 0.99],
             "gate_openness": 0.75,
             "pocket_radius": 8.00,
             "phe_filter_strength": 0.50,
@@ -29,12 +29,12 @@ if TORCH_AVAILABLE:
         },
         {
             "name": "expanded_stacked",
-            "heme_center": [0.00, 0.00, 0.00],
-            "oxo_axis": [0.00, 0.00, 1.00],
+            "heme_center": [0.28, 0.18, 0.25],
+            "oxo_axis": [0.26, 0.10, 0.96],
             "gate_openness": 0.90,
             "pocket_radius": 9.20,
             "phe_filter_strength": 0.35,
-            "channel_bias": [0.80, 0.80, 0.60],
+            "channel_bias": [0.68, 0.84, 0.72],
             "allosteric_pressure": 0.80,
         },
     ]
@@ -88,6 +88,33 @@ if TORCH_AVAILABLE:
         return [(batch_index == idx) for idx in range(num_molecules)]
 
 
+    def _masked_edge_feature_means(
+        edge_index: Optional[torch.Tensor],
+        edge_attr: Optional[torch.Tensor],
+        atom_mask: torch.Tensor,
+        *,
+        width: int,
+        device,
+        dtype,
+    ) -> torch.Tensor:
+        if edge_index is None or edge_attr is None or not getattr(edge_index, "numel", lambda: 0)() or not getattr(edge_attr, "numel", lambda: 0)():
+            return torch.zeros(width, device=device, dtype=dtype)
+        edge_index_t = edge_index.to(device=device, dtype=torch.long)
+        edge_attr_t = edge_attr.to(device=device, dtype=dtype)
+        if edge_attr_t.ndim == 1:
+            edge_attr_t = edge_attr_t.unsqueeze(-1)
+        edge_width = min(width, int(edge_attr_t.size(-1)))
+        src = edge_index_t[0]
+        dst = edge_index_t[1]
+        mask = atom_mask[src] & atom_mask[dst]
+        if not bool(mask.any()):
+            return torch.zeros(width, device=device, dtype=dtype)
+        mean = edge_attr_t[mask, :edge_width].mean(dim=0)
+        if edge_width == width:
+            return mean
+        return torch.nn.functional.pad(mean, (0, width - edge_width))
+
+
     def _reaction_direction_vectors(
         atom_coords: torch.Tensor,
         edge_index: Optional[torch.Tensor],
@@ -121,61 +148,70 @@ if TORCH_AVAILABLE:
     def score_molecule_against_states(
         atom_coords: torch.Tensor,
         batch_index: torch.Tensor,
+        edge_index: Optional[torch.Tensor],
         edge_attr: Optional[torch.Tensor],
         phase5_atom_features: Optional[torch.Tensor],
-        site_logits: torch.Tensor,
+        local_chem_features: Optional[torch.Tensor],
         states: List[Dict[str, torch.Tensor | float | str]],
     ) -> Dict[str, torch.Tensor]:
         rows = int(atom_coords.size(0))
         device = atom_coords.device
         dtype = atom_coords.dtype
         num_molecules = int(batch_index.max().item()) + 1 if batch_index.numel() else 0
-        z = torch.zeros(num_molecules, 6, device=device, dtype=dtype)
+        z = torch.zeros(num_molecules, 7, device=device, dtype=dtype)
         phase5 = _optional_feature(phase5_atom_features, rows, 18, device=device, dtype=dtype)
+        local_chem = _optional_feature(local_chem_features, rows, 11, device=device, dtype=dtype)
         access_score = phase5[:, 8:9] if phase5.numel() else torch.zeros(rows, 1, device=device, dtype=dtype)
-        edge_attr_t = edge_attr.to(device=device, dtype=dtype) if edge_attr is not None and getattr(edge_attr, "numel", lambda: 0)() else None
+        crowding = local_chem[:, 4:5] if local_chem.numel() else torch.zeros(rows, 1, device=device, dtype=dtype)
+        charge_delta = local_chem[:, 5:6] if local_chem.numel() else torch.zeros(rows, 1, device=device, dtype=dtype)
         for mol_idx, mol_mask in enumerate(_molecule_masks(batch_index, num_molecules)):
             if not bool(mol_mask.any()):
                 continue
             mol_coords = atom_coords[mol_mask]
             num_atoms = float(mol_mask.sum().item())
             bbox_span = (mol_coords.max(dim=0).values - mol_coords.min(dim=0).values).norm()
-            mol_logits = site_logits[mol_mask]
-            topk = min(6, int(mol_logits.numel()))
-            order = torch.argsort(mol_logits, descending=True)[:topk]
-            candidate_span = (
-                (mol_coords[order].max(dim=0).values - mol_coords[order].min(dim=0).values).norm()
+            topk = min(6, int(mol_coords.size(0)))
+            local_access = access_score[mol_mask].view(-1)
+            exposed_order = torch.argsort(local_access, descending=True)[:topk]
+            exposed_span = (
+                (mol_coords[exposed_order].max(dim=0).values - mol_coords[exposed_order].min(dim=0).values).norm()
                 if topk > 1
                 else torch.tensor(0.0, device=device, dtype=dtype)
             )
             mean_access = access_score[mol_mask].mean()
-            aromatic_frac = torch.tensor(0.0, device=device, dtype=dtype)
-            rotatable_frac = torch.tensor(0.0, device=device, dtype=dtype)
-            if edge_attr_t is not None:
-                edge_count = min(int(edge_attr_t.size(0)), int(batch_index.numel()) * 4)
-                if edge_count > 0 and int(edge_attr_t.size(-1)) >= 7:
-                    rotatable_frac = edge_attr_t[:, 6].mean()
-                    aromatic_frac = edge_attr_t[:, 3].mean()
+            mean_crowding = crowding[mol_mask].mean().clamp(0.0, 1.0)
+            max_charge_delta = charge_delta[mol_mask].abs().max().clamp(0.0, 2.0) / 2.0
+            edge_means = _masked_edge_feature_means(
+                edge_index,
+                edge_attr,
+                mol_mask,
+                width=7,
+                device=device,
+                dtype=dtype,
+            )
+            aromatic_frac = edge_means[3].clamp(0.0, 1.0)
+            rotatable_frac = edge_means[6].clamp(0.0, 1.0)
             z[mol_idx] = torch.stack(
                 [
                     torch.log1p(torch.tensor(num_atoms, device=device, dtype=dtype)) / 4.0,
                     bbox_span / 12.0,
-                    candidate_span / 10.0,
+                    exposed_span / 10.0,
                     rotatable_frac.clamp(0.0, 1.0),
                     aromatic_frac.clamp(0.0, 1.0),
                     mean_access.clamp(0.0, 1.0),
+                    (0.55 * max_charge_delta + 0.45 * (1.0 - mean_crowding)).clamp(0.0, 1.0),
                 ]
             )
         coeff = torch.as_tensor(
             [
-                [-1.20, -1.00, -0.80, 0.35, -0.15, -0.25],
-                [0.10, 0.25, 0.15, 0.10, 0.05, 0.30],
-                [1.05, 1.15, 0.90, 0.10, 0.20, 0.15],
+                [-1.10, -1.05, -0.75, -0.10, 0.05, -0.15, -0.05],
+                [0.05, 0.30, 0.18, 0.18, 0.02, 0.32, 0.08],
+                [0.95, 1.05, 0.92, 0.28, 0.16, 0.20, 0.24],
             ],
             device=device,
             dtype=dtype,
         )
-        bias = torch.as_tensor([0.65, 0.35, -0.45], device=device, dtype=dtype)
+        bias = torch.as_tensor([0.55, 0.30, -0.30], device=device, dtype=dtype)
         logits = z @ coeff.t() + bias
         weights = torch.softmax(logits, dim=-1)
         return {
@@ -252,6 +288,10 @@ if TORCH_AVAILABLE:
             "score": score.clamp(0.0, 1.0),
             "path_cost": path_cost,
             "crowding": crowding,
+            "channel_pref": channel_pref,
+            "radial_overflow": radial_overflow,
+            "filter_penalty": filter_penalty,
+            "normalized_distance": (dist / pocket_radius),
         }
 
 
@@ -298,6 +338,10 @@ if TORCH_AVAILABLE:
         orientation_parts = []
         access_parts = []
         path_cost_parts = []
+        channel_pref_parts = []
+        radial_overflow_parts = []
+        filter_penalty_parts = []
+        normalized_distance_parts = []
         electronic = compute_electronic_score(local_chem_features, bde_values)
         for state in states:
             proximity = compute_proximity_score(
@@ -324,10 +368,18 @@ if TORCH_AVAILABLE:
             orientation_parts.append(orientation)
             access_parts.append(access_payload["score"])
             path_cost_parts.append(access_payload["path_cost"])
+            channel_pref_parts.append(access_payload["channel_pref"])
+            radial_overflow_parts.append(access_payload["radial_overflow"])
+            filter_penalty_parts.append(access_payload["filter_penalty"])
+            normalized_distance_parts.append(access_payload["normalized_distance"])
         proximity = torch.cat(proximity_parts, dim=1)
         orientation = torch.cat(orientation_parts, dim=1)
         access = torch.cat(access_parts, dim=1)
         path_cost = torch.cat(path_cost_parts, dim=1)
+        channel_pref = torch.cat(channel_pref_parts, dim=1)
+        radial_overflow = torch.cat(radial_overflow_parts, dim=1)
+        filter_penalty = torch.cat(filter_penalty_parts, dim=1)
+        normalized_distance = torch.cat(normalized_distance_parts, dim=1)
         state_weight_atoms = state_weights[batch_index]
         weighted_gate = (state_weight_atoms * torch.as_tensor([float(s["gate_openness"]) for s in states], device=atom_coords.device, dtype=atom_coords.dtype).view(1, -1)).sum(dim=1, keepdim=True)
         return {
@@ -338,6 +390,10 @@ if TORCH_AVAILABLE:
             "electronic": electronic,
             "reaction_direction": reaction_dir,
             "weighted_gate": weighted_gate,
+            "channel_pref": channel_pref,
+            "radial_overflow": radial_overflow,
+            "filter_penalty": filter_penalty,
+            "normalized_distance": normalized_distance,
         }
 
 
