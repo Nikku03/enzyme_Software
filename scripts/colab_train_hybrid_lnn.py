@@ -2271,6 +2271,8 @@ def main() -> None:
         if precedent_logbook:
             print(f"precedent_logbook={precedent_logbook}")
         for key in sorted(PRESETS[preset]):
+            if key == "HYBRID_COLAB_PRESET_BASE":
+                continue
             print(f"{key}={os.environ[key]}")
         print()
 
