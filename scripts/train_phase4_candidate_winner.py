@@ -53,6 +53,8 @@ def main() -> None:
     parser.add_argument("--dropout", type=float, default=0.10)
     parser.add_argument("--margin-weight", type=float, default=0.25)
     parser.add_argument("--margin-value", type=float, default=0.30)
+    parser.add_argument("--do-no-harm-weight", type=float, default=0.20)
+    parser.add_argument("--do-no-harm-margin", type=float, default=0.15)
     parser.add_argument("--early-stopping-patience", type=int, default=6)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
@@ -77,6 +79,8 @@ def main() -> None:
         weight_decay=float(args.weight_decay),
         margin_weight=float(args.margin_weight),
         margin_value=float(args.margin_value),
+        do_no_harm_weight=float(args.do_no_harm_weight),
+        do_no_harm_margin=float(args.do_no_harm_margin),
     )
 
     output_dir = Path(args.output_dir)
@@ -121,6 +125,8 @@ def main() -> None:
             "candidate_cache": str(cache_path),
             "best_epoch": int(best_state["epoch"]),
             "seed": int(args.seed),
+            "do_no_harm_weight": float(args.do_no_harm_weight),
+            "do_no_harm_margin": float(args.do_no_harm_margin),
             "history": history,
             "test_metrics": test_metrics,
         },
@@ -131,6 +137,8 @@ def main() -> None:
         "seed": int(args.seed),
         "feature_dim": int(feature_dim),
         "best_epoch": int(best_state["epoch"]),
+        "do_no_harm_weight": float(args.do_no_harm_weight),
+        "do_no_harm_margin": float(args.do_no_harm_margin),
         "history": history,
         "split_summaries": {
             "train": train_ds.summary,
