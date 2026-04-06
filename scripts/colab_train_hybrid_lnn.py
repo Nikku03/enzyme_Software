@@ -191,9 +191,16 @@ LOCKED_PRESET_KEYS = {
 
 
 def _apply_preset(preset_values: dict[str, str]) -> list[str]:
-    locked = _env_flag("HYBRID_COLAB_LOCK_PRESET_POLICY", True)
+    base = preset_values.get("HYBRID_COLAB_PRESET_BASE", "").strip().lower()
     overridden: list[str] = []
+    if base:
+        if base not in PRESETS:
+            raise ValueError(f"Unknown HYBRID_COLAB_PRESET_BASE={base!r}")
+        overridden.extend(_apply_preset(PRESETS[base]))
+    locked = _env_flag("HYBRID_COLAB_LOCK_PRESET_POLICY", True)
     for key, value in preset_values.items():
+        if key == "HYBRID_COLAB_PRESET_BASE":
+            continue
         if locked and key in LOCKED_PRESET_KEYS:
             previous = os.environ.get(key)
             os.environ[key] = value
@@ -823,6 +830,11 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_CYP3A4_STATE_ORIENTATION_ALPHA": "2.0",
         "HYBRID_COLAB_CYP3A4_STATE_ACCESS_PATH_LAMBDA": "1.10",
         "HYBRID_COLAB_CYP3A4_STATE_ACCESS_CROWDING_LAMBDA": "0.90",
+        "HYBRID_COLAB_CYP3A4_STATE_ACCESS_RADIAL_LAMBDA": "1.15",
+        "HYBRID_COLAB_CYP3A4_STATE_ACCESS_FILTER_LAMBDA": "0.95",
+        "HYBRID_COLAB_CYP3A4_STATE_WEIGHT_TEMPERATURE": "0.85",
+        "HYBRID_COLAB_CYP3A4_STATE_MIN_STATE_WEIGHT": "0.10",
+        "HYBRID_COLAB_CYP3A4_STATE_AGGREGATION_TEMPERATURE": "0.75",
         "HYBRID_COLAB_SITE_RANKING_WEIGHT": "0.80",
         "HYBRID_COLAB_SITE_HARD_NEGATIVE_FRACTION": "0.70",
         "HYBRID_COLAB_SITE_TOP1_MARGIN_TOPK": "2",
@@ -838,6 +850,34 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_SOURCE_ALIGN_COV_WEIGHT": "0.0",
         "HYBRID_COLAB_NEXUS_WAVE_SIDEINFO_AUX_WEIGHT": "0.03",
         "HYBRID_COLAB_NEXUS_ANALOGICAL_SIDEINFO_AUX_WEIGHT": "0.05",
+    },
+    "cyp3a4_sideinfo_fullrank_reaction_layer_learned_only": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank_reaction_layer",
+        "HYBRID_COLAB_CYP3A4_STATE_PROXIMITY_WEIGHT": "0.0",
+        "HYBRID_COLAB_CYP3A4_STATE_ORIENTATION_WEIGHT": "0.0",
+        "HYBRID_COLAB_CYP3A4_STATE_ACCESS_WEIGHT": "0.0",
+        "HYBRID_COLAB_CYP3A4_STATE_ELECTRONIC_WEIGHT": "0.0",
+    },
+    "cyp3a4_sideinfo_fullrank_reaction_layer_proximity": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank_reaction_layer",
+        "HYBRID_COLAB_CYP3A4_STATE_PROXIMITY_WEIGHT": "1.20",
+        "HYBRID_COLAB_CYP3A4_STATE_ORIENTATION_WEIGHT": "0.0",
+        "HYBRID_COLAB_CYP3A4_STATE_ACCESS_WEIGHT": "0.0",
+        "HYBRID_COLAB_CYP3A4_STATE_ELECTRONIC_WEIGHT": "0.0",
+    },
+    "cyp3a4_sideinfo_fullrank_reaction_layer_access": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank_reaction_layer",
+        "HYBRID_COLAB_CYP3A4_STATE_PROXIMITY_WEIGHT": "0.0",
+        "HYBRID_COLAB_CYP3A4_STATE_ORIENTATION_WEIGHT": "0.0",
+        "HYBRID_COLAB_CYP3A4_STATE_ACCESS_WEIGHT": "1.00",
+        "HYBRID_COLAB_CYP3A4_STATE_ELECTRONIC_WEIGHT": "0.0",
+    },
+    "cyp3a4_sideinfo_fullrank_reaction_layer_proximity_access": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank_reaction_layer",
+        "HYBRID_COLAB_CYP3A4_STATE_PROXIMITY_WEIGHT": "1.20",
+        "HYBRID_COLAB_CYP3A4_STATE_ORIENTATION_WEIGHT": "0.0",
+        "HYBRID_COLAB_CYP3A4_STATE_ACCESS_WEIGHT": "1.00",
+        "HYBRID_COLAB_CYP3A4_STATE_ELECTRONIC_WEIGHT": "0.0",
     },
     "cyp3a4_sideinfo_fullrank_localchem": {
         "HYBRID_COLAB_DATASET": "data/prepared_training/main8_cyp3a4_augmented.json",

@@ -162,6 +162,11 @@ class ModelConfig:
     cyp3a4_state_orientation_alpha: float = 2.0
     cyp3a4_state_access_path_lambda: float = 1.10
     cyp3a4_state_access_crowding_lambda: float = 0.90
+    cyp3a4_state_access_radial_lambda: float = 1.15
+    cyp3a4_state_access_filter_lambda: float = 0.95
+    cyp3a4_state_weight_temperature: float = 0.85
+    cyp3a4_state_min_state_weight: float = 0.10
+    cyp3a4_state_aggregation_temperature: float = 0.75
     use_topk_reranker: bool = False
     topk_reranker_k: int = 8
     topk_reranker_hidden_dim: int = 128
@@ -327,6 +332,11 @@ class ModelConfig:
         self.cyp3a4_state_orientation_alpha = max(0.5, float(self.cyp3a4_state_orientation_alpha))
         self.cyp3a4_state_access_path_lambda = max(0.0, float(self.cyp3a4_state_access_path_lambda))
         self.cyp3a4_state_access_crowding_lambda = max(0.0, float(self.cyp3a4_state_access_crowding_lambda))
+        self.cyp3a4_state_access_radial_lambda = max(0.0, float(self.cyp3a4_state_access_radial_lambda))
+        self.cyp3a4_state_access_filter_lambda = max(0.0, float(self.cyp3a4_state_access_filter_lambda))
+        self.cyp3a4_state_weight_temperature = max(1.0e-3, float(self.cyp3a4_state_weight_temperature))
+        self.cyp3a4_state_min_state_weight = min(max(float(self.cyp3a4_state_min_state_weight), 0.0), 0.30)
+        self.cyp3a4_state_aggregation_temperature = max(1.0e-3, float(self.cyp3a4_state_aggregation_temperature))
         self.nexus_site_arbiter_hidden_dim = max(32, int(self.nexus_site_arbiter_hidden_dim))
         self.nexus_site_arbiter_dropout = min(max(float(self.nexus_site_arbiter_dropout), 0.0), 0.5)
         self.nexus_lnn_vote_aux_weight = max(0.0, float(self.nexus_lnn_vote_aux_weight))

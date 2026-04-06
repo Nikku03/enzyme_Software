@@ -43,11 +43,13 @@ if TORCH_AVAILABLE:
     def get_cyp3a4_states(*, device=None, dtype=None) -> List[Dict[str, torch.Tensor | float | str]]:
         states: List[Dict[str, torch.Tensor | float | str]] = []
         for state in CYP3A4_STATES:
+            axis = torch.as_tensor(state["oxo_axis"], device=device, dtype=dtype or torch.float32)
+            axis = axis / axis.norm().clamp_min(1.0e-6)
             states.append(
                 {
                     "name": str(state["name"]),
                     "heme_center": torch.as_tensor(state["heme_center"], device=device, dtype=dtype or torch.float32),
-                    "oxo_axis": torch.as_tensor(state["oxo_axis"], device=device, dtype=dtype or torch.float32),
+                    "oxo_axis": axis,
                     "gate_openness": float(state["gate_openness"]),
                     "pocket_radius": float(state["pocket_radius"]),
                     "phe_filter_strength": float(state["phe_filter_strength"]),
@@ -115,15 +117,17 @@ if TORCH_AVAILABLE:
         return torch.nn.functional.pad(mean, (0, width - edge_width))
 
 
-    def _reaction_direction_vectors(
+    def _reaction_direction_candidates(
         atom_coords: torch.Tensor,
         edge_index: Optional[torch.Tensor],
         batch_index: torch.Tensor,
+        *,
+        max_directions: int = 4,
     ) -> torch.Tensor:
         rows = int(atom_coords.size(0))
         device = atom_coords.device
         dtype = atom_coords.dtype
-        direction = torch.zeros(rows, 3, device=device, dtype=dtype)
+        direction = torch.zeros(rows, max_directions, 3, device=device, dtype=dtype)
         if edge_index is not None and getattr(edge_index, "numel", lambda: 0)():
             edge_arr = edge_index.to(device=device, dtype=torch.long)
             for atom_idx in range(rows):
@@ -131,16 +135,19 @@ if TORCH_AVAILABLE:
                 nbrs = edge_arr[1, nbr_mask]
                 nbrs = nbrs[(nbrs >= 0) & (nbrs < rows)]
                 if nbrs.numel() > 0:
+                    limit = min(max_directions - 1, int(nbrs.numel()))
+                    for slot, nbr_idx in enumerate(nbrs[:limit]):
+                        direction[atom_idx, slot] = atom_coords[atom_idx] - atom_coords[int(nbr_idx)]
                     nbr_centroid = atom_coords[nbrs].mean(dim=0)
-                    direction[atom_idx] = atom_coords[atom_idx] - nbr_centroid
+                    direction[atom_idx, max_directions - 1] = atom_coords[atom_idx] - nbr_centroid
         for mol_idx in range(int(batch_index.max().item()) + 1 if batch_index.numel() else 0):
             mol_mask = batch_index == mol_idx
             if not bool(mol_mask.any()):
                 continue
             mol_centroid = atom_coords[mol_mask].mean(dim=0, keepdim=True)
-            missing = mol_mask & (direction.norm(dim=-1) <= 1.0e-6)
+            missing = mol_mask & (direction.norm(dim=-1).amax(dim=-1) <= 1.0e-6)
             if bool(missing.any()):
-                direction[missing] = atom_coords[missing] - mol_centroid
+                direction[missing, 0, :] = atom_coords[missing] - mol_centroid
         direction_norm = direction.norm(dim=-1, keepdim=True).clamp_min(1.0e-6)
         return direction / direction_norm
 
@@ -153,6 +160,9 @@ if TORCH_AVAILABLE:
         phase5_atom_features: Optional[torch.Tensor],
         local_chem_features: Optional[torch.Tensor],
         states: List[Dict[str, torch.Tensor | float | str]],
+        *,
+        state_temperature: float,
+        min_state_weight: float,
     ) -> Dict[str, torch.Tensor]:
         rows = int(atom_coords.size(0))
         device = atom_coords.device
@@ -213,7 +223,11 @@ if TORCH_AVAILABLE:
         )
         bias = torch.as_tensor([0.55, 0.30, -0.30], device=device, dtype=dtype)
         logits = z @ coeff.t() + bias
-        weights = torch.softmax(logits, dim=-1)
+        weights = torch.softmax(logits / max(float(state_temperature), 1.0e-3), dim=-1)
+        floor = max(0.0, min(float(min_state_weight), 0.30))
+        if floor > 0.0:
+            weights = weights.clamp_min(floor)
+            weights = weights / weights.sum(dim=-1, keepdim=True).clamp_min(1.0e-6)
         return {
             "molecule_features": z,
             "state_logits": logits,
@@ -238,8 +252,9 @@ if TORCH_AVAILABLE:
         *,
         alpha: float,
     ) -> torch.Tensor:
-        cosine = (reaction_direction @ state_axis.view(3, 1)).clamp(-1.0, 1.0)
-        return torch.relu(cosine).pow(float(alpha)).clamp(0.0, 1.0)
+        cosine = torch.matmul(reaction_direction, state_axis.view(3, 1)).squeeze(-1).clamp(-1.0, 1.0)
+        best = torch.relu(cosine).amax(dim=1, keepdim=True)
+        return best.pow(float(alpha)).clamp(0.0, 1.0)
 
 
     def compute_access_score(
@@ -251,6 +266,8 @@ if TORCH_AVAILABLE:
         *,
         path_lambda: float,
         crowding_lambda: float,
+        radial_lambda: float,
+        filter_lambda: float,
     ) -> Dict[str, torch.Tensor]:
         rows = int(atom_coords.size(0))
         device = atom_coords.device
@@ -282,8 +299,15 @@ if TORCH_AVAILABLE:
             + 0.35 * (1.0 - channel_pref)
             + 0.25 * allosteric * (dist / pocket_radius)
         )
-        filter_penalty = (1.0 - phe_filter * (0.60 * blockage + 0.40 * crowding)).clamp(0.05, 1.0)
-        score = torch.exp(-(float(path_lambda) * path_cost) - (float(crowding_lambda) * crowding)) * gate * filter_penalty
+        filter_penalty = (phe_filter * (0.60 * blockage + 0.40 * crowding)).clamp(0.0, 1.5)
+        normalized_distance = (dist / pocket_radius).clamp(0.0, 3.0)
+        channel_multiplier = channel_pref.clamp(0.20, 1.25)
+        score = torch.exp(
+            -(float(path_lambda) * normalized_distance)
+            - (float(radial_lambda) * radial_overflow.clamp(0.0, 2.0))
+            - (float(filter_lambda) * filter_penalty)
+            - (float(crowding_lambda) * crowding.clamp(0.0, 2.0))
+        ) * gate * channel_multiplier
         return {
             "score": score.clamp(0.0, 1.0),
             "path_cost": path_cost,
@@ -291,7 +315,7 @@ if TORCH_AVAILABLE:
             "channel_pref": channel_pref,
             "radial_overflow": radial_overflow,
             "filter_penalty": filter_penalty,
-            "normalized_distance": (dist / pocket_radius),
+            "normalized_distance": normalized_distance,
         }
 
 
@@ -331,9 +355,11 @@ if TORCH_AVAILABLE:
         orientation_alpha: float,
         access_path_lambda: float,
         access_crowding_lambda: float,
+        access_radial_lambda: float,
+        access_filter_lambda: float,
     ) -> Dict[str, torch.Tensor]:
         rows = int(atom_coords.size(0))
-        reaction_dir = _reaction_direction_vectors(atom_coords, edge_index, batch_index)
+        reaction_dir = _reaction_direction_candidates(atom_coords, edge_index, batch_index)
         proximity_parts = []
         orientation_parts = []
         access_parts = []
@@ -342,7 +368,8 @@ if TORCH_AVAILABLE:
         radial_overflow_parts = []
         filter_penalty_parts = []
         normalized_distance_parts = []
-        electronic = compute_electronic_score(local_chem_features, bde_values)
+        electronic_raw = compute_electronic_score(local_chem_features, bde_values)
+        electronic_effective_parts = []
         for state in states:
             proximity = compute_proximity_score(
                 atom_coords,
@@ -363,6 +390,8 @@ if TORCH_AVAILABLE:
                 state,
                 path_lambda=access_path_lambda,
                 crowding_lambda=access_crowding_lambda,
+                radial_lambda=access_radial_lambda,
+                filter_lambda=access_filter_lambda,
             )
             proximity_parts.append(proximity)
             orientation_parts.append(orientation)
@@ -372,6 +401,7 @@ if TORCH_AVAILABLE:
             radial_overflow_parts.append(access_payload["radial_overflow"])
             filter_penalty_parts.append(access_payload["filter_penalty"])
             normalized_distance_parts.append(access_payload["normalized_distance"])
+            electronic_effective_parts.append(electronic_raw * access_payload["score"])
         proximity = torch.cat(proximity_parts, dim=1)
         orientation = torch.cat(orientation_parts, dim=1)
         access = torch.cat(access_parts, dim=1)
@@ -380,16 +410,23 @@ if TORCH_AVAILABLE:
         radial_overflow = torch.cat(radial_overflow_parts, dim=1)
         filter_penalty = torch.cat(filter_penalty_parts, dim=1)
         normalized_distance = torch.cat(normalized_distance_parts, dim=1)
+        electronic = torch.cat(electronic_effective_parts, dim=1)
         state_weight_atoms = state_weights[batch_index]
         weighted_gate = (state_weight_atoms * torch.as_tensor([float(s["gate_openness"]) for s in states], device=atom_coords.device, dtype=atom_coords.dtype).view(1, -1)).sum(dim=1, keepdim=True)
+        weighted_pocket_radius = (
+            state_weight_atoms
+            * torch.as_tensor([float(s["pocket_radius"]) for s in states], device=atom_coords.device, dtype=atom_coords.dtype).view(1, -1)
+        ).sum(dim=1, keepdim=True)
         return {
             "proximity": proximity,
             "orientation": orientation,
             "access": access,
             "path_cost": path_cost,
             "electronic": electronic,
+            "electronic_raw": electronic_raw,
             "reaction_direction": reaction_dir,
             "weighted_gate": weighted_gate,
+            "weighted_pocket_radius": weighted_pocket_radius,
             "channel_pref": channel_pref,
             "radial_overflow": radial_overflow,
             "filter_penalty": filter_penalty,
@@ -408,19 +445,29 @@ if TORCH_AVAILABLE:
         access_weight: float,
         electronic_weight: float,
         learned_weight: float,
+        aggregation_temperature: float,
     ) -> Dict[str, torch.Tensor]:
         learned = frozen_scores.view(-1, 1)
-        state_scores = (
+        mechanistic = (
             float(proximity_weight) * state_features["proximity"]
             + float(orientation_weight) * state_features["orientation"]
             + float(access_weight) * state_features["access"]
             + float(electronic_weight) * state_features["electronic"]
-            + float(learned_weight) * learned
         )
+        gate = torch.sigmoid(
+            1.35 * state_features["proximity"]
+            + 0.95 * state_features["orientation"]
+            + 1.55 * state_features["access"]
+            - 1.10 * state_features["filter_penalty"]
+        )
+        state_scores = (float(learned_weight) * learned) + (gate * mechanistic)
         log_weights = torch.log(state_weights.clamp_min(1.0e-6))[batch_index]
-        final_scores = torch.logsumexp(log_weights + state_scores, dim=1, keepdim=True)
+        agg_temp = max(float(aggregation_temperature), 1.0e-3)
+        final_scores = agg_temp * torch.logsumexp(log_weights + (state_scores / agg_temp), dim=1, keepdim=True)
         return {
             "state_scores": state_scores,
+            "mechanistic": mechanistic,
+            "gate": gate,
             "final_scores": final_scores,
         }
 

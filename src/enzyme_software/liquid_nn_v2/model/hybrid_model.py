@@ -732,6 +732,8 @@ if TORCH_AVAILABLE:
                 phase5_atom_features=batch.get("phase5_atom_features"),
                 local_chem_features=batch.get("local_chem_features"),
                 states=states,
+                state_temperature=float(getattr(self.config, "cyp3a4_state_weight_temperature", 0.85)),
+                min_state_weight=float(getattr(self.config, "cyp3a4_state_min_state_weight", 0.10)),
             )
             state_features = build_state_conditioned_features(
                 atom_coords=atom_coords,
@@ -747,6 +749,8 @@ if TORCH_AVAILABLE:
                 orientation_alpha=float(getattr(self.config, "cyp3a4_state_orientation_alpha", 2.0)),
                 access_path_lambda=float(getattr(self.config, "cyp3a4_state_access_path_lambda", 1.10)),
                 access_crowding_lambda=float(getattr(self.config, "cyp3a4_state_access_crowding_lambda", 0.90)),
+                access_radial_lambda=float(getattr(self.config, "cyp3a4_state_access_radial_lambda", 1.15)),
+                access_filter_lambda=float(getattr(self.config, "cyp3a4_state_access_filter_lambda", 0.95)),
             )
             rescored = rescore_candidates(
                 frozen_scores=site_logits.view(-1),
@@ -758,6 +762,7 @@ if TORCH_AVAILABLE:
                 access_weight=float(getattr(self.config, "cyp3a4_state_access_weight", 1.00)),
                 electronic_weight=float(getattr(self.config, "cyp3a4_state_electronic_weight", 0.90)),
                 learned_weight=float(getattr(self.config, "cyp3a4_state_learned_weight", 1.00)),
+                aggregation_temperature=float(getattr(self.config, "cyp3a4_state_aggregation_temperature", 0.75)),
             )
             result = dict(outputs)
             result.setdefault("site_logits_learned", site_logits)
@@ -771,26 +776,62 @@ if TORCH_AVAILABLE:
                 "orientation": state_features["orientation"],
                 "access": state_features["access"],
                 "electronic": state_features["electronic"],
+                "electronic_raw": state_features["electronic_raw"],
                 "path_cost": state_features["path_cost"],
                 "channel_pref": state_features["channel_pref"],
                 "radial_overflow": state_features["radial_overflow"],
                 "filter_penalty": state_features["filter_penalty"],
                 "normalized_distance": state_features["normalized_distance"],
+                "weighted_gate": state_features["weighted_gate"],
+                "weighted_pocket_radius": state_features["weighted_pocket_radius"],
+                "mechanistic": rescored["mechanistic"],
+                "gate": rescored["gate"],
             }
+            state_entropy = -(state_payload["state_weights"] * torch.log(state_payload["state_weights"].clamp_min(1.0e-6))).sum(dim=-1)
+            best_state_idx = torch.argmax(state_payload["state_weights"], dim=-1) if state_payload["state_weights"].numel() else torch.zeros(0, device=device, dtype=torch.long)
+            best_state_onehot = torch.nn.functional.one_hot(best_state_idx, num_classes=len(states)).to(dtype=dtype) if best_state_idx.numel() else torch.zeros(0, len(states), device=device, dtype=dtype)
+            learned_top1 = torch.zeros(int(state_payload["state_weights"].size(0)), device=device, dtype=dtype)
+            rescored_top1 = torch.zeros_like(learned_top1)
+            for mol_idx in range(int(state_payload["state_weights"].size(0))):
+                mol_mask = batch_index == mol_idx
+                if not bool(mol_mask.any()):
+                    continue
+                learned_top1[mol_idx] = site_logits.view(-1)[mol_mask].max()
+                rescored_top1[mol_idx] = result["site_logits"].view(-1)[mol_mask].max()
             diagnostics = dict(result.get("diagnostics") or {})
             diagnostics["cyp3a4_state_rescorer"] = {
                 "enabled": 1.0,
                 "closed_weight_mean": float(state_payload["state_weights"][:, 0].detach().mean().item()) if state_payload["state_weights"].numel() else 0.0,
                 "open_weight_mean": float(state_payload["state_weights"][:, 1].detach().mean().item()) if state_payload["state_weights"].numel() > 1 else 0.0,
                 "expanded_weight_mean": float(state_payload["state_weights"][:, 2].detach().mean().item()) if state_payload["state_weights"].numel() > 2 else 0.0,
+                "state_weight_entropy_mean": float(state_entropy.detach().mean().item()) if state_entropy.numel() else 0.0,
+                "weighted_gate_openness_mean": float(state_features["weighted_gate"].detach().mean().item()) if state_features["weighted_gate"].numel() else 0.0,
+                "weighted_pocket_radius_mean": float(state_features["weighted_pocket_radius"].detach().mean().item()) if state_features["weighted_pocket_radius"].numel() else 0.0,
                 "proximity_mean": float(state_features["proximity"].detach().mean().item()) if state_features["proximity"].numel() else 0.0,
                 "orientation_mean": float(state_features["orientation"].detach().mean().item()) if state_features["orientation"].numel() else 0.0,
                 "access_mean": float(state_features["access"].detach().mean().item()) if state_features["access"].numel() else 0.0,
                 "electronic_mean": float(state_features["electronic"].detach().mean().item()) if state_features["electronic"].numel() else 0.0,
+                "electronic_raw_mean": float(state_features["electronic_raw"].detach().mean().item()) if state_features["electronic_raw"].numel() else 0.0,
+                "mechanistic_mean": float(rescored["mechanistic"].detach().mean().item()) if rescored["mechanistic"].numel() else 0.0,
+                "gate_mean": float(rescored["gate"].detach().mean().item()) if rescored["gate"].numel() else 0.0,
                 "channel_pref_mean": float(state_features["channel_pref"].detach().mean().item()) if state_features["channel_pref"].numel() else 0.0,
                 "radial_overflow_mean": float(state_features["radial_overflow"].detach().mean().item()) if state_features["radial_overflow"].numel() else 0.0,
                 "filter_penalty_mean": float(state_features["filter_penalty"].detach().mean().item()) if state_features["filter_penalty"].numel() else 0.0,
                 "normalized_distance_mean": float(state_features["normalized_distance"].detach().mean().item()) if state_features["normalized_distance"].numel() else 0.0,
+                "closed_proximity_mean": float(state_features["proximity"][:, 0].detach().mean().item()) if state_features["proximity"].size(1) > 0 else 0.0,
+                "open_proximity_mean": float(state_features["proximity"][:, 1].detach().mean().item()) if state_features["proximity"].size(1) > 1 else 0.0,
+                "expanded_proximity_mean": float(state_features["proximity"][:, 2].detach().mean().item()) if state_features["proximity"].size(1) > 2 else 0.0,
+                "closed_access_mean": float(state_features["access"][:, 0].detach().mean().item()) if state_features["access"].size(1) > 0 else 0.0,
+                "open_access_mean": float(state_features["access"][:, 1].detach().mean().item()) if state_features["access"].size(1) > 1 else 0.0,
+                "expanded_access_mean": float(state_features["access"][:, 2].detach().mean().item()) if state_features["access"].size(1) > 2 else 0.0,
+                "closed_orientation_mean": float(state_features["orientation"][:, 0].detach().mean().item()) if state_features["orientation"].size(1) > 0 else 0.0,
+                "open_orientation_mean": float(state_features["orientation"][:, 1].detach().mean().item()) if state_features["orientation"].size(1) > 1 else 0.0,
+                "expanded_orientation_mean": float(state_features["orientation"][:, 2].detach().mean().item()) if state_features["orientation"].size(1) > 2 else 0.0,
+                "best_state_closed_fraction": float(best_state_onehot[:, 0].mean().item()) if best_state_onehot.numel() else 0.0,
+                "best_state_open_fraction": float(best_state_onehot[:, 1].mean().item()) if best_state_onehot.size(1) > 1 else 0.0,
+                "best_state_expanded_fraction": float(best_state_onehot[:, 2].mean().item()) if best_state_onehot.size(1) > 2 else 0.0,
+                "state_score_std_mean": float(rescored["state_scores"].detach().std(dim=1).mean().item()) if rescored["state_scores"].numel() else 0.0,
+                "mechanistic_delta_top1_mean": float((rescored_top1 - learned_top1).detach().mean().item()) if learned_top1.numel() else 0.0,
                 "rescored_logit_mean": float(result["site_logits"].detach().mean().item()) if result["site_logits"].numel() else 0.0,
             }
             result["diagnostics"] = diagnostics
