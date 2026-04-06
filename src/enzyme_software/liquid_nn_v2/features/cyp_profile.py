@@ -68,20 +68,31 @@ def get_cyp_profile(cyp_label: str | None) -> Dict[str, np.ndarray | float]:
     payload = dict(_DEFAULT_PROFILE)
     if key in _CYP_PROFILES:
         payload.update(_CYP_PROFILES[key])
-    profile = np.asarray(payload["profile"], dtype=np.float32).reshape(1, CYP_PROFILE_DIM)
-    axis = np.asarray(payload["axis"], dtype=np.float32).reshape(3)
+    profile_raw = payload.get("profile", _DEFAULT_PROFILE["profile"])
+    axis_raw = payload.get("axis", _DEFAULT_PROFILE["axis"])
+    coeffs_raw = payload.get("boundary_coeffs", _DEFAULT_PROFILE["boundary_coeffs"])
+    profile = np.asarray(profile_raw, dtype=np.float32).reshape(1, -1)
+    if profile.shape[1] != CYP_PROFILE_DIM:
+        profile = np.asarray(_DEFAULT_PROFILE["profile"], dtype=np.float32).reshape(1, CYP_PROFILE_DIM)
+    axis = np.asarray(axis_raw, dtype=np.float32).reshape(-1)
+    if axis.size != 3:
+        axis = np.asarray(_DEFAULT_PROFILE["axis"], dtype=np.float32).reshape(3)
+    else:
+        axis = axis.reshape(3)
     axis_norm = float(np.linalg.norm(axis))
     if axis_norm <= 1.0e-6:
         axis = np.asarray([0.0, 0.0, 1.0], dtype=np.float32)
     else:
         axis = axis / axis_norm
-    coeffs = np.asarray(payload["boundary_coeffs"], dtype=np.float32).reshape(BOUNDARY_COEFF_DIM)
+    coeffs = np.asarray(coeffs_raw, dtype=np.float32).reshape(-1)
+    if coeffs.size != BOUNDARY_COEFF_DIM:
+        coeffs = np.asarray(_DEFAULT_PROFILE["boundary_coeffs"], dtype=np.float32).reshape(BOUNDARY_COEFF_DIM)
     return {
         "name": key or "UNKNOWN",
         "profile": profile,
         "axis": axis.astype(np.float32),
         "boundary_coeffs": coeffs.astype(np.float32),
-        "boundary_radius": float(payload["boundary_radius"]),
-        "access_lambda": float(payload["access_lambda"]),
-        "heme_offset": float(payload["heme_offset"]),
+        "boundary_radius": float(payload.get("boundary_radius", _DEFAULT_PROFILE["boundary_radius"])),
+        "access_lambda": float(payload.get("access_lambda", _DEFAULT_PROFILE["access_lambda"])),
+        "heme_offset": float(payload.get("heme_offset", _DEFAULT_PROFILE["heme_offset"])),
     }

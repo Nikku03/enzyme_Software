@@ -232,7 +232,17 @@ def smiles_to_graph(
             access_payload["cost"],
             access_payload["score"],
             access_payload["blockage"],
-            boundary_payload["profile"],
+            np.asarray(
+                boundary_payload.get(
+                    "profile",
+                    np.repeat(
+                        np.asarray(cyp_profile_payload.get("profile", np.zeros((1, 8), dtype=np.float32)), dtype=np.float32),
+                        mol.GetNumAtoms(),
+                        axis=0,
+                    ),
+                ),
+                dtype=np.float32,
+            ),
         ],
         axis=1,
     ).astype(np.float32)
@@ -280,7 +290,7 @@ def smiles_to_graph(
         local_anomaly_score_normalized=anomaly_payload["score_normalized"].astype(np.float32),
         local_anomaly_flag=anomaly_payload["flag"].astype(np.float32),
         phase5_atom_features=phase5_atom_features,
-        phase5_cyp_profile=np.asarray(cyp_profile_payload["profile"], dtype=np.float32),
+        phase5_cyp_profile=np.asarray(cyp_profile_payload.get("profile", np.zeros((1, 8), dtype=np.float32)), dtype=np.float32),
         phase5_heme_center=np.asarray(boundary_payload["heme_center"], dtype=np.float32),
         parsing_status=prep.status,
         repaired=prep.repaired,
