@@ -1,5 +1,6 @@
 import argparse
 import json
+import random
 import sys
 from pathlib import Path
 
@@ -17,6 +18,28 @@ from enzyme_software.liquid_nn_v2.data.candidate_set_dataset import CandidateSet
 from enzyme_software.liquid_nn_v2.model.candidate_winner_model import CandidateWinnerModel
 from enzyme_software.liquid_nn_v2.training.candidate_winner_trainer import CandidateWinnerTrainer
 
+try:
+    import numpy as np
+except Exception:  # pragma: no cover
+    np = None
+
+
+def _set_seed(seed: int) -> torch.Generator:
+    random.seed(int(seed))
+    if np is not None:
+        np.random.seed(int(seed))
+    torch.manual_seed(int(seed))
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(int(seed))
+        try:
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+        except Exception:
+            pass
+    generator = torch.Generator()
+    generator.manual_seed(int(seed))
+    return generator
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train the offline Phase 4 candidate winner model")
@@ -31,8 +54,10 @@ def main() -> None:
     parser.add_argument("--margin-weight", type=float, default=0.25)
     parser.add_argument("--margin-value", type=float, default=0.30)
     parser.add_argument("--early-stopping-patience", type=int, default=6)
+    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
+    train_generator = _set_seed(int(args.seed))
     cache_path = Path(args.candidate_cache)
     train_ds = CandidateSetDataset(cache_path, split="train")
     val_ds = CandidateSetDataset(cache_path, split="val")
@@ -41,7 +66,7 @@ def main() -> None:
     if feature_dim <= 0:
         raise ValueError(f"Invalid feature_dim in {cache_path}")
 
-    train_loader = DataLoader(train_ds, batch_size=int(args.batch_size), shuffle=True, collate_fn=collate_candidate_sets, num_workers=0)
+    train_loader = DataLoader(train_ds, batch_size=int(args.batch_size), shuffle=True, collate_fn=collate_candidate_sets, num_workers=0, generator=train_generator)
     val_loader = DataLoader(val_ds, batch_size=int(args.batch_size), shuffle=False, collate_fn=collate_candidate_sets, num_workers=0)
     test_loader = DataLoader(test_ds, batch_size=int(args.batch_size), shuffle=False, collate_fn=collate_candidate_sets, num_workers=0)
 
@@ -95,6 +120,7 @@ def main() -> None:
         extra={
             "candidate_cache": str(cache_path),
             "best_epoch": int(best_state["epoch"]),
+            "seed": int(args.seed),
             "history": history,
             "test_metrics": test_metrics,
         },
@@ -102,6 +128,7 @@ def main() -> None:
     report = {
         "status": "completed",
         "candidate_cache": str(cache_path),
+        "seed": int(args.seed),
         "feature_dim": int(feature_dim),
         "best_epoch": int(best_state["epoch"]),
         "history": history,
