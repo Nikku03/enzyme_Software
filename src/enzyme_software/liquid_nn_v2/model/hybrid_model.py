@@ -7,6 +7,12 @@ from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_
 from enzyme_software.liquid_nn_v2.features.route_prior import combine_lnn_with_prior
 from enzyme_software.liquid_nn_v2.model.accessibility import AccessibilityHead
 from enzyme_software.liquid_nn_v2.model.barrier import BarrierHead
+from enzyme_software.liquid_nn_v2.model.cyp3a4_state import (
+    build_state_conditioned_features,
+    get_cyp3a4_states,
+    rescore_candidates,
+    score_molecule_against_states,
+)
 from enzyme_software.liquid_nn_v2.model.event_context import SparseEventContext
 from enzyme_software.liquid_nn_v2.model.hybrid_modules import TopKCrossAtomReranker
 from enzyme_software.liquid_nn_v2.model.nexus_bridge import NexusHybridBridge
@@ -402,6 +408,30 @@ if TORCH_AVAILABLE:
         def _base_impl(self):
             return getattr(self.base_lnn, "impl", self.base_lnn)
 
+        def _batch_is_cyp3a4(self, batch: Dict[str, object]) -> bool:
+            fixed_idx = int(getattr(self.config, "fixed_cyp_index", -1))
+            cyp_names = list(getattr(self.config, "cyp_names", ()) or ())
+            if 0 <= fixed_idx < len(cyp_names) and str(cyp_names[fixed_idx]).strip().upper() == "CYP3A4":
+                return True
+            graph_metadata = list(batch.get("graph_metadata", []) or [])
+            labels = {
+                str((meta or {}).get("primary_cyp", "") or (meta or {}).get("cyp", "")).strip().upper()
+                for meta in graph_metadata
+                if meta is not None
+            }
+            labels = {label for label in labels if label}
+            if labels and labels == {"CYP3A4"}:
+                return True
+            cyp_labels = batch.get("cyp_labels")
+            if cyp_labels is not None and getattr(cyp_labels, "numel", lambda: 0)():
+                try:
+                    idx = cyp_names.index("CYP3A4")
+                    unique = set(int(v) for v in cyp_labels.view(-1).detach().cpu().tolist())
+                    return unique == {idx}
+                except ValueError:
+                    return False
+            return False
+
         def _gradient_reverse(self, value: torch.Tensor, scale: float) -> torch.Tensor:
             if scale <= 0.0:
                 return value.detach()
@@ -677,6 +707,84 @@ if TORCH_AVAILABLE:
             result["phase5_sparse_relay_outputs"] = relay_outputs
             if source_site_logits:
                 result["source_site_logits"] = source_site_logits
+            return result
+
+        def _apply_cyp3a4_state_rescorer(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
+            if not bool(getattr(self.config, "use_cyp3a4_state_rescorer", False)):
+                return outputs
+            if not self._batch_is_cyp3a4(batch):
+                return outputs
+            site_logits = outputs.get("site_logits")
+            batch_index = batch.get("batch")
+            atom_coords = batch.get("atom_coordinates")
+            if site_logits is None or batch_index is None:
+                return outputs
+            rows = int(site_logits.size(0))
+            device = site_logits.device
+            dtype = site_logits.dtype
+            atom_coords = atom_coords.to(device=device, dtype=dtype) if atom_coords is not None else torch.zeros(rows, 3, device=device, dtype=dtype)
+            states = get_cyp3a4_states(device=device, dtype=dtype)
+            state_payload = score_molecule_against_states(
+                atom_coords=atom_coords,
+                batch_index=batch_index,
+                edge_attr=batch.get("edge_attr"),
+                phase5_atom_features=batch.get("phase5_atom_features"),
+                site_logits=site_logits.view(-1),
+                states=states,
+            )
+            state_features = build_state_conditioned_features(
+                atom_coords=atom_coords,
+                edge_index=batch.get("edge_index"),
+                batch_index=batch_index,
+                phase5_atom_features=batch.get("phase5_atom_features"),
+                local_chem_features=batch.get("local_chem_features"),
+                bde_values=(batch.get("physics_features") or {}).get("bde_values"),
+                states=states,
+                state_weights=state_payload["state_weights"],
+                distance_center=float(getattr(self.config, "cyp3a4_state_distance_center", 4.5)),
+                distance_sigma=float(getattr(self.config, "cyp3a4_state_distance_sigma", 1.2)),
+                orientation_alpha=float(getattr(self.config, "cyp3a4_state_orientation_alpha", 2.0)),
+                access_path_lambda=float(getattr(self.config, "cyp3a4_state_access_path_lambda", 1.10)),
+                access_crowding_lambda=float(getattr(self.config, "cyp3a4_state_access_crowding_lambda", 0.90)),
+            )
+            rescored = rescore_candidates(
+                frozen_scores=site_logits.view(-1),
+                state_features=state_features,
+                state_weights=state_payload["state_weights"],
+                batch_index=batch_index,
+                proximity_weight=float(getattr(self.config, "cyp3a4_state_proximity_weight", 1.20)),
+                orientation_weight=float(getattr(self.config, "cyp3a4_state_orientation_weight", 0.80)),
+                access_weight=float(getattr(self.config, "cyp3a4_state_access_weight", 1.00)),
+                electronic_weight=float(getattr(self.config, "cyp3a4_state_electronic_weight", 0.90)),
+                learned_weight=float(getattr(self.config, "cyp3a4_state_learned_weight", 1.00)),
+            )
+            result = dict(outputs)
+            result.setdefault("site_logits_learned", site_logits)
+            result["site_logits"] = rescored["final_scores"].view_as(site_logits).clamp(-20.0, 20.0)
+            result["site_scores"] = torch.sigmoid(result["site_logits"])
+            result["cyp3a4_state_rescorer_outputs"] = {
+                "state_weights": state_payload["state_weights"],
+                "state_logits": state_payload["state_logits"],
+                "state_scores": rescored["state_scores"],
+                "proximity": state_features["proximity"],
+                "orientation": state_features["orientation"],
+                "access": state_features["access"],
+                "electronic": state_features["electronic"],
+                "path_cost": state_features["path_cost"],
+            }
+            diagnostics = dict(result.get("diagnostics") or {})
+            diagnostics["cyp3a4_state_rescorer"] = {
+                "enabled": 1.0,
+                "closed_weight_mean": float(state_payload["state_weights"][:, 0].detach().mean().item()) if state_payload["state_weights"].numel() else 0.0,
+                "open_weight_mean": float(state_payload["state_weights"][:, 1].detach().mean().item()) if state_payload["state_weights"].numel() > 1 else 0.0,
+                "expanded_weight_mean": float(state_payload["state_weights"][:, 2].detach().mean().item()) if state_payload["state_weights"].numel() > 2 else 0.0,
+                "proximity_mean": float(state_features["proximity"].detach().mean().item()) if state_features["proximity"].numel() else 0.0,
+                "orientation_mean": float(state_features["orientation"].detach().mean().item()) if state_features["orientation"].numel() else 0.0,
+                "access_mean": float(state_features["access"].detach().mean().item()) if state_features["access"].numel() else 0.0,
+                "electronic_mean": float(state_features["electronic"].detach().mean().item()) if state_features["electronic"].numel() else 0.0,
+                "rescored_logit_mean": float(result["site_logits"].detach().mean().item()) if result["site_logits"].numel() else 0.0,
+            }
+            result["diagnostics"] = diagnostics
             return result
 
         def _apply_phase2_context(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
@@ -1383,6 +1491,7 @@ if TORCH_AVAILABLE:
                     )
                     outputs["domain_logits"] = self.domain_adv_head(rev)
             outputs = self._apply_nexus_bridge(outputs, batch)
+            outputs = self._apply_cyp3a4_state_rescorer(outputs, batch)
             outputs = self._apply_topk_reranker(outputs, batch)
             outputs = self._apply_candidate_mask(outputs, batch)
             prior = route_prior
