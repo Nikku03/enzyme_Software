@@ -83,6 +83,7 @@ if TORCH_AVAILABLE:
                 else prop_top2_vals[:, 0].mean()
             )
             tournament_margin = outputs["tournament_margin"]
+            rival_count = outputs["comparison_mask"].sum(dim=-1)
             return total, {
                 "pairwise_bce": float(pair_loss.detach().item()),
                 "pairwise_accuracy": float(pair_accuracy),
@@ -91,6 +92,7 @@ if TORCH_AVAILABLE:
                 "tournament_total_loss": float(total.detach().item()),
                 "tournament_margin_mean": float(tournament_margin[valid].mean().detach().item()) if bool(valid.any()) else 0.0,
                 "tournament_margin_abs_mean": float(tournament_margin[valid].abs().mean().detach().item()) if bool(valid.any()) else 0.0,
+                "local_rival_count_mean": float(rival_count[valid].float().mean().detach().item()) if bool(valid.any()) else 0.0,
                 "tournament_top1_gap_mean": float(top1_gap.detach().item()),
                 "proposal_top1_gap_mean": float(proposal_gap.detach().item()),
             }
@@ -105,6 +107,15 @@ if TORCH_AVAILABLE:
                     batch["candidate_mask"],
                     batch["proposal_scores"],
                     compare_top_n=int(self.compare_top_n),
+                    candidate_local_rival_mask=batch.get("candidate_local_rival_mask"),
+                    candidate_graph_distance=batch.get("candidate_graph_distance"),
+                    candidate_3d_distance=batch.get("candidate_3d_distance"),
+                    candidate_same_ring_system=batch.get("candidate_same_ring_system"),
+                    candidate_same_topology_role=batch.get("candidate_same_topology_role"),
+                    candidate_same_chem_family=batch.get("candidate_same_chem_family"),
+                    candidate_branch_bulk=batch.get("candidate_branch_bulk"),
+                    candidate_exposed_span=batch.get("candidate_exposed_span"),
+                    candidate_anti_score=batch.get("candidate_anti_score"),
                 )
                 loss, stats = self._loss(
                     outputs,
@@ -197,6 +208,7 @@ if TORCH_AVAILABLE:
             proposal_top1_rows = []
             sources = []
             margin_history = []
+            rival_history = []
             with torch.no_grad():
                 for raw_batch in loader:
                     batch = self._move(raw_batch)
@@ -205,6 +217,15 @@ if TORCH_AVAILABLE:
                         batch["candidate_mask"],
                         batch["proposal_scores"],
                         compare_top_n=int(self.compare_top_n),
+                        candidate_local_rival_mask=batch.get("candidate_local_rival_mask"),
+                        candidate_graph_distance=batch.get("candidate_graph_distance"),
+                        candidate_3d_distance=batch.get("candidate_3d_distance"),
+                        candidate_same_ring_system=batch.get("candidate_same_ring_system"),
+                        candidate_same_topology_role=batch.get("candidate_same_topology_role"),
+                        candidate_same_chem_family=batch.get("candidate_same_chem_family"),
+                        candidate_branch_bulk=batch.get("candidate_branch_bulk"),
+                        candidate_exposed_span=batch.get("candidate_exposed_span"),
+                        candidate_anti_score=batch.get("candidate_anti_score"),
                     )
                     final_rows.append(outputs["final_scores"].detach().cpu())
                     target_rows.append(batch["target_mask"].detach().cpu())
@@ -213,6 +234,7 @@ if TORCH_AVAILABLE:
                     valid = batch["candidate_mask"] > 0.5
                     if bool(valid.any()):
                         margin_history.append(float(outputs["tournament_margin"][valid].abs().mean().detach().cpu().item()))
+                        rival_history.append(float(outputs["comparison_mask"].sum(dim=-1)[valid].float().mean().detach().cpu().item()))
                     sources.extend(list(raw_batch.get("source") or []))
             if not final_rows:
                 return {}
@@ -230,6 +252,7 @@ if TORCH_AVAILABLE:
                 sources=sources,
             )
             metrics["tournament_margin_abs_mean"] = float(sum(margin_history) / len(margin_history)) if margin_history else 0.0
+            metrics["local_rival_count_mean"] = float(sum(rival_history) / len(rival_history)) if rival_history else 0.0
             return metrics
 
         def rerank_split(self, loader, *, shortlist_k: int | None = None, total_molecules: int | None = None):
@@ -245,6 +268,15 @@ if TORCH_AVAILABLE:
                         batch["candidate_mask"],
                         batch["proposal_scores"],
                         compare_top_n=int(self.compare_top_n),
+                        candidate_local_rival_mask=batch.get("candidate_local_rival_mask"),
+                        candidate_graph_distance=batch.get("candidate_graph_distance"),
+                        candidate_3d_distance=batch.get("candidate_3d_distance"),
+                        candidate_same_ring_system=batch.get("candidate_same_ring_system"),
+                        candidate_same_topology_role=batch.get("candidate_same_topology_role"),
+                        candidate_same_chem_family=batch.get("candidate_same_chem_family"),
+                        candidate_branch_bulk=batch.get("candidate_branch_bulk"),
+                        candidate_exposed_span=batch.get("candidate_exposed_span"),
+                        candidate_anti_score=batch.get("candidate_anti_score"),
                     )
                     final_scores = outputs["final_scores"].detach().cpu()
                     tournament_margin = outputs["tournament_margin"].detach().cpu()
