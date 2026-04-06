@@ -620,10 +620,12 @@ if TORCH_AVAILABLE:
             relay_outputs = self.phase5_sparse_relay(
                 atom_features=atom_features,
                 edge_index=batch.get("edge_index"),
+                edge_attr=batch.get("edge_attr"),
                 atom_coords=batch.get("atom_coordinates"),
                 batch_index=batch_index,
                 candidate_mask=batch.get("candidate_mask"),
                 phase5_atom_features=z,
+                local_chem_features=batch.get("local_chem_features"),
             )
             relay = relay_outputs["relay_features"]
             relay_in = torch.cat([atom_features, relay, z], dim=-1)
@@ -668,6 +670,8 @@ if TORCH_AVAILABLE:
                 "relay_neighbor_mean": float(relay_outputs["neighbor_count"].detach().mean().item()) if relay_outputs["neighbor_count"].numel() else 0.0,
                 "relay_activity_mean": float(relay_outputs["activity"].detach().mean().item()) if relay_outputs["activity"].numel() else 0.0,
                 "relay_distance_mean": float(relay_outputs["distance_mean"].detach().mean().item()) if relay_outputs["distance_mean"].numel() else 0.0,
+                "relay_weight_entropy_mean": float(relay_outputs["weight_entropy"].detach().mean().item()) if relay_outputs["weight_entropy"].numel() else 0.0,
+                "relay_feature_delta_mean": float(relay_outputs["feature_delta"].detach().norm(dim=-1).mean().item()) if relay_outputs["feature_delta"].numel() else 0.0,
             }
             result["diagnostics"] = diagnostics
             result["phase5_sparse_relay_outputs"] = relay_outputs
