@@ -10,6 +10,7 @@ from enzyme_software.liquid_nn_v2.model.barrier import BarrierHead
 from enzyme_software.liquid_nn_v2.model.event_context import SparseEventContext
 from enzyme_software.liquid_nn_v2.model.hybrid_modules import TopKCrossAtomReranker
 from enzyme_software.liquid_nn_v2.model.nexus_bridge import NexusHybridBridge
+from enzyme_software.liquid_nn_v2.model.phase5_sparse_relay import Phase5SparseRelay
 from enzyme_software.liquid_nn_v2.model.precedent_logbook import AuditedEpisodeLogbook
 from enzyme_software.liquid_nn_v2.model.wave_field import WholeMoleculeWaveField
 
@@ -49,6 +50,10 @@ if TORCH_AVAILABLE:
             self.phase5_proposer_scale_logit = None
             self.phase5_proposer_logit_head = None
             self.phase5_proposer_logit_scale_logit = None
+            self.phase5_sparse_relay = None
+            self.phase5_sparse_relay_proj = None
+            self.phase5_sparse_relay_gate = None
+            self.phase5_sparse_relay_scale_logit = None
             self.topk_reranker = None
             self.domain_adv_head = None
             domain_adv_weight = float(getattr(self.config, "domain_adv_weight", 0.0))
@@ -313,6 +318,38 @@ if TORCH_AVAILABLE:
                 phase5_gate_linear = self.phase5_proposer_gate[-2]
                 if hasattr(phase5_gate_linear, "bias") and phase5_gate_linear.bias is not None:
                     nn.init.constant_(phase5_gate_linear.bias, -0.75)
+            if bool(getattr(self.config, "use_phase5_sparse_relay", False)):
+                atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
+                relay_hidden = int(getattr(self.config, "phase5_sparse_relay_hidden_dim", atom_dim))
+                phase5_dropout = float(getattr(self.config, "phase5_proposer_dropout", 0.05))
+                self.phase5_sparse_relay = Phase5SparseRelay(
+                    atom_dim=atom_dim,
+                    phase5_dim=18,
+                    hidden_dim=relay_hidden,
+                    rounds=int(getattr(self.config, "phase5_sparse_relay_rounds", 2)),
+                    radius=float(getattr(self.config, "phase5_sparse_relay_radius", 4.5)),
+                    dropout=phase5_dropout,
+                )
+                relay_in = (2 * atom_dim) + 18
+                self.phase5_sparse_relay_proj = nn.Sequential(
+                    nn.Linear(relay_in, atom_dim),
+                    nn.SiLU(),
+                    nn.Dropout(phase5_dropout),
+                    nn.Linear(atom_dim, atom_dim),
+                )
+                self.phase5_sparse_relay_gate = nn.Sequential(
+                    nn.Linear(relay_in, max(32, atom_dim // 2)),
+                    nn.SiLU(),
+                    nn.Dropout(phase5_dropout),
+                    nn.Linear(max(32, atom_dim // 2), 1),
+                    nn.Sigmoid(),
+                )
+                self.phase5_sparse_relay_scale_logit = nn.Parameter(
+                    torch.logit(torch.tensor(float(getattr(self.config, "phase5_sparse_relay_init_scale", 0.08))))
+                )
+                relay_gate_linear = self.phase5_sparse_relay_gate[-2]
+                if hasattr(relay_gate_linear, "bias") and relay_gate_linear.bias is not None:
+                    nn.init.constant_(relay_gate_linear.bias, -0.75)
             if bool(getattr(self.config, "use_topk_reranker", False)):
                 atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
                 mol_dim = int(getattr(self.config, "cyp_branch_dim", getattr(self.config, "mol_dim", 128)))
@@ -565,6 +602,75 @@ if TORCH_AVAILABLE:
                 "p5_profile_norm_mean": float(z_full[:, -8:].detach().norm(dim=-1).mean().item()) if z_full.size(-1) >= 8 else 0.0,
             }
             result["diagnostics"] = diagnostics
+            if source_site_logits:
+                result["source_site_logits"] = source_site_logits
+            return result
+
+        def _apply_phase5_sparse_relay(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
+            if self.phase5_sparse_relay is None or self.phase5_sparse_relay_proj is None or self.phase5_sparse_relay_gate is None:
+                return outputs
+            atom_features = outputs.get("atom_features")
+            phase5_atom = batch.get("phase5_atom_features")
+            batch_index = batch.get("batch")
+            if atom_features is None or phase5_atom is None or batch_index is None:
+                return outputs
+            device = atom_features.device
+            dtype = atom_features.dtype
+            z = phase5_atom.to(device=device, dtype=dtype)
+            relay_outputs = self.phase5_sparse_relay(
+                atom_features=atom_features,
+                edge_index=batch.get("edge_index"),
+                atom_coords=batch.get("atom_coordinates"),
+                batch_index=batch_index,
+                candidate_mask=batch.get("candidate_mask"),
+                phase5_atom_features=z,
+            )
+            relay = relay_outputs["relay_features"]
+            relay_in = torch.cat([atom_features, relay, z], dim=-1)
+            residual = torch.tanh(self.phase5_sparse_relay_proj(relay_in))
+            gate = self.phase5_sparse_relay_gate(relay_in)
+            scale = torch.sigmoid(self.phase5_sparse_relay_scale_logit).to(device=device, dtype=dtype)
+            fused_atom_features = atom_features + (scale * gate * residual)
+            base_impl = self._base_impl()
+            num_molecules = int(outputs["cyp_logits"].size(0))
+            prior_payload = base_impl.manual_priors(
+                batch,
+                num_atoms=int(atom_features.size(0)),
+                num_molecules=num_molecules,
+                device=device,
+            )
+            site_logits, _site_residual = base_impl.site_head(
+                fused_atom_features,
+                prior_logits=prior_payload.get("atom_prior_logits") if getattr(self.base_lnn.config, "use_manual_engine_priors", False) else None,
+                prior_features=prior_payload.get("atom_prior_embedding") if getattr(self.base_lnn.config, "use_manual_engine_priors", False) else None,
+            )
+            site_logits = base_impl._apply_bde_prior(site_logits, (batch.get("physics_features") or {}).get("bde_values"))
+            source_site_logits = {}
+            if hasattr(base_impl, "_compute_source_site_logits"):
+                source_site_logits = base_impl._compute_source_site_logits(fused_atom_features, prior_payload) or {}
+            if source_site_logits and hasattr(base_impl, "_blend_source_site_logits"):
+                site_logits = base_impl._blend_source_site_logits(
+                    site_logits,
+                    source_site_logits,
+                    batch.get("graph_metadata"),
+                    batch.get("batch"),
+                )
+            result = dict(outputs)
+            result.setdefault("site_logits_phase5_relay_base", outputs.get("site_logits"))
+            result["site_logits"] = site_logits.clamp(-20.0, 20.0)
+            result["site_scores"] = torch.sigmoid(result["site_logits"])
+            result["atom_features"] = fused_atom_features
+            diagnostics = dict(result.get("diagnostics") or {})
+            diagnostics["phase5_sparse_relay"] = {
+                "relay_scale": float(scale.detach().item()),
+                "relay_gate_mean": float(gate.detach().mean().item()) if gate.numel() else 0.0,
+                "relay_residual_norm_mean": float(residual.detach().norm(dim=-1).mean().item()) if residual.numel() else 0.0,
+                "relay_neighbor_mean": float(relay_outputs["neighbor_count"].detach().mean().item()) if relay_outputs["neighbor_count"].numel() else 0.0,
+                "relay_activity_mean": float(relay_outputs["activity"].detach().mean().item()) if relay_outputs["activity"].numel() else 0.0,
+                "relay_distance_mean": float(relay_outputs["distance_mean"].detach().mean().item()) if relay_outputs["distance_mean"].numel() else 0.0,
+            }
+            result["diagnostics"] = diagnostics
+            result["phase5_sparse_relay_outputs"] = relay_outputs
             if source_site_logits:
                 result["source_site_logits"] = source_site_logits
             return result
@@ -1261,6 +1367,7 @@ if TORCH_AVAILABLE:
             outputs = dict(self.base_lnn(batch))
             outputs = self._apply_fixed_cyp_context(outputs)
             outputs = self._apply_phase5_proposer(outputs, batch)
+            outputs = self._apply_phase5_sparse_relay(outputs, batch)
             outputs = self._apply_local_chemistry(outputs, batch)
             outputs = self._apply_phase2_context(outputs, batch)
             if self.domain_adv_head is not None:

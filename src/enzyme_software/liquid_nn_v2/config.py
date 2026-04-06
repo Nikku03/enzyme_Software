@@ -140,6 +140,11 @@ class ModelConfig:
     phase5_proposer_dropout: float = 0.05
     phase5_proposer_init_scale: float = 0.10
     phase5_proposer_logit_scale: float = 0.06
+    use_phase5_sparse_relay: bool = False
+    phase5_sparse_relay_hidden_dim: int = 96
+    phase5_sparse_relay_rounds: int = 2
+    phase5_sparse_relay_radius: float = 4.5
+    phase5_sparse_relay_init_scale: float = 0.08
     use_topk_reranker: bool = False
     topk_reranker_k: int = 8
     topk_reranker_hidden_dim: int = 128
@@ -289,6 +294,11 @@ class ModelConfig:
         self.phase5_proposer_dropout = min(max(float(self.phase5_proposer_dropout), 0.0), 0.5)
         self.phase5_proposer_init_scale = min(max(float(self.phase5_proposer_init_scale), 1.0e-3), 1.0)
         self.phase5_proposer_logit_scale = min(max(float(self.phase5_proposer_logit_scale), 1.0e-3), 1.0)
+        self.use_phase5_sparse_relay = bool(self.use_phase5_sparse_relay)
+        self.phase5_sparse_relay_hidden_dim = max(32, int(self.phase5_sparse_relay_hidden_dim))
+        self.phase5_sparse_relay_rounds = max(1, min(4, int(self.phase5_sparse_relay_rounds)))
+        self.phase5_sparse_relay_radius = max(1.0, float(self.phase5_sparse_relay_radius))
+        self.phase5_sparse_relay_init_scale = min(max(float(self.phase5_sparse_relay_init_scale), 1.0e-3), 1.0)
         self.nexus_site_arbiter_hidden_dim = max(32, int(self.nexus_site_arbiter_hidden_dim))
         self.nexus_site_arbiter_dropout = min(max(float(self.nexus_site_arbiter_dropout), 0.0), 0.5)
         self.nexus_lnn_vote_aux_weight = max(0.0, float(self.nexus_lnn_vote_aux_weight))
