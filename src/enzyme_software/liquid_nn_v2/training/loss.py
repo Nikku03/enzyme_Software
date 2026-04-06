@@ -302,6 +302,12 @@ if TORCH_AVAILABLE:
             top1_margin_value: float = 0.5,
             top1_margin_topk: int = 1,
             top1_margin_decay: float = 1.0,
+            cover_weight: float = 0.0,
+            cover_margin: float = 0.20,
+            cover_topk: int = 5,
+            shortlist_weight: float = 0.0,
+            shortlist_temperature: float = 0.70,
+            shortlist_topk: int = 5,
         ):
             super().__init__()
             self.focal = FocalLoss(gamma=focal_gamma, pos_weight=pos_weight, label_smoothing=label_smoothing)
@@ -309,12 +315,41 @@ if TORCH_AVAILABLE:
             self.top1_margin_value = float(top1_margin_value)
             self.top1_margin_topk = max(1, int(top1_margin_topk))
             self.top1_margin_decay = min(max(float(top1_margin_decay), 0.1), 1.0)
+            self.cover_weight = float(cover_weight)
+            self.cover_margin = float(cover_margin)
+            self.cover_topk = max(1, int(cover_topk))
+            self.shortlist_weight = float(shortlist_weight)
+            self.shortlist_temperature = max(1.0e-3, float(shortlist_temperature))
+            self.shortlist_topk = max(1, int(shortlist_topk))
             self.ranking = RankingLoss(margin=ranking_margin, hard_negative_fraction=hard_negative_fraction)
             self.listmle = ListwiseRankingLoss()
             self.softap = SoftAPLoss(temperature=softap_temperature)
             self.ranking_weight = float(ranking_weight)
             self.listmle_weight = float(listmle_weight)
             self.softap_weight = float(softap_weight)
+
+        def _iter_scored_molecules(self, logits, labels, batch, supervision_mask=None):
+            logits_flat = logits.view(-1)
+            labels_flat = labels.view(-1)
+            sup_flat = supervision_mask.view(-1) if supervision_mask is not None else None
+            num_mol = int(batch.max().item()) + 1 if batch.numel() else 0
+            for mol_idx in range(num_mol):
+                mol_mask = batch == mol_idx
+                if not bool(mol_mask.any()):
+                    continue
+                mol_logits = logits_flat[mol_mask]
+                mol_labels = labels_flat[mol_mask]
+                if sup_flat is not None:
+                    supervised = sup_flat[mol_mask] > 0.5
+                    if not bool(supervised.any()):
+                        continue
+                    mol_logits = mol_logits[supervised]
+                    mol_labels = mol_labels[supervised]
+                pos_mask = mol_labels > 0.5
+                neg_mask = ~pos_mask
+                if not bool(pos_mask.any()) or not bool(neg_mask.any()):
+                    continue
+                yield mol_idx, mol_logits, pos_mask, neg_mask
 
         def _top1_margin_loss(self, logits, labels, batch, supervision_mask=None, graph_weights=None):
             """Penalise each molecule where the top-scored atom is not a true site.
@@ -372,6 +407,62 @@ if TORCH_AVAILABLE:
             denom = stacked_weights.sum().clamp_min(1.0e-6)
             return (stacked_losses * stacked_weights).sum() / denom
 
+        def _cover_loss(self, logits, labels, batch, supervision_mask=None, graph_weights=None):
+            """Push the best true site above the top-K hardest false atoms per molecule."""
+            losses = []
+            weights = []
+            for mol_idx, mol_logits, pos_mask, neg_mask in self._iter_scored_molecules(
+                logits,
+                labels,
+                batch,
+                supervision_mask=supervision_mask,
+            ):
+                best_pos = mol_logits[pos_mask].max()
+                neg_logits = mol_logits[neg_mask]
+                topk = min(self.cover_topk, int(neg_logits.numel()))
+                hard_negs = torch.topk(neg_logits, k=topk, largest=True).values
+                cover_value = torch.relu(self.cover_margin - (best_pos - hard_negs)).mean()
+                losses.append(cover_value)
+                if graph_weights is not None and mol_idx < int(graph_weights.numel()):
+                    weights.append(graph_weights[mol_idx].to(dtype=cover_value.dtype, device=cover_value.device))
+                else:
+                    weights.append(torch.tensor(1.0, dtype=cover_value.dtype, device=cover_value.device))
+            if not losses:
+                return logits.sum() * 0.0
+            stacked_losses = torch.stack(losses)
+            stacked_weights = torch.stack(weights)
+            denom = stacked_weights.sum().clamp_min(1.0e-6)
+            return (stacked_losses * stacked_weights).sum() / denom
+
+        def _shortlist_loss(self, logits, labels, batch, supervision_mask=None, graph_weights=None):
+            """Local softmax over best true vs. top-K hardest false atoms per molecule."""
+            losses = []
+            weights = []
+            temperature = self.shortlist_temperature
+            for mol_idx, mol_logits, pos_mask, neg_mask in self._iter_scored_molecules(
+                logits,
+                labels,
+                batch,
+                supervision_mask=supervision_mask,
+            ):
+                best_pos = mol_logits[pos_mask].max()
+                neg_logits = mol_logits[neg_mask]
+                topk = min(self.shortlist_topk, int(neg_logits.numel()))
+                hard_negs = torch.topk(neg_logits, k=topk, largest=True).values
+                shortlist_scores = torch.cat([best_pos.view(1), hard_negs], dim=0) / temperature
+                shortlist_value = -F.log_softmax(shortlist_scores, dim=0)[0]
+                losses.append(shortlist_value)
+                if graph_weights is not None and mol_idx < int(graph_weights.numel()):
+                    weights.append(graph_weights[mol_idx].to(dtype=shortlist_value.dtype, device=shortlist_value.device))
+                else:
+                    weights.append(torch.tensor(1.0, dtype=shortlist_value.dtype, device=shortlist_value.device))
+            if not losses:
+                return logits.sum() * 0.0
+            stacked_losses = torch.stack(losses)
+            stacked_weights = torch.stack(weights)
+            denom = stacked_weights.sum().clamp_min(1.0e-6)
+            return (stacked_losses * stacked_weights).sum() / denom
+
         def forward(self, logits, labels, batch, supervision_mask=None, node_weights=None, graph_weights=None):
             focal_loss = self.focal(logits, labels, supervision_mask=supervision_mask, node_weights=node_weights, batch=batch)
             ranking_loss = self.ranking(logits, labels, batch, supervision_mask=supervision_mask, graph_weights=graph_weights)
@@ -413,12 +504,32 @@ if TORCH_AVAILABLE:
                     supervision_mask=supervision_mask,
                     graph_weights=graph_weights,
                 )
+            cover_loss = logits.sum() * 0.0
+            if self.cover_weight > 0.0:
+                cover_loss = self._cover_loss(
+                    logits,
+                    labels,
+                    batch,
+                    supervision_mask=supervision_mask,
+                    graph_weights=graph_weights,
+                )
+            shortlist_loss = logits.sum() * 0.0
+            if self.shortlist_weight > 0.0:
+                shortlist_loss = self._shortlist_loss(
+                    logits,
+                    labels,
+                    batch,
+                    supervision_mask=supervision_mask,
+                    graph_weights=graph_weights,
+                )
             total = (
                 focal_loss
                 + self.ranking_weight * ranking_loss
                 + self.listmle_weight * listmle_loss
                 + self.softap_weight * softap_loss
                 + self.top1_margin_weight * top1_margin_loss
+                + self.cover_weight * cover_loss
+                + self.shortlist_weight * shortlist_loss
             )
             return total, {
                 "focal_loss": float(focal_loss.item()),
@@ -426,6 +537,8 @@ if TORCH_AVAILABLE:
                 "listmle_loss": float(listmle_loss.item()),
                 "softap_loss": float(softap_loss.item()),
                 "top1_margin_loss": float(top1_margin_loss.item()),
+                "cover_loss": float(cover_loss.item()),
+                "shortlist_loss": float(shortlist_loss.item()),
                 "site_loss": float(total.item()),
             }
 
@@ -547,6 +660,12 @@ if TORCH_AVAILABLE:
             site_hard_negative_fraction: float = 0.5,
             site_top1_margin_topk: int = 1,
             site_top1_margin_decay: float = 1.0,
+            site_cover_weight: float = 0.0,
+            site_cover_margin: float = 0.20,
+            site_cover_topk: int = 5,
+            site_shortlist_weight: float = 0.0,
+            site_shortlist_temperature: float = 0.70,
+            site_shortlist_topk: int = 5,
         ):
             super().__init__()
             self.site_loss = SiteOfMetabolismLoss(
@@ -562,6 +681,12 @@ if TORCH_AVAILABLE:
                 top1_margin_value=float(site_top1_margin_value),
                 top1_margin_topk=int(site_top1_margin_topk),
                 top1_margin_decay=float(site_top1_margin_decay),
+                cover_weight=float(site_cover_weight),
+                cover_margin=float(site_cover_margin),
+                cover_topk=int(site_cover_topk),
+                shortlist_weight=float(site_shortlist_weight),
+                shortlist_temperature=float(site_shortlist_temperature),
+                shortlist_topk=int(site_shortlist_topk),
             )
             self.log_var_site = nn.Parameter(torch.tensor(0.0))
             self.log_var_cyp = nn.Parameter(torch.tensor(0.0))

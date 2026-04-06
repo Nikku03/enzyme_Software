@@ -103,6 +103,12 @@ class ModelConfig:
     site_hard_negative_fraction: float = 0.5
     site_top1_margin_topk: int = 1
     site_top1_margin_decay: float = 1.0
+    site_cover_weight: float = 0.0
+    site_cover_margin: float = 0.20
+    site_cover_topk: int = 5
+    site_shortlist_weight: float = 0.0
+    site_shortlist_temperature: float = 0.70
+    site_shortlist_topk: int = 5
     site_source_weight_default: float = 1.0
     site_source_weight_drugbank: float = 1.0
     site_source_weight_az120: float = 1.0
@@ -330,6 +336,12 @@ class ModelConfig:
         self.site_hard_negative_fraction = min(max(float(self.site_hard_negative_fraction), 0.0), 1.0)
         self.site_top1_margin_topk = max(1, int(self.site_top1_margin_topk))
         self.site_top1_margin_decay = min(max(float(self.site_top1_margin_decay), 0.1), 1.0)
+        self.site_cover_weight = max(0.0, float(self.site_cover_weight))
+        self.site_cover_margin = max(0.0, float(self.site_cover_margin))
+        self.site_cover_topk = max(1, int(self.site_cover_topk))
+        self.site_shortlist_weight = max(0.0, float(self.site_shortlist_weight))
+        self.site_shortlist_temperature = max(1.0e-3, float(self.site_shortlist_temperature))
+        self.site_shortlist_topk = max(1, int(self.site_shortlist_topk))
         self.site_source_weight_default = max(0.1, float(self.site_source_weight_default))
         self.site_source_weight_drugbank = max(0.1, float(self.site_source_weight_drugbank))
         self.site_source_weight_az120 = max(0.1, float(self.site_source_weight_az120))

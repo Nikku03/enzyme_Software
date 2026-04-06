@@ -151,6 +151,12 @@ if TORCH_AVAILABLE:
                 site_hard_negative_fraction=float(getattr(model_config, "site_hard_negative_fraction", 0.5)),
                 site_top1_margin_topk=int(getattr(model_config, "site_top1_margin_topk", 1)),
                 site_top1_margin_decay=float(getattr(model_config, "site_top1_margin_decay", 1.0)),
+                site_cover_weight=float(getattr(model_config, "site_cover_weight", 0.0)),
+                site_cover_margin=float(getattr(model_config, "site_cover_margin", 0.20)),
+                site_cover_topk=int(getattr(model_config, "site_cover_topk", 5)),
+                site_shortlist_weight=float(getattr(model_config, "site_shortlist_weight", 0.0)),
+                site_shortlist_temperature=float(getattr(model_config, "site_shortlist_temperature", 0.70)),
+                site_shortlist_topk=int(getattr(model_config, "site_shortlist_topk", 5)),
             )
             self.loss_fn.to(self.device)
             self.reranker_loss = CandidateRerankLoss(
