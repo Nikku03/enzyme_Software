@@ -61,16 +61,43 @@ def collate_candidate_sets(batch: List[CandidateSetSample]) -> Dict[str, object]
     require_torch()
     if not batch:
         raise ValueError("collate_candidate_sets received an empty batch")
+    max_candidates = max(int(sample.candidate_features.shape[0]) for sample in batch)
+    feature_dim = int(batch[0].candidate_features.shape[-1])
+
+    def _pad_2d(tensor: torch.Tensor, *, fill: float = 0.0) -> torch.Tensor:
+        rows = int(tensor.shape[0])
+        if rows >= max_candidates:
+            return tensor
+        pad = torch.full((max_candidates - rows, tensor.shape[1]), fill_value=fill, dtype=tensor.dtype)
+        return torch.cat([tensor, pad], dim=0)
+
+    def _pad_1d(tensor: torch.Tensor, *, fill: float = 0.0, dtype=None) -> torch.Tensor:
+        rows = int(tensor.shape[0])
+        if rows >= max_candidates:
+            return tensor
+        pad = torch.full((max_candidates - rows,), fill_value=fill, dtype=dtype or tensor.dtype)
+        return torch.cat([tensor, pad], dim=0)
+
     return {
         "molecule_id": [sample.molecule_id for sample in batch],
         "canonical_smiles": [sample.canonical_smiles for sample in batch],
         "source": [sample.source for sample in batch],
         "primary_cyp": [sample.primary_cyp for sample in batch],
-        "candidate_features": torch.stack([sample.candidate_features for sample in batch], dim=0),
-        "candidate_mask": torch.stack([sample.candidate_mask for sample in batch], dim=0),
-        "target_mask": torch.stack([sample.target_mask for sample in batch], dim=0),
-        "candidate_atom_indices": torch.stack([sample.candidate_atom_indices for sample in batch], dim=0),
-        "proposal_scores": torch.stack([sample.proposal_scores for sample in batch], dim=0),
+        "candidate_features": torch.stack([
+            _pad_2d(sample.candidate_features.view(-1, feature_dim), fill=0.0) for sample in batch
+        ], dim=0),
+        "candidate_mask": torch.stack([
+            _pad_1d(sample.candidate_mask.view(-1), fill=0.0) for sample in batch
+        ], dim=0),
+        "target_mask": torch.stack([
+            _pad_1d(sample.target_mask.view(-1), fill=0.0) for sample in batch
+        ], dim=0),
+        "candidate_atom_indices": torch.stack([
+            _pad_1d(sample.candidate_atom_indices.view(-1), fill=-1, dtype=torch.long) for sample in batch
+        ], dim=0),
+        "proposal_scores": torch.stack([
+            _pad_1d(sample.proposal_scores.view(-1), fill=-20.0) for sample in batch
+        ], dim=0),
         "proposal_top1_index": torch.as_tensor([sample.proposal_top1_index for sample in batch], dtype=torch.long),
         "proposal_top1_is_true": torch.as_tensor([1.0 if sample.proposal_top1_is_true else 0.0 for sample in batch], dtype=torch.float32),
         "true_site_atoms": [list(sample.true_site_atoms) for sample in batch],
