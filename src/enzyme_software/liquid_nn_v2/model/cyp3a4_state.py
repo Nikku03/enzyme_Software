@@ -446,6 +446,7 @@ if TORCH_AVAILABLE:
         electronic_weight: float,
         learned_weight: float,
         aggregation_temperature: float,
+        use_mechanistic_gate: bool,
     ) -> Dict[str, torch.Tensor]:
         learned = frozen_scores.view(-1, 1)
         mechanistic = (
@@ -454,12 +455,15 @@ if TORCH_AVAILABLE:
             + float(access_weight) * state_features["access"]
             + float(electronic_weight) * state_features["electronic"]
         )
-        gate = torch.sigmoid(
-            1.35 * state_features["proximity"]
-            + 0.95 * state_features["orientation"]
-            + 1.55 * state_features["access"]
-            - 1.10 * state_features["filter_penalty"]
-        )
+        if bool(use_mechanistic_gate):
+            gate = torch.sigmoid(
+                1.35 * state_features["proximity"]
+                + 0.95 * state_features["orientation"]
+                + 1.55 * state_features["access"]
+                - 1.10 * state_features["filter_penalty"]
+            )
+        else:
+            gate = torch.ones_like(state_features["proximity"])
         state_scores = (float(learned_weight) * learned) + (gate * mechanistic)
         log_weights = torch.log(state_weights.clamp_min(1.0e-6))[batch_index]
         agg_temp = max(float(aggregation_temperature), 1.0e-3)

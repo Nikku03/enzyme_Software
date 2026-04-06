@@ -763,6 +763,7 @@ if TORCH_AVAILABLE:
                 electronic_weight=float(getattr(self.config, "cyp3a4_state_electronic_weight", 0.90)),
                 learned_weight=float(getattr(self.config, "cyp3a4_state_learned_weight", 1.00)),
                 aggregation_temperature=float(getattr(self.config, "cyp3a4_state_aggregation_temperature", 0.75)),
+                use_mechanistic_gate=bool(getattr(self.config, "cyp3a4_state_use_mechanistic_gate", True)),
             )
             result = dict(outputs)
             result.setdefault("site_logits_learned", site_logits)
@@ -814,6 +815,7 @@ if TORCH_AVAILABLE:
                 "electronic_raw_mean": float(state_features["electronic_raw"].detach().mean().item()) if state_features["electronic_raw"].numel() else 0.0,
                 "mechanistic_mean": float(rescored["mechanistic"].detach().mean().item()) if rescored["mechanistic"].numel() else 0.0,
                 "gate_mean": float(rescored["gate"].detach().mean().item()) if rescored["gate"].numel() else 0.0,
+                "use_mechanistic_gate": float(bool(getattr(self.config, "cyp3a4_state_use_mechanistic_gate", True))),
                 "channel_pref_mean": float(state_features["channel_pref"].detach().mean().item()) if state_features["channel_pref"].numel() else 0.0,
                 "radial_overflow_mean": float(state_features["radial_overflow"].detach().mean().item()) if state_features["radial_overflow"].numel() else 0.0,
                 "filter_penalty_mean": float(state_features["filter_penalty"].detach().mean().item()) if state_features["filter_penalty"].numel() else 0.0,

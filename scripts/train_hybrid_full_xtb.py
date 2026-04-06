@@ -177,6 +177,7 @@ def _collect_model_overrides() -> dict[str, int | float]:
         "HYBRID_COLAB_CYP3A4_STATE_WEIGHT_TEMPERATURE": (_env_float, "cyp3a4_state_weight_temperature"),
         "HYBRID_COLAB_CYP3A4_STATE_MIN_STATE_WEIGHT": (_env_float, "cyp3a4_state_min_state_weight"),
         "HYBRID_COLAB_CYP3A4_STATE_AGGREGATION_TEMPERATURE": (_env_float, "cyp3a4_state_aggregation_temperature"),
+        "HYBRID_COLAB_CYP3A4_STATE_USE_MECHANISTIC_GATE": (_env_int, "cyp3a4_state_use_mechanistic_gate"),
         "HYBRID_COLAB_SOURCE_ALIGN_WEIGHT": (_env_float, "source_align_weight"),
         "HYBRID_COLAB_SOURCE_ALIGN_COV_WEIGHT": (_env_float, "source_align_cov_weight"),
         "HYBRID_COLAB_USE_SOURCE_SITE_HEADS": (_env_int, "use_source_site_heads"),
