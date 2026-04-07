@@ -31,7 +31,9 @@ from enzyme_software.liquid_nn_v2.experiments.hybrid_full_xtb import (
 )
 from enzyme_software.liquid_nn_v2.features.steric_features import StructureLibrary
 from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM
+from enzyme_software.liquid_nn_v2.model.pairwise_head import PairwiseHead
 from enzyme_software.liquid_nn_v2.training.episode_logger import EpisodeLogger
+from enzyme_software.liquid_nn_v2.training.pairwise_probe_trainer import PairwiseProbeTrainer
 from enzyme_software.liquid_nn_v2.training.trainer import Trainer
 
 
@@ -191,6 +193,13 @@ def _collect_model_overrides() -> dict[str, int | float]:
         "HYBRID_COLAB_USE_SOURCE_SITE_HEADS": (_env_int, "use_source_site_heads"),
         "HYBRID_COLAB_SOURCE_SITE_AUX_WEIGHT": (_env_float, "source_site_aux_weight"),
         "HYBRID_COLAB_SOURCE_SITE_BLEND_WEIGHT": (_env_float, "source_site_blend_weight"),
+        "HYBRID_COLAB_ENABLE_PAIRWISE_PROBE": (_env_int, "enable_pairwise_probe"),
+        "HYBRID_COLAB_PAIRWISE_PROBE_DROPOUT": (_env_float, "pairwise_probe_dropout"),
+        "HYBRID_COLAB_PAIRWISE_PROBE_HIDDEN_SCALE": (_env_float, "pairwise_probe_hidden_scale"),
+        "HYBRID_COLAB_PAIRWISE_PROBE_MAX_PAIRS_PER_BATCH": (_env_int, "pairwise_probe_max_pairs_per_batch"),
+        "HYBRID_COLAB_PAIRWISE_PROBE_FREEZE_BACKBONE": (_env_int, "pairwise_probe_freeze_backbone"),
+        "HYBRID_COLAB_PAIRWISE_PROBE_FREEZE_PROPOSER": (_env_int, "pairwise_probe_freeze_proposer"),
+        "HYBRID_COLAB_PAIRWISE_PROBE_LOG_EVERY_EPOCH": (_env_int, "pairwise_probe_log_every_epoch"),
     }
     overrides: dict[str, int | float] = {}
     for env_name, (parser, field_name) in mapping.items():
@@ -902,6 +911,113 @@ def _save_training_state(
     return latest_path, best_path, archive_path, report_path
 
 
+def _save_pairwise_probe_state(
+    *,
+    model,
+    pairwise_head,
+    output_dir: Path,
+    artifact_dir: Path,
+    args,
+    history,
+    best_val_loss: float,
+    best_epoch: int,
+    best_head_state,
+    base_config,
+    checkpoint_path: Path,
+    split_mode: str,
+    split_summary: dict[str, object],
+    pairwise_probe_test_metrics=None,
+    status: str = "running",
+):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    latest_path = output_dir / "pairwise_probe_latest.pt"
+    best_path = output_dir / "pairwise_probe_best.pt"
+    archive_path = output_dir / f"pairwise_probe_{timestamp}.pt"
+    report_path = artifact_dir / f"pairwise_probe_report_{timestamp}.json"
+    history_len = int(len(history))
+    final_epoch = int(history[-1]["epoch"]) if history else 0
+    last_train_metrics = dict(history[-1].get("pairwise_probe_train_metrics") or {}) if history else {}
+    last_val_metrics = dict(history[-1].get("pairwise_probe_val_metrics") or {}) if history else {}
+    best_val_entry = min(
+        history,
+        key=lambda row: float((row.get("pairwise_probe_val_metrics") or {}).get("pairwise_loss", float("inf"))),
+    ) if history else None
+    best_val_metrics = dict((best_val_entry or {}).get("pairwise_probe_val_metrics") or {})
+    best_train_metrics = dict((best_val_entry or {}).get("pairwise_probe_train_metrics") or {})
+    effective_split_summary = _effective_split_summary(split_summary)
+    checkpoint = {
+        "model_state_dict": _initialized_state_dict(model),
+        "pairwise_head_state_dict": _initialized_state_dict(pairwise_head),
+        "config": {
+            "base_model": base_config.__dict__,
+            "pairwise_probe": {
+                "embedding_dim": int(getattr(pairwise_head, "embedding_dim", 0)),
+                "input_dim": int(getattr(pairwise_head, "input_dim", 0)),
+                "dropout": float(getattr(base_config, "pairwise_probe_dropout", 0.1)),
+                "hidden_scale": float(getattr(base_config, "pairwise_probe_hidden_scale", 2.0)),
+            },
+        },
+        "training_config": TrainingConfig(
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            early_stopping_patience=args.early_stopping_patience,
+        ).__dict__,
+        "pairwise_probe_enabled": True,
+        "pairwise_probe_checkpoint_source": str(checkpoint_path),
+        "pairwise_probe_freeze_backbone": bool(getattr(base_config, "pairwise_probe_freeze_backbone", True)),
+        "pairwise_probe_freeze_proposer": bool(getattr(base_config, "pairwise_probe_freeze_proposer", True)),
+        "pairwise_probe_best_val_loss": float(best_val_loss),
+        "best_epoch": int(best_epoch),
+        "history_len": history_len,
+        "final_epoch": final_epoch,
+        "split_mode": split_mode,
+        "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+        "split_summary": split_summary,
+        "effective_split_summary": effective_split_summary,
+        "last_pairwise_probe_train_metrics": last_train_metrics,
+        "last_pairwise_probe_val_metrics": last_val_metrics,
+        "best_pairwise_probe_train_metrics": best_train_metrics,
+        "best_pairwise_probe_val_metrics": best_val_metrics,
+        "pairwise_probe_test_metrics": pairwise_probe_test_metrics,
+        "history": history,
+        "status": status,
+    }
+    torch.save(checkpoint, latest_path)
+    torch.save(checkpoint, archive_path)
+    if best_head_state is not None:
+        best_checkpoint = dict(checkpoint)
+        best_checkpoint["pairwise_head_state_dict"] = best_head_state
+        best_checkpoint["status"] = f"{status}_best"
+        torch.save(best_checkpoint, best_path)
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": status,
+                "pairwise_probe_enabled": True,
+                "pairwise_probe_checkpoint_source": str(checkpoint_path),
+                "pairwise_probe_best_val_loss": float(best_val_loss),
+                "best_epoch": int(best_epoch),
+                "history_len": history_len,
+                "final_epoch": final_epoch,
+                "split_mode": split_mode,
+                "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+                "split_summary": split_summary,
+                "effective_split_summary": effective_split_summary,
+                "last_pairwise_probe_train_metrics": last_train_metrics,
+                "last_pairwise_probe_val_metrics": last_val_metrics,
+                "best_pairwise_probe_train_metrics": best_train_metrics,
+                "best_pairwise_probe_val_metrics": best_val_metrics,
+                "pairwise_probe_test_metrics": pairwise_probe_test_metrics,
+                "history": history,
+            },
+            indent=2,
+        )
+    )
+    return latest_path, best_path, archive_path, report_path
+
+
 def main() -> None:
     require_torch()
     parser = argparse.ArgumentParser(description="Train hybrid model with full xTB manual priors")
@@ -1212,6 +1328,12 @@ def main() -> None:
     else:
         print(f"No warm-start checkpoint found at {checkpoint_path}; starting from current initialization", flush=True)
 
+    if bool(getattr(base_config, "enable_pairwise_probe", False)) and not checkpoint_path.exists():
+        raise FileNotFoundError(
+            "Pairwise probe mode requires a warm-start checkpoint so it can test the current frozen representation. "
+            f"Missing checkpoint: {checkpoint_path}"
+        )
+
     precedent_logbook = None if args.disable_precedent_logbook else _resolve_precedent_logbook(args.precedent_logbook, artifact_dir)
     if precedent_logbook is not None and precedent_logbook.exists():
         precedent_stats = model.load_nexus_precedent_logbook(
@@ -1254,6 +1376,153 @@ def main() -> None:
     )
     if model_overrides:
         print(f"Model overrides: {model_overrides}", flush=True)
+
+    if bool(getattr(base_config, "enable_pairwise_probe", False)):
+        # Pairwise probe files for this experiment:
+        # - model/pairwise_head.py
+        # - training/pairwise_probe.py
+        # - training/pairwise_probe_trainer.py
+        # - this script for gated launch/checkpoint wiring
+        # Pairwise probe Stage 1:
+        # - embeddings come from outputs["atom_features"]
+        # - proposer scores come from masked outputs["site_logits"]
+        # - the warm-started model runs frozen under no_grad and only PairwiseHead trains
+        pairwise_head = PairwiseHead(
+            int(getattr(base_config, "som_branch_dim", getattr(base_config, "hidden_dim", 128))),
+            hidden_scale=float(getattr(base_config, "pairwise_probe_hidden_scale", 2.0)),
+            dropout=float(getattr(base_config, "pairwise_probe_dropout", 0.1)),
+        )
+        probe_trainer = PairwiseProbeTrainer(
+            model=model,
+            pairwise_head=pairwise_head,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            max_pairs_per_batch=getattr(base_config, "pairwise_probe_max_pairs_per_batch", None),
+            freeze_backbone=bool(getattr(base_config, "pairwise_probe_freeze_backbone", True)),
+            freeze_proposer=bool(getattr(base_config, "pairwise_probe_freeze_proposer", True)),
+            device=device,
+        )
+        history = []
+        best_val_loss = float("inf")
+        best_epoch = 0
+        best_head_state = None
+        epochs_without_improvement = 0
+
+        try:
+            for epoch in range(args.epochs):
+                setattr(train_loader, "_current_epoch", epoch)
+                setattr(train_loader, "_split_name", "train")
+                train_metrics = probe_trainer.train_loader_epoch(train_loader)
+
+                setattr(val_loader, "_current_epoch", epoch)
+                setattr(val_loader, "_split_name", "val")
+                val_metrics = probe_trainer.evaluate_loader(val_loader)
+                history.append(
+                    {
+                        "epoch": epoch + 1,
+                        "pairwise_probe_train_metrics": train_metrics,
+                        "pairwise_probe_val_metrics": val_metrics,
+                    }
+                )
+                val_loss = float(val_metrics.get("pairwise_loss", float("inf")))
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
+                    best_epoch = epoch + 1
+                    best_head_state = _initialized_state_dict(pairwise_head)
+                    epochs_without_improvement = 0
+                else:
+                    epochs_without_improvement += 1
+
+                if bool(getattr(base_config, "pairwise_probe_log_every_epoch", True)):
+                    print(
+                        f"Epoch {epoch + 1:3d} | "
+                        f"train_pairwise_loss={train_metrics.get('pairwise_loss', 0.0):.4f} | "
+                        f"val_pairwise_loss={val_metrics.get('pairwise_loss', 0.0):.4f} | "
+                        f"val_pairwise_acc={val_metrics.get('pairwise_accuracy', 0.0):.3f} | "
+                        f"val_pair_count={val_metrics.get('pair_count', 0.0):.0f} | "
+                        f"val_hard_neg_rank={val_metrics.get('hard_neg_rank_mean', 0.0):.2f} | "
+                        f"val_score_gap={val_metrics.get('score_gap_mean', 0.0):.4f}",
+                        flush=True,
+                    )
+
+                _save_pairwise_probe_state(
+                    model=model,
+                    pairwise_head=pairwise_head,
+                    output_dir=output_dir,
+                    artifact_dir=artifact_dir,
+                    args=args,
+                    history=history,
+                    best_val_loss=best_val_loss,
+                    best_epoch=best_epoch,
+                    best_head_state=best_head_state,
+                    base_config=base_config,
+                    checkpoint_path=checkpoint_path,
+                    split_mode=args.split_mode,
+                    split_summary=split_summary,
+                    pairwise_probe_test_metrics=None,
+                    status="running",
+                )
+
+                if early_stopping_enabled and epochs_without_improvement >= early_stopping_patience:
+                    print(
+                        f"Early stopping pairwise probe after epoch {epoch + 1}: no val pairwise loss improvement for "
+                        f"{early_stopping_patience} epochs.",
+                        flush=True,
+                    )
+                    break
+        except KeyboardInterrupt:
+            print("\nInterrupted. Saving current pairwise probe progress...", flush=True)
+            latest_path, best_path, _, report_path = _save_pairwise_probe_state(
+                model=model,
+                pairwise_head=pairwise_head,
+                output_dir=output_dir,
+                artifact_dir=artifact_dir,
+                args=args,
+                history=history,
+                best_val_loss=best_val_loss,
+                best_epoch=best_epoch,
+                best_head_state=best_head_state,
+                base_config=base_config,
+                checkpoint_path=checkpoint_path,
+                split_mode=args.split_mode,
+                split_summary=split_summary,
+                pairwise_probe_test_metrics=None,
+                status="interrupted",
+            )
+            print(f"Saved latest checkpoint: {latest_path}", flush=True)
+            print(f"Saved best checkpoint: {best_path}", flush=True)
+            print(f"Saved report: {report_path}", flush=True)
+            return
+
+        if best_head_state is not None:
+            pairwise_head.load_state_dict(best_head_state, strict=False)
+
+        setattr(test_loader, "_current_epoch", max(0, len(history) - 1))
+        setattr(test_loader, "_split_name", "test")
+        test_metrics = probe_trainer.evaluate_loader(test_loader)
+        print(json.dumps({"pairwise_probe_test_metrics": test_metrics}, indent=2), flush=True)
+        latest_path, best_path, archive_path, report_path = _save_pairwise_probe_state(
+            model=model,
+            pairwise_head=pairwise_head,
+            output_dir=output_dir,
+            artifact_dir=artifact_dir,
+            args=args,
+            history=history,
+            best_val_loss=best_val_loss,
+            best_epoch=best_epoch,
+            best_head_state=best_head_state,
+            base_config=base_config,
+            checkpoint_path=checkpoint_path,
+            split_mode=args.split_mode,
+            split_summary=split_summary,
+            pairwise_probe_test_metrics=test_metrics,
+            status="completed",
+        )
+        print(f"\nSaved checkpoint: {archive_path}", flush=True)
+        print(f"Saved latest checkpoint: {latest_path}", flush=True)
+        print(f"Saved best checkpoint: {best_path}", flush=True)
+        print(f"Saved report: {report_path}", flush=True)
+        return
 
     trainer = Trainer(
         model=model,

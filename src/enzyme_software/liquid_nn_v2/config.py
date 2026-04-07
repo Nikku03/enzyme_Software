@@ -123,6 +123,13 @@ class ModelConfig:
     site_source_weight_metxbiodb: float = 1.0
     site_source_weight_attnsom: float = 1.0
     site_source_weight_cyp_dbs_external: float = 1.0
+    enable_pairwise_probe: bool = False
+    pairwise_probe_dropout: float = 0.1
+    pairwise_probe_hidden_scale: float = 2.0
+    pairwise_probe_max_pairs_per_batch: Optional[int] = None
+    pairwise_probe_freeze_backbone: bool = True
+    pairwise_probe_freeze_proposer: bool = True
+    pairwise_probe_log_every_epoch: bool = True
     candidate_mask_mode: str = "hard"
     candidate_mask_logit_bias: float = 2.0
     disable_cyp_task: bool = False
