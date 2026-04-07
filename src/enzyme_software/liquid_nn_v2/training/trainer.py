@@ -11,7 +11,12 @@ from enzyme_software.liquid_nn_v2.config import TrainingConfig
 from enzyme_software.liquid_nn_v2.training.hard_negative_mining import mine_hard_negative_pairs
 from enzyme_software.liquid_nn_v2.training.episode_logger import EpisodeLogger
 from enzyme_software.liquid_nn_v2.training.loss import AdaptiveLossV2, CandidateRerankLoss
+from enzyme_software.liquid_nn_v2.training.pairwise_probe import (
+    build_pairwise_probe_examples,
+    zero_pairwise_probe_metrics,
+)
 from enzyme_software.liquid_nn_v2.training.metrics import (
+    _safe_binary_auc,
     compute_cyp_metrics,
     compute_reranker_metrics,
     compute_site_metrics_v2,
@@ -62,13 +67,24 @@ if TORCH_AVAILABLE:
             betas,
             eps: float = 1.0e-8,
         ):
-            self.param_groups = [{
-                "params": [param for param in params if param is not None],
-                "lr": float(lr),
-                "weight_decay": float(weight_decay),
-                "betas": tuple(float(value) for value in betas),
-                "eps": float(eps),
-            }]
+            if params and isinstance(params, list) and params and isinstance(params[0], dict):
+                self.param_groups = []
+                for group in params:
+                    self.param_groups.append({
+                        "params": [param for param in group.get("params", []) if param is not None],
+                        "lr": float(group.get("lr", lr)),
+                        "weight_decay": float(group.get("weight_decay", weight_decay)),
+                        "betas": tuple(float(value) for value in group.get("betas", betas)),
+                        "eps": float(group.get("eps", eps)),
+                    })
+            else:
+                self.param_groups = [{
+                    "params": [param for param in params if param is not None],
+                    "lr": float(lr),
+                    "weight_decay": float(weight_decay),
+                    "betas": tuple(float(value) for value in betas),
+                    "eps": float(eps),
+                }]
             self.state: Dict[int, Dict[str, object]] = {}
 
         def zero_grad(self, set_to_none: bool = False) -> None:
@@ -128,11 +144,13 @@ if TORCH_AVAILABLE:
         device: Optional[torch.device] = None
         cyp_class_weights: Optional[object] = None
         episode_logger: Optional[EpisodeLogger] = None
+        pairwise_head: Optional[object] = None
 
         def __post_init__(self):
             self.device = self.device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self._disable_broken_torch_compile_wrappers()
             self.model.to(self.device)
+            self.pairwise_head = self.pairwise_head.to(self.device) if self.pairwise_head is not None else None
             self.current_epoch = 0
             weights = None
             model_config = getattr(self.model, "config", None)
@@ -185,7 +203,12 @@ if TORCH_AVAILABLE:
                 margin_weight=float(getattr(model_config, "topk_reranker_margin_weight", 0.25)),
                 margin_value=float(getattr(model_config, "topk_reranker_margin_value", 0.30)),
             ).to(self.device)
-            trainable_params = self._trainable_parameters()
+            self._pairwise_aux_loss_fn = torch.nn.BCEWithLogitsLoss() if self._pairwise_aux_enabled() else None
+            if self._pairwise_aux_enabled():
+                for param in self.loss_fn.parameters():
+                    param.requires_grad = False
+            self.trainable_module_summary = self._build_trainable_module_summary()
+            param_groups = self._optimizer_parameter_groups()
             force_manual = os.environ.get("HYBRID_FORCE_MANUAL_OPTIMIZER", "").strip().lower() in {
                 "1", "true", "yes", "on",
             }
@@ -193,7 +216,7 @@ if TORCH_AVAILABLE:
                 self._optimizer_backend = "manual"
                 print("Using ManualAdamW due to HYBRID_FORCE_MANUAL_OPTIMIZER=1.", flush=True)
                 self.optimizer = _ManualAdamW(
-                    trainable_params,
+                    param_groups,
                     lr=self.config.learning_rate,
                     weight_decay=self.config.weight_decay,
                     betas=self.config.betas,
@@ -203,10 +226,7 @@ if TORCH_AVAILABLE:
                 self._optimizer_backend = "torch"
                 try:
                     self.optimizer = torch.optim.AdamW(
-                        trainable_params,
-                        lr=self.config.learning_rate,
-                        weight_decay=self.config.weight_decay,
-                        betas=self.config.betas,
+                        param_groups,
                     )
                     self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                         self.optimizer,
@@ -225,7 +245,7 @@ if TORCH_AVAILABLE:
                     )
                     self._optimizer_backend = "manual"
                     self.optimizer = _ManualAdamW(
-                        trainable_params,
+                        param_groups,
                         lr=self.config.learning_rate,
                         weight_decay=self.config.weight_decay,
                         betas=self.config.betas,
@@ -252,11 +272,122 @@ if TORCH_AVAILABLE:
 
         def _trainable_parameters(self) -> List[torch.nn.Parameter]:
             params: List[torch.nn.Parameter] = []
-            for module in (self.model, self.loss_fn):
+            modules = [self.model, self.loss_fn]
+            if self.pairwise_head is not None:
+                modules.append(self.pairwise_head)
+            for module in modules:
                 for param in module.parameters():
                     if param.requires_grad:
                         params.append(param)
             return params
+
+        def _pairwise_aux_enabled(self) -> bool:
+            model_config = getattr(self.model, "config", None)
+            return bool(getattr(model_config, "enable_pairwise_aux", False)) and self.pairwise_head is not None
+
+        def _build_trainable_module_summary(self) -> List[Dict[str, object]]:
+            summary: List[Dict[str, object]] = []
+            seen = set()
+            model_config = getattr(self.model, "config", None)
+            if self.pairwise_head is not None:
+                params = [param for param in self.pairwise_head.parameters() if param.requires_grad]
+                if params:
+                    summary.append(
+                        {
+                            "name": "pairwise_head",
+                            "lr": float(self.config.learning_rate),
+                            "param_count": int(sum(param.numel() for param in params)),
+                        }
+                    )
+                    seen.update(id(param) for param in params)
+            if self._pairwise_aux_enabled():
+                proposer_lr = float(self.config.learning_rate) * float(
+                    getattr(model_config, "pairwise_aux_proposer_lr_scale", 0.1)
+                )
+                backbone_lr = float(self.config.learning_rate) * float(
+                    getattr(model_config, "pairwise_aux_backbone_lr_scale", 0.1)
+                )
+                base_impl = getattr(getattr(self.model, "base_lnn", None), "impl", None)
+                for name, module, lr_value in (
+                    ("base_lnn.impl.site_head", getattr(base_impl, "site_head", None), proposer_lr),
+                    ("base_lnn.impl.som_branch", getattr(base_impl, "som_branch", None), backbone_lr),
+                ):
+                    if module is None:
+                        continue
+                    params = [param for param in module.parameters() if param.requires_grad and id(param) not in seen]
+                    if not params:
+                        continue
+                    summary.append(
+                        {
+                            "name": name,
+                            "lr": float(lr_value),
+                            "param_count": int(sum(param.numel() for param in params)),
+                        }
+                    )
+                    seen.update(id(param) for param in params)
+            else:
+                params = [param for param in self.model.parameters() if param.requires_grad]
+                if params:
+                    summary.append(
+                        {
+                            "name": "model",
+                            "lr": float(self.config.learning_rate),
+                            "param_count": int(sum(param.numel() for param in params)),
+                        }
+                    )
+            return summary
+
+        def _optimizer_parameter_groups(self):
+            model_config = getattr(self.model, "config", None)
+            if not self._pairwise_aux_enabled():
+                trainable_params = self._trainable_parameters()
+                return [
+                    {
+                        "params": trainable_params,
+                        "lr": float(self.config.learning_rate),
+                        "weight_decay": float(self.config.weight_decay),
+                        "betas": tuple(self.config.betas),
+                    }
+                ]
+
+            groups = []
+            seen = set()
+
+            def _append_group(name: str, params, lr_value: float) -> None:
+                filtered = [param for param in params if param.requires_grad and id(param) not in seen]
+                if not filtered:
+                    return
+                groups.append(
+                    {
+                        "name": name,
+                        "params": filtered,
+                        "lr": float(lr_value),
+                        "weight_decay": float(self.config.weight_decay),
+                        "betas": tuple(self.config.betas),
+                    }
+                )
+                seen.update(id(param) for param in filtered)
+
+            _append_group("pairwise_head", self.pairwise_head.parameters(), float(self.config.learning_rate))
+            base_impl = getattr(getattr(self.model, "base_lnn", None), "impl", None)
+            proposer_lr = float(self.config.learning_rate) * float(
+                getattr(model_config, "pairwise_aux_proposer_lr_scale", 0.1)
+            )
+            backbone_lr = float(self.config.learning_rate) * float(
+                getattr(model_config, "pairwise_aux_backbone_lr_scale", 0.1)
+            )
+            if base_impl is not None:
+                _append_group("base_lnn.impl.site_head", getattr(base_impl, "site_head", object()).parameters() if getattr(base_impl, "site_head", None) is not None else [], proposer_lr)
+                _append_group("base_lnn.impl.som_branch", getattr(base_impl, "som_branch", object()).parameters() if getattr(base_impl, "som_branch", None) is not None else [], backbone_lr)
+            leftover = [
+                param
+                for param in self._trainable_parameters()
+                if id(param) not in seen
+            ]
+            _append_group("leftover_trainable", leftover, proposer_lr)
+            if not groups:
+                raise RuntimeError("Pairwise auxiliary mode has no trainable parameters")
+            return groups
 
         def _check_tensor_finite(self, name: str, value) -> None:
             if value is None or not hasattr(value, "numel") or value.numel() == 0:
@@ -501,6 +632,172 @@ if TORCH_AVAILABLE:
                 return raw.mean()
             mask = supervision_mask.float().view_as(logits)
             return (raw * mask).sum() / mask.sum().clamp_min(1.0)
+
+        def _compute_pairwise_aux_metrics(self, pair_logits, pair_labels, metadata: Dict[str, float]):
+            if not bool(torch.isfinite(pair_logits).all()):
+                raise FloatingPointError("Non-finite pairwise auxiliary logits detected")
+            probabilities = torch.sigmoid(pair_logits)
+            pair_count = int(pair_labels.numel())
+            if pair_count <= 0:
+                zero_stats = zero_pairwise_probe_metrics()
+                zero_stats["molecules_with_pairs"] = float(metadata.get("molecules_with_pairs", 0.0))
+                return zero_stats
+            positive_mask = pair_labels > 0.5
+            negative_mask = ~positive_mask
+            positive_count = int(positive_mask.sum().item())
+            negative_count = int(negative_mask.sum().item())
+            single_class_batch = float(positive_count == 0 or negative_count == 0)
+            if single_class_batch > 0.0:
+                raise RuntimeError(
+                    "Pairwise auxiliary batch must contain both directional classes; "
+                    f"got positive_count={positive_count}, negative_count={negative_count}"
+                )
+            return {
+                "pairwise_accuracy": float(((probabilities >= 0.5).float() == pair_labels).float().mean().item()),
+                "pairwise_auc": float(_safe_binary_auc(pair_labels.detach().cpu().numpy(), probabilities.detach().cpu().numpy())),
+                "pair_count": float(pair_count),
+                "molecules_with_pairs": float(metadata.get("molecules_with_pairs", 0.0)),
+                "hard_neg_rank_mean": float(metadata.get("hard_neg_rank_mean", 0.0)),
+                "score_gap_mean": float(metadata.get("score_gap_mean", 0.0)),
+                "true_beats_fraction_before_pairwise": float(metadata.get("true_beats_fraction_before_pairwise", 0.0)),
+                "pairwise_mean_probability": float(probabilities.mean().item()),
+                "pairwise_positive_rate": float(pair_labels.float().mean().item()),
+                "pairwise_mean_probability_pos": float(probabilities[positive_mask].mean().item()),
+                "pairwise_mean_probability_neg": float(probabilities[negative_mask].mean().item()),
+                "pairwise_logit_mean_pos": float(pair_logits[positive_mask].mean().item()),
+                "pairwise_logit_mean_neg": float(pair_logits[negative_mask].mean().item()),
+                "zero_pair_batches": 0.0,
+                "single_class_batches": single_class_batch,
+            }
+
+        def _build_pairwise_aux(self, batch: Dict[str, object], outputs: Dict[str, object]):
+            if not self._pairwise_aux_enabled():
+                return None
+            atom_features = outputs.get("atom_features")
+            site_logits = outputs.get("site_logits")
+            if atom_features is None or site_logits is None:
+                raise RuntimeError("Pairwise auxiliary mode requires model outputs['atom_features'] and outputs['site_logits']")
+            model_config = getattr(self.model, "config", None)
+            mining_logits = (
+                site_logits
+                if bool(getattr(model_config, "pairwise_aux_recompute_hard_neg_online", True))
+                else outputs.get("site_logits_base", site_logits)
+            )
+            pair_features, pair_labels, metadata = build_pairwise_probe_examples(
+                atom_embeddings=atom_features,
+                site_logits=mining_logits.view(-1),
+                site_labels=batch["site_labels"],
+                batch_index=batch["batch"],
+                supervision_mask=batch.get("effective_site_supervision_mask", batch.get("site_supervision_mask")),
+                candidate_mask=batch.get("candidate_train_mask", batch.get("candidate_mask")),
+                max_pairs=getattr(model_config, "pairwise_probe_max_pairs_per_batch", None),
+            )
+            if int(pair_labels.numel()) == 0:
+                return None
+            pair_logits = self.pairwise_head(pair_features).view(-1)
+            if not bool(torch.isfinite(pair_features).all()):
+                raise FloatingPointError("Non-finite pairwise auxiliary features detected")
+            pair_loss = self._pairwise_aux_loss_fn(pair_logits, pair_labels)
+            if not bool(torch.isfinite(pair_loss)):
+                raise FloatingPointError("Non-finite pairwise auxiliary loss detected")
+            pair_metrics = self._compute_pairwise_aux_metrics(pair_logits.detach(), pair_labels.detach(), metadata)
+            pair_metrics["pairwise_loss"] = float(pair_loss.detach().item())
+            return pair_loss, pair_metrics
+
+        def _merge_pairwise_epoch_stats(self, accum: Dict[str, float]) -> Dict[str, float]:
+            total_pairs = float(accum.get("pair_count", 0.0))
+            zero_pair_batches = float(accum.get("zero_pair_batches", 0.0))
+            single_class_batches = float(accum.get("single_class_batches", 0.0))
+            if total_pairs <= 0.0:
+                stats = zero_pairwise_probe_metrics()
+                stats["zero_pair_batches"] = zero_pair_batches
+                stats["single_class_batches"] = single_class_batches
+                return stats
+            positive_rate = float(accum.get("pairwise_positive_rate_sum", 0.0)) / total_pairs
+            if positive_rate <= 0.0 or positive_rate >= 1.0:
+                raise RuntimeError(
+                    "Pairwise auxiliary epoch collapsed to a single label class; "
+                    f"pairwise_positive_rate={positive_rate:.4f}"
+                )
+            return {
+                "pairwise_loss": float(accum.get("pairwise_loss_sum", 0.0)) / total_pairs,
+                "pairwise_accuracy": float(accum.get("pairwise_accuracy_sum", 0.0)) / total_pairs,
+                "pairwise_auc": float(accum.get("pairwise_auc_sum", 0.0)) / total_pairs,
+                "pair_count": total_pairs,
+                "molecules_with_pairs": float(accum.get("molecules_with_pairs", 0.0)),
+                "hard_neg_rank_mean": float(accum.get("hard_neg_rank_sum", 0.0)) / total_pairs,
+                "score_gap_mean": float(accum.get("score_gap_sum", 0.0)) / total_pairs,
+                "true_beats_fraction_before_pairwise": float(accum.get("true_beats_sum", 0.0)) / total_pairs,
+                "pairwise_mean_probability": float(accum.get("pairwise_probability_sum", 0.0)) / total_pairs,
+                "pairwise_positive_rate": positive_rate,
+                "pairwise_mean_probability_pos": float(accum.get("pairwise_probability_pos_sum", 0.0)) / max(
+                    1.0, float(accum.get("positive_pair_count", 0.0))
+                ),
+                "pairwise_mean_probability_neg": float(accum.get("pairwise_probability_neg_sum", 0.0)) / max(
+                    1.0, float(accum.get("negative_pair_count", 0.0))
+                ),
+                "pairwise_logit_mean_pos": float(accum.get("pairwise_logit_pos_sum", 0.0)) / max(
+                    1.0, float(accum.get("positive_pair_count", 0.0))
+                ),
+                "pairwise_logit_mean_neg": float(accum.get("pairwise_logit_neg_sum", 0.0)) / max(
+                    1.0, float(accum.get("negative_pair_count", 0.0))
+                ),
+                "zero_pair_batches": zero_pair_batches,
+                "single_class_batches": single_class_batches,
+            }
+
+        def _update_pairwise_epoch_accum(self, accum: Dict[str, float], pair_stats: Dict[str, float]) -> None:
+            pair_count = float(pair_stats.get("pair_count", 0.0))
+            if pair_count <= 0.0:
+                accum["zero_pair_batches"] = float(accum.get("zero_pair_batches", 0.0)) + 1.0
+                return
+            accum["pair_count"] = float(accum.get("pair_count", 0.0)) + pair_count
+            accum["molecules_with_pairs"] = float(accum.get("molecules_with_pairs", 0.0)) + float(
+                pair_stats.get("molecules_with_pairs", 0.0)
+            )
+            accum["pairwise_loss_sum"] = float(accum.get("pairwise_loss_sum", 0.0)) + (
+                float(pair_stats.get("pairwise_loss", 0.0)) * pair_count
+            )
+            accum["pairwise_accuracy_sum"] = float(accum.get("pairwise_accuracy_sum", 0.0)) + (
+                float(pair_stats.get("pairwise_accuracy", 0.0)) * pair_count
+            )
+            accum["pairwise_auc_sum"] = float(accum.get("pairwise_auc_sum", 0.0)) + (
+                float(pair_stats.get("pairwise_auc", 0.0)) * pair_count
+            )
+            accum["hard_neg_rank_sum"] = float(accum.get("hard_neg_rank_sum", 0.0)) + (
+                float(pair_stats.get("hard_neg_rank_mean", 0.0)) * pair_count
+            )
+            accum["score_gap_sum"] = float(accum.get("score_gap_sum", 0.0)) + (
+                float(pair_stats.get("score_gap_mean", 0.0)) * pair_count
+            )
+            accum["true_beats_sum"] = float(accum.get("true_beats_sum", 0.0)) + (
+                float(pair_stats.get("true_beats_fraction_before_pairwise", 0.0)) * pair_count
+            )
+            accum["pairwise_probability_sum"] = float(accum.get("pairwise_probability_sum", 0.0)) + (
+                float(pair_stats.get("pairwise_mean_probability", 0.0)) * pair_count
+            )
+            accum["pairwise_positive_rate_sum"] = float(accum.get("pairwise_positive_rate_sum", 0.0)) + (
+                float(pair_stats.get("pairwise_positive_rate", 0.0)) * pair_count
+            )
+            positive_pair_count = pair_count * float(pair_stats.get("pairwise_positive_rate", 0.0))
+            negative_pair_count = pair_count - positive_pair_count
+            accum["positive_pair_count"] = float(accum.get("positive_pair_count", 0.0)) + positive_pair_count
+            accum["negative_pair_count"] = float(accum.get("negative_pair_count", 0.0)) + negative_pair_count
+            accum["pairwise_probability_pos_sum"] = float(accum.get("pairwise_probability_pos_sum", 0.0)) + (
+                float(pair_stats.get("pairwise_mean_probability_pos", 0.0)) * positive_pair_count
+            )
+            accum["pairwise_probability_neg_sum"] = float(accum.get("pairwise_probability_neg_sum", 0.0)) + (
+                float(pair_stats.get("pairwise_mean_probability_neg", 0.0)) * negative_pair_count
+            )
+            accum["pairwise_logit_pos_sum"] = float(accum.get("pairwise_logit_pos_sum", 0.0)) + (
+                float(pair_stats.get("pairwise_logit_mean_pos", 0.0)) * positive_pair_count
+            )
+            accum["pairwise_logit_neg_sum"] = float(accum.get("pairwise_logit_neg_sum", 0.0)) + (
+                float(pair_stats.get("pairwise_logit_mean_neg", 0.0)) * negative_pair_count
+            )
+            accum["single_class_batches"] = float(accum.get("single_class_batches", 0.0)) + float(
+                pair_stats.get("single_class_batches", 0.0)
+            )
 
         def _resolve_site_engine_supervision(
             self,
@@ -839,6 +1136,16 @@ if TORCH_AVAILABLE:
                 aux_loss, aux_stats = source_site_aux
                 loss = loss + aux_loss
                 stats.update(aux_stats)
+            pairwise_aux = self._build_pairwise_aux(batch, outputs)
+            if pairwise_aux is not None:
+                pairwise_loss, pairwise_stats = pairwise_aux
+                pairwise_weight = float(getattr(model_config, "pairwise_aux_weight", 0.1))
+                loss = loss + (pairwise_weight * pairwise_loss)
+                stats.update(pairwise_stats)
+                stats["pairwise_aux_weight"] = float(pairwise_weight)
+            elif self._pairwise_aux_enabled():
+                stats.update(zero_pairwise_probe_metrics())
+                stats["pairwise_aux_weight"] = float(getattr(model_config, "pairwise_aux_weight", 0.1))
             reranker_outputs = outputs.get("topk_reranker_outputs") or {}
             proposal_mask = reranker_outputs.get("selected_mask") if isinstance(reranker_outputs, dict) else None
             if proposal_mask is not None and (
@@ -993,6 +1300,22 @@ if TORCH_AVAILABLE:
             self.model.train()
             history = []
             self.current_epoch = int(getattr(loader, "_current_epoch", 0) or 0)
+            pairwise_accum: Dict[str, float] = {"zero_pair_batches": 0.0, "single_class_batches": 0.0}
+            site_scores = []
+            proposal_site_scores = []
+            site_labels = []
+            site_supervision_masks = []
+            candidate_masks = []
+            proposal_masks = []
+            site_batch = []
+            merged_edge_parts = []
+            merged_coord_parts = []
+            graph_sources = []
+            cyp_logits = []
+            cyp_labels = []
+            cyp_supervision_masks = []
+            graph_offset = 0
+            atom_offset = 0
             for batch_idx, raw_batch in enumerate(loader):
                 if raw_batch is None:
                     continue
@@ -1023,6 +1346,36 @@ if TORCH_AVAILABLE:
                         outputs=outputs,
                         stats=stats,
                     )
+                site_scores.append(outputs["site_scores"].detach().cpu())
+                proposal_site_scores.append(
+                    outputs.get("site_scores_proposal", outputs["site_scores"]).detach().cpu()
+                )
+                site_labels.append(batch["site_labels"].detach().cpu())
+                site_supervision_masks.append(
+                    batch.get("site_supervision_mask", torch.ones_like(batch["site_labels"])).detach().cpu()
+                )
+                candidate_masks.append(
+                    batch.get("candidate_mask", torch.ones_like(batch["site_labels"])).detach().cpu()
+                )
+                reranker_outputs = outputs.get("topk_reranker_outputs") or {}
+                proposal_masks.append(
+                    reranker_outputs.get("selected_mask", torch.zeros_like(batch["site_labels"])).detach().cpu()
+                )
+                site_batch.append(batch["batch"].detach().cpu() + graph_offset)
+                edge_index = batch.get("edge_index")
+                if edge_index is not None:
+                    merged_edge_parts.append(edge_index.detach().cpu() + atom_offset)
+                atom_coordinates = batch.get("atom_coordinates")
+                if atom_coordinates is not None:
+                    merged_coord_parts.append(atom_coordinates.detach().cpu())
+                graph_sources.extend(_graph_sources_from_metadata(list(batch.get("graph_metadata") or [])))
+                cyp_logits.append(outputs["cyp_logits"].detach().cpu())
+                cyp_labels.append(batch["cyp_labels"].detach().cpu())
+                cyp_supervision_masks.append(
+                    batch.get("cyp_supervision_mask", torch.ones_like(batch["cyp_labels"])).detach().cpu()
+                )
+                graph_offset += int(batch["cyp_labels"].shape[0])
+                atom_offset += int(batch["site_labels"].shape[0])
                 self.optimizer.zero_grad()
                 loss.backward()
                 if self._has_nonfinite_gradients():
@@ -1037,21 +1390,91 @@ if TORCH_AVAILABLE:
                         flush=True,
                     )
                     history.append(stats)
+                    if self._pairwise_aux_enabled():
+                        self._update_pairwise_epoch_accum(pairwise_accum, stats)
                     continue
                 self._clip_gradients()
                 self.optimizer.step()
                 self._sanitize_trainable_parameters()
                 history.append(stats)
+                if self._pairwise_aux_enabled():
+                    self._update_pairwise_epoch_accum(pairwise_accum, stats)
             if not history:
                 raise RuntimeError(
                     "train_loader_epoch received zero valid batches. "
                     "This usually means the dataset loader dropped every molecule."
                 )
             keys = sorted({key for stats in history for key in stats.keys()})
-            return {
+            merged = {
                 key: float(sum(float(stats.get(key, 0.0)) for stats in history) / len(history))
                 for key in keys
             }
+            if site_scores:
+                merged_site_scores = torch.cat(site_scores, dim=0)
+                merged_proposal_site_scores = torch.cat(proposal_site_scores, dim=0)
+                merged_site_labels = torch.cat(site_labels, dim=0)
+                merged_site_supervision_mask = torch.cat(site_supervision_masks, dim=0)
+                merged_candidate_mask = torch.cat(candidate_masks, dim=0)
+                merged_proposal_mask = torch.cat(proposal_masks, dim=0)
+                merged_site_batch = torch.cat(site_batch, dim=0)
+                merged_edge_index = torch.cat(merged_edge_parts, dim=1) if merged_edge_parts else torch.zeros((2, 0), dtype=torch.long)
+                merged_atom_coordinates = torch.cat(merged_coord_parts, dim=0) if merged_coord_parts else None
+                merged_cyp_logits = torch.cat(cyp_logits, dim=0)
+                merged_cyp_labels = torch.cat(cyp_labels, dim=0)
+                merged_cyp_supervision_mask = torch.cat(cyp_supervision_masks, dim=0)
+                merged.update(
+                    compute_site_metrics_v2(
+                        merged_site_scores,
+                        merged_site_labels,
+                        merged_site_batch,
+                        supervision_mask=merged_site_supervision_mask,
+                        ranking_mask=merged_candidate_mask,
+                    )
+                )
+                merged.update(
+                    mine_hard_negative_pairs(
+                        merged_site_scores,
+                        merged_site_labels,
+                        merged_site_batch,
+                        supervision_mask=merged_site_supervision_mask,
+                        candidate_mask=merged_candidate_mask,
+                        edge_index=merged_edge_index,
+                        atom_coordinates=merged_atom_coordinates,
+                        use_top_score=bool(getattr(self.model.config, "site_use_top_score_hard_neg", True)),
+                        use_graph_local=bool(getattr(self.model.config, "site_use_graph_local_hard_neg", True)),
+                        use_3d_local=bool(getattr(self.model.config, "site_use_3d_local_hard_neg", True)),
+                        max_hard_negs_per_true=int(getattr(self.model.config, "site_hard_negative_max_per_true", 3)),
+                    )["stats"]
+                )
+                merged["source_recall_at_6"] = compute_sourcewise_recall_at_k(
+                    merged_site_scores,
+                    merged_site_labels,
+                    merged_site_batch,
+                    graph_sources,
+                    k=6,
+                    supervision_mask=merged_site_supervision_mask,
+                    ranking_mask=merged_candidate_mask,
+                )
+                merged.update(
+                    compute_reranker_metrics(
+                        merged_site_scores,
+                        merged_proposal_site_scores,
+                        merged_site_labels,
+                        merged_site_batch,
+                        merged_proposal_mask,
+                        supervision_mask=merged_site_supervision_mask,
+                    )
+                )
+                merged.update(
+                    compute_cyp_metrics(
+                        merged_cyp_logits,
+                        merged_cyp_labels,
+                        supervision_mask=merged_cyp_supervision_mask,
+                    )
+                )
+            if self._pairwise_aux_enabled():
+                merged.update(self._merge_pairwise_epoch_stats(pairwise_accum))
+            return merged
 
         def evaluate(self, graphs: Iterable) -> Dict[str, object]:
             self.model.eval()
@@ -1109,7 +1532,17 @@ if TORCH_AVAILABLE:
                 batch["cyp_labels"],
                 supervision_mask=batch.get("cyp_supervision_mask"),
             )
-            return {**site_metrics, **cyp_metrics}
+            metrics = {**site_metrics, **cyp_metrics}
+            if self._pairwise_aux_enabled():
+                pairwise_aux = self._build_pairwise_aux(batch, outputs)
+                if pairwise_aux is not None:
+                    pairwise_loss, pairwise_stats = pairwise_aux
+                    pairwise_stats = dict(pairwise_stats)
+                    pairwise_stats["pairwise_loss"] = float(pairwise_loss.detach().item())
+                    metrics.update(pairwise_stats)
+                else:
+                    metrics.update(zero_pairwise_probe_metrics())
+            return metrics
 
         def analyze_tau(self, loader=None) -> Dict[str, float]:
             target_loader = loader
@@ -1181,6 +1614,7 @@ if TORCH_AVAILABLE:
             cyp_logits = []
             cyp_labels = []
             cyp_supervision_masks = []
+            pairwise_accum: Dict[str, float] = {"zero_pair_batches": 0.0, "single_class_batches": 0.0}
             graph_offset = 0
             atom_offset = 0
             with torch.no_grad():
@@ -1235,6 +1669,15 @@ if TORCH_AVAILABLE:
                     cyp_supervision_masks.append(
                         batch.get("cyp_supervision_mask", torch.ones_like(batch["cyp_labels"])).detach().cpu()
                     )
+                    if self._pairwise_aux_enabled():
+                        pairwise_aux = self._build_pairwise_aux(batch, outputs)
+                        if pairwise_aux is not None:
+                            pairwise_loss, pairwise_stats = pairwise_aux
+                            pairwise_stats = dict(pairwise_stats)
+                            pairwise_stats["pairwise_loss"] = float(pairwise_loss.detach().item())
+                            self._update_pairwise_epoch_accum(pairwise_accum, pairwise_stats)
+                        else:
+                            pairwise_accum["zero_pair_batches"] = float(pairwise_accum.get("zero_pair_batches", 0.0)) + 1.0
                     graph_offset += int(batch["cyp_labels"].shape[0])
                     atom_offset += int(batch["site_labels"].shape[0])
             if not site_scores:
@@ -1297,7 +1740,10 @@ if TORCH_AVAILABLE:
                 merged_cyp_labels,
                 supervision_mask=merged_cyp_supervision_mask,
             )
-            return {**site_metrics, **cyp_metrics}
+            metrics = {**site_metrics, **cyp_metrics}
+            if self._pairwise_aux_enabled():
+                metrics.update(self._merge_pairwise_epoch_stats(pairwise_accum))
+            return metrics
 else:  # pragma: no cover
     @dataclass
     class Trainer:  # type: ignore[override]

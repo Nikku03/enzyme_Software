@@ -130,6 +130,14 @@ class ModelConfig:
     pairwise_probe_freeze_backbone: bool = True
     pairwise_probe_freeze_proposer: bool = True
     pairwise_probe_log_every_epoch: bool = True
+    enable_pairwise_aux: bool = False
+    pairwise_aux_weight: float = 0.1
+    pairwise_aux_unfreeze_proposer_head: bool = True
+    pairwise_aux_unfreeze_last_backbone_block: bool = False
+    pairwise_aux_recompute_hard_neg_online: bool = True
+    pairwise_aux_log_every_epoch: bool = True
+    pairwise_aux_backbone_lr_scale: float = 0.1
+    pairwise_aux_proposer_lr_scale: float = 0.1
     candidate_mask_mode: str = "hard"
     candidate_mask_logit_bias: float = 2.0
     disable_cyp_task: bool = False

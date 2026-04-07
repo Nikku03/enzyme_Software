@@ -200,6 +200,14 @@ def _collect_model_overrides() -> dict[str, int | float]:
         "HYBRID_COLAB_PAIRWISE_PROBE_FREEZE_BACKBONE": (_env_int, "pairwise_probe_freeze_backbone"),
         "HYBRID_COLAB_PAIRWISE_PROBE_FREEZE_PROPOSER": (_env_int, "pairwise_probe_freeze_proposer"),
         "HYBRID_COLAB_PAIRWISE_PROBE_LOG_EVERY_EPOCH": (_env_int, "pairwise_probe_log_every_epoch"),
+        "HYBRID_COLAB_ENABLE_PAIRWISE_AUX": (_env_int, "enable_pairwise_aux"),
+        "HYBRID_COLAB_PAIRWISE_AUX_WEIGHT": (_env_float, "pairwise_aux_weight"),
+        "HYBRID_COLAB_PAIRWISE_AUX_UNFREEZE_PROPOSER_HEAD": (_env_int, "pairwise_aux_unfreeze_proposer_head"),
+        "HYBRID_COLAB_PAIRWISE_AUX_UNFREEZE_LAST_BACKBONE_BLOCK": (_env_int, "pairwise_aux_unfreeze_last_backbone_block"),
+        "HYBRID_COLAB_PAIRWISE_AUX_RECOMPUTE_HARD_NEG_ONLINE": (_env_int, "pairwise_aux_recompute_hard_neg_online"),
+        "HYBRID_COLAB_PAIRWISE_AUX_LOG_EVERY_EPOCH": (_env_int, "pairwise_aux_log_every_epoch"),
+        "HYBRID_COLAB_PAIRWISE_AUX_BACKBONE_LR_SCALE": (_env_float, "pairwise_aux_backbone_lr_scale"),
+        "HYBRID_COLAB_PAIRWISE_AUX_PROPOSER_LR_SCALE": (_env_float, "pairwise_aux_proposer_lr_scale"),
     }
     overrides: dict[str, int | float] = {}
     for env_name, (parser, field_name) in mapping.items():
@@ -741,6 +749,7 @@ def _effective_split_summary(split_summary: dict[str, object]) -> dict[str, dict
 def _save_training_state(
     *,
     model,
+    pairwise_head=None,
     output_dir: Path,
     artifact_dir: Path,
     args,
@@ -748,6 +757,7 @@ def _save_training_state(
     best_val_top1: float,
     best_val_monitor: float,
     best_state,
+    best_pairwise_head_state=None,
     base_config,
     xtb_cache_dir: Path,
     xtb_validity_summary: dict[str, object],
@@ -794,6 +804,7 @@ def _save_training_state(
     source_breakdown = _episode_source_breakdown(episode_log_path)
     checkpoint = {
         "model_state_dict": _initialized_state_dict(model),
+        "pairwise_head_state_dict": _initialized_state_dict(pairwise_head) if pairwise_head is not None else None,
         "config": {
             "base_model": base_config.__dict__,
             "hybrid_wrapper": {"prior_weight": float(torch.sigmoid(model.prior_weight_logit).detach().item())},
@@ -841,6 +852,13 @@ def _save_training_state(
         "freeze_base_modules": _parse_csv_tokens(str(getattr(args, "freeze_base_modules", "") or "")),
         "backbone_thaw_lr_scale": float(getattr(args, "backbone_thaw_lr_scale", 0.1)),
         "site_only_target_cyp": bool(getattr(args, "site_only_target_cyp", False)),
+        "pairwise_aux_enabled": bool(getattr(base_config, "enable_pairwise_aux", False)),
+        "pairwise_aux_weight": float(getattr(base_config, "pairwise_aux_weight", 0.0)),
+        "pairwise_aux_unfreeze_proposer_head": bool(getattr(base_config, "pairwise_aux_unfreeze_proposer_head", False)),
+        "pairwise_aux_unfreeze_last_backbone_block": bool(getattr(base_config, "pairwise_aux_unfreeze_last_backbone_block", False)),
+        "pairwise_aux_recompute_hard_neg_online": bool(getattr(base_config, "pairwise_aux_recompute_hard_neg_online", True)),
+        "pairwise_aux_proposer_lr_scale": float(getattr(base_config, "pairwise_aux_proposer_lr_scale", 0.1)),
+        "pairwise_aux_backbone_lr_scale": float(getattr(base_config, "pairwise_aux_backbone_lr_scale", 0.1)),
         "split_summary": split_summary,
         "effective_split_summary": effective_split_summary,
         "last_train_metrics": last_train_metrics,
@@ -855,6 +873,8 @@ def _save_training_state(
     if best_state is not None:
         best_checkpoint = dict(checkpoint)
         best_checkpoint["model_state_dict"] = best_state
+        if pairwise_head is not None:
+            best_checkpoint["pairwise_head_state_dict"] = best_pairwise_head_state
         best_checkpoint["status"] = f"{status}_best"
         torch.save(best_checkpoint, best_path)
     report_path.write_text(
@@ -894,6 +914,13 @@ def _save_training_state(
                 "freeze_base_modules": _parse_csv_tokens(str(getattr(args, "freeze_base_modules", "") or "")),
                 "backbone_thaw_lr_scale": float(getattr(args, "backbone_thaw_lr_scale", 0.1)),
                 "site_only_target_cyp": bool(getattr(args, "site_only_target_cyp", False)),
+                "pairwise_aux_enabled": bool(getattr(base_config, "enable_pairwise_aux", False)),
+                "pairwise_aux_weight": float(getattr(base_config, "pairwise_aux_weight", 0.0)),
+                "pairwise_aux_unfreeze_proposer_head": bool(getattr(base_config, "pairwise_aux_unfreeze_proposer_head", False)),
+                "pairwise_aux_unfreeze_last_backbone_block": bool(getattr(base_config, "pairwise_aux_unfreeze_last_backbone_block", False)),
+                "pairwise_aux_recompute_hard_neg_online": bool(getattr(base_config, "pairwise_aux_recompute_hard_neg_online", True)),
+                "pairwise_aux_proposer_lr_scale": float(getattr(base_config, "pairwise_aux_proposer_lr_scale", 0.1)),
+                "pairwise_aux_backbone_lr_scale": float(getattr(base_config, "pairwise_aux_backbone_lr_scale", 0.1)),
                 "split_summary": split_summary,
                 "effective_split_summary": effective_split_summary,
                 "episode_log_path": str(episode_log_path) if episode_log_path is not None else None,
@@ -1524,6 +1551,38 @@ def main() -> None:
         print(f"Saved report: {report_path}", flush=True)
         return
 
+    pairwise_head = None
+    pairwise_aux_trainable_modules: list[str] = []
+    if bool(getattr(base_config, "enable_pairwise_aux", False)):
+        base_impl = getattr(getattr(model, "base_lnn", None), "impl", None)
+        proposer_head = getattr(base_impl, "site_head", None)
+        last_backbone_block = getattr(base_impl, "som_branch", None)
+        pairwise_head = PairwiseHead(
+            int(getattr(base_config, "som_branch_dim", getattr(base_config, "hidden_dim", 128))),
+            hidden_scale=float(getattr(base_config, "pairwise_probe_hidden_scale", 2.0)),
+            dropout=float(getattr(base_config, "pairwise_probe_dropout", 0.1)),
+        )
+        for param in model.parameters():
+            param.requires_grad = False
+        if bool(getattr(base_config, "pairwise_aux_unfreeze_proposer_head", True)) and proposer_head is not None:
+            for param in proposer_head.parameters():
+                param.requires_grad = True
+            pairwise_aux_trainable_modules.append("base_lnn.impl.site_head")
+        if bool(getattr(base_config, "pairwise_aux_unfreeze_last_backbone_block", False)) and last_backbone_block is not None:
+            for param in last_backbone_block.parameters():
+                param.requires_grad = True
+            pairwise_aux_trainable_modules.append("base_lnn.impl.som_branch")
+        for param in pairwise_head.parameters():
+            param.requires_grad = True
+        pairwise_aux_trainable_modules.append("pairwise_head")
+        print(
+            "Pairwise aux Stage 2 enabled | "
+            f"weight={float(getattr(base_config, 'pairwise_aux_weight', 0.1)):.3f} | "
+            f"trainable_modules={pairwise_aux_trainable_modules} | "
+            f"recompute_hard_neg_online={'yes' if bool(getattr(base_config, 'pairwise_aux_recompute_hard_neg_online', True)) else 'no'}",
+            flush=True,
+        )
+
     trainer = Trainer(
         model=model,
         config=TrainingConfig(
@@ -1535,7 +1594,10 @@ def main() -> None:
         ),
         device=device,
         episode_logger=episode_logger,
+        pairwise_head=pairwise_head,
     )
+    if bool(getattr(base_config, "enable_pairwise_aux", False)):
+        print(f"Pairwise aux optimizer groups: {trainer.trainable_module_summary}", flush=True)
     reranker_lr_scale = float(_env_float("HYBRID_COLAB_TOPK_RERANKER_LR_SCALE") or 1.0)
     if _reconfigure_reranker_param_groups(
         trainer,
@@ -1553,10 +1615,13 @@ def main() -> None:
     best_val_top1 = -1.0
     best_val_monitor = -1.0
     best_state = None
+    best_pairwise_head_state = None
     epochs_without_improvement = 0
     train_start = time.perf_counter()
     backbone_freeze_epochs = max(0, int(args.backbone_freeze_epochs))
-    if bool(getattr(base_config, "use_topk_reranker", False)):
+    if bool(getattr(base_config, "enable_pairwise_aux", False)):
+        backbone_freeze_epochs = 0
+    if bool(getattr(base_config, "use_topk_reranker", False)) and not bool(getattr(base_config, "enable_pairwise_aux", False)):
         reranker_headstart_epochs = int(_env_int("HYBRID_COLAB_TOPK_RERANKER_HEADSTART_EPOCHS") or 0)
         if reranker_headstart_epochs > backbone_freeze_epochs:
             backbone_freeze_epochs = reranker_headstart_epochs
@@ -1722,6 +1787,7 @@ def main() -> None:
             if selection_value > best_val_monitor:
                 best_val_monitor = selection_value
                 best_state = _initialized_state_dict(model)
+                best_pairwise_head_state = _initialized_state_dict(pairwise_head) if pairwise_head is not None else None
                 epochs_without_improvement = 0
             else:
                 epochs_without_improvement += 1
@@ -1745,9 +1811,24 @@ def main() -> None:
                     f"eta={eta_seconds / 60.0:.1f}m",
                     flush=True,
                 )
+                if bool(getattr(base_config, "enable_pairwise_aux", False)) and bool(
+                    getattr(base_config, "pairwise_aux_log_every_epoch", True)
+                ):
+                    print(
+                        "  pairwise_aux | "
+                        f"train_loss={train_stats.get('pairwise_loss', 0.0):.4f} | "
+                        f"val_loss={val_metrics.get('pairwise_loss', 0.0):.4f} | "
+                        f"val_acc={val_metrics.get('pairwise_accuracy', 0.0):.3f} | "
+                        f"val_auc={val_metrics.get('pairwise_auc', 0.0):.3f} | "
+                        f"val_pairs={val_metrics.get('pair_count', 0.0):.0f} | "
+                        f"val_prob_pos={val_metrics.get('pairwise_mean_probability_pos', 0.0):.3f} | "
+                        f"val_prob_neg={val_metrics.get('pairwise_mean_probability_neg', 0.0):.3f}",
+                        flush=True,
+                    )
 
             latest_path, best_path, _, report_path = _save_training_state(
                 model=model,
+                pairwise_head=pairwise_head,
                 output_dir=output_dir,
                 artifact_dir=artifact_dir,
                 args=args,
@@ -1755,6 +1836,7 @@ def main() -> None:
                 best_val_top1=best_val_top1,
                 best_val_monitor=best_val_monitor,
                 best_state=best_state,
+                best_pairwise_head_state=best_pairwise_head_state,
                 base_config=base_config,
                 xtb_cache_dir=xtb_cache_dir,
                 xtb_validity_summary=xtb_validity_summary,
@@ -1781,6 +1863,7 @@ def main() -> None:
         print("\nInterrupted. Saving current hybrid_full_xtb progress...", flush=True)
         latest_path, best_path, _, report_path = _save_training_state(
             model=model,
+            pairwise_head=pairwise_head,
             output_dir=output_dir,
             artifact_dir=artifact_dir,
             args=args,
@@ -1788,6 +1871,7 @@ def main() -> None:
             best_val_top1=best_val_top1,
             best_val_monitor=best_val_monitor,
             best_state=best_state,
+            best_pairwise_head_state=best_pairwise_head_state,
             base_config=base_config,
             xtb_cache_dir=xtb_cache_dir,
             xtb_validity_summary=xtb_validity_summary,
@@ -1809,6 +1893,8 @@ def main() -> None:
 
     if best_state is not None:
         model.load_state_dict(best_state, strict=False)
+    if pairwise_head is not None and best_pairwise_head_state is not None:
+        pairwise_head.load_state_dict(best_pairwise_head_state, strict=False)
 
     print("\n" + "=" * 60, flush=True)
     print("TEST SET EVALUATION", flush=True)
@@ -1839,6 +1925,7 @@ def main() -> None:
 
     latest_path, best_path, archive_path, report_path = _save_training_state(
         model=model,
+        pairwise_head=pairwise_head,
         output_dir=output_dir,
         artifact_dir=artifact_dir,
         args=args,
@@ -1846,6 +1933,7 @@ def main() -> None:
         best_val_top1=best_val_top1,
         best_val_monitor=best_val_monitor,
         best_state=best_state,
+        best_pairwise_head_state=best_pairwise_head_state,
         base_config=base_config,
         xtb_cache_dir=xtb_cache_dir,
         xtb_validity_summary=xtb_validity_summary,
