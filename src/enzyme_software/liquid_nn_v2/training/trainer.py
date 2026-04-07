@@ -11,7 +11,12 @@ from enzyme_software.liquid_nn_v2.config import TrainingConfig
 from enzyme_software.liquid_nn_v2.training.hard_negative_mining import mine_hard_negative_pairs
 from enzyme_software.liquid_nn_v2.training.episode_logger import EpisodeLogger
 from enzyme_software.liquid_nn_v2.training.loss import AdaptiveLossV2, CandidateRerankLoss
-from enzyme_software.liquid_nn_v2.training.metrics import compute_cyp_metrics, compute_reranker_metrics, compute_site_metrics_v2
+from enzyme_software.liquid_nn_v2.training.metrics import (
+    compute_cyp_metrics,
+    compute_reranker_metrics,
+    compute_site_metrics_v2,
+    compute_sourcewise_recall_at_k,
+)
 from enzyme_software.liquid_nn_v2.training.utils import collate_molecule_graphs, move_to_device
 
 
@@ -34,6 +39,13 @@ if TORCH_AVAILABLE:
             "literature_curation": "literature",
         }
         return aliases.get(text, text)
+
+    def _graph_sources_from_metadata(metadata: List[dict]) -> List[str]:
+        sources: List[str] = []
+        for meta in metadata:
+            source = _normalize_source_name(str((meta or {}).get("site_source") or (meta or {}).get("source") or "unknown"))
+            sources.append(source or "unknown")
+        return sources
 
     class _NoOpScheduler:
         def step(self, val_metric: float) -> None:
@@ -164,6 +176,7 @@ if TORCH_AVAILABLE:
                 site_use_top_score_hard_neg=bool(getattr(model_config, "site_use_top_score_hard_neg", True)),
                 site_use_graph_local_hard_neg=bool(getattr(model_config, "site_use_graph_local_hard_neg", True)),
                 site_use_3d_local_hard_neg=bool(getattr(model_config, "site_use_3d_local_hard_neg", True)),
+                site_use_rank_weighted_hard_neg=bool(getattr(model_config, "site_use_rank_weighted_hard_neg", False)),
             )
             self.loss_fn.to(self.device)
             self.reranker_loss = CandidateRerankLoss(
@@ -1052,6 +1065,16 @@ if TORCH_AVAILABLE:
                 supervision_mask=batch.get("site_supervision_mask"),
                 ranking_mask=batch.get("candidate_mask"),
             )
+            graph_sources = _graph_sources_from_metadata(list(batch.get("graph_metadata") or []))
+            site_metrics["source_recall_at_6"] = compute_sourcewise_recall_at_k(
+                outputs["site_scores"],
+                batch["site_labels"],
+                batch["batch"],
+                graph_sources,
+                k=6,
+                supervision_mask=batch.get("site_supervision_mask"),
+                ranking_mask=batch.get("candidate_mask"),
+            )
             site_metrics.update(
                 mine_hard_negative_pairs(
                     outputs["site_scores"],
@@ -1153,6 +1176,7 @@ if TORCH_AVAILABLE:
             site_batch = []
             merged_edge_parts = []
             merged_coord_parts = []
+            graph_sources = []
             cyp_logits = []
             cyp_labels = []
             cyp_supervision_masks = []
@@ -1204,6 +1228,7 @@ if TORCH_AVAILABLE:
                     atom_coordinates = batch.get("atom_coordinates")
                     if atom_coordinates is not None:
                         merged_coord_parts.append(atom_coordinates.detach().cpu())
+                    graph_sources.extend(_graph_sources_from_metadata(list(batch.get("graph_metadata") or [])))
                     cyp_logits.append(outputs["cyp_logits"].detach().cpu())
                     cyp_labels.append(batch["cyp_labels"].detach().cpu())
                     cyp_supervision_masks.append(
@@ -1246,6 +1271,15 @@ if TORCH_AVAILABLE:
                     use_3d_local=bool(getattr(self.model.config, "site_use_3d_local_hard_neg", True)),
                     max_hard_negs_per_true=int(getattr(self.model.config, "site_hard_negative_max_per_true", 3)),
                 )["stats"]
+            )
+            site_metrics["source_recall_at_6"] = compute_sourcewise_recall_at_k(
+                merged_site_scores,
+                merged_site_labels,
+                merged_site_batch,
+                graph_sources,
+                k=6,
+                supervision_mask=merged_site_supervision_mask,
+                ranking_mask=merged_candidate_mask,
             )
             site_metrics.update(
                 compute_reranker_metrics(

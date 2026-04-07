@@ -115,6 +115,7 @@ def _collect_model_overrides() -> dict[str, int | float]:
         "HYBRID_COLAB_SITE_USE_TOP_SCORE_HARD_NEG": (_env_int, "site_use_top_score_hard_neg"),
         "HYBRID_COLAB_SITE_USE_GRAPH_LOCAL_HARD_NEG": (_env_int, "site_use_graph_local_hard_neg"),
         "HYBRID_COLAB_SITE_USE_3D_LOCAL_HARD_NEG": (_env_int, "site_use_3d_local_hard_neg"),
+        "HYBRID_COLAB_SITE_USE_RANK_WEIGHTED_HARD_NEG": (_env_int, "site_use_rank_weighted_hard_neg"),
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_DEFAULT": (_env_float, "site_source_weight_default"),
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_DRUGBANK": (_env_float, "site_source_weight_drugbank"),
         "HYBRID_COLAB_SITE_SOURCE_WEIGHT_AZ120": (_env_float, "site_source_weight_az120"),

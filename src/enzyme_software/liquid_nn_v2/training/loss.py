@@ -315,6 +315,7 @@ if TORCH_AVAILABLE:
             use_top_score_hard_neg: bool = True,
             use_graph_local_hard_neg: bool = True,
             use_3d_local_hard_neg: bool = True,
+            use_rank_weighted_hard_neg: bool = False,
         ):
             super().__init__()
             self.focal = FocalLoss(gamma=focal_gamma, pos_weight=pos_weight, label_smoothing=label_smoothing)
@@ -334,6 +335,7 @@ if TORCH_AVAILABLE:
             self.use_top_score_hard_neg = bool(use_top_score_hard_neg)
             self.use_graph_local_hard_neg = bool(use_graph_local_hard_neg)
             self.use_3d_local_hard_neg = bool(use_3d_local_hard_neg)
+            self.use_rank_weighted_hard_neg = bool(use_rank_weighted_hard_neg)
             self.ranking = RankingLoss(margin=ranking_margin, hard_negative_fraction=hard_negative_fraction)
             self.listmle = ListwiseRankingLoss()
             self.softap = SoftAPLoss(temperature=softap_temperature)
@@ -569,6 +571,7 @@ if TORCH_AVAILABLE:
                     use_graph_local=self.use_graph_local_hard_neg,
                     use_3d_local=self.use_3d_local_hard_neg,
                     max_hard_negs_per_true=self.hard_negative_max_per_true,
+                    use_rank_weighting=self.use_rank_weighted_hard_neg,
                 )
             total = (
                 focal_loss
@@ -591,6 +594,7 @@ if TORCH_AVAILABLE:
                 "hard_negative_loss_raw": float(hard_negative_loss.item()),
                 "hard_negative_weight": float(self.hard_negative_weight),
                 "hard_negative_margin": float(self.hard_negative_margin),
+                "hard_negative_rank_weighted": float(1.0 if self.use_rank_weighted_hard_neg else 0.0),
                 "site_loss": float(total.item()),
                 **hard_negative_stats,
             }
@@ -725,6 +729,7 @@ if TORCH_AVAILABLE:
             site_use_top_score_hard_neg: bool = True,
             site_use_graph_local_hard_neg: bool = True,
             site_use_3d_local_hard_neg: bool = True,
+            site_use_rank_weighted_hard_neg: bool = False,
         ):
             super().__init__()
             self.site_loss = SiteOfMetabolismLoss(
@@ -752,6 +757,7 @@ if TORCH_AVAILABLE:
                 use_top_score_hard_neg=bool(site_use_top_score_hard_neg),
                 use_graph_local_hard_neg=bool(site_use_graph_local_hard_neg),
                 use_3d_local_hard_neg=bool(site_use_3d_local_hard_neg),
+                use_rank_weighted_hard_neg=bool(site_use_rank_weighted_hard_neg),
             )
             self.log_var_site = nn.Parameter(torch.tensor(0.0))
             self.log_var_cyp = nn.Parameter(torch.tensor(0.0))

@@ -115,6 +115,7 @@ class ModelConfig:
     site_use_top_score_hard_neg: bool = True
     site_use_graph_local_hard_neg: bool = True
     site_use_3d_local_hard_neg: bool = True
+    site_use_rank_weighted_hard_neg: bool = False
     site_source_weight_default: float = 1.0
     site_source_weight_drugbank: float = 1.0
     site_source_weight_az120: float = 1.0
@@ -388,6 +389,7 @@ class ModelConfig:
         self.site_use_top_score_hard_neg = bool(self.site_use_top_score_hard_neg)
         self.site_use_graph_local_hard_neg = bool(self.site_use_graph_local_hard_neg)
         self.site_use_3d_local_hard_neg = bool(self.site_use_3d_local_hard_neg)
+        self.site_use_rank_weighted_hard_neg = bool(self.site_use_rank_weighted_hard_neg)
         self.site_source_weight_default = max(0.1, float(self.site_source_weight_default))
         self.site_source_weight_drugbank = max(0.1, float(self.site_source_weight_drugbank))
         self.site_source_weight_az120 = max(0.1, float(self.site_source_weight_az120))

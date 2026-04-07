@@ -214,6 +214,56 @@ def compute_site_metrics_v2(scores, labels, batch, threshold: float = 0.5, super
     }
 
 
+def compute_sourcewise_recall_at_k(
+    scores,
+    labels,
+    batch,
+    graph_sources,
+    *,
+    k: int,
+    supervision_mask=None,
+    ranking_mask=None,
+) -> Dict[str, float]:
+    scores_np = _to_numpy(scores).reshape(-1)
+    labels_np = _to_numpy(labels).reshape(-1)
+    batch_np = _to_numpy(batch).reshape(-1)
+    mask_np = _to_numpy(supervision_mask).reshape(-1) > 0.5 if supervision_mask is not None else None
+    ranking_np = _to_numpy(ranking_mask).reshape(-1) > 0.5 if ranking_mask is not None else None
+    if batch_np.size == 0:
+        return {}
+    num_molecules = int(batch_np.max()) + 1
+    hit_counts: Dict[str, int] = {}
+    total_counts: Dict[str, int] = {}
+    for mol_idx in range(num_molecules):
+        mol_mask = batch_np == mol_idx
+        if mask_np is not None:
+            mol_mask = mol_mask & mask_np
+        if not np.any(mol_mask):
+            continue
+        mol_labels = labels_np[mol_mask]
+        if not np.any(mol_labels == 1):
+            continue
+        source = str(graph_sources[mol_idx] if mol_idx < len(graph_sources) else "unknown")
+        total_counts[source] = total_counts.get(source, 0) + 1
+        ranked_mask = mol_mask
+        if ranking_np is not None:
+            ranked_mask = ranked_mask & ranking_np
+        mol_scores = scores_np[ranked_mask]
+        mol_rank_labels = labels_np[ranked_mask]
+        if mol_scores.size == 0 or not np.any(mol_rank_labels == 1):
+            hit = False
+        else:
+            topk = min(int(k), int(mol_scores.size))
+            top_idx = np.argsort(mol_scores)[-topk:]
+            hit = bool(np.any(mol_rank_labels[top_idx] == 1))
+        hit_counts[source] = hit_counts.get(source, 0) + int(hit)
+    return {
+        source: float(hit_counts.get(source, 0)) / float(total)
+        for source, total in sorted(total_counts.items())
+        if total > 0
+    }
+
+
 def compute_reranker_metrics(
     final_scores,
     proposal_scores,

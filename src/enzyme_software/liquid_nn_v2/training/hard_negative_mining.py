@@ -108,6 +108,7 @@ if TORCH_AVAILABLE:
         true_scores = []
         negative_scores = []
         pair_type_indices = []
+        negative_ranks = []
         true_ranks = []
         negative_ranks_by_type = {name: [] for name in HARD_NEGATIVE_TYPE_NAMES}
         margins_by_type = {name: [] for name in HARD_NEGATIVE_TYPE_NAMES}
@@ -220,6 +221,7 @@ if TORCH_AVAILABLE:
                     pair_type_indices.append(
                         torch.tensor(_HARD_NEGATIVE_TYPE_TO_INDEX[type_name], device=mol_scores.device, dtype=torch.long)
                     )
+                    negative_ranks.append(candidate_ranks[neg_rank_pos].to(dtype=torch.float32))
                     negative_ranks_by_type[type_name].append(candidate_ranks[neg_rank_pos].to(dtype=torch.float32))
                     margins_by_type[type_name].append(margin)
                     beats_by_type[type_name].append((margin > 0.0).to(dtype=torch.float32))
@@ -232,11 +234,13 @@ if TORCH_AVAILABLE:
             true_scores_tensor = torch.stack(true_scores)
             negative_scores_tensor = torch.stack(negative_scores)
             pair_types_tensor = torch.stack(pair_type_indices)
+            negative_ranks_tensor = torch.stack(negative_ranks) if negative_ranks else scores_flat.new_empty((0,))
             true_ranks_tensor = torch.stack(true_ranks) if true_ranks else torch.empty(0, device=scores_flat.device)
         else:
             true_scores_tensor = scores_flat.new_empty((0,))
             negative_scores_tensor = scores_flat.new_empty((0,))
             pair_types_tensor = torch.empty((0,), dtype=torch.long, device=scores_flat.device)
+            negative_ranks_tensor = scores_flat.new_empty((0,))
             true_ranks_tensor = scores_flat.new_empty((0,))
 
         stats: Dict[str, float] = {
@@ -264,6 +268,7 @@ if TORCH_AVAILABLE:
             "true_scores": true_scores_tensor,
             "negative_scores": negative_scores_tensor,
             "pair_type_indices": pair_types_tensor,
+            "negative_ranks": negative_ranks_tensor,
             "stats": stats,
         }
 
@@ -282,6 +287,7 @@ if TORCH_AVAILABLE:
         use_graph_local: bool = True,
         use_3d_local: bool = True,
         max_hard_negs_per_true: int = 3,
+        use_rank_weighting: bool = False,
     ):
         mined = mine_hard_negative_pairs(
             scores,
@@ -298,18 +304,31 @@ if TORCH_AVAILABLE:
         )
         true_scores = mined["true_scores"]
         negative_scores = mined["negative_scores"]
+        pair_types = mined["pair_type_indices"]
+        negative_ranks = mined["negative_ranks"]
         stats = dict(mined["stats"])
         if int(true_scores.numel()) == 0:
             zero = _zero_scalar(scores.view(-1))
             stats["hard_negative_loss"] = 0.0
             stats["hard_negative_active_fraction"] = 0.0
             stats["hard_negative_pair_count"] = 0.0
+            stats["hard_negative_weighted_rank_factor_mean"] = 0.0
             return zero, stats
         margin_terms = torch.relu(float(margin) - (true_scores - negative_scores))
-        stats["hard_negative_loss"] = float(margin_terms.mean().detach().item())
+        pair_weights = torch.ones_like(margin_terms)
+        if use_rank_weighting and int(pair_types.numel()) == int(margin_terms.numel()):
+            rank_1_2 = negative_ranks <= 2.0
+            rank_3_5 = (negative_ranks > 2.0) & (negative_ranks <= 5.0)
+            rank_gt_5 = negative_ranks > 5.0
+            pair_weights = torch.where(rank_1_2, torch.full_like(pair_weights, 1.5), pair_weights)
+            pair_weights = torch.where(rank_3_5, torch.full_like(pair_weights, 1.0), pair_weights)
+            pair_weights = torch.where(rank_gt_5, torch.full_like(pair_weights, 0.5), pair_weights)
+        weighted_terms = margin_terms * pair_weights
+        stats["hard_negative_loss"] = float(weighted_terms.mean().detach().item())
         stats["hard_negative_active_fraction"] = float((margin_terms > 0.0).float().mean().detach().item())
         stats["hard_negative_pair_count"] = float(int(margin_terms.numel()))
-        return margin_terms.mean(), stats
+        stats["hard_negative_weighted_rank_factor_mean"] = float(pair_weights.mean().detach().item())
+        return weighted_terms.mean(), stats
 else:  # pragma: no cover
     def mine_hard_negative_pairs(*args, **kwargs):
         require_torch()
