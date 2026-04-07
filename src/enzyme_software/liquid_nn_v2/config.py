@@ -109,6 +109,12 @@ class ModelConfig:
     site_shortlist_weight: float = 0.0
     site_shortlist_temperature: float = 0.70
     site_shortlist_topk: int = 5
+    site_hard_negative_weight: float = 0.0
+    site_hard_negative_margin: float = 0.20
+    site_hard_negative_max_per_true: int = 3
+    site_use_top_score_hard_neg: bool = True
+    site_use_graph_local_hard_neg: bool = True
+    site_use_3d_local_hard_neg: bool = True
     site_source_weight_default: float = 1.0
     site_source_weight_drugbank: float = 1.0
     site_source_weight_az120: float = 1.0
@@ -376,6 +382,12 @@ class ModelConfig:
         self.site_shortlist_weight = max(0.0, float(self.site_shortlist_weight))
         self.site_shortlist_temperature = max(1.0e-3, float(self.site_shortlist_temperature))
         self.site_shortlist_topk = max(1, int(self.site_shortlist_topk))
+        self.site_hard_negative_weight = max(0.0, float(self.site_hard_negative_weight))
+        self.site_hard_negative_margin = max(0.0, float(self.site_hard_negative_margin))
+        self.site_hard_negative_max_per_true = max(1, int(self.site_hard_negative_max_per_true))
+        self.site_use_top_score_hard_neg = bool(self.site_use_top_score_hard_neg)
+        self.site_use_graph_local_hard_neg = bool(self.site_use_graph_local_hard_neg)
+        self.site_use_3d_local_hard_neg = bool(self.site_use_3d_local_hard_neg)
         self.site_source_weight_default = max(0.1, float(self.site_source_weight_default))
         self.site_source_weight_drugbank = max(0.1, float(self.site_source_weight_drugbank))
         self.site_source_weight_az120 = max(0.1, float(self.site_source_weight_az120))

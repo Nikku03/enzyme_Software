@@ -8,6 +8,7 @@ import numpy as np
 
 from enzyme_software.liquid_nn_v2._compat import F, TORCH_AVAILABLE, require_torch, torch
 from enzyme_software.liquid_nn_v2.config import TrainingConfig
+from enzyme_software.liquid_nn_v2.training.hard_negative_mining import mine_hard_negative_pairs
 from enzyme_software.liquid_nn_v2.training.episode_logger import EpisodeLogger
 from enzyme_software.liquid_nn_v2.training.loss import AdaptiveLossV2, CandidateRerankLoss
 from enzyme_software.liquid_nn_v2.training.metrics import compute_cyp_metrics, compute_reranker_metrics, compute_site_metrics_v2
@@ -157,6 +158,12 @@ if TORCH_AVAILABLE:
                 site_shortlist_weight=float(getattr(model_config, "site_shortlist_weight", 0.0)),
                 site_shortlist_temperature=float(getattr(model_config, "site_shortlist_temperature", 0.70)),
                 site_shortlist_topk=int(getattr(model_config, "site_shortlist_topk", 5)),
+                site_hard_negative_weight=float(getattr(model_config, "site_hard_negative_weight", 0.0)),
+                site_hard_negative_margin=float(getattr(model_config, "site_hard_negative_margin", 0.20)),
+                site_hard_negative_max_per_true=int(getattr(model_config, "site_hard_negative_max_per_true", 3)),
+                site_use_top_score_hard_neg=bool(getattr(model_config, "site_use_top_score_hard_neg", True)),
+                site_use_graph_local_hard_neg=bool(getattr(model_config, "site_use_graph_local_hard_neg", True)),
+                site_use_3d_local_hard_neg=bool(getattr(model_config, "site_use_3d_local_hard_neg", True)),
             )
             self.loss_fn.to(self.device)
             self.reranker_loss = CandidateRerankLoss(
@@ -649,6 +656,9 @@ if TORCH_AVAILABLE:
                 batch.get("tau_init"),
                 outputs.get("energy_outputs"),
                 outputs.get("deliberation_outputs"),
+                candidate_mask=batch.get("candidate_train_mask", batch.get("candidate_mask")),
+                edge_index=batch.get("edge_index"),
+                atom_coordinates=batch.get("atom_coordinates"),
             )
             stats = dict(stats)
             stats.update(source_weight_stats)
@@ -1042,6 +1052,21 @@ if TORCH_AVAILABLE:
                 supervision_mask=batch.get("site_supervision_mask"),
                 ranking_mask=batch.get("candidate_mask"),
             )
+            site_metrics.update(
+                mine_hard_negative_pairs(
+                    outputs["site_scores"],
+                    batch["site_labels"],
+                    batch["batch"],
+                    supervision_mask=batch.get("site_supervision_mask"),
+                    candidate_mask=batch.get("candidate_mask"),
+                    edge_index=batch.get("edge_index"),
+                    atom_coordinates=batch.get("atom_coordinates"),
+                    use_top_score=bool(getattr(self.model.config, "site_use_top_score_hard_neg", True)),
+                    use_graph_local=bool(getattr(self.model.config, "site_use_graph_local_hard_neg", True)),
+                    use_3d_local=bool(getattr(self.model.config, "site_use_3d_local_hard_neg", True)),
+                    max_hard_negs_per_true=int(getattr(self.model.config, "site_hard_negative_max_per_true", 3)),
+                )["stats"]
+            )
             proposal_scores = outputs.get("site_scores_proposal")
             reranker_outputs = outputs.get("topk_reranker_outputs") or {}
             if proposal_scores is not None and reranker_outputs.get("selected_mask") is not None:
@@ -1126,10 +1151,13 @@ if TORCH_AVAILABLE:
             candidate_masks = []
             proposal_masks = []
             site_batch = []
+            merged_edge_parts = []
+            merged_coord_parts = []
             cyp_logits = []
             cyp_labels = []
             cyp_supervision_masks = []
-            batch_offset = 0
+            graph_offset = 0
+            atom_offset = 0
             with torch.no_grad():
                 for raw_batch in loader:
                     if raw_batch is None:
@@ -1169,13 +1197,20 @@ if TORCH_AVAILABLE:
                     proposal_masks.append(
                         reranker_outputs.get("selected_mask", torch.zeros_like(batch["site_labels"])).detach().cpu()
                     )
-                    site_batch.append(batch["batch"].detach().cpu() + batch_offset)
+                    site_batch.append(batch["batch"].detach().cpu() + graph_offset)
+                    edge_index = batch.get("edge_index")
+                    if edge_index is not None:
+                        merged_edge_parts.append(edge_index.detach().cpu() + atom_offset)
+                    atom_coordinates = batch.get("atom_coordinates")
+                    if atom_coordinates is not None:
+                        merged_coord_parts.append(atom_coordinates.detach().cpu())
                     cyp_logits.append(outputs["cyp_logits"].detach().cpu())
                     cyp_labels.append(batch["cyp_labels"].detach().cpu())
                     cyp_supervision_masks.append(
                         batch.get("cyp_supervision_mask", torch.ones_like(batch["cyp_labels"])).detach().cpu()
                     )
-                    batch_offset += int(batch["cyp_labels"].shape[0])
+                    graph_offset += int(batch["cyp_labels"].shape[0])
+                    atom_offset += int(batch["site_labels"].shape[0])
             if not site_scores:
                 return {}
             merged_site_scores = torch.cat(site_scores, dim=0)
@@ -1185,6 +1220,8 @@ if TORCH_AVAILABLE:
             merged_candidate_mask = torch.cat(candidate_masks, dim=0)
             merged_proposal_mask = torch.cat(proposal_masks, dim=0)
             merged_site_batch = torch.cat(site_batch, dim=0)
+            merged_edge_index = torch.cat(merged_edge_parts, dim=1) if merged_edge_parts else torch.zeros((2, 0), dtype=torch.long)
+            merged_atom_coordinates = torch.cat(merged_coord_parts, dim=0) if merged_coord_parts else None
             merged_cyp_logits = torch.cat(cyp_logits, dim=0)
             merged_cyp_labels = torch.cat(cyp_labels, dim=0)
             merged_cyp_supervision_mask = torch.cat(cyp_supervision_masks, dim=0)
@@ -1194,6 +1231,21 @@ if TORCH_AVAILABLE:
                 merged_site_batch,
                 supervision_mask=merged_site_supervision_mask,
                 ranking_mask=merged_candidate_mask,
+            )
+            site_metrics.update(
+                mine_hard_negative_pairs(
+                    merged_site_scores,
+                    merged_site_labels,
+                    merged_site_batch,
+                    supervision_mask=merged_site_supervision_mask,
+                    candidate_mask=merged_candidate_mask,
+                    edge_index=merged_edge_index,
+                    atom_coordinates=merged_atom_coordinates,
+                    use_top_score=bool(getattr(self.model.config, "site_use_top_score_hard_neg", True)),
+                    use_graph_local=bool(getattr(self.model.config, "site_use_graph_local_hard_neg", True)),
+                    use_3d_local=bool(getattr(self.model.config, "site_use_3d_local_hard_neg", True)),
+                    max_hard_negs_per_true=int(getattr(self.model.config, "site_hard_negative_max_per_true", 3)),
+                )["stats"]
             )
             site_metrics.update(
                 compute_reranker_metrics(

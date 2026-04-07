@@ -5,6 +5,7 @@ from typing import Dict, Optional
 from enzyme_software.losses import ListMLELoss, MIRankLoss
 from enzyme_software.liquid_nn_v2._compat import F, TORCH_AVAILABLE, nn, require_torch, torch
 from enzyme_software.liquid_nn_v2.data.cyp_classes import ALL_CYP_CLASSES, MAJOR_CYP_CLASSES
+from enzyme_software.liquid_nn_v2.training.hard_negative_mining import compute_hard_negative_margin_loss
 
 
 CYP_COUNTS = {
@@ -308,6 +309,12 @@ if TORCH_AVAILABLE:
             shortlist_weight: float = 0.0,
             shortlist_temperature: float = 0.70,
             shortlist_topk: int = 5,
+            hard_negative_weight: float = 0.0,
+            hard_negative_margin: float = 0.20,
+            hard_negative_max_per_true: int = 3,
+            use_top_score_hard_neg: bool = True,
+            use_graph_local_hard_neg: bool = True,
+            use_3d_local_hard_neg: bool = True,
         ):
             super().__init__()
             self.focal = FocalLoss(gamma=focal_gamma, pos_weight=pos_weight, label_smoothing=label_smoothing)
@@ -321,6 +328,12 @@ if TORCH_AVAILABLE:
             self.shortlist_weight = float(shortlist_weight)
             self.shortlist_temperature = max(1.0e-3, float(shortlist_temperature))
             self.shortlist_topk = max(1, int(shortlist_topk))
+            self.hard_negative_weight = float(hard_negative_weight)
+            self.hard_negative_margin = float(hard_negative_margin)
+            self.hard_negative_max_per_true = max(1, int(hard_negative_max_per_true))
+            self.use_top_score_hard_neg = bool(use_top_score_hard_neg)
+            self.use_graph_local_hard_neg = bool(use_graph_local_hard_neg)
+            self.use_3d_local_hard_neg = bool(use_3d_local_hard_neg)
             self.ranking = RankingLoss(margin=ranking_margin, hard_negative_fraction=hard_negative_fraction)
             self.listmle = ListwiseRankingLoss()
             self.softap = SoftAPLoss(temperature=softap_temperature)
@@ -463,7 +476,18 @@ if TORCH_AVAILABLE:
             denom = stacked_weights.sum().clamp_min(1.0e-6)
             return (stacked_losses * stacked_weights).sum() / denom
 
-        def forward(self, logits, labels, batch, supervision_mask=None, node_weights=None, graph_weights=None):
+        def forward(
+            self,
+            logits,
+            labels,
+            batch,
+            supervision_mask=None,
+            node_weights=None,
+            graph_weights=None,
+            candidate_mask=None,
+            edge_index=None,
+            atom_coordinates=None,
+        ):
             focal_loss = self.focal(logits, labels, supervision_mask=supervision_mask, node_weights=node_weights, batch=batch)
             ranking_loss = self.ranking(logits, labels, batch, supervision_mask=supervision_mask, graph_weights=graph_weights)
             listmle_loss = logits.sum() * 0.0
@@ -522,6 +546,30 @@ if TORCH_AVAILABLE:
                     supervision_mask=supervision_mask,
                     graph_weights=graph_weights,
                 )
+            hard_negative_loss = logits.sum() * 0.0
+            hard_negative_stats = {
+                "hard_negative_loss": 0.0,
+                "hard_negative_active_fraction": 0.0,
+                "hard_negative_pair_count": 0.0,
+                "recall_at_6": 0.0,
+                "recall_at_12": 0.0,
+                "true_site_rank_mean": 0.0,
+            }
+            if self.hard_negative_weight > 0.0:
+                hard_negative_loss, hard_negative_stats = compute_hard_negative_margin_loss(
+                    logits,
+                    labels,
+                    batch,
+                    margin=self.hard_negative_margin,
+                    supervision_mask=supervision_mask,
+                    candidate_mask=candidate_mask,
+                    edge_index=edge_index,
+                    atom_coordinates=atom_coordinates,
+                    use_top_score=self.use_top_score_hard_neg,
+                    use_graph_local=self.use_graph_local_hard_neg,
+                    use_3d_local=self.use_3d_local_hard_neg,
+                    max_hard_negs_per_true=self.hard_negative_max_per_true,
+                )
             total = (
                 focal_loss
                 + self.ranking_weight * ranking_loss
@@ -530,6 +578,7 @@ if TORCH_AVAILABLE:
                 + self.top1_margin_weight * top1_margin_loss
                 + self.cover_weight * cover_loss
                 + self.shortlist_weight * shortlist_loss
+                + self.hard_negative_weight * hard_negative_loss
             )
             return total, {
                 "focal_loss": float(focal_loss.item()),
@@ -539,7 +588,11 @@ if TORCH_AVAILABLE:
                 "top1_margin_loss": float(top1_margin_loss.item()),
                 "cover_loss": float(cover_loss.item()),
                 "shortlist_loss": float(shortlist_loss.item()),
+                "hard_negative_loss_raw": float(hard_negative_loss.item()),
+                "hard_negative_weight": float(self.hard_negative_weight),
+                "hard_negative_margin": float(self.hard_negative_margin),
                 "site_loss": float(total.item()),
+                **hard_negative_stats,
             }
 
 
@@ -666,6 +719,12 @@ if TORCH_AVAILABLE:
             site_shortlist_weight: float = 0.0,
             site_shortlist_temperature: float = 0.70,
             site_shortlist_topk: int = 5,
+            site_hard_negative_weight: float = 0.0,
+            site_hard_negative_margin: float = 0.20,
+            site_hard_negative_max_per_true: int = 3,
+            site_use_top_score_hard_neg: bool = True,
+            site_use_graph_local_hard_neg: bool = True,
+            site_use_3d_local_hard_neg: bool = True,
         ):
             super().__init__()
             self.site_loss = SiteOfMetabolismLoss(
@@ -687,6 +746,12 @@ if TORCH_AVAILABLE:
                 shortlist_weight=float(site_shortlist_weight),
                 shortlist_temperature=float(site_shortlist_temperature),
                 shortlist_topk=int(site_shortlist_topk),
+                hard_negative_weight=float(site_hard_negative_weight),
+                hard_negative_margin=float(site_hard_negative_margin),
+                hard_negative_max_per_true=int(site_hard_negative_max_per_true),
+                use_top_score_hard_neg=bool(site_use_top_score_hard_neg),
+                use_graph_local_hard_neg=bool(site_use_graph_local_hard_neg),
+                use_3d_local_hard_neg=bool(site_use_3d_local_hard_neg),
             )
             self.log_var_site = nn.Parameter(torch.tensor(0.0))
             self.log_var_cyp = nn.Parameter(torch.tensor(0.0))
@@ -733,6 +798,9 @@ if TORCH_AVAILABLE:
             tau_init=None,
             energy_outputs=None,
             deliberation_outputs=None,
+            candidate_mask=None,
+            edge_index=None,
+            atom_coordinates=None,
         ):
             site_loss, site_dict = self.site_loss(
                 site_logits,
@@ -741,6 +809,9 @@ if TORCH_AVAILABLE:
                 supervision_mask=site_supervision_mask,
                 node_weights=node_confidence_weights,
                 graph_weights=graph_confidence_weights,
+                candidate_mask=candidate_mask,
+                edge_index=edge_index,
+                atom_coordinates=atom_coordinates,
             )
             cyp_loss = site_loss * 0.0
             cyp_mask = None
