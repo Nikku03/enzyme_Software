@@ -31,8 +31,10 @@ from enzyme_software.liquid_nn_v2.experiments.hybrid_full_xtb import (
 )
 from enzyme_software.liquid_nn_v2.features.steric_features import StructureLibrary
 from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM
+from enzyme_software.liquid_nn_v2.model.distilled_proposer_head import DistilledProposerHead
 from enzyme_software.liquid_nn_v2.model.pairwise_head import PairwiseHead
 from enzyme_software.liquid_nn_v2.training.episode_logger import EpisodeLogger
+from enzyme_software.liquid_nn_v2.training.pairwise_distilled_proposer_trainer import PairwiseDistilledProposerTrainer
 from enzyme_software.liquid_nn_v2.training.pairwise_probe_trainer import PairwiseProbeTrainer
 from enzyme_software.liquid_nn_v2.training.trainer import Trainer
 
@@ -75,7 +77,12 @@ def _env_int(name: str) -> int | None:
     return int(raw)
 
 
-def _collect_model_overrides() -> dict[str, int | float]:
+def _env_str(name: str) -> str | None:
+    raw = os.environ.get(name, "").strip()
+    return raw or None
+
+
+def _collect_model_overrides() -> dict[str, int | float | str]:
     mapping = {
         "HYBRID_COLAB_NEXUS_WAVE_HIDDEN_DIM": (_env_int, "nexus_wave_hidden_dim"),
         "HYBRID_COLAB_NEXUS_GRAPH_DIM": (_env_int, "nexus_graph_dim"),
@@ -208,8 +215,24 @@ def _collect_model_overrides() -> dict[str, int | float]:
         "HYBRID_COLAB_PAIRWISE_AUX_LOG_EVERY_EPOCH": (_env_int, "pairwise_aux_log_every_epoch"),
         "HYBRID_COLAB_PAIRWISE_AUX_BACKBONE_LR_SCALE": (_env_float, "pairwise_aux_backbone_lr_scale"),
         "HYBRID_COLAB_PAIRWISE_AUX_PROPOSER_LR_SCALE": (_env_float, "pairwise_aux_proposer_lr_scale"),
+        "HYBRID_COLAB_ENABLE_PAIRWISE_DISTILLED_PROPOSER": (_env_int, "enable_pairwise_distilled_proposer"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_USE_FROZEN_BACKBONE": (_env_int, "distilled_proposer_use_frozen_backbone"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_USE_FROZEN_PAIRWISE_HEAD": (_env_int, "distilled_proposer_use_frozen_pairwise_head"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_CANDIDATE_TOPK": (_env_int, "distilled_proposer_candidate_topk"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_TARGET_TEMPERATURE": (_env_float, "distilled_proposer_target_temperature"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_HEAD_HIDDEN_DIM": (_env_int, "distilled_proposer_head_hidden_dim"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_DROPOUT": (_env_float, "distilled_proposer_dropout"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_LOSS_TYPE": (_env_str, "distilled_proposer_loss_type"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_LABEL_SMOOTHING": (_env_float, "distilled_proposer_label_smoothing"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_LR_SCALE": (_env_float, "distilled_proposer_lr_scale"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_BACKBONE_LR_SCALE": (_env_float, "distilled_proposer_backbone_lr_scale"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_RESTRICT_TO_CANDIDATES": (_env_int, "distilled_proposer_restrict_to_candidates"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_LOG_EVERY_EPOCH": (_env_int, "distilled_proposer_log_every_epoch"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_TRAINABLE_PROPOSER_HEAD_ONLY": (_env_int, "distilled_proposer_trainable_proposer_head_only"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_UNFREEZE_LAST_BACKBONE_BLOCK": (_env_int, "distilled_proposer_unfreeze_last_backbone_block"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_PAIRWISE_TEACHER_CHECKPOINT": (_env_str, "distilled_proposer_pairwise_teacher_checkpoint_path"),
     }
-    overrides: dict[str, int | float] = {}
+    overrides: dict[str, int | float | str] = {}
     for env_name, (parser, field_name) in mapping.items():
         value = parser(env_name)
         if value is not None:
@@ -1045,6 +1068,152 @@ def _save_pairwise_probe_state(
     return latest_path, best_path, archive_path, report_path
 
 
+def _load_pairwise_teacher_checkpoint(checkpoint_path: Path, pairwise_head, *, device) -> dict[str, object]:
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(
+            "pairwise_distilled_proposer requires a Stage 1 pairwise teacher checkpoint. "
+            f"Missing checkpoint: {checkpoint_path}"
+        )
+    payload = torch.load(checkpoint_path, map_location=device)
+    state_dict = payload.get("pairwise_head_state_dict")
+    if state_dict is None:
+        raise KeyError(
+            "Pairwise teacher checkpoint is missing 'pairwise_head_state_dict'. "
+            f"Checkpoint: {checkpoint_path}"
+        )
+    missing, unexpected = pairwise_head.load_state_dict(state_dict, strict=False)
+    if missing:
+        raise RuntimeError(
+            "Pairwise teacher checkpoint is incompatible with the current PairwiseHead. "
+            f"Missing keys: {missing}"
+        )
+    return {
+        "checkpoint_path": str(checkpoint_path),
+        "unexpected": list(unexpected),
+    }
+
+
+def _save_pairwise_distilled_proposer_state(
+    *,
+    model,
+    pairwise_head,
+    distilled_head,
+    output_dir: Path,
+    artifact_dir: Path,
+    args,
+    history,
+    best_epoch: int,
+    best_selection,
+    best_model_state,
+    best_distilled_head_state,
+    base_config,
+    checkpoint_path: Path,
+    teacher_checkpoint_path: Path,
+    split_mode: str,
+    split_summary: dict[str, object],
+    test_metrics=None,
+    status: str = "running",
+):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    latest_path = output_dir / "pairwise_distilled_proposer_latest.pt"
+    best_path = output_dir / "pairwise_distilled_proposer_best.pt"
+    archive_path = output_dir / f"pairwise_distilled_proposer_{timestamp}.pt"
+    report_path = artifact_dir / f"pairwise_distilled_proposer_report_{timestamp}.json"
+    history_len = int(len(history))
+    final_epoch = int(history[-1]["epoch"]) if history else 0
+    last_train_metrics = dict(history[-1].get("train") or {}) if history else {}
+    last_val_metrics = dict(history[-1].get("val") or {}) if history else {}
+    best_val_entry = next((row for row in history if int(row.get("epoch", 0)) == int(best_epoch)), None) if history else None
+    best_val_metrics = dict((best_val_entry or {}).get("val") or {})
+    best_train_metrics = dict((best_val_entry or {}).get("train") or {})
+    effective_split_summary = _effective_split_summary(split_summary)
+    checkpoint = {
+        "model_state_dict": _initialized_state_dict(model),
+        "pairwise_head_state_dict": _initialized_state_dict(pairwise_head),
+        "distilled_proposer_head_state_dict": _initialized_state_dict(distilled_head),
+        "config": {
+            "base_model": base_config.__dict__,
+            "distilled_proposer": {
+                "hidden_dim": int(getattr(distilled_head, "hidden_dim", 0)),
+                "dropout": float(getattr(base_config, "distilled_proposer_dropout", 0.1)),
+                "candidate_topk": int(getattr(base_config, "distilled_proposer_candidate_topk", 6)),
+                "target_temperature": float(getattr(base_config, "distilled_proposer_target_temperature", 1.0)),
+                "loss_type": str(getattr(base_config, "distilled_proposer_loss_type", "kl")),
+            },
+        },
+        "training_config": TrainingConfig(
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            early_stopping_patience=args.early_stopping_patience,
+        ).__dict__,
+        "pairwise_distilled_proposer_enabled": True,
+        "checkpoint_source": str(checkpoint_path),
+        "pairwise_teacher_checkpoint_path": str(teacher_checkpoint_path),
+        "best_epoch": int(best_epoch),
+        "best_selection": list(best_selection) if best_selection is not None else None,
+        "history_len": history_len,
+        "final_epoch": final_epoch,
+        "split_mode": split_mode,
+        "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+        "split_summary": split_summary,
+        "effective_split_summary": effective_split_summary,
+        "last_train_metrics": last_train_metrics,
+        "last_val_metrics": last_val_metrics,
+        "best_train_metrics": best_train_metrics,
+        "best_val_metrics": best_val_metrics,
+        "test_metrics": test_metrics,
+        "history": history,
+        "status": status,
+    }
+    torch.save(checkpoint, latest_path)
+    torch.save(checkpoint, archive_path)
+    if best_model_state is not None:
+        best_checkpoint = dict(checkpoint)
+        best_checkpoint["model_state_dict"] = best_model_state
+        best_checkpoint["distilled_proposer_head_state_dict"] = best_distilled_head_state
+        best_checkpoint["status"] = f"{status}_best"
+        torch.save(best_checkpoint, best_path)
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": status,
+                "pairwise_distilled_proposer_enabled": True,
+                "checkpoint_source": str(checkpoint_path),
+                "pairwise_teacher_checkpoint_path": str(teacher_checkpoint_path),
+                "best_epoch": int(best_epoch),
+                "best_selection": list(best_selection) if best_selection is not None else None,
+                "history_len": history_len,
+                "final_epoch": final_epoch,
+                "split_mode": split_mode,
+                "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+                "split_summary": split_summary,
+                "effective_split_summary": effective_split_summary,
+                "last_train_metrics": last_train_metrics,
+                "last_val_metrics": last_val_metrics,
+                "best_train_metrics": best_train_metrics,
+                "best_val_metrics": best_val_metrics,
+                "test_metrics": test_metrics,
+                "history": history,
+                "distilled_proposer_use_frozen_backbone": bool(getattr(base_config, "distilled_proposer_use_frozen_backbone", True)),
+                "distilled_proposer_use_frozen_pairwise_head": bool(getattr(base_config, "distilled_proposer_use_frozen_pairwise_head", True)),
+                "distilled_proposer_candidate_topk": int(getattr(base_config, "distilled_proposer_candidate_topk", 6)),
+                "distilled_proposer_target_temperature": float(getattr(base_config, "distilled_proposer_target_temperature", 1.0)),
+                "distilled_proposer_loss_type": str(getattr(base_config, "distilled_proposer_loss_type", "kl")),
+                "distilled_proposer_label_smoothing": float(getattr(base_config, "distilled_proposer_label_smoothing", 0.0)),
+                "distilled_proposer_lr_scale": float(getattr(base_config, "distilled_proposer_lr_scale", 1.0)),
+                "distilled_proposer_backbone_lr_scale": float(getattr(base_config, "distilled_proposer_backbone_lr_scale", 0.1)),
+                "distilled_proposer_restrict_to_candidates": bool(getattr(base_config, "distilled_proposer_restrict_to_candidates", True)),
+                "distilled_proposer_trainable_proposer_head_only": bool(getattr(base_config, "distilled_proposer_trainable_proposer_head_only", True)),
+                "distilled_proposer_unfreeze_last_backbone_block": bool(getattr(base_config, "distilled_proposer_unfreeze_last_backbone_block", False)),
+            },
+            indent=2,
+        )
+    )
+    return latest_path, best_path, archive_path, report_path
+
+
 def main() -> None:
     require_torch()
     parser = argparse.ArgumentParser(description="Train hybrid model with full xTB manual priors")
@@ -1360,6 +1529,11 @@ def main() -> None:
             "Pairwise probe mode requires a warm-start checkpoint so it can test the current frozen representation. "
             f"Missing checkpoint: {checkpoint_path}"
         )
+    if bool(getattr(base_config, "enable_pairwise_distilled_proposer", False)) and not checkpoint_path.exists():
+        raise FileNotFoundError(
+            "pairwise_distilled_proposer requires a warm-start checkpoint for the frozen backbone. "
+            f"Missing checkpoint: {checkpoint_path}"
+        )
 
     precedent_logbook = None if args.disable_precedent_logbook else _resolve_precedent_logbook(args.precedent_logbook, artifact_dir)
     if precedent_logbook is not None and precedent_logbook.exists():
@@ -1403,6 +1577,197 @@ def main() -> None:
     )
     if model_overrides:
         print(f"Model overrides: {model_overrides}", flush=True)
+
+    if bool(getattr(base_config, "enable_pairwise_distilled_proposer", False)):
+        # pairwise_distilled_proposer branch:
+        # - backbone embeddings come from outputs["atom_features"]
+        # - teacher candidate scores come from masked outputs["site_logits"]
+        # - a frozen Stage 1 PairwiseHead compares molecule-local candidate pairs
+        # - its win probabilities are distilled into soft scalar targets for a new scalar head
+        teacher_checkpoint_value = str(
+            getattr(base_config, "distilled_proposer_pairwise_teacher_checkpoint_path", "") or ""
+        ).strip()
+        if not teacher_checkpoint_value:
+            raise ValueError(
+                "pairwise_distilled_proposer requires distilled_proposer_pairwise_teacher_checkpoint_path "
+                "(set HYBRID_COLAB_DISTILLED_PROPOSER_PAIRWISE_TEACHER_CHECKPOINT)."
+            )
+        teacher_checkpoint_path = Path(teacher_checkpoint_value).expanduser()
+        pairwise_head = PairwiseHead(
+            int(getattr(base_config, "som_branch_dim", getattr(base_config, "hidden_dim", 128))),
+            hidden_scale=float(getattr(base_config, "pairwise_probe_hidden_scale", 2.0)),
+            dropout=float(getattr(base_config, "pairwise_probe_dropout", 0.1)),
+        )
+        teacher_load_report = _load_pairwise_teacher_checkpoint(teacher_checkpoint_path, pairwise_head, device=device)
+        hidden_dim = getattr(base_config, "distilled_proposer_head_hidden_dim", None)
+        distilled_head = DistilledProposerHead(
+            int(getattr(base_config, "som_branch_dim", getattr(base_config, "hidden_dim", 128))),
+            hidden_dim=(int(hidden_dim) if hidden_dim is not None and int(hidden_dim) > 0 else None),
+            dropout=float(getattr(base_config, "distilled_proposer_dropout", 0.1)),
+        )
+        distill_trainer = PairwiseDistilledProposerTrainer(
+            model=model,
+            pairwise_head=pairwise_head,
+            distilled_head=distilled_head,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            candidate_topk=int(getattr(base_config, "distilled_proposer_candidate_topk", 6)),
+            target_temperature=float(getattr(base_config, "distilled_proposer_target_temperature", 1.0)),
+            loss_type=str(getattr(base_config, "distilled_proposer_loss_type", "kl")),
+            label_smoothing=float(getattr(base_config, "distilled_proposer_label_smoothing", 0.0)),
+            restrict_to_candidates=bool(getattr(base_config, "distilled_proposer_restrict_to_candidates", True)),
+            use_frozen_backbone=bool(getattr(base_config, "distilled_proposer_use_frozen_backbone", True)),
+            use_frozen_pairwise_head=bool(getattr(base_config, "distilled_proposer_use_frozen_pairwise_head", True)),
+            trainable_proposer_head_only=bool(getattr(base_config, "distilled_proposer_trainable_proposer_head_only", True)),
+            unfreeze_last_backbone_block=bool(getattr(base_config, "distilled_proposer_unfreeze_last_backbone_block", False)),
+            distilled_head_lr_scale=float(getattr(base_config, "distilled_proposer_lr_scale", 1.0)),
+            backbone_lr_scale=float(getattr(base_config, "distilled_proposer_backbone_lr_scale", 0.1)),
+            device=device,
+        )
+        print(
+            "pairwise_distilled_proposer enabled | "
+            f"teacher={teacher_load_report['checkpoint_path']} | "
+            f"trainable_modules={distill_trainer.trainable_module_summary}",
+            flush=True,
+        )
+        history = []
+        best_epoch = 0
+        best_selection = None
+        best_model_state = None
+        best_distilled_head_state = None
+        epochs_without_improvement = 0
+
+        def _selection_tuple(metrics: dict[str, object]) -> tuple[float, float, float]:
+            return (
+                float(metrics.get("recall_at_6", 0.0)),
+                float(metrics.get("recall_at_12", 0.0)),
+                float(metrics.get("site_top1_acc_all_molecules", 0.0)),
+            )
+
+        try:
+            for epoch in range(args.epochs):
+                setattr(train_loader, "_current_epoch", epoch)
+                setattr(train_loader, "_split_name", "train")
+                train_metrics = distill_trainer.train_loader_epoch(train_loader)
+
+                setattr(val_loader, "_current_epoch", epoch)
+                setattr(val_loader, "_split_name", "val")
+                val_metrics = distill_trainer.evaluate_loader(val_loader)
+                history.append({"epoch": epoch + 1, "train": train_metrics, "val": val_metrics})
+
+                selection = _selection_tuple(val_metrics)
+                if best_selection is None or selection > best_selection:
+                    best_selection = selection
+                    best_epoch = epoch + 1
+                    best_model_state = _initialized_state_dict(model)
+                    best_distilled_head_state = _initialized_state_dict(distilled_head)
+                    epochs_without_improvement = 0
+                else:
+                    epochs_without_improvement += 1
+
+                if bool(getattr(base_config, "distilled_proposer_log_every_epoch", True)):
+                    print(
+                        f"Epoch {epoch + 1:3d} | "
+                        f"train_distill={train_metrics.get('distilled_kl_loss', 0.0):.4f} | "
+                        f"val_distill={val_metrics.get('distilled_kl_loss', 0.0):.4f} | "
+                        f"val_top1={val_metrics.get('site_top1_acc_all_molecules', 0.0):.3f} | "
+                        f"val_top3={val_metrics.get('site_top3_acc_all_molecules', 0.0):.3f} | "
+                        f"val_recall6={val_metrics.get('recall_at_6', 0.0):.3f} | "
+                        f"val_recall12={val_metrics.get('recall_at_12', 0.0):.3f} | "
+                        f"target_entropy={val_metrics.get('distilled_target_entropy_mean', 0.0):.3f} | "
+                        f"target_true_mass={val_metrics.get('distilled_target_true_mass_mean', 0.0):.3f}",
+                        flush=True,
+                    )
+
+                _save_pairwise_distilled_proposer_state(
+                    model=model,
+                    pairwise_head=pairwise_head,
+                    distilled_head=distilled_head,
+                    output_dir=output_dir,
+                    artifact_dir=artifact_dir,
+                    args=args,
+                    history=history,
+                    best_epoch=best_epoch,
+                    best_selection=best_selection,
+                    best_model_state=best_model_state,
+                    best_distilled_head_state=best_distilled_head_state,
+                    base_config=base_config,
+                    checkpoint_path=checkpoint_path,
+                    teacher_checkpoint_path=teacher_checkpoint_path,
+                    split_mode=args.split_mode,
+                    split_summary=split_summary,
+                    test_metrics=None,
+                    status="running",
+                )
+
+                if early_stopping_enabled and epochs_without_improvement >= early_stopping_patience:
+                    print(
+                        f"Early stopping pairwise_distilled_proposer after epoch {epoch + 1}: no shortlist improvement for "
+                        f"{early_stopping_patience} epochs.",
+                        flush=True,
+                    )
+                    break
+        except KeyboardInterrupt:
+            print("\nInterrupted. Saving current pairwise_distilled_proposer progress...", flush=True)
+            latest_path, best_path, _, report_path = _save_pairwise_distilled_proposer_state(
+                model=model,
+                pairwise_head=pairwise_head,
+                distilled_head=distilled_head,
+                output_dir=output_dir,
+                artifact_dir=artifact_dir,
+                args=args,
+                history=history,
+                best_epoch=best_epoch,
+                best_selection=best_selection,
+                best_model_state=best_model_state,
+                best_distilled_head_state=best_distilled_head_state,
+                base_config=base_config,
+                checkpoint_path=checkpoint_path,
+                teacher_checkpoint_path=teacher_checkpoint_path,
+                split_mode=args.split_mode,
+                split_summary=split_summary,
+                test_metrics=None,
+                status="interrupted",
+            )
+            print(f"Saved latest checkpoint: {latest_path}", flush=True)
+            print(f"Saved best checkpoint: {best_path}", flush=True)
+            print(f"Saved report: {report_path}", flush=True)
+            return
+
+        if best_model_state is not None:
+            model.load_state_dict(best_model_state, strict=False)
+        if best_distilled_head_state is not None:
+            distilled_head.load_state_dict(best_distilled_head_state, strict=False)
+
+        setattr(test_loader, "_current_epoch", max(0, len(history) - 1))
+        setattr(test_loader, "_split_name", "test")
+        test_metrics = distill_trainer.evaluate_loader(test_loader)
+        print(json.dumps({"pairwise_distilled_proposer_test_metrics": test_metrics}, indent=2), flush=True)
+        latest_path, best_path, archive_path, report_path = _save_pairwise_distilled_proposer_state(
+            model=model,
+            pairwise_head=pairwise_head,
+            distilled_head=distilled_head,
+            output_dir=output_dir,
+            artifact_dir=artifact_dir,
+            args=args,
+            history=history,
+            best_epoch=best_epoch,
+            best_selection=best_selection,
+            best_model_state=best_model_state,
+            best_distilled_head_state=best_distilled_head_state,
+            base_config=base_config,
+            checkpoint_path=checkpoint_path,
+            teacher_checkpoint_path=teacher_checkpoint_path,
+            split_mode=args.split_mode,
+            split_summary=split_summary,
+            test_metrics=test_metrics,
+            status="completed",
+        )
+        print(f"\nSaved checkpoint: {archive_path}", flush=True)
+        print(f"Saved latest checkpoint: {latest_path}", flush=True)
+        print(f"Saved best checkpoint: {best_path}", flush=True)
+        print(f"Saved report: {report_path}", flush=True)
+        return
 
     if bool(getattr(base_config, "enable_pairwise_probe", False)):
         # Pairwise probe files for this experiment:
