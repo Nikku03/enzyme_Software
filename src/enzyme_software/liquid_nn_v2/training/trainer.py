@@ -170,6 +170,7 @@ if TORCH_AVAILABLE:
                 site_shortlist_weight=float(getattr(model_config, "site_shortlist_weight", 0.0)),
                 site_shortlist_temperature=float(getattr(model_config, "site_shortlist_temperature", 0.70)),
                 site_shortlist_topk=int(getattr(model_config, "site_shortlist_topk", 5)),
+                site_use_rank_weighted_shortlist=bool(getattr(model_config, "site_use_rank_weighted_shortlist", False)),
                 site_hard_negative_weight=float(getattr(model_config, "site_hard_negative_weight", 0.0)),
                 site_hard_negative_margin=float(getattr(model_config, "site_hard_negative_margin", 0.20)),
                 site_hard_negative_max_per_true=int(getattr(model_config, "site_hard_negative_max_per_true", 3)),

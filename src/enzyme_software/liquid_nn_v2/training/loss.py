@@ -309,6 +309,7 @@ if TORCH_AVAILABLE:
             shortlist_weight: float = 0.0,
             shortlist_temperature: float = 0.70,
             shortlist_topk: int = 5,
+            use_rank_weighted_shortlist: bool = False,
             hard_negative_weight: float = 0.0,
             hard_negative_margin: float = 0.20,
             hard_negative_max_per_true: int = 3,
@@ -329,6 +330,7 @@ if TORCH_AVAILABLE:
             self.shortlist_weight = float(shortlist_weight)
             self.shortlist_temperature = max(1.0e-3, float(shortlist_temperature))
             self.shortlist_topk = max(1, int(shortlist_topk))
+            self.use_rank_weighted_shortlist = bool(use_rank_weighted_shortlist)
             self.hard_negative_weight = float(hard_negative_weight)
             self.hard_negative_margin = float(hard_negative_margin)
             self.hard_negative_max_per_true = max(1, int(hard_negative_max_per_true))
@@ -453,6 +455,7 @@ if TORCH_AVAILABLE:
             """Local softmax over best true vs. top-K hardest false atoms per molecule."""
             losses = []
             weights = []
+            rank_weights = []
             temperature = self.shortlist_temperature
             for mol_idx, mol_logits, pos_mask, neg_mask in self._iter_scored_molecules(
                 logits,
@@ -461,12 +464,25 @@ if TORCH_AVAILABLE:
                 supervision_mask=supervision_mask,
             ):
                 best_pos = mol_logits[pos_mask].max()
+                best_pos_rank = 1 + int((mol_logits > best_pos).sum().item())
                 neg_logits = mol_logits[neg_mask]
                 topk = min(self.shortlist_topk, int(neg_logits.numel()))
                 hard_negs = torch.topk(neg_logits, k=topk, largest=True).values
                 shortlist_scores = torch.cat([best_pos.view(1), hard_negs], dim=0) / temperature
                 shortlist_value = -F.log_softmax(shortlist_scores, dim=0)[0]
+                rank_weight = torch.tensor(1.0, dtype=shortlist_value.dtype, device=shortlist_value.device)
+                if self.use_rank_weighted_shortlist:
+                    if best_pos_rank <= 3:
+                        rank_weight = torch.tensor(1.0, dtype=shortlist_value.dtype, device=shortlist_value.device)
+                    elif best_pos_rank <= 8:
+                        rank_weight = torch.tensor(1.5, dtype=shortlist_value.dtype, device=shortlist_value.device)
+                    elif best_pos_rank <= 12:
+                        rank_weight = torch.tensor(1.25, dtype=shortlist_value.dtype, device=shortlist_value.device)
+                    else:
+                        rank_weight = torch.tensor(0.75, dtype=shortlist_value.dtype, device=shortlist_value.device)
+                    shortlist_value = shortlist_value * rank_weight
                 losses.append(shortlist_value)
+                rank_weights.append(rank_weight)
                 if graph_weights is not None and mol_idx < int(graph_weights.numel()):
                     weights.append(graph_weights[mol_idx].to(dtype=shortlist_value.dtype, device=shortlist_value.device))
                 else:
@@ -591,6 +607,7 @@ if TORCH_AVAILABLE:
                 "top1_margin_loss": float(top1_margin_loss.item()),
                 "cover_loss": float(cover_loss.item()),
                 "shortlist_loss": float(shortlist_loss.item()),
+                "shortlist_rank_weighted": float(1.0 if self.use_rank_weighted_shortlist else 0.0),
                 "hard_negative_loss_raw": float(hard_negative_loss.item()),
                 "hard_negative_weight": float(self.hard_negative_weight),
                 "hard_negative_margin": float(self.hard_negative_margin),
@@ -723,6 +740,7 @@ if TORCH_AVAILABLE:
             site_shortlist_weight: float = 0.0,
             site_shortlist_temperature: float = 0.70,
             site_shortlist_topk: int = 5,
+            site_use_rank_weighted_shortlist: bool = False,
             site_hard_negative_weight: float = 0.0,
             site_hard_negative_margin: float = 0.20,
             site_hard_negative_max_per_true: int = 3,
@@ -751,6 +769,7 @@ if TORCH_AVAILABLE:
                 shortlist_weight=float(site_shortlist_weight),
                 shortlist_temperature=float(site_shortlist_temperature),
                 shortlist_topk=int(site_shortlist_topk),
+                use_rank_weighted_shortlist=bool(site_use_rank_weighted_shortlist),
                 hard_negative_weight=float(site_hard_negative_weight),
                 hard_negative_margin=float(site_hard_negative_margin),
                 hard_negative_max_per_true=int(site_hard_negative_max_per_true),

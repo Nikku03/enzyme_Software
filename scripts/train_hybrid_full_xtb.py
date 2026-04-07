@@ -109,6 +109,7 @@ def _collect_model_overrides() -> dict[str, int | float]:
         "HYBRID_COLAB_SITE_SHORTLIST_WEIGHT": (_env_float, "site_shortlist_weight"),
         "HYBRID_COLAB_SITE_SHORTLIST_TEMPERATURE": (_env_float, "site_shortlist_temperature"),
         "HYBRID_COLAB_SITE_SHORTLIST_TOPK": (_env_int, "site_shortlist_topk"),
+        "HYBRID_COLAB_SITE_USE_RANK_WEIGHTED_SHORTLIST": (_env_int, "site_use_rank_weighted_shortlist"),
         "HYBRID_COLAB_SITE_HARD_NEGATIVE_WEIGHT": (_env_float, "site_hard_negative_weight"),
         "HYBRID_COLAB_SITE_HARD_NEGATIVE_MARGIN": (_env_float, "site_hard_negative_margin"),
         "HYBRID_COLAB_SITE_HARD_NEGATIVE_MAX_PER_TRUE": (_env_int, "site_hard_negative_max_per_true"),

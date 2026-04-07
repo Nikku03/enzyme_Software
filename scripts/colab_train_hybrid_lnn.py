@@ -1653,6 +1653,30 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank_phase2_hardneg_f",
         "HYBRID_COLAB_SITE_USE_RANK_WEIGHTED_HARD_NEG": "1",
     },
+    "cyp3a4_sideinfo_fullrank_phase3_h": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank_phase2_hardneg_e",
+    },
+    "cyp3a4_sideinfo_fullrank_phase3_i": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank_phase2_hardneg_e",
+        "HYBRID_COLAB_SITE_SHORTLIST_WEIGHT": "0.05",
+        "HYBRID_COLAB_SITE_SHORTLIST_TEMPERATURE": "0.70",
+        "HYBRID_COLAB_SITE_SHORTLIST_TOPK": "12",
+        "HYBRID_COLAB_SITE_USE_RANK_WEIGHTED_SHORTLIST": "1",
+    },
+    "cyp3a4_sideinfo_fullrank_phase3_j": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank_phase2_hardneg_e",
+        "HYBRID_COLAB_SITE_SHORTLIST_WEIGHT": "0.10",
+        "HYBRID_COLAB_SITE_SHORTLIST_TEMPERATURE": "0.70",
+        "HYBRID_COLAB_SITE_SHORTLIST_TOPK": "12",
+        "HYBRID_COLAB_SITE_USE_RANK_WEIGHTED_SHORTLIST": "1",
+    },
+    "cyp3a4_sideinfo_fullrank_phase3_k": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank_phase2_hardneg_e",
+        "HYBRID_COLAB_SITE_SHORTLIST_WEIGHT": "0.20",
+        "HYBRID_COLAB_SITE_SHORTLIST_TEMPERATURE": "0.70",
+        "HYBRID_COLAB_SITE_SHORTLIST_TOPK": "12",
+        "HYBRID_COLAB_SITE_USE_RANK_WEIGHTED_SHORTLIST": "1",
+    },
     "cyp3a4_sideinfo_fullrank_phase5a_baseline_seed22": {
         "HYBRID_COLAB_DATASET": "data/prepared_training/main8_cyp3a4_augmented.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",

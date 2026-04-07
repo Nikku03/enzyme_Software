@@ -109,6 +109,7 @@ class ModelConfig:
     site_shortlist_weight: float = 0.0
     site_shortlist_temperature: float = 0.70
     site_shortlist_topk: int = 5
+    site_use_rank_weighted_shortlist: bool = False
     site_hard_negative_weight: float = 0.0
     site_hard_negative_margin: float = 0.20
     site_hard_negative_max_per_true: int = 3
@@ -383,6 +384,7 @@ class ModelConfig:
         self.site_shortlist_weight = max(0.0, float(self.site_shortlist_weight))
         self.site_shortlist_temperature = max(1.0e-3, float(self.site_shortlist_temperature))
         self.site_shortlist_topk = max(1, int(self.site_shortlist_topk))
+        self.site_use_rank_weighted_shortlist = bool(self.site_use_rank_weighted_shortlist)
         self.site_hard_negative_weight = max(0.0, float(self.site_hard_negative_weight))
         self.site_hard_negative_margin = max(0.0, float(self.site_hard_negative_margin))
         self.site_hard_negative_max_per_true = max(1, int(self.site_hard_negative_max_per_true))
