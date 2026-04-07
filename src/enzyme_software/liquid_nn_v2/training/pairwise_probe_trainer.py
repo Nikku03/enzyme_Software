@@ -82,8 +82,37 @@ if TORCH_AVAILABLE:
             return pair_features, pair_labels, metadata
 
         def _compute_batch_metrics(self, pair_logits, pair_labels, metadata: Dict[str, float]):
+            if not bool(torch.isfinite(pair_logits).all()):
+                raise FloatingPointError("Non-finite pairwise probe logits detected")
             probabilities = torch.sigmoid(pair_logits)
             pair_count = int(pair_labels.numel())
+            if pair_count <= 0:
+                return {
+                    "pairwise_accuracy": 0.0,
+                    "pairwise_auc": 0.5,
+                    "pair_count": 0.0,
+                    "molecules_with_pairs": float(metadata.get("molecules_with_pairs", 0.0)),
+                    "hard_neg_rank_mean": float(metadata.get("hard_neg_rank_mean", 0.0)),
+                    "score_gap_mean": float(metadata.get("score_gap_mean", 0.0)),
+                    "true_beats_fraction_before_pairwise": float(metadata.get("true_beats_fraction_before_pairwise", 0.0)),
+                    "pairwise_mean_probability": 0.0,
+                    "pairwise_positive_rate": 0.0,
+                    "pairwise_mean_probability_pos": 0.0,
+                    "pairwise_mean_probability_neg": 0.0,
+                    "pairwise_logit_mean_pos": 0.0,
+                    "pairwise_logit_mean_neg": 0.0,
+                    "single_class_batch": 0.0,
+                }
+            positive_mask = pair_labels > 0.5
+            negative_mask = ~positive_mask
+            positive_count = int(positive_mask.sum().item())
+            negative_count = int(negative_mask.sum().item())
+            single_class_batch = float(positive_count == 0 or negative_count == 0)
+            if single_class_batch > 0.0:
+                raise RuntimeError(
+                    "Pairwise probe batch must contain both directional classes; "
+                    f"got positive_count={positive_count}, negative_count={negative_count}"
+                )
             accuracy = float(((probabilities >= 0.5).float() == pair_labels).float().mean().item()) if pair_count else 0.0
             auc = float(_safe_binary_auc(pair_labels.detach().cpu().numpy(), probabilities.detach().cpu().numpy())) if pair_count else 0.5
             return {
@@ -95,16 +124,29 @@ if TORCH_AVAILABLE:
                 "score_gap_mean": float(metadata.get("score_gap_mean", 0.0)),
                 "true_beats_fraction_before_pairwise": float(metadata.get("true_beats_fraction_before_pairwise", 0.0)),
                 "pairwise_mean_probability": float(probabilities.mean().item()) if pair_count else 0.0,
-                "pairwise_positive_rate": float((probabilities >= 0.5).float().mean().item()) if pair_count else 0.0,
+                "pairwise_positive_rate": float(pair_labels.float().mean().item()),
+                "pairwise_mean_probability_pos": float(probabilities[positive_mask].mean().item()) if positive_count else 0.0,
+                "pairwise_mean_probability_neg": float(probabilities[negative_mask].mean().item()) if negative_count else 0.0,
+                "pairwise_logit_mean_pos": float(pair_logits[positive_mask].mean().item()) if positive_count else 0.0,
+                "pairwise_logit_mean_neg": float(pair_logits[negative_mask].mean().item()) if negative_count else 0.0,
+                "single_class_batch": single_class_batch,
             }
 
         def _merge_epoch_stats(self, accum: Dict[str, float]) -> Dict[str, float]:
             total_pairs = float(accum.get("pair_count", 0.0))
             zero_pair_batches = float(accum.get("zero_pair_batches", 0.0))
+            single_class_batches = float(accum.get("single_class_batches", 0.0))
             if total_pairs <= 0.0:
                 stats = zero_pairwise_probe_metrics()
                 stats["zero_pair_batches"] = zero_pair_batches
+                stats["single_class_batches"] = single_class_batches
                 return stats
+            positive_rate = float(accum.get("pairwise_positive_rate_sum", 0.0)) / total_pairs
+            if positive_rate <= 0.0 or positive_rate >= 1.0:
+                raise RuntimeError(
+                    "Pairwise probe epoch collapsed to a single label class; "
+                    f"pairwise_positive_rate={positive_rate:.4f}"
+                )
             return {
                 "pairwise_loss": float(accum.get("pairwise_loss_sum", 0.0)) / total_pairs,
                 "pairwise_accuracy": float(accum.get("pairwise_accuracy_sum", 0.0)) / total_pairs,
@@ -115,8 +157,21 @@ if TORCH_AVAILABLE:
                 "score_gap_mean": float(accum.get("score_gap_sum", 0.0)) / total_pairs,
                 "true_beats_fraction_before_pairwise": float(accum.get("true_beats_sum", 0.0)) / total_pairs,
                 "pairwise_mean_probability": float(accum.get("pairwise_probability_sum", 0.0)) / total_pairs,
-                "pairwise_positive_rate": float(accum.get("pairwise_positive_rate_sum", 0.0)) / total_pairs,
+                "pairwise_positive_rate": positive_rate,
+                "pairwise_mean_probability_pos": float(accum.get("pairwise_probability_pos_sum", 0.0)) / max(
+                    1.0, float(accum.get("positive_pair_count", 0.0))
+                ),
+                "pairwise_mean_probability_neg": float(accum.get("pairwise_probability_neg_sum", 0.0)) / max(
+                    1.0, float(accum.get("negative_pair_count", 0.0))
+                ),
+                "pairwise_logit_mean_pos": float(accum.get("pairwise_logit_pos_sum", 0.0)) / max(
+                    1.0, float(accum.get("positive_pair_count", 0.0))
+                ),
+                "pairwise_logit_mean_neg": float(accum.get("pairwise_logit_neg_sum", 0.0)) / max(
+                    1.0, float(accum.get("negative_pair_count", 0.0))
+                ),
                 "zero_pair_batches": zero_pair_batches,
+                "single_class_batches": single_class_batches,
             }
 
         def train_loader_epoch(self, loader) -> Dict[str, float]:
@@ -154,6 +209,25 @@ if TORCH_AVAILABLE:
                 accum["true_beats_sum"] = float(accum.get("true_beats_sum", 0.0)) + (float(batch_metrics["true_beats_fraction_before_pairwise"]) * pair_count)
                 accum["pairwise_probability_sum"] = float(accum.get("pairwise_probability_sum", 0.0)) + (float(batch_metrics["pairwise_mean_probability"]) * pair_count)
                 accum["pairwise_positive_rate_sum"] = float(accum.get("pairwise_positive_rate_sum", 0.0)) + (float(batch_metrics["pairwise_positive_rate"]) * pair_count)
+                positive_pair_count = float(metadata.get("positive_pair_count", 0.0))
+                negative_pair_count = float(metadata.get("negative_pair_count", 0.0))
+                accum["positive_pair_count"] = float(accum.get("positive_pair_count", 0.0)) + positive_pair_count
+                accum["negative_pair_count"] = float(accum.get("negative_pair_count", 0.0)) + negative_pair_count
+                accum["pairwise_probability_pos_sum"] = float(accum.get("pairwise_probability_pos_sum", 0.0)) + (
+                    float(batch_metrics["pairwise_mean_probability_pos"]) * positive_pair_count
+                )
+                accum["pairwise_probability_neg_sum"] = float(accum.get("pairwise_probability_neg_sum", 0.0)) + (
+                    float(batch_metrics["pairwise_mean_probability_neg"]) * negative_pair_count
+                )
+                accum["pairwise_logit_pos_sum"] = float(accum.get("pairwise_logit_pos_sum", 0.0)) + (
+                    float(batch_metrics["pairwise_logit_mean_pos"]) * positive_pair_count
+                )
+                accum["pairwise_logit_neg_sum"] = float(accum.get("pairwise_logit_neg_sum", 0.0)) + (
+                    float(batch_metrics["pairwise_logit_mean_neg"]) * negative_pair_count
+                )
+                accum["single_class_batches"] = float(accum.get("single_class_batches", 0.0)) + float(
+                    batch_metrics["single_class_batch"]
+                )
             return self._merge_epoch_stats(accum)
 
         def evaluate_loader(self, loader) -> Dict[str, float]:
@@ -183,6 +257,25 @@ if TORCH_AVAILABLE:
                     accum["true_beats_sum"] = float(accum.get("true_beats_sum", 0.0)) + (float(batch_metrics["true_beats_fraction_before_pairwise"]) * pair_count)
                     accum["pairwise_probability_sum"] = float(accum.get("pairwise_probability_sum", 0.0)) + (float(batch_metrics["pairwise_mean_probability"]) * pair_count)
                     accum["pairwise_positive_rate_sum"] = float(accum.get("pairwise_positive_rate_sum", 0.0)) + (float(batch_metrics["pairwise_positive_rate"]) * pair_count)
+                    positive_pair_count = float(metadata.get("positive_pair_count", 0.0))
+                    negative_pair_count = float(metadata.get("negative_pair_count", 0.0))
+                    accum["positive_pair_count"] = float(accum.get("positive_pair_count", 0.0)) + positive_pair_count
+                    accum["negative_pair_count"] = float(accum.get("negative_pair_count", 0.0)) + negative_pair_count
+                    accum["pairwise_probability_pos_sum"] = float(accum.get("pairwise_probability_pos_sum", 0.0)) + (
+                        float(batch_metrics["pairwise_mean_probability_pos"]) * positive_pair_count
+                    )
+                    accum["pairwise_probability_neg_sum"] = float(accum.get("pairwise_probability_neg_sum", 0.0)) + (
+                        float(batch_metrics["pairwise_mean_probability_neg"]) * negative_pair_count
+                    )
+                    accum["pairwise_logit_pos_sum"] = float(accum.get("pairwise_logit_pos_sum", 0.0)) + (
+                        float(batch_metrics["pairwise_logit_mean_pos"]) * positive_pair_count
+                    )
+                    accum["pairwise_logit_neg_sum"] = float(accum.get("pairwise_logit_neg_sum", 0.0)) + (
+                        float(batch_metrics["pairwise_logit_mean_neg"]) * negative_pair_count
+                    )
+                    accum["single_class_batches"] = float(accum.get("single_class_batches", 0.0)) + float(
+                        batch_metrics["single_class_batch"]
+                    )
             return self._merge_epoch_stats(accum)
 else:  # pragma: no cover
     @dataclass
