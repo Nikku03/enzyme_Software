@@ -250,6 +250,12 @@ class ModelConfig:
     winner_v2_rebuild_dropout: float = 0.1
     winner_v2_rebuild_loss_weight: float = 1.0
     winner_v2_rebuild_log_restore_summary: bool = True
+    enable_two_head_shortlist_winner_v2_rebuild_hard_source_finetune: bool = False
+    hard_source_names: str = "attnsom,cyp_dbs_external"
+    hard_source_finetune_require_hit: bool = True
+    hard_source_finetune_skip_non_hard_sources: bool = True
+    winner_finetune_init_checkpoint_path: str = ""
+    hard_source_finetune_lr_scale: float = 0.5
     candidate_mask_mode: str = "hard"
     candidate_mask_logit_bias: float = 2.0
     disable_cyp_task: bool = False
@@ -618,6 +624,14 @@ class ModelConfig:
         self.winner_v2_rebuild_dropout = min(max(float(self.winner_v2_rebuild_dropout), 0.0), 0.5)
         self.winner_v2_rebuild_loss_weight = max(0.0, float(self.winner_v2_rebuild_loss_weight))
         self.winner_v2_rebuild_log_restore_summary = bool(self.winner_v2_rebuild_log_restore_summary)
+        self.enable_two_head_shortlist_winner_v2_rebuild_hard_source_finetune = bool(
+            self.enable_two_head_shortlist_winner_v2_rebuild_hard_source_finetune
+        )
+        self.hard_source_names = str(self.hard_source_names or "").strip().lower()
+        self.hard_source_finetune_require_hit = bool(self.hard_source_finetune_require_hit)
+        self.hard_source_finetune_skip_non_hard_sources = bool(self.hard_source_finetune_skip_non_hard_sources)
+        self.winner_finetune_init_checkpoint_path = str(self.winner_finetune_init_checkpoint_path or "").strip()
+        self.hard_source_finetune_lr_scale = max(0.0, float(self.hard_source_finetune_lr_scale))
         self.candidate_mask_mode = str(self.candidate_mask_mode).strip().lower() or "hard"
         if self.candidate_mask_mode not in {"hard", "soft", "off"}:
             self.candidate_mask_mode = "hard"

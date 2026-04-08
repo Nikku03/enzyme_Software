@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import random
@@ -14,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 os.environ.setdefault("TORCHDYNAMO_DISABLE", "1")
 os.environ.setdefault("TORCH_COMPILE_DISABLE", "1")
+os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 if str(SRC) not in sys.path:
@@ -52,6 +54,9 @@ from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_trainer imp
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_1_trainer import TwoHeadShortlistWinnerV2_1Trainer
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_2_trainer import TwoHeadShortlistWinnerV2_2Trainer
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_3_trainer import TwoHeadShortlistWinnerV2_3Trainer
+from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_hard_source_finetune_trainer import (
+    TwoHeadShortlistWinnerV2RebuildHardSourceFinetuneTrainer,
+)
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_trainer import TwoHeadShortlistWinnerV2RebuildTrainer
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_trainer import TwoHeadShortlistWinnerV2Trainer
 from enzyme_software.liquid_nn_v2.training.trainer import Trainer
@@ -75,6 +80,201 @@ def _resolve_device(name: str | None):
     if torch.cuda.is_available():
         return torch.device("cuda")
     return torch.device("cpu")
+
+
+def _apply_reproducibility_lock(seed: int) -> dict[str, object]:
+    metadata: dict[str, object] = {
+        "seed": int(seed),
+        "python_random_seed_set": False,
+        "numpy_seed_set": False,
+        "torch_seed_set": False,
+        "cuda_seed_set": False,
+        "cudnn_deterministic": None,
+        "cudnn_benchmark": None,
+        "torch_deterministic_algorithms_enabled": False,
+        "torch_deterministic_algorithms_warn_only": None,
+        "deterministic_mode_enabled": False,
+        "python_random_state_digest": "",
+        "numpy_rng_state_digest": "",
+        "torch_rng_state_digest": "",
+        "torch_initial_seed": None,
+        "cuda_matmul_allow_tf32": None,
+        "cudnn_allow_tf32": None,
+        "cublas_workspace_config": str(os.environ.get("CUBLAS_WORKSPACE_CONFIG", "")),
+        "seed_applied_before_dataloader_init": True,
+        "seed_applied_before_model_init": True,
+        "seed_applied_before_winner_head_init": True,
+        "notes": [],
+    }
+    notes = metadata["notes"]
+
+    random.seed(int(seed))
+    metadata["python_random_seed_set"] = True
+
+    try:
+        import numpy as np
+
+        np.random.seed(int(seed))
+        metadata["numpy_seed_set"] = True
+        try:
+            np_state = np.random.get_state()
+            metadata["numpy_rng_state_digest"] = hashlib.sha256(np.asarray(np_state[1], dtype=np.uint32).tobytes()).hexdigest()
+        except Exception as digest_exc:
+            notes.append(f"numpy_state_digest_failed:{type(digest_exc).__name__}:{digest_exc}")
+    except Exception as exc:
+        notes.append(f"numpy_seed_failed:{type(exc).__name__}:{exc}")
+
+    try:
+        torch.manual_seed(int(seed))
+        metadata["torch_seed_set"] = True
+        metadata["torch_initial_seed"] = int(torch.initial_seed())
+        try:
+            metadata["torch_rng_state_digest"] = hashlib.sha256(torch.random.get_rng_state().cpu().numpy().tobytes()).hexdigest()
+        except Exception as digest_exc:
+            notes.append(f"torch_state_digest_failed:{type(digest_exc).__name__}:{digest_exc}")
+    except Exception as exc:
+        notes.append(f"torch_seed_failed:{type(exc).__name__}:{exc}")
+
+    if torch.cuda.is_available():
+        try:
+            torch.cuda.manual_seed(int(seed))
+            torch.cuda.manual_seed_all(int(seed))
+            metadata["cuda_seed_set"] = True
+        except Exception as exc:
+            notes.append(f"cuda_seed_failed:{type(exc).__name__}:{exc}")
+
+    try:
+        torch.backends.cudnn.deterministic = True
+        metadata["cudnn_deterministic"] = bool(torch.backends.cudnn.deterministic)
+        torch.backends.cudnn.benchmark = False
+        metadata["cudnn_benchmark"] = bool(torch.backends.cudnn.benchmark)
+        if hasattr(torch.backends, "cuda") and hasattr(torch.backends.cuda, "matmul"):
+            torch.backends.cuda.matmul.allow_tf32 = False
+            metadata["cuda_matmul_allow_tf32"] = bool(torch.backends.cuda.matmul.allow_tf32)
+        if hasattr(torch.backends.cudnn, "allow_tf32"):
+            torch.backends.cudnn.allow_tf32 = False
+            metadata["cudnn_allow_tf32"] = bool(torch.backends.cudnn.allow_tf32)
+    except Exception as exc:
+        notes.append(f"cudnn_flags_failed:{type(exc).__name__}:{exc}")
+
+    try:
+        metadata["python_random_state_digest"] = hashlib.sha256(repr(random.getstate()).encode("utf-8")).hexdigest()
+    except Exception as exc:
+        notes.append(f"python_state_digest_failed:{type(exc).__name__}:{exc}")
+
+    if hasattr(torch, "use_deterministic_algorithms"):
+        try:
+            torch.use_deterministic_algorithms(True, warn_only=True)
+            metadata["torch_deterministic_algorithms_warn_only"] = True
+            if hasattr(torch, "are_deterministic_algorithms_enabled"):
+                metadata["torch_deterministic_algorithms_enabled"] = bool(torch.are_deterministic_algorithms_enabled())
+            else:
+                metadata["torch_deterministic_algorithms_enabled"] = True
+        except TypeError:
+            try:
+                torch.use_deterministic_algorithms(True)
+                metadata["torch_deterministic_algorithms_warn_only"] = False
+                if hasattr(torch, "are_deterministic_algorithms_enabled"):
+                    metadata["torch_deterministic_algorithms_enabled"] = bool(torch.are_deterministic_algorithms_enabled())
+                else:
+                    metadata["torch_deterministic_algorithms_enabled"] = True
+            except Exception as exc:
+                notes.append(f"torch_deterministic_failed:{type(exc).__name__}:{exc}")
+        except Exception as exc:
+            notes.append(f"torch_deterministic_failed:{type(exc).__name__}:{exc}")
+    else:
+        notes.append("torch_deterministic_unavailable")
+
+    metadata["deterministic_mode_enabled"] = bool(
+        metadata.get("python_random_seed_set")
+        and metadata.get("numpy_seed_set")
+        and metadata.get("torch_seed_set")
+        and metadata.get("cudnn_deterministic") is True
+        and metadata.get("cudnn_benchmark") is False
+    )
+    return metadata
+
+
+def _checkpoint_metadata(path_like: Path | str | None) -> dict[str, object]:
+    path = Path(path_like).expanduser() if path_like else Path("")
+    exists = bool(path_like) and path.exists()
+    metadata: dict[str, object] = {
+        "path": str(path.resolve(strict=False)) if path_like else "",
+        "exists": bool(exists),
+        "sha256": "",
+        "size_bytes": 0,
+        "mtime_epoch": None,
+        "hash_error": "",
+    }
+    if not exists:
+        return metadata
+    try:
+        stat = path.stat()
+        metadata["size_bytes"] = int(stat.st_size)
+        metadata["mtime_epoch"] = float(stat.st_mtime)
+    except Exception as exc:
+        metadata["hash_error"] = f"stat_failed:{type(exc).__name__}:{exc}"
+        return metadata
+    try:
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            while True:
+                chunk = handle.read(1024 * 1024)
+                if not chunk:
+                    break
+                digest.update(chunk)
+        metadata["sha256"] = digest.hexdigest()
+    except Exception as exc:
+        metadata["hash_error"] = f"sha256_failed:{type(exc).__name__}:{exc}"
+    return metadata
+
+
+def _checkpoint_identity_match(
+    warm_start_checkpoint_metadata: dict[str, object],
+    frozen_shortlist_checkpoint_metadata: dict[str, object],
+) -> dict[str, object]:
+    warm_path = str((warm_start_checkpoint_metadata or {}).get("path", "") or "")
+    frozen_path = str((frozen_shortlist_checkpoint_metadata or {}).get("path", "") or "")
+    warm_sha = str((warm_start_checkpoint_metadata or {}).get("sha256", "") or "")
+    frozen_sha = str((frozen_shortlist_checkpoint_metadata or {}).get("sha256", "") or "")
+    return {
+        "same_path": bool(warm_path and frozen_path and warm_path == frozen_path),
+        "same_sha256": bool(warm_sha and frozen_sha and warm_sha == frozen_sha),
+        "same_size_bytes": int((warm_start_checkpoint_metadata or {}).get("size_bytes", 0) or 0)
+        == int((frozen_shortlist_checkpoint_metadata or {}).get("size_bytes", 0) or 0),
+        "same_mtime_epoch": float((warm_start_checkpoint_metadata or {}).get("mtime_epoch") or 0.0)
+        == float((frozen_shortlist_checkpoint_metadata or {}).get("mtime_epoch") or 0.0),
+    }
+
+
+def _load_winner_head_init_checkpoint(
+    winner_head,
+    checkpoint_path: Path,
+    *,
+    device,
+) -> dict[str, object]:
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(
+            "hard-source winner fine-tune requires a winner init checkpoint. "
+            f"Missing checkpoint: {checkpoint_path}"
+        )
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    winner_state = None
+    if isinstance(checkpoint, dict):
+        winner_state = checkpoint.get("winner_head_state_dict")
+        if winner_state is None and all(isinstance(key, str) for key in checkpoint.keys()):
+            winner_state = checkpoint
+    if not isinstance(winner_state, dict):
+        raise KeyError(
+            "winner fine-tune init checkpoint does not contain `winner_head_state_dict` "
+            f"and is not a raw winner-head state dict: {checkpoint_path}"
+        )
+    load_result = winner_head.load_state_dict(winner_state, strict=True)
+    return {
+        "path": str(checkpoint_path),
+        "missing_keys": list(getattr(load_result, "missing_keys", []) or []),
+        "unexpected_keys": list(getattr(load_result, "unexpected_keys", []) or []),
+    }
 
 
 def _env_flag(name: str, default: str = "0") -> bool:
@@ -345,6 +545,18 @@ def _collect_model_overrides() -> dict[str, int | float | str]:
         "HYBRID_COLAB_WINNER_V2_REBUILD_DROPOUT": (_env_float, "winner_v2_rebuild_dropout"),
         "HYBRID_COLAB_WINNER_V2_REBUILD_LOSS_WEIGHT": (_env_float, "winner_v2_rebuild_loss_weight"),
         "HYBRID_COLAB_WINNER_V2_REBUILD_LOG_RESTORE_SUMMARY": (_env_int, "winner_v2_rebuild_log_restore_summary"),
+        "HYBRID_COLAB_ENABLE_TWO_HEAD_SHORTLIST_WINNER_V2_REBUILD_HARD_SOURCE_FINETUNE": (
+            _env_int,
+            "enable_two_head_shortlist_winner_v2_rebuild_hard_source_finetune",
+        ),
+        "HYBRID_COLAB_HARD_SOURCE_NAMES": (_env_str, "hard_source_names"),
+        "HYBRID_COLAB_HARD_SOURCE_FINETUNE_REQUIRE_HIT": (_env_int, "hard_source_finetune_require_hit"),
+        "HYBRID_COLAB_HARD_SOURCE_FINETUNE_SKIP_NON_HARD_SOURCES": (
+            _env_int,
+            "hard_source_finetune_skip_non_hard_sources",
+        ),
+        "HYBRID_COLAB_WINNER_FINETUNE_INIT_CHECKPOINT": (_env_str, "winner_finetune_init_checkpoint_path"),
+        "HYBRID_COLAB_HARD_SOURCE_FINETUNE_LR_SCALE": (_env_float, "hard_source_finetune_lr_scale"),
     }
     overrides: dict[str, int | float | str] = {}
     for env_name, (parser, field_name) in mapping.items():
@@ -809,6 +1021,7 @@ def _build_loaders_with_fallback(
 ):
     common = dict(
         batch_size=args.batch_size,
+        seed=int(args.seed),
         structure_sdf=args.structure_sdf,
         manual_target_bond=args.manual_target_bond,
         manual_feature_cache_dir=args.manual_feature_cache_dir,
@@ -2170,6 +2383,10 @@ def _save_two_head_shortlist_winner_v2_rebuild_state(
     split_mode: str,
     split_summary: dict[str, object],
     restore_summary: dict[str, object],
+    reproducibility_metadata: dict[str, object],
+    warm_start_checkpoint_metadata: dict[str, object],
+    frozen_shortlist_checkpoint_metadata: dict[str, object],
+    checkpoint_identity_match: dict[str, object],
     test_metrics=None,
     status: str = "running",
 ):
@@ -2232,6 +2449,36 @@ def _save_two_head_shortlist_winner_v2_rebuild_state(
         "status": status,
         "trainable_module_summary": list(trainable_module_summary or []),
         "frozen_module_summary": list(frozen_module_summary or []),
+        "seed": int(getattr(args, "seed", 0)),
+        "reproducibility_metadata": dict(reproducibility_metadata or {}),
+        "warm_start_checkpoint_metadata": dict(warm_start_checkpoint_metadata or {}),
+        "frozen_shortlist_checkpoint_metadata": dict(frozen_shortlist_checkpoint_metadata or {}),
+        "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+        "reproducibility_debug": {
+            "seed": int(getattr(args, "seed", 0)),
+            "split_mode": split_mode,
+            "train_total": int(((effective_split_summary or {}).get("train") or {}).get("total", 0)),
+            "val_total": int(((effective_split_summary or {}).get("val") or {}).get("total", 0)),
+            "test_total": int(((effective_split_summary or {}).get("test") or {}).get("total", 0)),
+            "warm_start_sha256": str((warm_start_checkpoint_metadata or {}).get("sha256", "")),
+            "frozen_shortlist_sha256": str((frozen_shortlist_checkpoint_metadata or {}).get("sha256", "")),
+            "deterministic_mode_enabled": bool((reproducibility_metadata or {}).get("deterministic_mode_enabled", False)),
+            "seed_applied_before_model_init": bool((reproducibility_metadata or {}).get("seed_applied_before_model_init", False)),
+            "seed_applied_before_dataloader_init": bool((reproducibility_metadata or {}).get("seed_applied_before_dataloader_init", False)),
+            "seed_applied_before_winner_head_init": bool((reproducibility_metadata or {}).get("seed_applied_before_winner_head_init", False)),
+            "torch_rng_state_digest": str((reproducibility_metadata or {}).get("torch_rng_state_digest", "")),
+            "numpy_rng_state_digest": str((reproducibility_metadata or {}).get("numpy_rng_state_digest", "")),
+            "python_random_state_digest": str((reproducibility_metadata or {}).get("python_random_state_digest", "")),
+            "data_loader_num_workers": 0,
+            "sampler_seed": int(getattr(args, "seed", 0)),
+            "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+            "replay_ready_flag": bool(
+                (reproducibility_metadata or {}).get("deterministic_mode_enabled", False)
+                and bool((warm_start_checkpoint_metadata or {}).get("sha256"))
+                and bool((frozen_shortlist_checkpoint_metadata or {}).get("sha256"))
+            ),
+            "notes": list((reproducibility_metadata or {}).get("notes", []) or []),
+        },
     }
     torch.save(checkpoint, latest_path)
     torch.save(checkpoint, archive_path)
@@ -2272,6 +2519,235 @@ def _save_two_head_shortlist_winner_v2_rebuild_state(
                 ),
                 "trainable_module_summary": list(trainable_module_summary or []),
                 "frozen_module_summary": list(frozen_module_summary or []),
+                "seed": int(getattr(args, "seed", 0)),
+                "reproducibility_metadata": dict(reproducibility_metadata or {}),
+                "warm_start_checkpoint_metadata": dict(warm_start_checkpoint_metadata or {}),
+                "frozen_shortlist_checkpoint_metadata": dict(frozen_shortlist_checkpoint_metadata or {}),
+                "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+                "reproducibility_debug": {
+                    "seed": int(getattr(args, "seed", 0)),
+                    "split_mode": split_mode,
+                    "train_total": int(((effective_split_summary or {}).get("train") or {}).get("total", 0)),
+                    "val_total": int(((effective_split_summary or {}).get("val") or {}).get("total", 0)),
+                    "test_total": int(((effective_split_summary or {}).get("test") or {}).get("total", 0)),
+                    "warm_start_sha256": str((warm_start_checkpoint_metadata or {}).get("sha256", "")),
+                    "frozen_shortlist_sha256": str((frozen_shortlist_checkpoint_metadata or {}).get("sha256", "")),
+                    "deterministic_mode_enabled": bool((reproducibility_metadata or {}).get("deterministic_mode_enabled", False)),
+                    "seed_applied_before_model_init": bool((reproducibility_metadata or {}).get("seed_applied_before_model_init", False)),
+                    "seed_applied_before_dataloader_init": bool((reproducibility_metadata or {}).get("seed_applied_before_dataloader_init", False)),
+                    "seed_applied_before_winner_head_init": bool((reproducibility_metadata or {}).get("seed_applied_before_winner_head_init", False)),
+                    "torch_rng_state_digest": str((reproducibility_metadata or {}).get("torch_rng_state_digest", "")),
+                    "numpy_rng_state_digest": str((reproducibility_metadata or {}).get("numpy_rng_state_digest", "")),
+                    "python_random_state_digest": str((reproducibility_metadata or {}).get("python_random_state_digest", "")),
+                    "data_loader_num_workers": 0,
+                    "sampler_seed": int(getattr(args, "seed", 0)),
+                    "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+                    "replay_ready_flag": bool(
+                        (reproducibility_metadata or {}).get("deterministic_mode_enabled", False)
+                        and bool((warm_start_checkpoint_metadata or {}).get("sha256"))
+                        and bool((frozen_shortlist_checkpoint_metadata or {}).get("sha256"))
+                    ),
+                    "notes": list((reproducibility_metadata or {}).get("notes", []) or []),
+                },
+            },
+            indent=2,
+        )
+    )
+    return latest_path, best_path, archive_path, report_path
+
+
+def _save_two_head_shortlist_winner_v2_rebuild_hard_source_finetune_state(
+    *,
+    model,
+    winner_head,
+    optimizer_state,
+    trainable_module_summary,
+    frozen_module_summary,
+    frozen_shortlist_checkpoint_path: Path,
+    winner_finetune_init_checkpoint_path: Path,
+    winner_finetune_init_checkpoint_metadata: dict[str, object],
+    winner_finetune_init_load_summary: dict[str, object],
+    output_dir: Path,
+    artifact_dir: Path,
+    args,
+    history,
+    best_epoch: int,
+    best_selection,
+    best_model_state,
+    best_winner_head_state,
+    base_config,
+    checkpoint_path: Path,
+    split_mode: str,
+    split_summary: dict[str, object],
+    restore_summary: dict[str, object],
+    reproducibility_metadata: dict[str, object],
+    warm_start_checkpoint_metadata: dict[str, object],
+    frozen_shortlist_checkpoint_metadata: dict[str, object],
+    checkpoint_identity_match: dict[str, object],
+    test_metrics=None,
+    status: str = "running",
+):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    latest_path = output_dir / "two_head_shortlist_winner_v2_rebuild_hard_source_finetune_latest.pt"
+    best_path = output_dir / "two_head_shortlist_winner_v2_rebuild_hard_source_finetune_best.pt"
+    archive_path = output_dir / f"two_head_shortlist_winner_v2_rebuild_hard_source_finetune_{timestamp}.pt"
+    report_path = artifact_dir / f"two_head_shortlist_winner_v2_rebuild_hard_source_finetune_report_{timestamp}.json"
+    history_len = int(len(history))
+    final_epoch = int(history[-1]["epoch"]) if history else 0
+    last_train_metrics = dict(history[-1].get("train") or {}) if history else {}
+    last_val_metrics = dict(history[-1].get("val") or {}) if history else {}
+    best_val_entry = next((row for row in history if int(row.get("epoch", 0)) == int(best_epoch)), None) if history else None
+    best_val_metrics = dict((best_val_entry or {}).get("val") or {})
+    best_train_metrics = dict((best_val_entry or {}).get("train") or {})
+    effective_split_summary = _effective_split_summary(split_summary)
+    branch_config = {
+        "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
+        "frozen_shortlist_topk": int(getattr(base_config, "frozen_shortlist_topk", 6)),
+        "winner_v2_rebuild_hidden_dim": getattr(base_config, "winner_v2_rebuild_hidden_dim", None),
+        "winner_v2_rebuild_dropout": float(getattr(base_config, "winner_v2_rebuild_dropout", 0.1)),
+        "winner_v2_rebuild_loss_weight": float(getattr(base_config, "winner_v2_rebuild_loss_weight", 1.0)),
+        "winner_v2_rebuild_log_restore_summary": bool(getattr(base_config, "winner_v2_rebuild_log_restore_summary", True)),
+        "hard_source_names": str(getattr(base_config, "hard_source_names", "")),
+        "hard_source_finetune_require_hit": bool(getattr(base_config, "hard_source_finetune_require_hit", True)),
+        "hard_source_finetune_skip_non_hard_sources": bool(
+            getattr(base_config, "hard_source_finetune_skip_non_hard_sources", True)
+        ),
+        "winner_finetune_init_checkpoint_path": str(winner_finetune_init_checkpoint_path),
+        "hard_source_finetune_lr_scale": float(getattr(base_config, "hard_source_finetune_lr_scale", 0.5)),
+        "restore_summary": dict(restore_summary or {}),
+    }
+    checkpoint = {
+        "model_state_dict": _initialized_state_dict(model),
+        "winner_head_state_dict": _initialized_state_dict(winner_head),
+        "optimizer_state_dict": optimizer_state,
+        "config": {
+            "base_model": base_config.__dict__,
+            "two_head_shortlist_winner_v2_rebuild_hard_source_finetune": branch_config,
+        },
+        "training_config": TrainingConfig(
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            early_stopping_patience=args.early_stopping_patience,
+        ).__dict__,
+        "two_head_shortlist_winner_v2_rebuild_hard_source_finetune_enabled": True,
+        "checkpoint_source": str(checkpoint_path),
+        "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
+        "winner_finetune_init_checkpoint_path": str(winner_finetune_init_checkpoint_path),
+        "winner_finetune_init_checkpoint_metadata": dict(winner_finetune_init_checkpoint_metadata or {}),
+        "winner_finetune_init_load_summary": dict(winner_finetune_init_load_summary or {}),
+        "restore_summary": dict(restore_summary or {}),
+        "best_epoch": int(best_epoch),
+        "best_selection": list(best_selection) if best_selection is not None else None,
+        "history_len": history_len,
+        "final_epoch": final_epoch,
+        "split_mode": split_mode,
+        "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+        "split_summary": split_summary,
+        "effective_split_summary": effective_split_summary,
+        "last_train_metrics": last_train_metrics,
+        "last_val_metrics": last_val_metrics,
+        "best_train_metrics": best_train_metrics,
+        "best_val_metrics": best_val_metrics,
+        "test_metrics": test_metrics,
+        "history": history,
+        "status": status,
+        "trainable_module_summary": list(trainable_module_summary or []),
+        "frozen_module_summary": list(frozen_module_summary or []),
+        "seed": int(getattr(args, "seed", 0)),
+        "reproducibility_metadata": dict(reproducibility_metadata or {}),
+        "warm_start_checkpoint_metadata": dict(warm_start_checkpoint_metadata or {}),
+        "frozen_shortlist_checkpoint_metadata": dict(frozen_shortlist_checkpoint_metadata or {}),
+        "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+        "reproducibility_debug": {
+            "seed": int(getattr(args, "seed", 0)),
+            "split_mode": split_mode,
+            "train_total": int(((effective_split_summary or {}).get("train") or {}).get("total", 0)),
+            "val_total": int(((effective_split_summary or {}).get("val") or {}).get("total", 0)),
+            "test_total": int(((effective_split_summary or {}).get("test") or {}).get("total", 0)),
+            "warm_start_sha256": str((warm_start_checkpoint_metadata or {}).get("sha256", "")),
+            "frozen_shortlist_sha256": str((frozen_shortlist_checkpoint_metadata or {}).get("sha256", "")),
+            "winner_finetune_init_sha256": str((winner_finetune_init_checkpoint_metadata or {}).get("sha256", "")),
+            "deterministic_mode_enabled": bool((reproducibility_metadata or {}).get("deterministic_mode_enabled", False)),
+            "seed_applied_before_model_init": bool((reproducibility_metadata or {}).get("seed_applied_before_model_init", False)),
+            "seed_applied_before_dataloader_init": bool((reproducibility_metadata or {}).get("seed_applied_before_dataloader_init", False)),
+            "seed_applied_before_winner_head_init": bool((reproducibility_metadata or {}).get("seed_applied_before_winner_head_init", False)),
+            "data_loader_num_workers": 0,
+            "sampler_seed": int(getattr(args, "seed", 0)),
+            "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+            "replay_ready_flag": bool(
+                (reproducibility_metadata or {}).get("deterministic_mode_enabled", False)
+                and bool((warm_start_checkpoint_metadata or {}).get("sha256"))
+                and bool((frozen_shortlist_checkpoint_metadata or {}).get("sha256"))
+            ),
+            "notes": list((reproducibility_metadata or {}).get("notes", []) or []),
+        },
+    }
+    torch.save(checkpoint, latest_path)
+    torch.save(checkpoint, archive_path)
+    if best_model_state is not None:
+        best_checkpoint = dict(checkpoint)
+        best_checkpoint["model_state_dict"] = best_model_state
+        best_checkpoint["winner_head_state_dict"] = best_winner_head_state
+        best_checkpoint["status"] = f"{status}_best"
+        torch.save(best_checkpoint, best_path)
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": status,
+                "two_head_shortlist_winner_v2_rebuild_hard_source_finetune_enabled": True,
+                "checkpoint_source": str(checkpoint_path),
+                "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
+                "winner_finetune_init_checkpoint_path": str(winner_finetune_init_checkpoint_path),
+                "winner_finetune_init_checkpoint_metadata": dict(winner_finetune_init_checkpoint_metadata or {}),
+                "winner_finetune_init_load_summary": dict(winner_finetune_init_load_summary or {}),
+                "restore_summary": dict(restore_summary or {}),
+                "best_epoch": int(best_epoch),
+                "best_selection": list(best_selection) if best_selection is not None else None,
+                "history_len": history_len,
+                "final_epoch": final_epoch,
+                "split_mode": split_mode,
+                "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+                "split_summary": split_summary,
+                "effective_split_summary": effective_split_summary,
+                "last_train_metrics": last_train_metrics,
+                "last_val_metrics": last_val_metrics,
+                "best_train_metrics": best_train_metrics,
+                "best_val_metrics": best_val_metrics,
+                "test_metrics": test_metrics,
+                "history": history,
+                **branch_config,
+                "trainable_module_summary": list(trainable_module_summary or []),
+                "frozen_module_summary": list(frozen_module_summary or []),
+                "seed": int(getattr(args, "seed", 0)),
+                "reproducibility_metadata": dict(reproducibility_metadata or {}),
+                "warm_start_checkpoint_metadata": dict(warm_start_checkpoint_metadata or {}),
+                "frozen_shortlist_checkpoint_metadata": dict(frozen_shortlist_checkpoint_metadata or {}),
+                "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+                "reproducibility_debug": {
+                    "seed": int(getattr(args, "seed", 0)),
+                    "split_mode": split_mode,
+                    "train_total": int(((effective_split_summary or {}).get("train") or {}).get("total", 0)),
+                    "val_total": int(((effective_split_summary or {}).get("val") or {}).get("total", 0)),
+                    "test_total": int(((effective_split_summary or {}).get("test") or {}).get("total", 0)),
+                    "warm_start_sha256": str((warm_start_checkpoint_metadata or {}).get("sha256", "")),
+                    "frozen_shortlist_sha256": str((frozen_shortlist_checkpoint_metadata or {}).get("sha256", "")),
+                    "winner_finetune_init_sha256": str((winner_finetune_init_checkpoint_metadata or {}).get("sha256", "")),
+                    "deterministic_mode_enabled": bool((reproducibility_metadata or {}).get("deterministic_mode_enabled", False)),
+                    "seed_applied_before_model_init": bool((reproducibility_metadata or {}).get("seed_applied_before_model_init", False)),
+                    "seed_applied_before_dataloader_init": bool((reproducibility_metadata or {}).get("seed_applied_before_dataloader_init", False)),
+                    "seed_applied_before_winner_head_init": bool((reproducibility_metadata or {}).get("seed_applied_before_winner_head_init", False)),
+                    "data_loader_num_workers": 0,
+                    "sampler_seed": int(getattr(args, "seed", 0)),
+                    "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+                    "replay_ready_flag": bool(
+                        (reproducibility_metadata or {}).get("deterministic_mode_enabled", False)
+                        and bool((warm_start_checkpoint_metadata or {}).get("sha256"))
+                        and bool((frozen_shortlist_checkpoint_metadata or {}).get("sha256"))
+                    ),
+                    "notes": list((reproducibility_metadata or {}).get("notes", []) or []),
+                },
             },
             indent=2,
         )
@@ -2351,6 +2827,7 @@ def main() -> None:
     freeze_base_modules = _parse_csv_tokens(args.freeze_base_modules)
     early_stopping_patience = int(args.early_stopping_patience)
     early_stopping_enabled = early_stopping_patience > 0
+    reproducibility_metadata = _apply_reproducibility_lock(int(args.seed))
 
     dataset_path = Path(args.dataset)
     if not dataset_path.exists():
@@ -2375,6 +2852,18 @@ def main() -> None:
     print("HYBRID LNN: FULL XTB MANUAL PRIORS", flush=True)
     print("=" * 60, flush=True)
     print(f"Using device: {device}", flush=True)
+    print(
+        "Reproducibility lock: "
+        f"seed={int(args.seed)} | "
+        f"python={int(bool(reproducibility_metadata.get('python_random_seed_set', False)))} "
+        f"numpy={int(bool(reproducibility_metadata.get('numpy_seed_set', False)))} "
+        f"torch={int(bool(reproducibility_metadata.get('torch_seed_set', False)))} "
+        f"cuda={int(bool(reproducibility_metadata.get('cuda_seed_set', False)))} "
+        f"deterministic={int(bool(reproducibility_metadata.get('deterministic_mode_enabled', False)))}",
+        flush=True,
+    )
+    if reproducibility_metadata.get("notes"):
+        print(f"Reproducibility notes: {reproducibility_metadata.get('notes')}", flush=True)
     if episode_log_path is not None:
         print(f"Episode log: {episode_log_path}", flush=True)
 
@@ -2593,6 +3082,52 @@ def main() -> None:
     frozen_shortlist_checkpoint_path = (
         Path(frozen_shortlist_checkpoint_value).expanduser() if frozen_shortlist_checkpoint_value else checkpoint_path
     )
+    warm_start_checkpoint_metadata = _checkpoint_metadata(checkpoint_path)
+    frozen_shortlist_checkpoint_metadata = _checkpoint_metadata(frozen_shortlist_checkpoint_path)
+    checkpoint_identity_match = _checkpoint_identity_match(
+        warm_start_checkpoint_metadata,
+        frozen_shortlist_checkpoint_metadata,
+    )
+    if warm_start_checkpoint_metadata.get("exists"):
+        print(
+            "Warm-start checkpoint identity: "
+            f"sha256={warm_start_checkpoint_metadata.get('sha256', '')[:16]}... "
+            f"size={warm_start_checkpoint_metadata.get('size_bytes', 0)} "
+            f"mtime={warm_start_checkpoint_metadata.get('mtime_epoch')}",
+            flush=True,
+        )
+        if warm_start_checkpoint_metadata.get("hash_error"):
+            warning = f"warm-start checkpoint hash warning: {warm_start_checkpoint_metadata.get('hash_error')}"
+            print(f"Reproducibility warning: {warning}", flush=True)
+            reproducibility_metadata.setdefault("notes", []).append(warning)
+    if str(frozen_shortlist_checkpoint_path) != str(checkpoint_path) and frozen_shortlist_checkpoint_metadata.get("exists"):
+        print(
+            "Frozen shortlist checkpoint identity: "
+            f"sha256={frozen_shortlist_checkpoint_metadata.get('sha256', '')[:16]}... "
+            f"size={frozen_shortlist_checkpoint_metadata.get('size_bytes', 0)} "
+            f"mtime={frozen_shortlist_checkpoint_metadata.get('mtime_epoch')}",
+            flush=True,
+        )
+    if frozen_shortlist_checkpoint_metadata.get("exists") and frozen_shortlist_checkpoint_metadata.get("hash_error"):
+        warning = f"frozen shortlist checkpoint hash warning: {frozen_shortlist_checkpoint_metadata.get('hash_error')}"
+        print(f"Reproducibility warning: {warning}", flush=True)
+        reproducibility_metadata.setdefault("notes", []).append(warning)
+    print(
+        "Checkpoint identity match: "
+        f"same_path={int(bool(checkpoint_identity_match.get('same_path', False)))} | "
+        f"same_sha256={int(bool(checkpoint_identity_match.get('same_sha256', False)))} | "
+        f"same_size={int(bool(checkpoint_identity_match.get('same_size_bytes', False)))} | "
+        f"same_mtime={int(bool(checkpoint_identity_match.get('same_mtime_epoch', False)))}",
+        flush=True,
+    )
+    if (
+        warm_start_checkpoint_metadata.get("exists")
+        and frozen_shortlist_checkpoint_metadata.get("exists")
+        and not bool(checkpoint_identity_match.get("same_sha256", False))
+    ):
+        warning = "warm-start and frozen shortlist checkpoints differ by SHA256"
+        print(f"Reproducibility warning: {warning}", flush=True)
+        reproducibility_metadata.setdefault("notes", []).append(warning)
     if any(
         bool(getattr(base_config, flag, False))
         for flag in (
@@ -2601,6 +3136,7 @@ def main() -> None:
             "enable_two_head_shortlist_winner_v2_2",
             "enable_two_head_shortlist_winner_v2_3",
             "enable_two_head_shortlist_winner_v2_rebuild",
+            "enable_two_head_shortlist_winner_v2_rebuild_hard_source_finetune",
         )
     ):
         if not frozen_shortlist_checkpoint_path.exists():
@@ -2679,6 +3215,264 @@ def main() -> None:
     )
     if model_overrides:
         print(f"Model overrides: {model_overrides}", flush=True)
+
+    if bool(getattr(base_config, "enable_two_head_shortlist_winner_v2_rebuild_hard_source_finetune", False)):
+        atom_dim = int(getattr(base_config, "som_branch_dim", getattr(base_config, "hidden_dim", 128)))
+        winner_feature_dim = winner_v2_feature_dim(
+            atom_dim,
+            use_existing_candidate_features=True,
+            use_score_gap_features=True,
+            use_rank_features=True,
+            use_pairwise_features=True,
+            use_graph_local_features=True,
+            use_3d_local_features=True,
+        )
+        winner_hidden_dim = getattr(base_config, "winner_v2_rebuild_hidden_dim", None)
+        winner_head = WinnerHeadV2(
+            winner_feature_dim,
+            hidden_dim=(int(winner_hidden_dim) if winner_hidden_dim is not None and int(winner_hidden_dim) > 0 else None),
+            dropout=float(getattr(base_config, "winner_v2_rebuild_dropout", 0.1)),
+        )
+        winner_finetune_init_checkpoint_path = Path(
+            str(getattr(base_config, "winner_finetune_init_checkpoint_path", "") or "")
+        ).expanduser()
+        if not str(winner_finetune_init_checkpoint_path):
+            raise FileNotFoundError(
+                "two_head_shortlist_winner_v2_rebuild_hard_source_finetune requires "
+                "`winner_finetune_init_checkpoint_path`."
+            )
+        winner_finetune_init_load_summary = _load_winner_head_init_checkpoint(
+            winner_head,
+            winner_finetune_init_checkpoint_path,
+            device=device,
+        )
+        winner_finetune_init_checkpoint_metadata = _checkpoint_metadata(winner_finetune_init_checkpoint_path)
+        print(
+            "Loaded winner fine-tune init checkpoint: "
+            f"{winner_finetune_init_checkpoint_path} | "
+            f"sha256={str(winner_finetune_init_checkpoint_metadata.get('sha256', ''))[:16]}... "
+            f"size={winner_finetune_init_checkpoint_metadata.get('size_bytes', 0)} "
+            f"mtime={winner_finetune_init_checkpoint_metadata.get('mtime_epoch')}",
+            flush=True,
+        )
+        finetune_learning_rate = float(args.learning_rate) * float(getattr(base_config, "hard_source_finetune_lr_scale", 0.5))
+        hard_source_finetune_trainer = TwoHeadShortlistWinnerV2RebuildHardSourceFinetuneTrainer(
+            model=model,
+            winner_head=winner_head,
+            learning_rate=finetune_learning_rate,
+            weight_decay=args.weight_decay,
+            frozen_shortlist_topk=int(getattr(base_config, "frozen_shortlist_topk", 6)),
+            winner_v2_rebuild_loss_weight=float(getattr(base_config, "winner_v2_rebuild_loss_weight", 1.0)),
+            shortlist_checkpoint_path=str(frozen_shortlist_checkpoint_path),
+            hard_source_names=str(getattr(base_config, "hard_source_names", "")),
+            hard_source_finetune_require_hit=bool(getattr(base_config, "hard_source_finetune_require_hit", True)),
+            hard_source_finetune_skip_non_hard_sources=bool(
+                getattr(base_config, "hard_source_finetune_skip_non_hard_sources", True)
+            ),
+            winner_finetune_init_checkpoint_path=str(winner_finetune_init_checkpoint_path),
+            device=device,
+        )
+        restore_summary = dict(getattr(hard_source_finetune_trainer, "restore_summary", {}) or {})
+        print(
+            "two_head_shortlist_winner_v2_rebuild_hard_source_finetune enabled | "
+            f"frozen_shortlist={frozen_shortlist_checkpoint_path} | "
+            f"winner_init={winner_finetune_init_checkpoint_path} | "
+            f"hard_sources={restore_summary.get('hard_source_finetune', {}).get('hard_source_names', [])} | "
+            f"trainable_modules={hard_source_finetune_trainer.trainable_module_summary} | "
+            f"frozen_modules={hard_source_finetune_trainer.frozen_module_summary}",
+            flush=True,
+        )
+        history = []
+        best_epoch = 0
+        best_selection = None
+        best_model_state = None
+        best_winner_head_state = None
+        epochs_without_improvement = 0
+
+        def _two_head_v2_rebuild_hard_source_selection_tuple(metrics: dict[str, object]) -> tuple[float, float, float, float]:
+            return (
+                float(metrics.get("hard_source_end_to_end_top1", 0.0)),
+                float(metrics.get("hard_source_winner_acc_given_hit", 0.0)),
+                float(metrics.get("end_to_end_top1", 0.0)),
+                float(metrics.get("shortlist_recall_at_6", 0.0)),
+            )
+
+        try:
+            for epoch in range(args.epochs):
+                setattr(train_loader, "_current_epoch", epoch)
+                setattr(train_loader, "_split_name", "train")
+                train_metrics = hard_source_finetune_trainer.train_loader_epoch(train_loader)
+
+                setattr(val_loader, "_current_epoch", epoch)
+                setattr(val_loader, "_split_name", "val")
+                val_metrics = hard_source_finetune_trainer.evaluate_loader(val_loader)
+                history.append({"epoch": epoch + 1, "train": train_metrics, "val": val_metrics})
+
+                selection = _two_head_v2_rebuild_hard_source_selection_tuple(val_metrics)
+                if best_selection is None or selection > best_selection:
+                    best_selection = selection
+                    best_epoch = epoch + 1
+                    best_model_state = _initialized_state_dict(model)
+                    best_winner_head_state = _initialized_state_dict(winner_head)
+                    epochs_without_improvement = 0
+                else:
+                    epochs_without_improvement += 1
+
+                print(
+                    f"Epoch {epoch + 1:3d} | "
+                    f"winner_loss={train_metrics.get('winner_loss', 0.0):.4f} | "
+                    f"train_hard_ft_count={int(train_metrics.get('hard_source_finetune_train_example_count', 0.0))} | "
+                    f"val_hard_winner={val_metrics.get('hard_source_winner_acc_given_hit', 0.0):.3f} | "
+                    f"val_hard_e2e_top1={val_metrics.get('hard_source_end_to_end_top1', 0.0):.3f} | "
+                    f"val_e2e_top1={val_metrics.get('end_to_end_top1', 0.0):.3f}",
+                    flush=True,
+                )
+
+                _save_two_head_shortlist_winner_v2_rebuild_hard_source_finetune_state(
+                    model=model,
+                    winner_head=winner_head,
+                    optimizer_state=hard_source_finetune_trainer.optimizer.state_dict(),
+                    trainable_module_summary=hard_source_finetune_trainer.trainable_module_summary,
+                    frozen_module_summary=hard_source_finetune_trainer.frozen_module_summary,
+                    frozen_shortlist_checkpoint_path=frozen_shortlist_checkpoint_path,
+                    winner_finetune_init_checkpoint_path=winner_finetune_init_checkpoint_path,
+                    winner_finetune_init_checkpoint_metadata=winner_finetune_init_checkpoint_metadata,
+                    winner_finetune_init_load_summary=winner_finetune_init_load_summary,
+                    output_dir=output_dir,
+                    artifact_dir=artifact_dir,
+                    args=args,
+                    history=history,
+                    best_epoch=best_epoch,
+                    best_selection=best_selection,
+                    best_model_state=best_model_state,
+                    best_winner_head_state=best_winner_head_state,
+                    base_config=base_config,
+                    checkpoint_path=checkpoint_path,
+                    split_mode=args.split_mode,
+                    split_summary=split_summary,
+                    restore_summary=restore_summary,
+                    reproducibility_metadata=reproducibility_metadata,
+                    warm_start_checkpoint_metadata=warm_start_checkpoint_metadata,
+                    frozen_shortlist_checkpoint_metadata=frozen_shortlist_checkpoint_metadata,
+                    checkpoint_identity_match=checkpoint_identity_match,
+                    status="running",
+                )
+
+                if epochs_without_improvement >= args.early_stopping_patience:
+                    print(
+                        "Early stopping two_head_shortlist_winner_v2_rebuild_hard_source_finetune "
+                        f"after epoch {epoch + 1}: no improvement for {args.early_stopping_patience} epoch(s).",
+                        flush=True,
+                    )
+                    break
+
+        except KeyboardInterrupt:
+            print(
+                "\nInterrupted. Saving current two_head_shortlist_winner_v2_rebuild_hard_source_finetune progress...",
+                flush=True,
+            )
+            latest_path, best_path, _, report_path = _save_two_head_shortlist_winner_v2_rebuild_hard_source_finetune_state(
+                model=model,
+                winner_head=winner_head,
+                optimizer_state=hard_source_finetune_trainer.optimizer.state_dict(),
+                trainable_module_summary=hard_source_finetune_trainer.trainable_module_summary,
+                frozen_module_summary=hard_source_finetune_trainer.frozen_module_summary,
+                frozen_shortlist_checkpoint_path=frozen_shortlist_checkpoint_path,
+                winner_finetune_init_checkpoint_path=winner_finetune_init_checkpoint_path,
+                winner_finetune_init_checkpoint_metadata=winner_finetune_init_checkpoint_metadata,
+                winner_finetune_init_load_summary=winner_finetune_init_load_summary,
+                output_dir=output_dir,
+                artifact_dir=artifact_dir,
+                args=args,
+                history=history,
+                best_epoch=best_epoch,
+                best_selection=best_selection,
+                best_model_state=best_model_state,
+                best_winner_head_state=best_winner_head_state,
+                base_config=base_config,
+                checkpoint_path=checkpoint_path,
+                split_mode=args.split_mode,
+                split_summary=split_summary,
+                restore_summary=restore_summary,
+                reproducibility_metadata=reproducibility_metadata,
+                warm_start_checkpoint_metadata=warm_start_checkpoint_metadata,
+                frozen_shortlist_checkpoint_metadata=frozen_shortlist_checkpoint_metadata,
+                checkpoint_identity_match=checkpoint_identity_match,
+                status="interrupted",
+            )
+            print(
+                json.dumps(
+                    {
+                        "status": "interrupted",
+                        "latest_checkpoint": str(latest_path),
+                        "best_checkpoint": str(best_path),
+                        "report": str(report_path),
+                    },
+                    indent=2,
+                ),
+                flush=True,
+            )
+            return
+
+        if best_model_state is not None:
+            model.load_state_dict(best_model_state, strict=False)
+        if best_winner_head_state is not None:
+            winner_head.load_state_dict(best_winner_head_state, strict=False)
+
+        setattr(test_loader, "_current_epoch", best_epoch)
+        setattr(test_loader, "_split_name", "test")
+        test_metrics = hard_source_finetune_trainer.evaluate_loader(test_loader)
+        print(
+            json.dumps(
+                {"two_head_shortlist_winner_v2_rebuild_hard_source_finetune_test_metrics": test_metrics},
+                indent=2,
+            ),
+            flush=True,
+        )
+        latest_path, best_path, archive_path, report_path = _save_two_head_shortlist_winner_v2_rebuild_hard_source_finetune_state(
+            model=model,
+            winner_head=winner_head,
+            optimizer_state=hard_source_finetune_trainer.optimizer.state_dict(),
+            trainable_module_summary=hard_source_finetune_trainer.trainable_module_summary,
+            frozen_module_summary=hard_source_finetune_trainer.frozen_module_summary,
+            frozen_shortlist_checkpoint_path=frozen_shortlist_checkpoint_path,
+            winner_finetune_init_checkpoint_path=winner_finetune_init_checkpoint_path,
+            winner_finetune_init_checkpoint_metadata=winner_finetune_init_checkpoint_metadata,
+            winner_finetune_init_load_summary=winner_finetune_init_load_summary,
+            output_dir=output_dir,
+            artifact_dir=artifact_dir,
+            args=args,
+            history=history,
+            best_epoch=best_epoch,
+            best_selection=best_selection,
+            best_model_state=best_model_state,
+            best_winner_head_state=best_winner_head_state,
+            base_config=base_config,
+            checkpoint_path=checkpoint_path,
+            split_mode=args.split_mode,
+            split_summary=split_summary,
+            restore_summary=restore_summary,
+            reproducibility_metadata=reproducibility_metadata,
+            warm_start_checkpoint_metadata=warm_start_checkpoint_metadata,
+            frozen_shortlist_checkpoint_metadata=frozen_shortlist_checkpoint_metadata,
+            checkpoint_identity_match=checkpoint_identity_match,
+            test_metrics=test_metrics,
+            status="completed",
+        )
+        print(
+            json.dumps(
+                {
+                    "status": "completed",
+                    "latest_checkpoint": str(latest_path),
+                    "best_checkpoint": str(best_path),
+                    "archive_checkpoint": str(archive_path),
+                    "report": str(report_path),
+                },
+                indent=2,
+            ),
+            flush=True,
+        )
+        return
 
     if bool(getattr(base_config, "enable_two_head_shortlist_winner_v2_rebuild", False)):
         atom_dim = int(getattr(base_config, "som_branch_dim", getattr(base_config, "hidden_dim", 128)))
@@ -2781,6 +3575,10 @@ def main() -> None:
                     split_mode=args.split_mode,
                     split_summary=split_summary,
                     restore_summary=restore_summary,
+                    reproducibility_metadata=reproducibility_metadata,
+                    warm_start_checkpoint_metadata=warm_start_checkpoint_metadata,
+                    frozen_shortlist_checkpoint_metadata=frozen_shortlist_checkpoint_metadata,
+                    checkpoint_identity_match=checkpoint_identity_match,
                     status="running",
                 )
 
@@ -2814,6 +3612,10 @@ def main() -> None:
                 split_mode=args.split_mode,
                 split_summary=split_summary,
                 restore_summary=restore_summary,
+                reproducibility_metadata=reproducibility_metadata,
+                warm_start_checkpoint_metadata=warm_start_checkpoint_metadata,
+                frozen_shortlist_checkpoint_metadata=frozen_shortlist_checkpoint_metadata,
+                checkpoint_identity_match=checkpoint_identity_match,
                 status="interrupted",
             )
             print(
@@ -2859,6 +3661,10 @@ def main() -> None:
             split_mode=args.split_mode,
             split_summary=split_summary,
             restore_summary=restore_summary,
+            reproducibility_metadata=reproducibility_metadata,
+            warm_start_checkpoint_metadata=warm_start_checkpoint_metadata,
+            frozen_shortlist_checkpoint_metadata=frozen_shortlist_checkpoint_metadata,
+            checkpoint_identity_match=checkpoint_identity_match,
             test_metrics=test_metrics,
             status="completed",
         )
