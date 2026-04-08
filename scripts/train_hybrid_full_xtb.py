@@ -33,9 +33,11 @@ from enzyme_software.liquid_nn_v2.features.steric_features import StructureLibra
 from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM
 from enzyme_software.liquid_nn_v2.model.distilled_proposer_head import DistilledProposerHead
 from enzyme_software.liquid_nn_v2.model.pairwise_head import PairwiseHead
+from enzyme_software.liquid_nn_v2.model.two_head_shortlist_winner import ShortlistHead, WinnerHead
 from enzyme_software.liquid_nn_v2.training.episode_logger import EpisodeLogger
 from enzyme_software.liquid_nn_v2.training.pairwise_distilled_proposer_trainer import PairwiseDistilledProposerTrainer
 from enzyme_software.liquid_nn_v2.training.pairwise_probe_trainer import PairwiseProbeTrainer
+from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_trainer import TwoHeadShortlistWinnerTrainer
 from enzyme_software.liquid_nn_v2.training.trainer import Trainer
 
 
@@ -240,6 +242,18 @@ def _collect_model_overrides() -> dict[str, int | float | str]:
         "HYBRID_COLAB_DISTILLED_PROPOSER_STUDENT_LR_SCALE": (_env_float, "distilled_proposer_student_lr_scale"),
         "HYBRID_COLAB_DISTILLED_PROPOSER_UNFROZEN_HEAD_LR_SCALE": (_env_float, "distilled_proposer_unfrozen_head_lr_scale"),
         "HYBRID_COLAB_DISTILLED_PROPOSER_UNFROZEN_BACKBONE_LR_SCALE": (_env_float, "distilled_proposer_unfrozen_backbone_lr_scale"),
+        "HYBRID_COLAB_ENABLE_TWO_HEAD_SHORTLIST_WINNER": (_env_int, "enable_two_head_shortlist_winner"),
+        "HYBRID_COLAB_SHORTLIST_TOPK": (_env_int, "shortlist_topk"),
+        "HYBRID_COLAB_SHORTLIST_HEAD_HIDDEN_DIM": (_env_int, "shortlist_head_hidden_dim"),
+        "HYBRID_COLAB_SHORTLIST_HEAD_DROPOUT": (_env_float, "shortlist_head_dropout"),
+        "HYBRID_COLAB_WINNER_HEAD_HIDDEN_DIM": (_env_int, "winner_head_hidden_dim"),
+        "HYBRID_COLAB_WINNER_HEAD_DROPOUT": (_env_float, "winner_head_dropout"),
+        "HYBRID_COLAB_SHORTLIST_LOSS_WEIGHT": (_env_float, "shortlist_loss_weight"),
+        "HYBRID_COLAB_WINNER_LOSS_WEIGHT": (_env_float, "winner_loss_weight"),
+        "HYBRID_COLAB_TRAIN_WINNER_ONLY_ON_HITS": (_env_int, "train_winner_only_on_hits"),
+        "HYBRID_COLAB_SHORTLIST_USE_EXISTING_SITE_LOSS": (_env_int, "shortlist_use_existing_site_loss"),
+        "HYBRID_COLAB_SHORTLIST_SELECTION_METRIC": (_env_str, "shortlist_selection_metric"),
+        "HYBRID_COLAB_TWO_HEAD_LOG_EVERY_EPOCH": (_env_int, "two_head_log_every_epoch"),
     }
     overrides: dict[str, int | float | str] = {}
     for env_name, (parser, field_name) in mapping.items():
@@ -1268,6 +1282,138 @@ def _save_pairwise_distilled_proposer_state(
     return latest_path, best_path, archive_path, report_path
 
 
+def _save_two_head_shortlist_winner_state(
+    *,
+    model,
+    shortlist_head,
+    winner_head,
+    optimizer_state,
+    trainable_module_summary,
+    frozen_module_summary,
+    output_dir: Path,
+    artifact_dir: Path,
+    args,
+    history,
+    best_epoch: int,
+    best_selection,
+    best_model_state,
+    best_shortlist_head_state,
+    best_winner_head_state,
+    base_config,
+    checkpoint_path: Path,
+    split_mode: str,
+    split_summary: dict[str, object],
+    test_metrics=None,
+    status: str = "running",
+):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    latest_path = output_dir / "two_head_shortlist_winner_latest.pt"
+    best_path = output_dir / "two_head_shortlist_winner_best.pt"
+    archive_path = output_dir / f"two_head_shortlist_winner_{timestamp}.pt"
+    report_path = artifact_dir / f"two_head_shortlist_winner_report_{timestamp}.json"
+    history_len = int(len(history))
+    final_epoch = int(history[-1]["epoch"]) if history else 0
+    last_train_metrics = dict(history[-1].get("train") or {}) if history else {}
+    last_val_metrics = dict(history[-1].get("val") or {}) if history else {}
+    best_val_entry = next((row for row in history if int(row.get("epoch", 0)) == int(best_epoch)), None) if history else None
+    best_val_metrics = dict((best_val_entry or {}).get("val") or {})
+    best_train_metrics = dict((best_val_entry or {}).get("train") or {})
+    effective_split_summary = _effective_split_summary(split_summary)
+    checkpoint = {
+        "model_state_dict": _initialized_state_dict(model),
+        "shortlist_head_state_dict": _initialized_state_dict(shortlist_head),
+        "winner_head_state_dict": _initialized_state_dict(winner_head),
+        "optimizer_state_dict": optimizer_state,
+        "config": {
+            "base_model": base_config.__dict__,
+            "two_head_shortlist_winner": {
+                "shortlist_topk": int(getattr(base_config, "shortlist_topk", 6)),
+                "shortlist_head_hidden_dim": getattr(base_config, "shortlist_head_hidden_dim", None),
+                "shortlist_head_dropout": float(getattr(base_config, "shortlist_head_dropout", 0.1)),
+                "winner_head_hidden_dim": getattr(base_config, "winner_head_hidden_dim", None),
+                "winner_head_dropout": float(getattr(base_config, "winner_head_dropout", 0.1)),
+                "shortlist_loss_weight": float(getattr(base_config, "shortlist_loss_weight", 1.0)),
+                "winner_loss_weight": float(getattr(base_config, "winner_loss_weight", 1.0)),
+                "train_winner_only_on_hits": bool(getattr(base_config, "train_winner_only_on_hits", True)),
+                "shortlist_use_existing_site_loss": bool(getattr(base_config, "shortlist_use_existing_site_loss", True)),
+                "shortlist_selection_metric": str(getattr(base_config, "shortlist_selection_metric", "recall_at_6")),
+            },
+        },
+        "training_config": TrainingConfig(
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            early_stopping_patience=args.early_stopping_patience,
+        ).__dict__,
+        "two_head_shortlist_winner_enabled": True,
+        "checkpoint_source": str(checkpoint_path),
+        "best_epoch": int(best_epoch),
+        "best_selection": list(best_selection) if best_selection is not None else None,
+        "history_len": history_len,
+        "final_epoch": final_epoch,
+        "split_mode": split_mode,
+        "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+        "split_summary": split_summary,
+        "effective_split_summary": effective_split_summary,
+        "last_train_metrics": last_train_metrics,
+        "last_val_metrics": last_val_metrics,
+        "best_train_metrics": best_train_metrics,
+        "best_val_metrics": best_val_metrics,
+        "test_metrics": test_metrics,
+        "history": history,
+        "status": status,
+        "trainable_module_summary": list(trainable_module_summary or []),
+        "frozen_module_summary": list(frozen_module_summary or []),
+    }
+    torch.save(checkpoint, latest_path)
+    torch.save(checkpoint, archive_path)
+    if best_model_state is not None:
+        best_checkpoint = dict(checkpoint)
+        best_checkpoint["model_state_dict"] = best_model_state
+        best_checkpoint["shortlist_head_state_dict"] = best_shortlist_head_state
+        best_checkpoint["winner_head_state_dict"] = best_winner_head_state
+        best_checkpoint["status"] = f"{status}_best"
+        torch.save(best_checkpoint, best_path)
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": status,
+                "two_head_shortlist_winner_enabled": True,
+                "checkpoint_source": str(checkpoint_path),
+                "best_epoch": int(best_epoch),
+                "best_selection": list(best_selection) if best_selection is not None else None,
+                "history_len": history_len,
+                "final_epoch": final_epoch,
+                "split_mode": split_mode,
+                "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+                "split_summary": split_summary,
+                "effective_split_summary": effective_split_summary,
+                "last_train_metrics": last_train_metrics,
+                "last_val_metrics": last_val_metrics,
+                "best_train_metrics": best_train_metrics,
+                "best_val_metrics": best_val_metrics,
+                "test_metrics": test_metrics,
+                "history": history,
+                "shortlist_topk": int(getattr(base_config, "shortlist_topk", 6)),
+                "shortlist_head_hidden_dim": getattr(base_config, "shortlist_head_hidden_dim", None),
+                "shortlist_head_dropout": float(getattr(base_config, "shortlist_head_dropout", 0.1)),
+                "winner_head_hidden_dim": getattr(base_config, "winner_head_hidden_dim", None),
+                "winner_head_dropout": float(getattr(base_config, "winner_head_dropout", 0.1)),
+                "shortlist_loss_weight": float(getattr(base_config, "shortlist_loss_weight", 1.0)),
+                "winner_loss_weight": float(getattr(base_config, "winner_loss_weight", 1.0)),
+                "train_winner_only_on_hits": bool(getattr(base_config, "train_winner_only_on_hits", True)),
+                "shortlist_use_existing_site_loss": bool(getattr(base_config, "shortlist_use_existing_site_loss", True)),
+                "shortlist_selection_metric": str(getattr(base_config, "shortlist_selection_metric", "recall_at_6")),
+                "trainable_module_summary": list(trainable_module_summary or []),
+                "frozen_module_summary": list(frozen_module_summary or []),
+            },
+            indent=2,
+        )
+    )
+    return latest_path, best_path, archive_path, report_path
+
+
 def main() -> None:
     require_torch()
     parser = argparse.ArgumentParser(description="Train hybrid model with full xTB manual priors")
@@ -1631,6 +1777,215 @@ def main() -> None:
     )
     if model_overrides:
         print(f"Model overrides: {model_overrides}", flush=True)
+
+    if bool(getattr(base_config, "enable_two_head_shortlist_winner", False)):
+        atom_dim = int(getattr(base_config, "som_branch_dim", getattr(base_config, "hidden_dim", 128)))
+        shortlist_hidden_dim = getattr(base_config, "shortlist_head_hidden_dim", None)
+        winner_hidden_dim = getattr(base_config, "winner_head_hidden_dim", None)
+        shortlist_head = ShortlistHead(
+            atom_dim,
+            hidden_dim=(int(shortlist_hidden_dim) if shortlist_hidden_dim is not None and int(shortlist_hidden_dim) > 0 else None),
+            dropout=float(getattr(base_config, "shortlist_head_dropout", 0.1)),
+        )
+        winner_head = WinnerHead(
+            atom_dim + 3,
+            hidden_dim=(int(winner_hidden_dim) if winner_hidden_dim is not None and int(winner_hidden_dim) > 0 else None),
+            dropout=float(getattr(base_config, "winner_head_dropout", 0.1)),
+        )
+        two_head_trainer = TwoHeadShortlistWinnerTrainer(
+            model=model,
+            shortlist_head=shortlist_head,
+            winner_head=winner_head,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            shortlist_topk=int(getattr(base_config, "shortlist_topk", 6)),
+            shortlist_loss_weight=float(getattr(base_config, "shortlist_loss_weight", 1.0)),
+            winner_loss_weight=float(getattr(base_config, "winner_loss_weight", 1.0)),
+            train_winner_only_on_hits=bool(getattr(base_config, "train_winner_only_on_hits", True)),
+            shortlist_use_existing_site_loss=bool(getattr(base_config, "shortlist_use_existing_site_loss", True)),
+            shortlist_selection_metric=str(getattr(base_config, "shortlist_selection_metric", "recall_at_6")),
+            device=device,
+        )
+        print(
+            "two_head_shortlist_winner enabled | "
+            f"trainable_modules={two_head_trainer.trainable_module_summary} | "
+            f"frozen_modules={two_head_trainer.frozen_module_summary}",
+            flush=True,
+        )
+        history = []
+        best_epoch = 0
+        best_selection = None
+        best_model_state = None
+        best_shortlist_head_state = None
+        best_winner_head_state = None
+        epochs_without_improvement = 0
+
+        selection_metric = str(getattr(base_config, "shortlist_selection_metric", "recall_at_6") or "recall_at_6").strip().lower()
+
+        def _two_head_selection_tuple(metrics: dict[str, object]) -> tuple[float, float, float]:
+            primary = float(metrics.get(selection_metric, 0.0))
+            secondary = float(metrics.get("end_to_end_top1", 0.0))
+            tertiary = float(metrics.get("winner_acc_given_hit", 0.0))
+            if selection_metric == "end_to_end_top1":
+                secondary = float(metrics.get("recall_at_6", 0.0))
+                tertiary = float(metrics.get("winner_acc_given_hit", 0.0))
+            elif selection_metric == "winner_acc_given_hit":
+                secondary = float(metrics.get("end_to_end_top1", 0.0))
+                tertiary = float(metrics.get("recall_at_6", 0.0))
+            return (primary, secondary, tertiary)
+
+        try:
+            for epoch in range(args.epochs):
+                setattr(train_loader, "_current_epoch", epoch)
+                setattr(train_loader, "_split_name", "train")
+                train_metrics = two_head_trainer.train_loader_epoch(train_loader)
+
+                setattr(val_loader, "_current_epoch", epoch)
+                setattr(val_loader, "_split_name", "val")
+                val_metrics = two_head_trainer.evaluate_loader(val_loader)
+                history.append({"epoch": epoch + 1, "train": train_metrics, "val": val_metrics})
+
+                selection = _two_head_selection_tuple(val_metrics)
+                if best_selection is None or selection > best_selection:
+                    best_selection = selection
+                    best_epoch = epoch + 1
+                    best_model_state = _initialized_state_dict(model)
+                    best_shortlist_head_state = _initialized_state_dict(shortlist_head)
+                    best_winner_head_state = _initialized_state_dict(winner_head)
+                    epochs_without_improvement = 0
+                else:
+                    epochs_without_improvement += 1
+
+                if bool(getattr(base_config, "two_head_log_every_epoch", True)):
+                    print(
+                        f"Epoch {epoch + 1:3d} | "
+                        f"shortlist_loss={train_metrics.get('shortlist_loss', 0.0):.4f} | "
+                        f"winner_loss={train_metrics.get('winner_loss', 0.0):.4f} | "
+                        f"val_recall6={val_metrics.get('recall_at_6', 0.0):.3f} | "
+                        f"val_recall12={val_metrics.get('recall_at_12', 0.0):.3f} | "
+                        f"val_winner={val_metrics.get('winner_acc_given_hit', 0.0):.3f} | "
+                        f"val_e2e_top1={val_metrics.get('end_to_end_top1', 0.0):.3f} | "
+                        f"val_shortlist_hit={val_metrics.get('shortlist_hit_fraction', 0.0):.3f}",
+                        flush=True,
+                    )
+
+                _save_two_head_shortlist_winner_state(
+                    model=model,
+                    shortlist_head=shortlist_head,
+                    winner_head=winner_head,
+                    optimizer_state=two_head_trainer.optimizer.state_dict(),
+                    trainable_module_summary=two_head_trainer.trainable_module_summary,
+                    frozen_module_summary=two_head_trainer.frozen_module_summary,
+                    output_dir=output_dir,
+                    artifact_dir=artifact_dir,
+                    args=args,
+                    history=history,
+                    best_epoch=best_epoch,
+                    best_selection=best_selection,
+                    best_model_state=best_model_state,
+                    best_shortlist_head_state=best_shortlist_head_state,
+                    best_winner_head_state=best_winner_head_state,
+                    base_config=base_config,
+                    checkpoint_path=checkpoint_path,
+                    split_mode=args.split_mode,
+                    split_summary=split_summary,
+                    status="running",
+                )
+
+                if epochs_without_improvement >= args.early_stopping_patience:
+                    print(
+                        f"Early stopping two_head_shortlist_winner after epoch {epoch + 1}: "
+                        f"no improvement for {args.early_stopping_patience} epoch(s).",
+                        flush=True,
+                    )
+                    break
+
+        except KeyboardInterrupt:
+            print("\nInterrupted. Saving current two_head_shortlist_winner progress...", flush=True)
+            latest_path, best_path, _, report_path = _save_two_head_shortlist_winner_state(
+                model=model,
+                shortlist_head=shortlist_head,
+                winner_head=winner_head,
+                optimizer_state=two_head_trainer.optimizer.state_dict(),
+                trainable_module_summary=two_head_trainer.trainable_module_summary,
+                frozen_module_summary=two_head_trainer.frozen_module_summary,
+                output_dir=output_dir,
+                artifact_dir=artifact_dir,
+                args=args,
+                history=history,
+                best_epoch=best_epoch,
+                best_selection=best_selection,
+                best_model_state=best_model_state,
+                best_shortlist_head_state=best_shortlist_head_state,
+                best_winner_head_state=best_winner_head_state,
+                base_config=base_config,
+                checkpoint_path=checkpoint_path,
+                split_mode=args.split_mode,
+                split_summary=split_summary,
+                status="interrupted",
+            )
+            print(
+                json.dumps(
+                    {
+                        "status": "interrupted",
+                        "latest_checkpoint": str(latest_path),
+                        "best_checkpoint": str(best_path),
+                        "report": str(report_path),
+                    },
+                    indent=2,
+                ),
+                flush=True,
+            )
+            return
+
+        if best_model_state is not None:
+            model.load_state_dict(best_model_state, strict=False)
+        if best_shortlist_head_state is not None:
+            shortlist_head.load_state_dict(best_shortlist_head_state, strict=False)
+        if best_winner_head_state is not None:
+            winner_head.load_state_dict(best_winner_head_state, strict=False)
+
+        setattr(test_loader, "_current_epoch", best_epoch)
+        setattr(test_loader, "_split_name", "test")
+        test_metrics = two_head_trainer.evaluate_loader(test_loader)
+        print(json.dumps({"two_head_shortlist_winner_test_metrics": test_metrics}, indent=2), flush=True)
+        latest_path, best_path, archive_path, report_path = _save_two_head_shortlist_winner_state(
+            model=model,
+            shortlist_head=shortlist_head,
+            winner_head=winner_head,
+            optimizer_state=two_head_trainer.optimizer.state_dict(),
+            trainable_module_summary=two_head_trainer.trainable_module_summary,
+            frozen_module_summary=two_head_trainer.frozen_module_summary,
+            output_dir=output_dir,
+            artifact_dir=artifact_dir,
+            args=args,
+            history=history,
+            best_epoch=best_epoch,
+            best_selection=best_selection,
+            best_model_state=best_model_state,
+            best_shortlist_head_state=best_shortlist_head_state,
+            best_winner_head_state=best_winner_head_state,
+            base_config=base_config,
+            checkpoint_path=checkpoint_path,
+            split_mode=args.split_mode,
+            split_summary=split_summary,
+            test_metrics=test_metrics,
+            status="completed",
+        )
+        print(
+            json.dumps(
+                {
+                    "status": "completed",
+                    "latest_checkpoint": str(latest_path),
+                    "best_checkpoint": str(best_path),
+                    "archive_checkpoint": str(archive_path),
+                    "report": str(report_path),
+                },
+                indent=2,
+            ),
+            flush=True,
+        )
+        return
 
     if bool(getattr(base_config, "enable_pairwise_distilled_proposer", False)):
         # pairwise_distilled_proposer branch:

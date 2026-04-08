@@ -163,6 +163,18 @@ class ModelConfig:
     distilled_proposer_student_lr_scale: float = 1.0
     distilled_proposer_unfrozen_head_lr_scale: float = 0.1
     distilled_proposer_unfrozen_backbone_lr_scale: float = 0.05
+    enable_two_head_shortlist_winner: bool = False
+    shortlist_topk: int = 6
+    shortlist_head_hidden_dim: Optional[int] = None
+    shortlist_head_dropout: float = 0.1
+    winner_head_hidden_dim: Optional[int] = None
+    winner_head_dropout: float = 0.1
+    shortlist_loss_weight: float = 1.0
+    winner_loss_weight: float = 1.0
+    train_winner_only_on_hits: bool = True
+    shortlist_use_existing_site_loss: bool = True
+    shortlist_selection_metric: str = "recall_at_6"
+    two_head_log_every_epoch: bool = True
     candidate_mask_mode: str = "hard"
     candidate_mask_logit_bias: float = 2.0
     disable_cyp_task: bool = False
@@ -438,6 +450,22 @@ class ModelConfig:
         self.site_source_weight_metxbiodb = max(0.1, float(self.site_source_weight_metxbiodb))
         self.site_source_weight_attnsom = max(0.1, float(self.site_source_weight_attnsom))
         self.site_source_weight_cyp_dbs_external = max(0.1, float(self.site_source_weight_cyp_dbs_external))
+        self.enable_two_head_shortlist_winner = bool(self.enable_two_head_shortlist_winner)
+        self.shortlist_topk = max(1, int(self.shortlist_topk))
+        self.shortlist_head_hidden_dim = (
+            None if self.shortlist_head_hidden_dim is None else max(1, int(self.shortlist_head_hidden_dim))
+        )
+        self.shortlist_head_dropout = min(max(float(self.shortlist_head_dropout), 0.0), 0.5)
+        self.winner_head_hidden_dim = (
+            None if self.winner_head_hidden_dim is None else max(1, int(self.winner_head_hidden_dim))
+        )
+        self.winner_head_dropout = min(max(float(self.winner_head_dropout), 0.0), 0.5)
+        self.shortlist_loss_weight = max(0.0, float(self.shortlist_loss_weight))
+        self.winner_loss_weight = max(0.0, float(self.winner_loss_weight))
+        self.train_winner_only_on_hits = bool(self.train_winner_only_on_hits)
+        self.shortlist_use_existing_site_loss = bool(self.shortlist_use_existing_site_loss)
+        self.shortlist_selection_metric = str(self.shortlist_selection_metric or "recall_at_6").strip().lower() or "recall_at_6"
+        self.two_head_log_every_epoch = bool(self.two_head_log_every_epoch)
         self.candidate_mask_mode = str(self.candidate_mask_mode).strip().lower() or "hard"
         if self.candidate_mask_mode not in {"hard", "soft", "off"}:
             self.candidate_mask_mode = "hard"
