@@ -277,9 +277,16 @@ if TORCH_AVAILABLE:
                 modules.append(self.pairwise_head)
             for module in modules:
                 for param in module.parameters():
-                    if param.requires_grad:
+                    if param.requires_grad and self._is_initialized_parameter(param):
                         params.append(param)
             return params
+
+        def _is_initialized_parameter(self, param) -> bool:
+            _uninit_cls = getattr(torch.nn.parameter, "UninitializedParameter", None)
+            return not (_uninit_cls is not None and isinstance(param, _uninit_cls))
+
+        def _count_parameters(self, params) -> int:
+            return int(sum(param.numel() for param in params if self._is_initialized_parameter(param)))
 
         def _pairwise_aux_enabled(self) -> bool:
             model_config = getattr(self.model, "config", None)
@@ -290,13 +297,13 @@ if TORCH_AVAILABLE:
             seen = set()
             model_config = getattr(self.model, "config", None)
             if self.pairwise_head is not None:
-                params = [param for param in self.pairwise_head.parameters() if param.requires_grad]
+                params = [param for param in self.pairwise_head.parameters() if param.requires_grad and self._is_initialized_parameter(param)]
                 if params:
                     summary.append(
                         {
                             "name": "pairwise_head",
                             "lr": float(self.config.learning_rate),
-                            "param_count": int(sum(param.numel() for param in params)),
+                            "param_count": self._count_parameters(params),
                         }
                     )
                     seen.update(id(param) for param in params)
@@ -314,25 +321,29 @@ if TORCH_AVAILABLE:
                 ):
                     if module is None:
                         continue
-                    params = [param for param in module.parameters() if param.requires_grad and id(param) not in seen]
+                    params = [
+                        param
+                        for param in module.parameters()
+                        if param.requires_grad and self._is_initialized_parameter(param) and id(param) not in seen
+                    ]
                     if not params:
                         continue
                     summary.append(
                         {
                             "name": name,
                             "lr": float(lr_value),
-                            "param_count": int(sum(param.numel() for param in params)),
+                            "param_count": self._count_parameters(params),
                         }
                     )
                     seen.update(id(param) for param in params)
             else:
-                params = [param for param in self.model.parameters() if param.requires_grad]
+                params = [param for param in self.model.parameters() if param.requires_grad and self._is_initialized_parameter(param)]
                 if params:
                     summary.append(
                         {
                             "name": "model",
                             "lr": float(self.config.learning_rate),
-                            "param_count": int(sum(param.numel() for param in params)),
+                            "param_count": self._count_parameters(params),
                         }
                     )
             return summary
@@ -354,7 +365,11 @@ if TORCH_AVAILABLE:
             seen = set()
 
             def _append_group(name: str, params, lr_value: float) -> None:
-                filtered = [param for param in params if param.requires_grad and id(param) not in seen]
+                filtered = [
+                    param
+                    for param in params
+                    if param.requires_grad and self._is_initialized_parameter(param) and id(param) not in seen
+                ]
                 if not filtered:
                     return
                 groups.append(
