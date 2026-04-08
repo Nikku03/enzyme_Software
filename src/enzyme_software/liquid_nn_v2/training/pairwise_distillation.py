@@ -9,6 +9,10 @@ if TORCH_AVAILABLE:
     def zero_pairwise_distillation_metrics() -> Dict[str, float]:
         return {
             "distilled_kl_loss": 0.0,
+            "distilled_supervised_loss": 0.0,
+            "distilled_total_loss": 0.0,
+            "distilled_supervised_weight": 0.0,
+            "distilled_distill_weight": 0.0,
             "distilled_target_entropy_mean": 0.0,
             "distilled_target_max_mean": 0.0,
             "distilled_target_argmax_match_true_fraction": 0.0,
@@ -17,6 +21,8 @@ if TORCH_AVAILABLE:
             "candidate_count_mean": 0.0,
             "skipped_singleton_candidate_molecules": 0.0,
             "distilled_molecule_count": 0.0,
+            "distilled_supervised_molecule_count": 0.0,
+            "distilled_total_molecule_count": 0.0,
         }
 
 

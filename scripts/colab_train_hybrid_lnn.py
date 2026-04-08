@@ -1768,6 +1768,13 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_PAIRWISE_PROBE_HIDDEN_SCALE": "2.0",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
     },
+    "cyp3a4_pairwise_distilled_proposer_dpb": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_pairwise_distilled_proposer",
+        "HYBRID_COLAB_ENABLE_PAIRWISE_DISTILLED_PROPOSER_SUPERVISED": "1",
+        "HYBRID_COLAB_DISTILLED_PROPOSER_SUPERVISED_WEIGHT": "1.0",
+        "HYBRID_COLAB_DISTILLED_PROPOSER_DISTILL_WEIGHT": "0.1",
+        "HYBRID_COLAB_DISTILLED_PROPOSER_USE_MAIN_SITE_LOSS_IMPL": "1",
+    },
     "cyp3a4_sideinfo_fullrank_phase5a_baseline_seed22": {
         "HYBRID_COLAB_DATASET": "data/prepared_training/main8_cyp3a4_augmented.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",

@@ -154,6 +154,10 @@ class ModelConfig:
     distilled_proposer_trainable_proposer_head_only: bool = True
     distilled_proposer_unfreeze_last_backbone_block: bool = False
     distilled_proposer_pairwise_teacher_checkpoint_path: str = ""
+    enable_pairwise_distilled_proposer_supervised: bool = False
+    distilled_proposer_supervised_weight: float = 1.0
+    distilled_proposer_distill_weight: float = 0.1
+    distilled_proposer_use_main_site_loss_impl: bool = True
     candidate_mask_mode: str = "hard"
     candidate_mask_logit_bias: float = 2.0
     disable_cyp_task: bool = False

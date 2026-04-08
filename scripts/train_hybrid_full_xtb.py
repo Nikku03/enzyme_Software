@@ -231,6 +231,10 @@ def _collect_model_overrides() -> dict[str, int | float | str]:
         "HYBRID_COLAB_DISTILLED_PROPOSER_TRAINABLE_PROPOSER_HEAD_ONLY": (_env_int, "distilled_proposer_trainable_proposer_head_only"),
         "HYBRID_COLAB_DISTILLED_PROPOSER_UNFREEZE_LAST_BACKBONE_BLOCK": (_env_int, "distilled_proposer_unfreeze_last_backbone_block"),
         "HYBRID_COLAB_DISTILLED_PROPOSER_PAIRWISE_TEACHER_CHECKPOINT": (_env_str, "distilled_proposer_pairwise_teacher_checkpoint_path"),
+        "HYBRID_COLAB_ENABLE_PAIRWISE_DISTILLED_PROPOSER_SUPERVISED": (_env_int, "enable_pairwise_distilled_proposer_supervised"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_SUPERVISED_WEIGHT": (_env_float, "distilled_proposer_supervised_weight"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_DISTILL_WEIGHT": (_env_float, "distilled_proposer_distill_weight"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_USE_MAIN_SITE_LOSS_IMPL": (_env_int, "distilled_proposer_use_main_site_loss_impl"),
     }
     overrides: dict[str, int | float | str] = {}
     for env_name, (parser, field_name) in mapping.items():
@@ -1139,6 +1143,9 @@ def _save_pairwise_distilled_proposer_state(
                 "candidate_topk": int(getattr(base_config, "distilled_proposer_candidate_topk", 6)),
                 "target_temperature": float(getattr(base_config, "distilled_proposer_target_temperature", 1.0)),
                 "loss_type": str(getattr(base_config, "distilled_proposer_loss_type", "kl")),
+                "supervised_enabled": bool(getattr(base_config, "enable_pairwise_distilled_proposer_supervised", False)),
+                "supervised_weight": float(getattr(base_config, "distilled_proposer_supervised_weight", 1.0)),
+                "distill_weight": float(getattr(base_config, "distilled_proposer_distill_weight", 0.1)),
             },
         },
         "training_config": TrainingConfig(
@@ -1207,6 +1214,14 @@ def _save_pairwise_distilled_proposer_state(
                 "distilled_proposer_restrict_to_candidates": bool(getattr(base_config, "distilled_proposer_restrict_to_candidates", True)),
                 "distilled_proposer_trainable_proposer_head_only": bool(getattr(base_config, "distilled_proposer_trainable_proposer_head_only", True)),
                 "distilled_proposer_unfreeze_last_backbone_block": bool(getattr(base_config, "distilled_proposer_unfreeze_last_backbone_block", False)),
+                "enable_pairwise_distilled_proposer_supervised": bool(
+                    getattr(base_config, "enable_pairwise_distilled_proposer_supervised", False)
+                ),
+                "distilled_proposer_supervised_weight": float(getattr(base_config, "distilled_proposer_supervised_weight", 1.0)),
+                "distilled_proposer_distill_weight": float(getattr(base_config, "distilled_proposer_distill_weight", 0.1)),
+                "distilled_proposer_use_main_site_loss_impl": bool(
+                    getattr(base_config, "distilled_proposer_use_main_site_loss_impl", True)
+                ),
             },
             indent=2,
         )
@@ -1622,6 +1637,10 @@ def main() -> None:
             unfreeze_last_backbone_block=bool(getattr(base_config, "distilled_proposer_unfreeze_last_backbone_block", False)),
             distilled_head_lr_scale=float(getattr(base_config, "distilled_proposer_lr_scale", 1.0)),
             backbone_lr_scale=float(getattr(base_config, "distilled_proposer_backbone_lr_scale", 0.1)),
+            enable_supervised_site_loss=bool(getattr(base_config, "enable_pairwise_distilled_proposer_supervised", False)),
+            supervised_weight=float(getattr(base_config, "distilled_proposer_supervised_weight", 1.0)),
+            distill_weight=float(getattr(base_config, "distilled_proposer_distill_weight", 0.1)),
+            use_main_site_loss_impl=bool(getattr(base_config, "distilled_proposer_use_main_site_loss_impl", True)),
             device=device,
         )
         print(
