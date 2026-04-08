@@ -231,8 +231,9 @@ if TORCH_AVAILABLE:
             if self.site_loss_wrapper is None:
                 raise RuntimeError("Supervised distilled proposer requested without a site loss wrapper")
             site_mask = self._supervision_mask(batch)
+            student_site_logits = student_logits.view_as(batch["site_labels"])
             site_loss, _ = self.site_loss_wrapper.site_loss(
-                student_logits,
+                student_site_logits,
                 batch["site_labels"],
                 batch["batch"],
                 supervision_mask=site_mask,
