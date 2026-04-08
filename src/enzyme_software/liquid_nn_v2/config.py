@@ -245,6 +245,11 @@ class ModelConfig:
     winner_v2_3_normal_source_weight: float = 1.0
     winner_v2_3_hard_sources: str = "attnsom,cyp_dbs_external"
     winner_v2_3_log_feature_summary: bool = True
+    enable_two_head_shortlist_winner_v2_rebuild: bool = False
+    winner_v2_rebuild_hidden_dim: Optional[int] = None
+    winner_v2_rebuild_dropout: float = 0.1
+    winner_v2_rebuild_loss_weight: float = 1.0
+    winner_v2_rebuild_log_restore_summary: bool = True
     candidate_mask_mode: str = "hard"
     candidate_mask_logit_bias: float = 2.0
     disable_cyp_task: bool = False
@@ -606,6 +611,13 @@ class ModelConfig:
         self.winner_v2_3_normal_source_weight = max(0.0, float(self.winner_v2_3_normal_source_weight))
         self.winner_v2_3_hard_sources = str(self.winner_v2_3_hard_sources or "").strip().lower()
         self.winner_v2_3_log_feature_summary = bool(self.winner_v2_3_log_feature_summary)
+        self.enable_two_head_shortlist_winner_v2_rebuild = bool(self.enable_two_head_shortlist_winner_v2_rebuild)
+        self.winner_v2_rebuild_hidden_dim = (
+            None if self.winner_v2_rebuild_hidden_dim is None else max(1, int(self.winner_v2_rebuild_hidden_dim))
+        )
+        self.winner_v2_rebuild_dropout = min(max(float(self.winner_v2_rebuild_dropout), 0.0), 0.5)
+        self.winner_v2_rebuild_loss_weight = max(0.0, float(self.winner_v2_rebuild_loss_weight))
+        self.winner_v2_rebuild_log_restore_summary = bool(self.winner_v2_rebuild_log_restore_summary)
         self.candidate_mask_mode = str(self.candidate_mask_mode).strip().lower() or "hard"
         if self.candidate_mask_mode not in {"hard", "soft", "off"}:
             self.candidate_mask_mode = "hard"

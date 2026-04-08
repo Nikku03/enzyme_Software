@@ -1902,6 +1902,18 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_WINNER_V2_3_LOG_FEATURE_SUMMARY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
     },
+    "cyp3a4_two_head_shortlist_winner_v2_rebuild": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank",
+        "HYBRID_COLAB_EPOCHS": "15",
+        "HYBRID_COLAB_LR": "1e-4",
+        "HYBRID_COLAB_WD": "1e-4",
+        "HYBRID_COLAB_EARLY_STOPPING_PATIENCE": "5",
+        "HYBRID_COLAB_ENABLE_TWO_HEAD_SHORTLIST_WINNER_V2_REBUILD": "1",
+        "HYBRID_COLAB_FROZEN_SHORTLIST_TOPK": "6",
+        "HYBRID_COLAB_WINNER_V2_REBUILD_LOSS_WEIGHT": "1.0",
+        "HYBRID_COLAB_WINNER_V2_REBUILD_LOG_RESTORE_SUMMARY": "1",
+        "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
+    },
     "cyp3a4_sideinfo_fullrank_phase5a_baseline_seed22": {
         "HYBRID_COLAB_DATASET": "data/prepared_training/main8_cyp3a4_augmented.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
