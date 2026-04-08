@@ -42,10 +42,12 @@ from enzyme_software.liquid_nn_v2.model.two_head_shortlist_winner import (
     WinnerHeadV2_1,
     WinnerHeadV2_2,
     WinnerHeadV2_3,
+    WinnerHeadV2Context,
     winner_v2_feature_dim,
     winner_v2_1_feature_dim,
     winner_v2_2_feature_dim,
     winner_v2_3_feature_dim,
+    winner_v2_context_feature_dim,
 )
 from enzyme_software.liquid_nn_v2.training.episode_logger import EpisodeLogger
 from enzyme_software.liquid_nn_v2.training.pairwise_distilled_proposer_trainer import PairwiseDistilledProposerTrainer
@@ -54,6 +56,12 @@ from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_trainer imp
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_1_trainer import TwoHeadShortlistWinnerV2_1Trainer
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_2_trainer import TwoHeadShortlistWinnerV2_2Trainer
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_3_trainer import TwoHeadShortlistWinnerV2_3Trainer
+from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_dual_winner_routing_trainer import (
+    TwoHeadShortlistWinnerV2RebuildDualWinnerRoutingTrainer,
+)
+from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_context_features_trainer import (
+    TwoHeadShortlistWinnerV2RebuildContextFeaturesTrainer,
+)
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_hard_source_finetune_trainer import (
     TwoHeadShortlistWinnerV2RebuildHardSourceFinetuneTrainer,
 )
@@ -274,6 +282,58 @@ def _load_winner_head_init_checkpoint(
         "path": str(checkpoint_path),
         "missing_keys": list(getattr(load_result, "missing_keys", []) or []),
         "unexpected_keys": list(getattr(load_result, "unexpected_keys", []) or []),
+    }
+
+
+def _load_context_winner_head_init_checkpoint(
+    winner_head,
+    checkpoint_path: Path,
+    *,
+    device,
+) -> dict[str, object]:
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(
+            "winner context init checkpoint is missing. "
+            f"Missing checkpoint: {checkpoint_path}"
+        )
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+    winner_state = None
+    if isinstance(checkpoint, dict):
+        winner_state = checkpoint.get("winner_head_state_dict")
+        if winner_state is None and all(isinstance(key, str) for key in checkpoint.keys()):
+            winner_state = checkpoint
+    if not isinstance(winner_state, dict):
+        raise KeyError(
+            "winner context init checkpoint does not contain `winner_head_state_dict` "
+            f"and is not a raw winner-head state dict: {checkpoint_path}"
+        )
+    target_state = winner_head.state_dict()
+    loaded_keys = []
+    partial_keys = []
+    skipped_keys = []
+    for key, value in winner_state.items():
+        if key not in target_state:
+            skipped_keys.append(key)
+            continue
+        target_value = target_state[key]
+        if tuple(target_value.shape) == tuple(value.shape):
+            target_state[key] = value.detach().to(dtype=target_value.dtype)
+            loaded_keys.append(key)
+            continue
+        if key == "net.0.weight" and len(target_value.shape) == 2 and len(value.shape) == 2:
+            if int(target_value.shape[0]) == int(value.shape[0]) and int(target_value.shape[1]) >= int(value.shape[1]):
+                patched = target_value.clone()
+                patched[:, : int(value.shape[1])] = value.detach().to(dtype=target_value.dtype)
+                target_state[key] = patched
+                partial_keys.append(key)
+                continue
+        skipped_keys.append(key)
+    winner_head.load_state_dict(target_state, strict=False)
+    return {
+        "path": str(checkpoint_path),
+        "loaded_keys": loaded_keys,
+        "partial_keys": partial_keys,
+        "skipped_keys": skipped_keys,
     }
 
 
@@ -557,6 +617,39 @@ def _collect_model_overrides() -> dict[str, int | float | str]:
         ),
         "HYBRID_COLAB_WINNER_FINETUNE_INIT_CHECKPOINT": (_env_str, "winner_finetune_init_checkpoint_path"),
         "HYBRID_COLAB_HARD_SOURCE_FINETUNE_LR_SCALE": (_env_float, "hard_source_finetune_lr_scale"),
+        "HYBRID_COLAB_ENABLE_TWO_HEAD_SHORTLIST_WINNER_V2_REBUILD_DUAL_WINNER_ROUTING": (
+            _env_int,
+            "enable_two_head_shortlist_winner_v2_rebuild_dual_winner_routing",
+        ),
+        "HYBRID_COLAB_GLOBAL_WINNER_CHECKPOINT": (_env_str, "global_winner_checkpoint_path"),
+        "HYBRID_COLAB_HARD_SOURCE_WINNER_CHECKPOINT": (_env_str, "hard_source_winner_checkpoint_path"),
+        "HYBRID_COLAB_DUAL_WINNER_ROUTE_BY_SOURCE": (_env_int, "dual_winner_route_by_source"),
+        "HYBRID_COLAB_DUAL_WINNER_USE_GLOBAL_FOR_NON_HARD": (_env_int, "dual_winner_use_global_for_non_hard"),
+        "HYBRID_COLAB_DUAL_WINNER_USE_SPECIALIST_FOR_HARD": (_env_int, "dual_winner_use_specialist_for_hard"),
+        "HYBRID_COLAB_ENABLE_TWO_HEAD_SHORTLIST_WINNER_V2_REBUILD_CONTEXT_FEATURES": (
+            _env_int,
+            "enable_two_head_shortlist_winner_v2_rebuild_context_features",
+        ),
+        "HYBRID_COLAB_WINNER_CONTEXT_USE_SOURCE_FEATURES": (_env_int, "winner_context_use_source_features"),
+        "HYBRID_COLAB_WINNER_CONTEXT_SOURCE_EMBEDDING_DIM": (_env_int, "winner_context_source_embedding_dim"),
+        "HYBRID_COLAB_WINNER_CONTEXT_USE_HARD_SOURCE_INDICATOR": (_env_int, "winner_context_use_hard_source_indicator"),
+        "HYBRID_COLAB_WINNER_CONTEXT_USE_LOCAL_COMPETITION_FEATURES": (
+            _env_int,
+            "winner_context_use_local_competition_features",
+        ),
+        "HYBRID_COLAB_WINNER_CONTEXT_USE_RELATIVE_TOP_CANDIDATE_FEATURES": (
+            _env_int,
+            "winner_context_use_relative_top_candidate_features",
+        ),
+        "HYBRID_COLAB_WINNER_CONTEXT_USE_GEOMETRY_PROXY_FEATURES": (
+            _env_int,
+            "winner_context_use_geometry_proxy_features",
+        ),
+        "HYBRID_COLAB_WINNER_CONTEXT_USE_ONLY_EXISTING_REPO_FEATURES": (
+            _env_int,
+            "winner_context_use_only_existing_repo_features",
+        ),
+        "HYBRID_COLAB_WINNER_CONTEXT_INIT_CHECKPOINT": (_env_str, "winner_context_init_checkpoint_path"),
     }
     overrides: dict[str, int | float | str] = {}
     for env_name, (parser, field_name) in mapping.items():
@@ -2755,6 +2848,329 @@ def _save_two_head_shortlist_winner_v2_rebuild_hard_source_finetune_state(
     return latest_path, best_path, archive_path, report_path
 
 
+def _save_two_head_shortlist_winner_v2_rebuild_dual_winner_routing_state(
+    *,
+    model,
+    global_winner_head,
+    specialist_winner_head,
+    frozen_shortlist_checkpoint_path: Path,
+    global_winner_checkpoint_path: Path,
+    hard_source_winner_checkpoint_path: Path,
+    global_winner_checkpoint_metadata: dict[str, object],
+    hard_source_winner_checkpoint_metadata: dict[str, object],
+    global_winner_load_summary: dict[str, object],
+    hard_source_winner_load_summary: dict[str, object],
+    trainable_module_summary,
+    frozen_module_summary,
+    output_dir: Path,
+    artifact_dir: Path,
+    args,
+    history,
+    best_epoch: int,
+    best_selection,
+    base_config,
+    checkpoint_path: Path,
+    split_mode: str,
+    split_summary: dict[str, object],
+    restore_summary: dict[str, object],
+    reproducibility_metadata: dict[str, object],
+    warm_start_checkpoint_metadata: dict[str, object],
+    frozen_shortlist_checkpoint_metadata: dict[str, object],
+    checkpoint_identity_match: dict[str, object],
+    test_metrics=None,
+    status: str = "completed",
+):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    latest_path = output_dir / "two_head_shortlist_winner_v2_rebuild_dual_winner_routing_latest.pt"
+    best_path = output_dir / "two_head_shortlist_winner_v2_rebuild_dual_winner_routing_best.pt"
+    archive_path = output_dir / f"two_head_shortlist_winner_v2_rebuild_dual_winner_routing_{timestamp}.pt"
+    report_path = artifact_dir / f"two_head_shortlist_winner_v2_rebuild_dual_winner_routing_report_{timestamp}.json"
+    history_len = int(len(history))
+    final_epoch = int(history[-1]["epoch"]) if history else 0
+    last_val_metrics = dict(history[-1].get("val") or {}) if history else {}
+    best_val_entry = next((row for row in history if int(row.get("epoch", 0)) == int(best_epoch)), None) if history else None
+    best_val_metrics = dict((best_val_entry or {}).get("val") or {})
+    effective_split_summary = _effective_split_summary(split_summary)
+    branch_config = {
+        "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
+        "frozen_shortlist_topk": int(getattr(base_config, "frozen_shortlist_topk", 6)),
+        "global_winner_checkpoint_path": str(global_winner_checkpoint_path),
+        "hard_source_winner_checkpoint_path": str(hard_source_winner_checkpoint_path),
+        "hard_source_names": str(getattr(base_config, "hard_source_names", "")),
+        "dual_winner_route_by_source": bool(getattr(base_config, "dual_winner_route_by_source", True)),
+        "dual_winner_use_global_for_non_hard": bool(getattr(base_config, "dual_winner_use_global_for_non_hard", True)),
+        "dual_winner_use_specialist_for_hard": bool(getattr(base_config, "dual_winner_use_specialist_for_hard", True)),
+        "restore_summary": dict(restore_summary or {}),
+    }
+    checkpoint = {
+        "model_state_dict": _initialized_state_dict(model),
+        "global_winner_head_state_dict": _initialized_state_dict(global_winner_head),
+        "specialist_winner_head_state_dict": _initialized_state_dict(specialist_winner_head),
+        "config": {
+            "base_model": base_config.__dict__,
+            "two_head_shortlist_winner_v2_rebuild_dual_winner_routing": branch_config,
+        },
+        "training_config": TrainingConfig(
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            early_stopping_patience=args.early_stopping_patience,
+        ).__dict__,
+        "two_head_shortlist_winner_v2_rebuild_dual_winner_routing_enabled": True,
+        "checkpoint_source": str(checkpoint_path),
+        "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
+        "global_winner_checkpoint_path": str(global_winner_checkpoint_path),
+        "hard_source_winner_checkpoint_path": str(hard_source_winner_checkpoint_path),
+        "global_winner_checkpoint_metadata": dict(global_winner_checkpoint_metadata or {}),
+        "hard_source_winner_checkpoint_metadata": dict(hard_source_winner_checkpoint_metadata or {}),
+        "global_winner_load_summary": dict(global_winner_load_summary or {}),
+        "hard_source_winner_load_summary": dict(hard_source_winner_load_summary or {}),
+        "restore_summary": dict(restore_summary or {}),
+        "best_epoch": int(best_epoch),
+        "best_selection": list(best_selection) if best_selection is not None else None,
+        "history_len": history_len,
+        "final_epoch": final_epoch,
+        "split_mode": split_mode,
+        "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+        "split_summary": split_summary,
+        "effective_split_summary": effective_split_summary,
+        "last_val_metrics": last_val_metrics,
+        "best_val_metrics": best_val_metrics,
+        "test_metrics": test_metrics,
+        "history": history,
+        "status": status,
+        "trainable_module_summary": list(trainable_module_summary or []),
+        "frozen_module_summary": list(frozen_module_summary or []),
+        "seed": int(getattr(args, "seed", 0)),
+        "reproducibility_metadata": dict(reproducibility_metadata or {}),
+        "warm_start_checkpoint_metadata": dict(warm_start_checkpoint_metadata or {}),
+        "frozen_shortlist_checkpoint_metadata": dict(frozen_shortlist_checkpoint_metadata or {}),
+        "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+    }
+    torch.save(checkpoint, latest_path)
+    torch.save(checkpoint, archive_path)
+    torch.save(checkpoint, best_path)
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": status,
+                "two_head_shortlist_winner_v2_rebuild_dual_winner_routing_enabled": True,
+                "checkpoint_source": str(checkpoint_path),
+                "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
+                "global_winner_checkpoint_path": str(global_winner_checkpoint_path),
+                "hard_source_winner_checkpoint_path": str(hard_source_winner_checkpoint_path),
+                "global_winner_checkpoint_metadata": dict(global_winner_checkpoint_metadata or {}),
+                "hard_source_winner_checkpoint_metadata": dict(hard_source_winner_checkpoint_metadata or {}),
+                "global_winner_load_summary": dict(global_winner_load_summary or {}),
+                "hard_source_winner_load_summary": dict(hard_source_winner_load_summary or {}),
+                "restore_summary": dict(restore_summary or {}),
+                "best_epoch": int(best_epoch),
+                "best_selection": list(best_selection) if best_selection is not None else None,
+                "history_len": history_len,
+                "final_epoch": final_epoch,
+                "split_mode": split_mode,
+                "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+                "split_summary": split_summary,
+                "effective_split_summary": effective_split_summary,
+                "last_val_metrics": last_val_metrics,
+                "best_val_metrics": best_val_metrics,
+                "test_metrics": test_metrics,
+                "history": history,
+                **branch_config,
+                "trainable_module_summary": list(trainable_module_summary or []),
+                "frozen_module_summary": list(frozen_module_summary or []),
+                "seed": int(getattr(args, "seed", 0)),
+                "reproducibility_metadata": dict(reproducibility_metadata or {}),
+                "warm_start_checkpoint_metadata": dict(warm_start_checkpoint_metadata or {}),
+                "frozen_shortlist_checkpoint_metadata": dict(frozen_shortlist_checkpoint_metadata or {}),
+                "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+                "reproducibility_debug": {
+                    "seed": int(getattr(args, "seed", 0)),
+                    "split_mode": split_mode,
+                    "train_total": int(((effective_split_summary or {}).get("train") or {}).get("total", 0)),
+                    "val_total": int(((effective_split_summary or {}).get("val") or {}).get("total", 0)),
+                    "test_total": int(((effective_split_summary or {}).get("test") or {}).get("total", 0)),
+                    "warm_start_sha256": str((warm_start_checkpoint_metadata or {}).get("sha256", "")),
+                    "frozen_shortlist_sha256": str((frozen_shortlist_checkpoint_metadata or {}).get("sha256", "")),
+                    "global_winner_sha256": str((global_winner_checkpoint_metadata or {}).get("sha256", "")),
+                    "hard_source_winner_sha256": str((hard_source_winner_checkpoint_metadata or {}).get("sha256", "")),
+                    "deterministic_mode_enabled": bool((reproducibility_metadata or {}).get("deterministic_mode_enabled", False)),
+                    "seed_applied_before_model_init": bool((reproducibility_metadata or {}).get("seed_applied_before_model_init", False)),
+                    "seed_applied_before_dataloader_init": bool((reproducibility_metadata or {}).get("seed_applied_before_dataloader_init", False)),
+                    "seed_applied_before_winner_head_init": bool((reproducibility_metadata or {}).get("seed_applied_before_winner_head_init", False)),
+                    "sampler_seed": int(getattr(args, "seed", 0)),
+                    "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+                    "notes": list((reproducibility_metadata or {}).get("notes", []) or []),
+                },
+            },
+            indent=2,
+        )
+    )
+    return latest_path, best_path, archive_path, report_path
+
+
+def _save_two_head_shortlist_winner_v2_rebuild_context_features_state(
+    *,
+    model,
+    winner_head,
+    optimizer_state,
+    trainable_module_summary,
+    frozen_module_summary,
+    frozen_shortlist_checkpoint_path: Path,
+    winner_context_init_checkpoint_path: Path,
+    winner_context_init_checkpoint_metadata: dict[str, object],
+    winner_context_init_load_summary: dict[str, object],
+    output_dir: Path,
+    artifact_dir: Path,
+    args,
+    history,
+    best_epoch: int,
+    best_selection,
+    best_model_state,
+    best_winner_head_state,
+    base_config,
+    checkpoint_path: Path,
+    split_mode: str,
+    split_summary: dict[str, object],
+    restore_summary: dict[str, object],
+    reproducibility_metadata: dict[str, object],
+    warm_start_checkpoint_metadata: dict[str, object],
+    frozen_shortlist_checkpoint_metadata: dict[str, object],
+    checkpoint_identity_match: dict[str, object],
+    test_metrics=None,
+    status: str = "running",
+):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    latest_path = output_dir / "two_head_shortlist_winner_v2_rebuild_context_features_latest.pt"
+    best_path = output_dir / "two_head_shortlist_winner_v2_rebuild_context_features_best.pt"
+    archive_path = output_dir / f"two_head_shortlist_winner_v2_rebuild_context_features_{timestamp}.pt"
+    report_path = artifact_dir / f"two_head_shortlist_winner_v2_rebuild_context_features_report_{timestamp}.json"
+    history_len = int(len(history))
+    final_epoch = int(history[-1]["epoch"]) if history else 0
+    last_train_metrics = dict(history[-1].get("train") or {}) if history else {}
+    last_val_metrics = dict(history[-1].get("val") or {}) if history else {}
+    best_val_entry = next((row for row in history if int(row.get("epoch", 0)) == int(best_epoch)), None) if history else None
+    best_val_metrics = dict((best_val_entry or {}).get("val") or {})
+    best_train_metrics = dict((best_val_entry or {}).get("train") or {})
+    effective_split_summary = _effective_split_summary(split_summary)
+    branch_config = {
+        "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
+        "frozen_shortlist_topk": int(getattr(base_config, "frozen_shortlist_topk", 6)),
+        "winner_context_use_source_features": bool(getattr(base_config, "winner_context_use_source_features", True)),
+        "winner_context_source_embedding_dim": int(getattr(base_config, "winner_context_source_embedding_dim", 8)),
+        "winner_context_use_hard_source_indicator": bool(
+            getattr(base_config, "winner_context_use_hard_source_indicator", True)
+        ),
+        "winner_context_use_local_competition_features": bool(
+            getattr(base_config, "winner_context_use_local_competition_features", True)
+        ),
+        "winner_context_use_relative_top_candidate_features": bool(
+            getattr(base_config, "winner_context_use_relative_top_candidate_features", True)
+        ),
+        "winner_context_use_geometry_proxy_features": bool(
+            getattr(base_config, "winner_context_use_geometry_proxy_features", True)
+        ),
+        "winner_context_use_only_existing_repo_features": bool(
+            getattr(base_config, "winner_context_use_only_existing_repo_features", True)
+        ),
+        "winner_context_init_checkpoint_path": str(winner_context_init_checkpoint_path),
+        "hard_source_names": str(getattr(base_config, "hard_source_names", "")),
+        "restore_summary": dict(restore_summary or {}),
+    }
+    checkpoint = {
+        "model_state_dict": _initialized_state_dict(model),
+        "winner_head_state_dict": _initialized_state_dict(winner_head),
+        "optimizer_state_dict": optimizer_state,
+        "config": {
+            "base_model": base_config.__dict__,
+            "two_head_shortlist_winner_v2_rebuild_context_features": branch_config,
+        },
+        "training_config": TrainingConfig(
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            early_stopping_patience=args.early_stopping_patience,
+        ).__dict__,
+        "two_head_shortlist_winner_v2_rebuild_context_features_enabled": True,
+        "checkpoint_source": str(checkpoint_path),
+        "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
+        "winner_context_init_checkpoint_path": str(winner_context_init_checkpoint_path),
+        "winner_context_init_checkpoint_metadata": dict(winner_context_init_checkpoint_metadata or {}),
+        "winner_context_init_load_summary": dict(winner_context_init_load_summary or {}),
+        "restore_summary": dict(restore_summary or {}),
+        "best_epoch": int(best_epoch),
+        "best_selection": list(best_selection) if best_selection is not None else None,
+        "history_len": history_len,
+        "final_epoch": final_epoch,
+        "split_mode": split_mode,
+        "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+        "split_summary": split_summary,
+        "effective_split_summary": effective_split_summary,
+        "last_train_metrics": last_train_metrics,
+        "last_val_metrics": last_val_metrics,
+        "best_train_metrics": best_train_metrics,
+        "best_val_metrics": best_val_metrics,
+        "test_metrics": test_metrics,
+        "history": history,
+        "status": status,
+        "trainable_module_summary": list(trainable_module_summary or []),
+        "frozen_module_summary": list(frozen_module_summary or []),
+        "seed": int(getattr(args, "seed", 0)),
+        "reproducibility_metadata": dict(reproducibility_metadata or {}),
+        "warm_start_checkpoint_metadata": dict(warm_start_checkpoint_metadata or {}),
+        "frozen_shortlist_checkpoint_metadata": dict(frozen_shortlist_checkpoint_metadata or {}),
+        "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+    }
+    torch.save(checkpoint, latest_path)
+    torch.save(checkpoint, archive_path)
+    if best_model_state is not None:
+        best_checkpoint = dict(checkpoint)
+        best_checkpoint["model_state_dict"] = best_model_state
+        best_checkpoint["winner_head_state_dict"] = best_winner_head_state
+        best_checkpoint["status"] = f"{status}_best"
+        torch.save(best_checkpoint, best_path)
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": status,
+                "two_head_shortlist_winner_v2_rebuild_context_features_enabled": True,
+                "checkpoint_source": str(checkpoint_path),
+                "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
+                "winner_context_init_checkpoint_path": str(winner_context_init_checkpoint_path),
+                "winner_context_init_checkpoint_metadata": dict(winner_context_init_checkpoint_metadata or {}),
+                "winner_context_init_load_summary": dict(winner_context_init_load_summary or {}),
+                "restore_summary": dict(restore_summary or {}),
+                "best_epoch": int(best_epoch),
+                "best_selection": list(best_selection) if best_selection is not None else None,
+                "history_len": history_len,
+                "final_epoch": final_epoch,
+                "split_mode": split_mode,
+                "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+                "split_summary": split_summary,
+                "effective_split_summary": effective_split_summary,
+                "last_train_metrics": last_train_metrics,
+                "last_val_metrics": last_val_metrics,
+                "best_train_metrics": best_train_metrics,
+                "best_val_metrics": best_val_metrics,
+                "test_metrics": test_metrics,
+                "history": history,
+                **branch_config,
+                "trainable_module_summary": list(trainable_module_summary or []),
+                "frozen_module_summary": list(frozen_module_summary or []),
+                "seed": int(getattr(args, "seed", 0)),
+                "reproducibility_metadata": dict(reproducibility_metadata or {}),
+                "warm_start_checkpoint_metadata": dict(warm_start_checkpoint_metadata or {}),
+                "frozen_shortlist_checkpoint_metadata": dict(frozen_shortlist_checkpoint_metadata or {}),
+                "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+            },
+            indent=2,
+        )
+    )
+    return latest_path, best_path, archive_path, report_path
+
+
 def main() -> None:
     require_torch()
     parser = argparse.ArgumentParser(description="Train hybrid model with full xTB manual priors")
@@ -3137,6 +3553,8 @@ def main() -> None:
             "enable_two_head_shortlist_winner_v2_3",
             "enable_two_head_shortlist_winner_v2_rebuild",
             "enable_two_head_shortlist_winner_v2_rebuild_hard_source_finetune",
+            "enable_two_head_shortlist_winner_v2_rebuild_dual_winner_routing",
+            "enable_two_head_shortlist_winner_v2_rebuild_context_features",
         )
     ):
         if not frozen_shortlist_checkpoint_path.exists():
@@ -3215,6 +3633,401 @@ def main() -> None:
     )
     if model_overrides:
         print(f"Model overrides: {model_overrides}", flush=True)
+
+    if bool(getattr(base_config, "enable_two_head_shortlist_winner_v2_rebuild_context_features", False)):
+        atom_dim = int(getattr(base_config, "som_branch_dim", getattr(base_config, "hidden_dim", 128)))
+        winner_candidate_feature_dim = winner_v2_context_feature_dim(
+            atom_dim,
+            use_relative_top_candidate_features=bool(
+                getattr(base_config, "winner_context_use_relative_top_candidate_features", True)
+            ),
+            use_local_competition_features=bool(getattr(base_config, "winner_context_use_local_competition_features", True)),
+            use_geometry_proxy_features=bool(getattr(base_config, "winner_context_use_geometry_proxy_features", True)),
+        )
+        winner_hidden_dim = getattr(base_config, "winner_v2_rebuild_hidden_dim", None)
+        winner_head = WinnerHeadV2Context(
+            winner_candidate_feature_dim,
+            source_vocab_size=6,
+            source_embedding_dim=int(getattr(base_config, "winner_context_source_embedding_dim", 8)),
+            use_source_features=bool(getattr(base_config, "winner_context_use_source_features", True)),
+            use_hard_source_indicator=bool(getattr(base_config, "winner_context_use_hard_source_indicator", True)),
+            hidden_dim=(int(winner_hidden_dim) if winner_hidden_dim is not None and int(winner_hidden_dim) > 0 else None),
+            dropout=float(getattr(base_config, "winner_v2_rebuild_dropout", 0.1)),
+        )
+        winner_context_init_checkpoint_path = Path(
+            str(getattr(base_config, "winner_context_init_checkpoint_path", "") or "")
+        ).expanduser()
+        winner_context_init_checkpoint_metadata = {}
+        winner_context_init_load_summary = {}
+        if str(winner_context_init_checkpoint_path):
+            winner_context_init_load_summary = _load_context_winner_head_init_checkpoint(
+                winner_head,
+                winner_context_init_checkpoint_path,
+                device=device,
+            )
+            winner_context_init_checkpoint_metadata = _checkpoint_metadata(winner_context_init_checkpoint_path)
+            print(
+                "Loaded winner context init checkpoint: "
+                f"{winner_context_init_checkpoint_path} | "
+                f"sha256={str(winner_context_init_checkpoint_metadata.get('sha256', ''))[:16]}... "
+                f"size={winner_context_init_checkpoint_metadata.get('size_bytes', 0)} "
+                f"mtime={winner_context_init_checkpoint_metadata.get('mtime_epoch')}",
+                flush=True,
+            )
+        context_trainer = TwoHeadShortlistWinnerV2RebuildContextFeaturesTrainer(
+            model=model,
+            winner_head=winner_head,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            frozen_shortlist_topk=int(getattr(base_config, "frozen_shortlist_topk", 6)),
+            winner_v2_rebuild_loss_weight=float(getattr(base_config, "winner_v2_rebuild_loss_weight", 1.0)),
+            shortlist_checkpoint_path=str(frozen_shortlist_checkpoint_path),
+            hard_source_names=str(getattr(base_config, "hard_source_names", "")),
+            winner_context_use_source_features=bool(getattr(base_config, "winner_context_use_source_features", True)),
+            winner_context_use_hard_source_indicator=bool(
+                getattr(base_config, "winner_context_use_hard_source_indicator", True)
+            ),
+            winner_context_use_local_competition_features=bool(
+                getattr(base_config, "winner_context_use_local_competition_features", True)
+            ),
+            winner_context_use_relative_top_candidate_features=bool(
+                getattr(base_config, "winner_context_use_relative_top_candidate_features", True)
+            ),
+            winner_context_use_geometry_proxy_features=bool(
+                getattr(base_config, "winner_context_use_geometry_proxy_features", True)
+            ),
+            winner_context_use_only_existing_repo_features=bool(
+                getattr(base_config, "winner_context_use_only_existing_repo_features", True)
+            ),
+            winner_context_init_checkpoint_path=str(winner_context_init_checkpoint_path),
+            device=device,
+        )
+        restore_summary = dict(getattr(context_trainer, "restore_summary", {}) or {})
+        print(
+            "two_head_shortlist_winner_v2_rebuild_context_features enabled | "
+            f"frozen_shortlist={frozen_shortlist_checkpoint_path} | "
+            f"winner_context_init={winner_context_init_checkpoint_path or 'none'} | "
+            f"trainable_modules={context_trainer.trainable_module_summary} | "
+            f"frozen_modules={context_trainer.frozen_module_summary} | "
+            f"restore_summary={restore_summary}",
+            flush=True,
+        )
+        history = []
+        best_epoch = 0
+        best_selection = None
+        best_model_state = None
+        best_winner_head_state = None
+        epochs_without_improvement = 0
+
+        def _two_head_v2_context_selection_tuple(metrics: dict[str, object]) -> tuple[float, float, float]:
+            return (
+                float(metrics.get("end_to_end_top1", 0.0)),
+                float(metrics.get("winner_acc_given_hit", 0.0)),
+                float(metrics.get("shortlist_recall_at_6", 0.0)),
+            )
+
+        try:
+            for epoch in range(args.epochs):
+                setattr(train_loader, "_current_epoch", epoch)
+                setattr(train_loader, "_split_name", "train")
+                train_metrics = context_trainer.train_loader_epoch(train_loader)
+
+                setattr(val_loader, "_current_epoch", epoch)
+                setattr(val_loader, "_split_name", "val")
+                val_metrics = context_trainer.evaluate_loader(val_loader)
+                history.append({"epoch": epoch + 1, "train": train_metrics, "val": val_metrics})
+
+                selection = _two_head_v2_context_selection_tuple(val_metrics)
+                if best_selection is None or selection > best_selection:
+                    best_selection = selection
+                    best_epoch = epoch + 1
+                    best_model_state = _initialized_state_dict(model)
+                    best_winner_head_state = _initialized_state_dict(winner_head)
+                    epochs_without_improvement = 0
+                else:
+                    epochs_without_improvement += 1
+
+                print(
+                    f"Epoch {epoch + 1:3d} | "
+                    f"winner_loss={train_metrics.get('winner_loss', 0.0):.4f} | "
+                    f"val_winner={val_metrics.get('winner_acc_given_hit', 0.0):.3f} | "
+                    f"val_e2e_top1={val_metrics.get('end_to_end_top1', 0.0):.3f} | "
+                    f"val_hard_e2e_top1={val_metrics.get('hard_source_end_to_end_top1', 0.0):.3f}",
+                    flush=True,
+                )
+
+                _save_two_head_shortlist_winner_v2_rebuild_context_features_state(
+                    model=model,
+                    winner_head=winner_head,
+                    optimizer_state=context_trainer.optimizer.state_dict(),
+                    trainable_module_summary=context_trainer.trainable_module_summary,
+                    frozen_module_summary=context_trainer.frozen_module_summary,
+                    frozen_shortlist_checkpoint_path=frozen_shortlist_checkpoint_path,
+                    winner_context_init_checkpoint_path=winner_context_init_checkpoint_path,
+                    winner_context_init_checkpoint_metadata=winner_context_init_checkpoint_metadata,
+                    winner_context_init_load_summary=winner_context_init_load_summary,
+                    output_dir=output_dir,
+                    artifact_dir=artifact_dir,
+                    args=args,
+                    history=history,
+                    best_epoch=best_epoch,
+                    best_selection=best_selection,
+                    best_model_state=best_model_state,
+                    best_winner_head_state=best_winner_head_state,
+                    base_config=base_config,
+                    checkpoint_path=checkpoint_path,
+                    split_mode=args.split_mode,
+                    split_summary=split_summary,
+                    restore_summary=restore_summary,
+                    reproducibility_metadata=reproducibility_metadata,
+                    warm_start_checkpoint_metadata=warm_start_checkpoint_metadata,
+                    frozen_shortlist_checkpoint_metadata=frozen_shortlist_checkpoint_metadata,
+                    checkpoint_identity_match=checkpoint_identity_match,
+                    status="running",
+                )
+
+                if epochs_without_improvement >= args.early_stopping_patience:
+                    print(
+                        f"Early stopping two_head_shortlist_winner_v2_rebuild_context_features after epoch {epoch + 1}: "
+                        f"no improvement for {args.early_stopping_patience} epoch(s).",
+                        flush=True,
+                    )
+                    break
+        except KeyboardInterrupt:
+            print("\nInterrupted. Saving current two_head_shortlist_winner_v2_rebuild_context_features progress...", flush=True)
+            latest_path, best_path, _, report_path = _save_two_head_shortlist_winner_v2_rebuild_context_features_state(
+                model=model,
+                winner_head=winner_head,
+                optimizer_state=context_trainer.optimizer.state_dict(),
+                trainable_module_summary=context_trainer.trainable_module_summary,
+                frozen_module_summary=context_trainer.frozen_module_summary,
+                frozen_shortlist_checkpoint_path=frozen_shortlist_checkpoint_path,
+                winner_context_init_checkpoint_path=winner_context_init_checkpoint_path,
+                winner_context_init_checkpoint_metadata=winner_context_init_checkpoint_metadata,
+                winner_context_init_load_summary=winner_context_init_load_summary,
+                output_dir=output_dir,
+                artifact_dir=artifact_dir,
+                args=args,
+                history=history,
+                best_epoch=best_epoch,
+                best_selection=best_selection,
+                best_model_state=best_model_state,
+                best_winner_head_state=best_winner_head_state,
+                base_config=base_config,
+                checkpoint_path=checkpoint_path,
+                split_mode=args.split_mode,
+                split_summary=split_summary,
+                restore_summary=restore_summary,
+                reproducibility_metadata=reproducibility_metadata,
+                warm_start_checkpoint_metadata=warm_start_checkpoint_metadata,
+                frozen_shortlist_checkpoint_metadata=frozen_shortlist_checkpoint_metadata,
+                checkpoint_identity_match=checkpoint_identity_match,
+                status="interrupted",
+            )
+            print(
+                json.dumps(
+                    {
+                        "status": "interrupted",
+                        "latest_checkpoint": str(latest_path),
+                        "best_checkpoint": str(best_path),
+                        "report": str(report_path),
+                    },
+                    indent=2,
+                ),
+                flush=True,
+            )
+            return
+
+        if best_model_state is not None:
+            model.load_state_dict(best_model_state, strict=False)
+        if best_winner_head_state is not None:
+            winner_head.load_state_dict(best_winner_head_state, strict=False)
+
+        setattr(test_loader, "_current_epoch", best_epoch)
+        setattr(test_loader, "_split_name", "test")
+        test_metrics = context_trainer.evaluate_loader(test_loader)
+        print(json.dumps({"two_head_shortlist_winner_v2_rebuild_context_features_test_metrics": test_metrics}, indent=2), flush=True)
+        latest_path, best_path, archive_path, report_path = _save_two_head_shortlist_winner_v2_rebuild_context_features_state(
+            model=model,
+            winner_head=winner_head,
+            optimizer_state=context_trainer.optimizer.state_dict(),
+            trainable_module_summary=context_trainer.trainable_module_summary,
+            frozen_module_summary=context_trainer.frozen_module_summary,
+            frozen_shortlist_checkpoint_path=frozen_shortlist_checkpoint_path,
+            winner_context_init_checkpoint_path=winner_context_init_checkpoint_path,
+            winner_context_init_checkpoint_metadata=winner_context_init_checkpoint_metadata,
+            winner_context_init_load_summary=winner_context_init_load_summary,
+            output_dir=output_dir,
+            artifact_dir=artifact_dir,
+            args=args,
+            history=history,
+            best_epoch=best_epoch,
+            best_selection=best_selection,
+            best_model_state=best_model_state,
+            best_winner_head_state=best_winner_head_state,
+            base_config=base_config,
+            checkpoint_path=checkpoint_path,
+            split_mode=args.split_mode,
+            split_summary=split_summary,
+            restore_summary=restore_summary,
+            reproducibility_metadata=reproducibility_metadata,
+            warm_start_checkpoint_metadata=warm_start_checkpoint_metadata,
+            frozen_shortlist_checkpoint_metadata=frozen_shortlist_checkpoint_metadata,
+            checkpoint_identity_match=checkpoint_identity_match,
+            test_metrics=test_metrics,
+            status="completed",
+        )
+        print(
+            json.dumps(
+                {
+                    "status": "completed",
+                    "latest_checkpoint": str(latest_path),
+                    "best_checkpoint": str(best_path),
+                    "archive_checkpoint": str(archive_path),
+                    "report": str(report_path),
+                },
+                indent=2,
+            ),
+            flush=True,
+        )
+        return
+
+    if bool(getattr(base_config, "enable_two_head_shortlist_winner_v2_rebuild_dual_winner_routing", False)):
+        atom_dim = int(getattr(base_config, "som_branch_dim", getattr(base_config, "hidden_dim", 128)))
+        winner_feature_dim = winner_v2_feature_dim(
+            atom_dim,
+            use_existing_candidate_features=True,
+            use_score_gap_features=True,
+            use_rank_features=True,
+            use_pairwise_features=True,
+            use_graph_local_features=True,
+            use_3d_local_features=True,
+        )
+        winner_hidden_dim = getattr(base_config, "winner_v2_rebuild_hidden_dim", None)
+        global_winner_head = WinnerHeadV2(
+            winner_feature_dim,
+            hidden_dim=(int(winner_hidden_dim) if winner_hidden_dim is not None and int(winner_hidden_dim) > 0 else None),
+            dropout=float(getattr(base_config, "winner_v2_rebuild_dropout", 0.1)),
+        )
+        specialist_winner_head = WinnerHeadV2(
+            winner_feature_dim,
+            hidden_dim=(int(winner_hidden_dim) if winner_hidden_dim is not None and int(winner_hidden_dim) > 0 else None),
+            dropout=float(getattr(base_config, "winner_v2_rebuild_dropout", 0.1)),
+        )
+        global_winner_checkpoint_path = Path(str(getattr(base_config, "global_winner_checkpoint_path", "") or "")).expanduser()
+        hard_source_winner_checkpoint_path = Path(
+            str(getattr(base_config, "hard_source_winner_checkpoint_path", "") or "")
+        ).expanduser()
+        if not str(global_winner_checkpoint_path):
+            raise FileNotFoundError(
+                "two_head_shortlist_winner_v2_rebuild_dual_winner_routing requires `global_winner_checkpoint_path`."
+            )
+        if not str(hard_source_winner_checkpoint_path):
+            raise FileNotFoundError(
+                "two_head_shortlist_winner_v2_rebuild_dual_winner_routing requires `hard_source_winner_checkpoint_path`."
+            )
+        global_winner_load_summary = _load_winner_head_init_checkpoint(
+            global_winner_head,
+            global_winner_checkpoint_path,
+            device=device,
+        )
+        hard_source_winner_load_summary = _load_winner_head_init_checkpoint(
+            specialist_winner_head,
+            hard_source_winner_checkpoint_path,
+            device=device,
+        )
+        global_winner_checkpoint_metadata = _checkpoint_metadata(global_winner_checkpoint_path)
+        hard_source_winner_checkpoint_metadata = _checkpoint_metadata(hard_source_winner_checkpoint_path)
+        dual_winner_trainer = TwoHeadShortlistWinnerV2RebuildDualWinnerRoutingTrainer(
+            model=model,
+            global_winner_head=global_winner_head,
+            specialist_winner_head=specialist_winner_head,
+            frozen_shortlist_topk=int(getattr(base_config, "frozen_shortlist_topk", 6)),
+            shortlist_checkpoint_path=str(frozen_shortlist_checkpoint_path),
+            hard_source_names=str(getattr(base_config, "hard_source_names", "")),
+            dual_winner_route_by_source=bool(getattr(base_config, "dual_winner_route_by_source", True)),
+            dual_winner_use_global_for_non_hard=bool(getattr(base_config, "dual_winner_use_global_for_non_hard", True)),
+            dual_winner_use_specialist_for_hard=bool(getattr(base_config, "dual_winner_use_specialist_for_hard", True)),
+            global_winner_checkpoint_path=str(global_winner_checkpoint_path),
+            hard_source_winner_checkpoint_path=str(hard_source_winner_checkpoint_path),
+            device=device,
+        )
+        restore_summary = dict(getattr(dual_winner_trainer, "restore_summary", {}) or {})
+        print(
+            "two_head_shortlist_winner_v2_rebuild_dual_winner_routing enabled | "
+            f"frozen_shortlist={frozen_shortlist_checkpoint_path} | "
+            f"global_winner={global_winner_checkpoint_path} | "
+            f"hard_source_winner={hard_source_winner_checkpoint_path} | "
+            f"hard_sources={restore_summary.get('dual_winner_routing', {}).get('hard_source_names', [])} | "
+            f"trainable_modules={dual_winner_trainer.trainable_module_summary} | "
+            f"frozen_modules={dual_winner_trainer.frozen_module_summary}",
+            flush=True,
+        )
+        setattr(val_loader, "_current_epoch", 1)
+        setattr(val_loader, "_split_name", "val")
+        val_metrics = dual_winner_trainer.evaluate_loader(val_loader)
+        setattr(test_loader, "_current_epoch", 1)
+        setattr(test_loader, "_split_name", "test")
+        test_metrics = dual_winner_trainer.evaluate_loader(test_loader)
+        history = [{"epoch": 1, "train": {}, "val": val_metrics}]
+        best_epoch = 1
+        best_selection = [
+            float(val_metrics.get("end_to_end_top1", 0.0)),
+            float(val_metrics.get("hard_source_end_to_end_top1", 0.0)),
+            float(val_metrics.get("winner_acc_given_hit", 0.0)),
+        ]
+        print(
+            json.dumps(
+                {"two_head_shortlist_winner_v2_rebuild_dual_winner_routing_test_metrics": test_metrics},
+                indent=2,
+            ),
+            flush=True,
+        )
+        latest_path, best_path, archive_path, report_path = _save_two_head_shortlist_winner_v2_rebuild_dual_winner_routing_state(
+            model=model,
+            global_winner_head=global_winner_head,
+            specialist_winner_head=specialist_winner_head,
+            frozen_shortlist_checkpoint_path=frozen_shortlist_checkpoint_path,
+            global_winner_checkpoint_path=global_winner_checkpoint_path,
+            hard_source_winner_checkpoint_path=hard_source_winner_checkpoint_path,
+            global_winner_checkpoint_metadata=global_winner_checkpoint_metadata,
+            hard_source_winner_checkpoint_metadata=hard_source_winner_checkpoint_metadata,
+            global_winner_load_summary=global_winner_load_summary,
+            hard_source_winner_load_summary=hard_source_winner_load_summary,
+            trainable_module_summary=dual_winner_trainer.trainable_module_summary,
+            frozen_module_summary=dual_winner_trainer.frozen_module_summary,
+            output_dir=output_dir,
+            artifact_dir=artifact_dir,
+            args=args,
+            history=history,
+            best_epoch=best_epoch,
+            best_selection=best_selection,
+            base_config=base_config,
+            checkpoint_path=checkpoint_path,
+            split_mode=args.split_mode,
+            split_summary=split_summary,
+            restore_summary=restore_summary,
+            reproducibility_metadata=reproducibility_metadata,
+            warm_start_checkpoint_metadata=warm_start_checkpoint_metadata,
+            frozen_shortlist_checkpoint_metadata=frozen_shortlist_checkpoint_metadata,
+            checkpoint_identity_match=checkpoint_identity_match,
+            test_metrics=test_metrics,
+            status="completed",
+        )
+        print(
+            json.dumps(
+                {
+                    "status": "completed",
+                    "latest_checkpoint": str(latest_path),
+                    "best_checkpoint": str(best_path),
+                    "archive_checkpoint": str(archive_path),
+                    "report": str(report_path),
+                },
+                indent=2,
+            ),
+            flush=True,
+        )
+        return
 
     if bool(getattr(base_config, "enable_two_head_shortlist_winner_v2_rebuild_hard_source_finetune", False)):
         atom_dim = int(getattr(base_config, "som_branch_dim", getattr(base_config, "hidden_dim", 128)))

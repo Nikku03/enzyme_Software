@@ -256,6 +256,21 @@ class ModelConfig:
     hard_source_finetune_skip_non_hard_sources: bool = True
     winner_finetune_init_checkpoint_path: str = ""
     hard_source_finetune_lr_scale: float = 0.5
+    enable_two_head_shortlist_winner_v2_rebuild_dual_winner_routing: bool = False
+    global_winner_checkpoint_path: str = ""
+    hard_source_winner_checkpoint_path: str = ""
+    dual_winner_route_by_source: bool = True
+    dual_winner_use_global_for_non_hard: bool = True
+    dual_winner_use_specialist_for_hard: bool = True
+    enable_two_head_shortlist_winner_v2_rebuild_context_features: bool = False
+    winner_context_use_source_features: bool = True
+    winner_context_source_embedding_dim: int = 8
+    winner_context_use_hard_source_indicator: bool = True
+    winner_context_use_local_competition_features: bool = True
+    winner_context_use_relative_top_candidate_features: bool = True
+    winner_context_use_geometry_proxy_features: bool = True
+    winner_context_use_only_existing_repo_features: bool = True
+    winner_context_init_checkpoint_path: str = ""
     candidate_mask_mode: str = "hard"
     candidate_mask_logit_bias: float = 2.0
     disable_cyp_task: bool = False
@@ -632,6 +647,27 @@ class ModelConfig:
         self.hard_source_finetune_skip_non_hard_sources = bool(self.hard_source_finetune_skip_non_hard_sources)
         self.winner_finetune_init_checkpoint_path = str(self.winner_finetune_init_checkpoint_path or "").strip()
         self.hard_source_finetune_lr_scale = max(0.0, float(self.hard_source_finetune_lr_scale))
+        self.enable_two_head_shortlist_winner_v2_rebuild_dual_winner_routing = bool(
+            self.enable_two_head_shortlist_winner_v2_rebuild_dual_winner_routing
+        )
+        self.global_winner_checkpoint_path = str(self.global_winner_checkpoint_path or "").strip()
+        self.hard_source_winner_checkpoint_path = str(self.hard_source_winner_checkpoint_path or "").strip()
+        self.dual_winner_route_by_source = bool(self.dual_winner_route_by_source)
+        self.dual_winner_use_global_for_non_hard = bool(self.dual_winner_use_global_for_non_hard)
+        self.dual_winner_use_specialist_for_hard = bool(self.dual_winner_use_specialist_for_hard)
+        self.enable_two_head_shortlist_winner_v2_rebuild_context_features = bool(
+            self.enable_two_head_shortlist_winner_v2_rebuild_context_features
+        )
+        self.winner_context_use_source_features = bool(self.winner_context_use_source_features)
+        self.winner_context_source_embedding_dim = max(1, int(self.winner_context_source_embedding_dim))
+        self.winner_context_use_hard_source_indicator = bool(self.winner_context_use_hard_source_indicator)
+        self.winner_context_use_local_competition_features = bool(self.winner_context_use_local_competition_features)
+        self.winner_context_use_relative_top_candidate_features = bool(
+            self.winner_context_use_relative_top_candidate_features
+        )
+        self.winner_context_use_geometry_proxy_features = bool(self.winner_context_use_geometry_proxy_features)
+        self.winner_context_use_only_existing_repo_features = bool(self.winner_context_use_only_existing_repo_features)
+        self.winner_context_init_checkpoint_path = str(self.winner_context_init_checkpoint_path or "").strip()
         self.candidate_mask_mode = str(self.candidate_mask_mode).strip().lower() or "hard"
         if self.candidate_mask_mode not in {"hard", "soft", "off"}:
             self.candidate_mask_mode = "hard"
