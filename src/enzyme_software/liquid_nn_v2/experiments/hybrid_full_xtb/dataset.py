@@ -785,6 +785,7 @@ def create_full_xtb_dataloaders_from_drugs(
     test_drugs: List[Dict[str, object]],
     *,
     batch_size: int,
+    seed: int = 42,
     cyp_classes: Optional[List[str]] = None,
     structure_sdf: Optional[str] = None,
     use_manual_engine_features: bool = True,
@@ -800,6 +801,7 @@ def create_full_xtb_dataloaders_from_drugs(
     drop_failed: bool = True,
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     require_torch()
+    seed = int(seed)
     structure_library = StructureLibrary.from_sdf(structure_sdf) if structure_sdf else None
     common = {
         "cyp_classes": cyp_classes,
@@ -835,7 +837,7 @@ def create_full_xtb_dataloaders_from_drugs(
         batch_sampler = _CappedSourceBatchSampler(
             train_ds.drugs,
             batch_size=batch_size,
-            seed=42,
+            seed=seed,
         )
         train_loader = DataLoader(
             train_ds,
@@ -845,7 +847,9 @@ def create_full_xtb_dataloaders_from_drugs(
             pin_memory=False,
         )
     else:
-        train_loader = DataLoader(train_ds, shuffle=True, **train_loader_kwargs)
+        train_generator = torch.Generator()
+        train_generator.manual_seed(seed)
+        train_loader = DataLoader(train_ds, shuffle=True, generator=train_generator, **train_loader_kwargs)
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=False)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0, pin_memory=False)
     return train_loader, val_loader, test_loader
