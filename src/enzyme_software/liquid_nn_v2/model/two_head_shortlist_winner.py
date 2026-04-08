@@ -93,6 +93,31 @@ if TORCH_AVAILABLE:
         return dim
 
 
+    def winner_v2_3_feature_dim(
+        embedding_dim: int,
+        *,
+        use_existing_candidate_features: bool = True,
+        use_score_gap_features: bool = True,
+        use_rank_features: bool = True,
+        use_normalized_score_features: bool = True,
+        use_pairwise_features: bool = False,
+        use_graph_local_features: bool = False,
+        use_3d_local_features: bool = False,
+        use_extra_candidate_features: bool = False,
+    ) -> int:
+        return winner_v2_2_feature_dim(
+            embedding_dim,
+            use_existing_candidate_features=use_existing_candidate_features,
+            use_score_gap_features=use_score_gap_features,
+            use_rank_features=use_rank_features,
+            use_normalized_score_features=use_normalized_score_features,
+            use_pairwise_features=use_pairwise_features,
+            use_graph_local_features=use_graph_local_features,
+            use_3d_local_features=use_3d_local_features,
+            use_extra_candidate_features=use_extra_candidate_features,
+        )
+
+
     class ShortlistHead(nn.Module):
         """Scalar shortlist scorer over per-atom embeddings."""
 
@@ -241,6 +266,36 @@ if TORCH_AVAILABLE:
                     f"got {int(candidate_features.size(-1))}"
                 )
             return self.net(candidate_features)
+
+
+    class WinnerHeadV2_3(nn.Module):
+        """Winner scorer over frozen-shortlist candidate features with compact defaults."""
+
+        def __init__(
+            self,
+            feature_dim: int,
+            *,
+            hidden_dim: int | None = None,
+            dropout: float = 0.1,
+        ):
+            super().__init__()
+            self.feature_dim = int(feature_dim)
+            self.hidden_dim = max(1, int(hidden_dim or self.feature_dim))
+            self.net = nn.Sequential(
+                nn.Linear(self.feature_dim, self.hidden_dim),
+                nn.LayerNorm(self.hidden_dim),
+                nn.ReLU(),
+                nn.Dropout(float(dropout)),
+                nn.Linear(self.hidden_dim, 1),
+            )
+
+        def forward(self, candidate_features):
+            if int(candidate_features.size(-1)) != int(self.feature_dim):
+                raise ValueError(
+                    f"Expected winner v2.3 candidate features with dim {self.feature_dim}, "
+                    f"got {int(candidate_features.size(-1))}"
+                )
+            return self.net(candidate_features)
 else:  # pragma: no cover
     def winner_v2_feature_dim(*args, **kwargs):
         require_torch()
@@ -249,6 +304,9 @@ else:  # pragma: no cover
         require_torch()
 
     def winner_v2_2_feature_dim(*args, **kwargs):
+        require_torch()
+
+    def winner_v2_3_feature_dim(*args, **kwargs):
         require_torch()
 
     class ShortlistHead:  # type: ignore[override]
@@ -268,5 +326,9 @@ else:  # pragma: no cover
             require_torch()
 
     class WinnerHeadV2_2:  # type: ignore[override]
+        def __init__(self, *args, **kwargs):
+            require_torch()
+
+    class WinnerHeadV2_3:  # type: ignore[override]
         def __init__(self, *args, **kwargs):
             require_torch()
