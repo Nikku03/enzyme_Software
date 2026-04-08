@@ -51,11 +51,16 @@ if TORCH_AVAILABLE:
         supervised_weight: float = 1.0
         distill_weight: float = 0.1
         use_main_site_loss_impl: bool = True
+        enable_unfreeze: bool = False
+        unfreeze_proposer_head: bool = True
+        student_lr_scale: float = 1.0
+        unfrozen_head_lr_scale: float = 0.1
+        unfrozen_backbone_lr_scale: float = 0.05
         device: Optional[torch.device] = None
 
         def __post_init__(self):
             self.device = self.device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            if bool(self.trainable_proposer_head_only):
+            if bool(self.trainable_proposer_head_only) and not bool(self.enable_unfreeze):
                 self.use_frozen_backbone = True
                 self.unfreeze_last_backbone_block = False
             self.model.to(self.device)
@@ -66,8 +71,15 @@ if TORCH_AVAILABLE:
             for param in self.pairwise_head.parameters():
                 param.requires_grad = False
             base_impl = getattr(getattr(self.model, "base_lnn", None), "impl", None)
+            self.proposer_head = getattr(base_impl, "site_head", None)
             self.last_backbone_block = getattr(base_impl, "som_branch", None)
-            if (not self.use_frozen_backbone) and bool(self.unfreeze_last_backbone_block) and self.last_backbone_block is not None:
+            if bool(self.enable_unfreeze) and bool(self.unfreeze_proposer_head) and self.proposer_head is not None:
+                for param in self.proposer_head.parameters():
+                    param.requires_grad = True
+            if bool(self.enable_unfreeze) and bool(self.unfreeze_last_backbone_block) and self.last_backbone_block is not None:
+                for param in self.last_backbone_block.parameters():
+                    param.requires_grad = True
+            elif (not self.use_frozen_backbone) and bool(self.unfreeze_last_backbone_block) and self.last_backbone_block is not None:
                 for param in self.last_backbone_block.parameters():
                     param.requires_grad = True
             for param in self.distilled_head.parameters():
@@ -115,39 +127,84 @@ if TORCH_AVAILABLE:
                 for param in self.site_loss_wrapper.parameters():
                     param.requires_grad = False
                 self.site_loss_wrapper.eval()
+            self.has_trainable_model_modules = any(param.requires_grad for param in self.model.parameters())
             param_groups = [
                 {
                     "params": [param for param in self.distilled_head.parameters() if param.requires_grad],
-                    "lr": float(self.learning_rate) * float(self.distilled_head_lr_scale),
+                    "lr": float(self.learning_rate) * float(self.student_lr_scale),
                     "weight_decay": float(self.weight_decay),
                 }
             ]
+            self.param_group_learning_rates = [
+                {
+                    "name": "distilled_proposer_head",
+                    "lr": float(self.learning_rate) * float(self.student_lr_scale),
+                }
+            ]
+            if self.proposer_head is not None:
+                proposer_params = [param for param in self.proposer_head.parameters() if param.requires_grad]
+                if proposer_params:
+                    param_groups.append(
+                        {
+                            "params": proposer_params,
+                            "lr": float(self.learning_rate) * float(self.unfrozen_head_lr_scale),
+                            "weight_decay": float(self.weight_decay),
+                        }
+                    )
+                    self.param_group_learning_rates.append(
+                        {
+                            "name": "base_lnn.impl.site_head",
+                            "lr": float(self.learning_rate) * float(self.unfrozen_head_lr_scale),
+                        }
+                    )
             if self.last_backbone_block is not None:
                 backbone_params = [param for param in self.last_backbone_block.parameters() if param.requires_grad]
                 if backbone_params:
                     param_groups.append(
                         {
                             "params": backbone_params,
-                            "lr": float(self.learning_rate) * float(self.backbone_lr_scale),
+                            "lr": float(self.learning_rate) * float(self.unfrozen_backbone_lr_scale),
                             "weight_decay": float(self.weight_decay),
+                        }
+                    )
+                    self.param_group_learning_rates.append(
+                        {
+                            "name": "base_lnn.impl.som_branch",
+                            "lr": float(self.learning_rate) * float(self.unfrozen_backbone_lr_scale),
                         }
                     )
             self.optimizer = torch.optim.AdamW(param_groups)
             self.trainable_module_summary = [
                 {
                     "name": "distilled_proposer_head",
-                    "lr": float(self.learning_rate) * float(self.distilled_head_lr_scale),
+                    "lr": float(self.learning_rate) * float(self.student_lr_scale),
                     "param_count": int(sum(param.numel() for param in self.distilled_head.parameters() if param.requires_grad)),
                 }
             ]
+            if self.proposer_head is not None and any(param.requires_grad for param in self.proposer_head.parameters()):
+                self.trainable_module_summary.append(
+                    {
+                        "name": "base_lnn.impl.site_head",
+                        "lr": float(self.learning_rate) * float(self.unfrozen_head_lr_scale),
+                        "param_count": int(sum(param.numel() for param in self.proposer_head.parameters() if param.requires_grad)),
+                    }
+                )
             if self.last_backbone_block is not None and any(param.requires_grad for param in self.last_backbone_block.parameters()):
                 self.trainable_module_summary.append(
                     {
                         "name": "base_lnn.impl.som_branch",
-                        "lr": float(self.learning_rate) * float(self.backbone_lr_scale),
+                        "lr": float(self.learning_rate) * float(self.unfrozen_backbone_lr_scale),
                         "param_count": int(sum(param.numel() for param in self.last_backbone_block.parameters() if param.requires_grad)),
                     }
                 )
+            self.frozen_module_summary = [
+                "pairwise_teacher",
+                "distilled_teacher_targets",
+            ]
+            if self.proposer_head is None or not any(param.requires_grad for param in self.proposer_head.parameters()):
+                self.frozen_module_summary.append("base_lnn.impl.site_head")
+            if self.last_backbone_block is None or not any(param.requires_grad for param in self.last_backbone_block.parameters()):
+                self.frozen_module_summary.append("base_lnn.impl.som_branch")
 
         def _prepare_batch(self, batch_or_graphs):
             if isinstance(batch_or_graphs, dict):
@@ -172,7 +229,7 @@ if TORCH_AVAILABLE:
             return float(int(molecule_ids.numel()))
 
         def _forward_model(self, batch: Dict[str, object]):
-            if self.use_frozen_backbone:
+            if self.use_frozen_backbone and not bool(self.has_trainable_model_modules):
                 with torch.no_grad():
                     outputs = self.model(batch)
             else:

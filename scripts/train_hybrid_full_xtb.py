@@ -235,6 +235,11 @@ def _collect_model_overrides() -> dict[str, int | float | str]:
         "HYBRID_COLAB_DISTILLED_PROPOSER_SUPERVISED_WEIGHT": (_env_float, "distilled_proposer_supervised_weight"),
         "HYBRID_COLAB_DISTILLED_PROPOSER_DISTILL_WEIGHT": (_env_float, "distilled_proposer_distill_weight"),
         "HYBRID_COLAB_DISTILLED_PROPOSER_USE_MAIN_SITE_LOSS_IMPL": (_env_int, "distilled_proposer_use_main_site_loss_impl"),
+        "HYBRID_COLAB_ENABLE_PAIRWISE_DISTILLED_PROPOSER_UNFREEZE": (_env_int, "enable_pairwise_distilled_proposer_unfreeze"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_UNFREEZE_PROPOSER_HEAD": (_env_int, "distilled_proposer_unfreeze_proposer_head"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_STUDENT_LR_SCALE": (_env_float, "distilled_proposer_student_lr_scale"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_UNFROZEN_HEAD_LR_SCALE": (_env_float, "distilled_proposer_unfrozen_head_lr_scale"),
+        "HYBRID_COLAB_DISTILLED_PROPOSER_UNFROZEN_BACKBONE_LR_SCALE": (_env_float, "distilled_proposer_unfrozen_backbone_lr_scale"),
     }
     overrides: dict[str, int | float | str] = {}
     for env_name, (parser, field_name) in mapping.items():
@@ -1102,6 +1107,10 @@ def _save_pairwise_distilled_proposer_state(
     model,
     pairwise_head,
     distilled_head,
+    optimizer_state,
+    trainable_module_summary,
+    param_group_learning_rates,
+    frozen_module_summary,
     output_dir: Path,
     artifact_dir: Path,
     args,
@@ -1135,6 +1144,7 @@ def _save_pairwise_distilled_proposer_state(
         "model_state_dict": _initialized_state_dict(model),
         "pairwise_head_state_dict": _initialized_state_dict(pairwise_head),
         "distilled_proposer_head_state_dict": _initialized_state_dict(distilled_head),
+        "optimizer_state_dict": optimizer_state,
         "config": {
             "base_model": base_config.__dict__,
             "distilled_proposer": {
@@ -1146,6 +1156,11 @@ def _save_pairwise_distilled_proposer_state(
                 "supervised_enabled": bool(getattr(base_config, "enable_pairwise_distilled_proposer_supervised", False)),
                 "supervised_weight": float(getattr(base_config, "distilled_proposer_supervised_weight", 1.0)),
                 "distill_weight": float(getattr(base_config, "distilled_proposer_distill_weight", 0.1)),
+                "unfreeze_enabled": bool(getattr(base_config, "enable_pairwise_distilled_proposer_unfreeze", False)),
+                "unfreeze_proposer_head": bool(getattr(base_config, "distilled_proposer_unfreeze_proposer_head", True)),
+                "student_lr_scale": float(getattr(base_config, "distilled_proposer_student_lr_scale", 1.0)),
+                "unfrozen_head_lr_scale": float(getattr(base_config, "distilled_proposer_unfrozen_head_lr_scale", 0.1)),
+                "unfrozen_backbone_lr_scale": float(getattr(base_config, "distilled_proposer_unfrozen_backbone_lr_scale", 0.05)),
             },
         },
         "training_config": TrainingConfig(
@@ -1173,6 +1188,9 @@ def _save_pairwise_distilled_proposer_state(
         "test_metrics": test_metrics,
         "history": history,
         "status": status,
+        "trainable_module_summary": list(trainable_module_summary or []),
+        "param_group_learning_rates": list(param_group_learning_rates or []),
+        "frozen_module_summary": list(frozen_module_summary or []),
     }
     torch.save(checkpoint, latest_path)
     torch.save(checkpoint, archive_path)
@@ -1222,6 +1240,27 @@ def _save_pairwise_distilled_proposer_state(
                 "distilled_proposer_use_main_site_loss_impl": bool(
                     getattr(base_config, "distilled_proposer_use_main_site_loss_impl", True)
                 ),
+                "enable_pairwise_distilled_proposer_unfreeze": bool(
+                    getattr(base_config, "enable_pairwise_distilled_proposer_unfreeze", False)
+                ),
+                "distilled_proposer_unfreeze_proposer_head": bool(
+                    getattr(base_config, "distilled_proposer_unfreeze_proposer_head", True)
+                ),
+                "distilled_proposer_unfreeze_last_backbone_block": bool(
+                    getattr(base_config, "distilled_proposer_unfreeze_last_backbone_block", False)
+                ),
+                "distilled_proposer_student_lr_scale": float(
+                    getattr(base_config, "distilled_proposer_student_lr_scale", 1.0)
+                ),
+                "distilled_proposer_unfrozen_head_lr_scale": float(
+                    getattr(base_config, "distilled_proposer_unfrozen_head_lr_scale", 0.1)
+                ),
+                "distilled_proposer_unfrozen_backbone_lr_scale": float(
+                    getattr(base_config, "distilled_proposer_unfrozen_backbone_lr_scale", 0.05)
+                ),
+                "trainable_module_summary": list(trainable_module_summary or []),
+                "param_group_learning_rates": list(param_group_learning_rates or []),
+                "frozen_module_summary": list(frozen_module_summary or []),
             },
             indent=2,
         )
@@ -1641,12 +1680,21 @@ def main() -> None:
             supervised_weight=float(getattr(base_config, "distilled_proposer_supervised_weight", 1.0)),
             distill_weight=float(getattr(base_config, "distilled_proposer_distill_weight", 0.1)),
             use_main_site_loss_impl=bool(getattr(base_config, "distilled_proposer_use_main_site_loss_impl", True)),
+            enable_unfreeze=bool(getattr(base_config, "enable_pairwise_distilled_proposer_unfreeze", False)),
+            unfreeze_proposer_head=bool(getattr(base_config, "distilled_proposer_unfreeze_proposer_head", True)),
+            student_lr_scale=float(getattr(base_config, "distilled_proposer_student_lr_scale", getattr(base_config, "distilled_proposer_lr_scale", 1.0))),
+            unfrozen_head_lr_scale=float(getattr(base_config, "distilled_proposer_unfrozen_head_lr_scale", 0.1)),
+            unfrozen_backbone_lr_scale=float(
+                getattr(base_config, "distilled_proposer_unfrozen_backbone_lr_scale", 0.05)
+            ),
             device=device,
         )
         print(
             "pairwise_distilled_proposer enabled | "
             f"teacher={teacher_load_report['checkpoint_path']} | "
-            f"trainable_modules={distill_trainer.trainable_module_summary}",
+            f"trainable_modules={distill_trainer.trainable_module_summary} | "
+            f"param_groups={distill_trainer.param_group_learning_rates} | "
+            f"frozen_modules={distill_trainer.frozen_module_summary}",
             flush=True,
         )
         history = []
@@ -1702,6 +1750,10 @@ def main() -> None:
                     model=model,
                     pairwise_head=pairwise_head,
                     distilled_head=distilled_head,
+                    optimizer_state=distill_trainer.optimizer.state_dict(),
+                    trainable_module_summary=distill_trainer.trainable_module_summary,
+                    param_group_learning_rates=distill_trainer.param_group_learning_rates,
+                    frozen_module_summary=distill_trainer.frozen_module_summary,
                     output_dir=output_dir,
                     artifact_dir=artifact_dir,
                     args=args,
@@ -1732,6 +1784,10 @@ def main() -> None:
                 model=model,
                 pairwise_head=pairwise_head,
                 distilled_head=distilled_head,
+                optimizer_state=distill_trainer.optimizer.state_dict(),
+                trainable_module_summary=distill_trainer.trainable_module_summary,
+                param_group_learning_rates=distill_trainer.param_group_learning_rates,
+                frozen_module_summary=distill_trainer.frozen_module_summary,
                 output_dir=output_dir,
                 artifact_dir=artifact_dir,
                 args=args,
@@ -1766,6 +1822,10 @@ def main() -> None:
             model=model,
             pairwise_head=pairwise_head,
             distilled_head=distilled_head,
+            optimizer_state=distill_trainer.optimizer.state_dict(),
+            trainable_module_summary=distill_trainer.trainable_module_summary,
+            param_group_learning_rates=distill_trainer.param_group_learning_rates,
+            frozen_module_summary=distill_trainer.frozen_module_summary,
             output_dir=output_dir,
             artifact_dir=artifact_dir,
             args=args,

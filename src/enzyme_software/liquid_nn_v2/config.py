@@ -158,6 +158,11 @@ class ModelConfig:
     distilled_proposer_supervised_weight: float = 1.0
     distilled_proposer_distill_weight: float = 0.1
     distilled_proposer_use_main_site_loss_impl: bool = True
+    enable_pairwise_distilled_proposer_unfreeze: bool = False
+    distilled_proposer_unfreeze_proposer_head: bool = True
+    distilled_proposer_student_lr_scale: float = 1.0
+    distilled_proposer_unfrozen_head_lr_scale: float = 0.1
+    distilled_proposer_unfrozen_backbone_lr_scale: float = 0.05
     candidate_mask_mode: str = "hard"
     candidate_mask_logit_bias: float = 2.0
     disable_cyp_task: bool = False
