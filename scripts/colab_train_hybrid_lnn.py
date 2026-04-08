@@ -1789,6 +1789,10 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_PRESET_BASE": "cyp3a4_pairwise_distilled_proposer_dpb",
         "HYBRID_COLAB_DISTILLED_PROPOSER_TARGET_TEMPERATURE": "0.5",
     },
+    "cyp3a4_pairwise_distilled_proposer_dpe": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_pairwise_distilled_proposer_dpb",
+        "HYBRID_COLAB_DISTILLED_PROPOSER_TARGET_TEMPERATURE": "2.0",
+    },
     "cyp3a4_sideinfo_fullrank_phase5a_baseline_seed22": {
         "HYBRID_COLAB_DATASET": "data/prepared_training/main8_cyp3a4_augmented.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
