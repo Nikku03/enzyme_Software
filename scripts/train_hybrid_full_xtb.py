@@ -368,9 +368,6 @@ def _env_str(name: str) -> str | None:
 
 def _collect_model_overrides() -> dict[str, int | float | str]:
     mapping = {
-        "HYBRID_COLAB_TRAIN_DATASET": (_env_str, "train_dataset"),
-        "HYBRID_COLAB_VAL_DATASET": (_env_str, "val_dataset"),
-        "HYBRID_COLAB_TEST_DATASET": (_env_str, "test_dataset"),
         "HYBRID_COLAB_NEXUS_WAVE_HIDDEN_DIM": (_env_int, "nexus_wave_hidden_dim"),
         "HYBRID_COLAB_NEXUS_GRAPH_DIM": (_env_int, "nexus_graph_dim"),
         "HYBRID_COLAB_NEXUS_MEMORY_CAPACITY": (_env_int, "nexus_memory_capacity"),
