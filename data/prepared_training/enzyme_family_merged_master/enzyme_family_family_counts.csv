@@ -1,0 +1,10 @@
+benchmarkable,broad_region_count,family,retained_row_count,strict_exact_clean_candidate_count,tiered_multisite_count,trainable
+1,23,CYP1A2,337,165,100,1
+1,10,CYP2A6,139,80,24,1
+1,17,CYP2B6,198,107,38,1
+1,13,CYP2C19,259,159,60,1
+1,11,CYP2C8,176,103,43,1
+1,14,CYP2C9,275,168,61,1
+1,15,CYP2D6,327,197,72,1
+1,16,CYP2E1,190,107,38,1
+1,36,CYP3A4,643,330,194,1

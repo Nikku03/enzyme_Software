@@ -1,0 +1,138 @@
+{
+  "target_family": "CYP2C9",
+  "total_master_rows_for_family": 275,
+  "strict_exact_clean_policy": "Include only single_exact and multi_exact rows with non-empty exact atom labels; exclude broad_region, tiered_multisite, and conflict_preserved rows. partial_agreement_union rows are included when they retain usable exact labels and do not carry blocking conflicts.",
+  "tiered_multisite_eval_policy": "Include only tiered_multisite rows and preserve primary, secondary, tertiary, and all_labeled_site_atoms without flattening to a deterministic target.",
+  "broad_region_aux_policy": "Include only broad_region rows for weak-supervision / auxiliary use; preserve broad_region_annotations and do not treat this subset as a strict Top-1 benchmark.",
+  "conflict_audit_policy": "Include conflict_preserved rows and any row with non-empty conflict_flags for human review and source-conflict analysis.",
+  "strict_exact_clean": {
+    "row_count": 168,
+    "source_breakdown": {
+      "ATTNSOM": 148,
+      "MetXBioDB": 20
+    },
+    "source_family_breakdown": {
+      "attnsom_family": 148,
+      "metxbiodb_family": 20
+    },
+    "label_regime_breakdown": {
+      "single_exact": 119,
+      "multi_exact": 49
+    },
+    "merge_policy_breakdown": {
+      "partial_agreement_union": 91,
+      "exact_agreement": 60,
+      "single_source": 17
+    },
+    "citation_count": 167,
+    "doi_count": 82,
+    "multisite_count": 101,
+    "empty_site_count": 0,
+    "included_single_exact_count": 119,
+    "included_multi_exact_count": 49,
+    "excluded_due_to_conflict_count": 32,
+    "excluded_due_to_broad_or_tiered_regime_count": 75,
+    "included_partial_agreement_union_count": 91,
+    "strict_decision_counts": {
+      "excluded_conflict_preserved": 32,
+      "excluded_non_exact_regime": 75,
+      "included_exact_clean": 77,
+      "included_partial_agreement_union": 91
+    }
+  },
+  "tiered_multisite_eval": {
+    "row_count": 61,
+    "source_breakdown": {
+      "ATTNSOM": 60,
+      "CYP_DBs_external": 1
+    },
+    "source_family_breakdown": {
+      "attnsom_family": 61
+    },
+    "label_regime_breakdown": {
+      "tiered_multisite": 61
+    },
+    "merge_policy_breakdown": {
+      "partial_agreement_union": 58,
+      "conflict_preserved": 2,
+      "exact_agreement": 1
+    },
+    "citation_count": 59,
+    "doi_count": 33,
+    "multisite_count": 61,
+    "empty_site_count": 0,
+    "primary_only_count": 0,
+    "primary_plus_secondary_count": 60,
+    "primary_plus_secondary_plus_tertiary_count": 19
+  },
+  "broad_region_aux": {
+    "row_count": 14,
+    "source_breakdown": {
+      "MetXBioDB": 14
+    },
+    "source_family_breakdown": {
+      "metxbiodb_family": 14
+    },
+    "label_regime_breakdown": {
+      "broad_region": 14
+    },
+    "merge_policy_breakdown": {
+      "conflict_preserved": 14
+    },
+    "citation_count": 14,
+    "doi_count": 0,
+    "multisite_count": 14,
+    "empty_site_count": 0,
+    "empty_exact_site_count": 0,
+    "rows_with_broad_region_annotations": 5
+  },
+  "conflict_audit": {
+    "row_count": 263,
+    "source_breakdown": {
+      "ATTNSOM": 211,
+      "MetXBioDB": 36,
+      "CYP_DBs_external": 16
+    },
+    "source_family_breakdown": {
+      "attnsom_family": 227,
+      "metxbiodb_family": 36
+    },
+    "label_regime_breakdown": {
+      "single_exact": 123,
+      "multi_exact": 65,
+      "tiered_multisite": 61,
+      "broad_region": 14
+    },
+    "merge_policy_breakdown": {
+      "partial_agreement_union": 149,
+      "exact_agreement": 49,
+      "conflict_preserved": 48,
+      "single_source": 17
+    },
+    "citation_count": 258,
+    "doi_count": 124,
+    "multisite_count": 193,
+    "empty_site_count": 0,
+    "conflict_flag_counts": {
+      "multi_family_assignment": 259,
+      "site_set_mismatch": 141,
+      "label_regime_mismatch": 105,
+      "tier_assignment_mismatch": 58,
+      "contains_broad_region_label": 42,
+      "site_set_disjoint": 6
+    },
+    "counts_by_merge_policy_used": {
+      "partial_agreement_union": 149,
+      "exact_agreement": 49,
+      "conflict_preserved": 48,
+      "single_source": 17
+    },
+    "counts_by_source_combination": {
+      "ATTNSOM | CYP_DBs_external | MetXBioDB": 193,
+      "MetXBioDB": 33,
+      "ATTNSOM": 16,
+      "CYP_DBs_external": 16,
+      "ATTNSOM | CYP_DBs_external": 5
+    }
+  }
+}

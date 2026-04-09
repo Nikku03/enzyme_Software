@@ -1,0 +1,10 @@
+benchmarkable,broad_region_rows,family,strict_exact_clean_rows,tiered_multisite_rows,total_rows,trainable
+1,23,CYP1A2,165,100,337,1
+1,10,CYP2A6,80,24,139,1
+1,17,CYP2B6,107,38,198,1
+1,13,CYP2C19,159,60,259,1
+1,11,CYP2C8,103,43,176,1
+1,14,CYP2C9,168,61,275,1
+1,15,CYP2D6,197,72,327,1
+1,16,CYP2E1,107,38,190,1
+1,36,CYP3A4,330,194,643,1

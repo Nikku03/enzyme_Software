@@ -1,0 +1,22 @@
+excluded_invalid_or_missing_label_count,excluded_non_target_family_count,fixed_family,parsed_count,parser_family,retained_annotation_count,retained_unique_molecule_count,source_file,source_name
+0,0,CYP1A2,271,attnsom_tiered,271,271,/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/1A2.sdf,ATTNSOM
+0,0,CYP2A6,105,attnsom_tiered,105,105,/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2A6.sdf,ATTNSOM
+0,0,CYP2B6,151,attnsom_tiered,151,151,/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2B6.sdf,ATTNSOM
+0,0,CYP2C19,218,attnsom_tiered,218,218,/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2C19.sdf,ATTNSOM
+0,0,CYP2C8,142,attnsom_tiered,142,142,/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2C8.sdf,ATTNSOM
+0,0,CYP2C9,226,attnsom_tiered,226,226,/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2C9.sdf,ATTNSOM
+0,0,CYP2D6,270,attnsom_tiered,270,270,/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2D6.sdf,ATTNSOM
+0,0,CYP2E1,145,attnsom_tiered,145,145,/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2E1.sdf,ATTNSOM
+0,0,CYP3A4,475,attnsom_tiered,475,475,/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf,ATTNSOM
+0,0,CYP1A2,271,attnsom_tiered,271,271,/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/1A2.sdf,CYP_DBs_external
+0,0,CYP2A6,105,attnsom_tiered,105,105,/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2A6.sdf,CYP_DBs_external
+0,0,CYP2B6,151,attnsom_tiered,151,151,/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2B6.sdf,CYP_DBs_external
+0,0,CYP2C19,218,attnsom_tiered,218,218,/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2C19.sdf,CYP_DBs_external
+0,0,CYP2C8,142,attnsom_tiered,142,142,/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2C8.sdf,CYP_DBs_external
+0,0,CYP2C9,226,attnsom_tiered,226,226,/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2C9.sdf,CYP_DBs_external
+0,0,CYP2D6,270,attnsom_tiered,270,270,/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2D6.sdf,CYP_DBs_external
+0,0,CYP2E1,145,attnsom_tiered,145,145,/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2E1.sdf,CYP_DBs_external
+0,0,CYP3A4,475,attnsom_tiered,475,475,/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf,CYP_DBs_external
+0,0,,679,metxbio_multi_bom,2046,679,/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf,MetXBioDB
+2,0,CYP3A4,54,flat_atom_list,52,52,/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Peng_external_dataset/Peng_external_dataset.sdf,Peng_external
+0,0,CYP3A4,20,flat_atom_list,20,20,/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Rudik_external_dataset/Rudik_external_dataset.sdf,Rudik_external

@@ -1,0 +1,1373 @@
+{
+  "input_master_dataset_path": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/enzyme_family_merged_master/enzyme_family_merged_master_dataset.json",
+  "source_family_tagging_enabled": false,
+  "families": {
+    "CYP1A2": {
+      "target_family": "CYP1A2",
+      "total_master_rows_for_family": 337,
+      "strict_exact_clean_policy": "Include only single_exact and multi_exact rows with non-empty exact atom labels; exclude broad_region, tiered_multisite, and conflict_preserved rows. partial_agreement_union rows are included when they retain usable exact labels and do not carry blocking conflicts.",
+      "tiered_multisite_eval_policy": "Include only tiered_multisite rows and preserve primary, secondary, tertiary, and all_labeled_site_atoms without flattening to a deterministic target.",
+      "broad_region_aux_policy": "Include only broad_region rows for weak-supervision / auxiliary use; preserve broad_region_annotations and do not treat this subset as a strict Top-1 benchmark.",
+      "conflict_audit_policy": "Include conflict_preserved rows and any row with non-empty conflict_flags for human review and source-conflict analysis.",
+      "strict_exact_clean": {
+        "row_count": 165,
+        "source_breakdown": {
+          "ATTNSOM": 148,
+          "MetXBioDB": 17
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 148,
+          "metxbiodb_family": 17
+        },
+        "label_regime_breakdown": {
+          "single_exact": 111,
+          "multi_exact": 54
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 98,
+          "exact_agreement": 53,
+          "single_source": 14
+        },
+        "citation_count": 165,
+        "doi_count": 85,
+        "multisite_count": 110,
+        "empty_site_count": 0,
+        "included_single_exact_count": 111,
+        "included_multi_exact_count": 54,
+        "excluded_due_to_conflict_count": 49,
+        "excluded_due_to_broad_or_tiered_regime_count": 123,
+        "included_partial_agreement_union_count": 98,
+        "strict_decision_counts": {
+          "excluded_conflict_preserved": 49,
+          "excluded_non_exact_regime": 123,
+          "included_exact_clean": 67,
+          "included_partial_agreement_union": 98
+        }
+      },
+      "tiered_multisite_eval": {
+        "row_count": 100,
+        "source_breakdown": {
+          "ATTNSOM": 97,
+          "CYP_DBs_external": 3
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 100
+        },
+        "label_regime_breakdown": {
+          "tiered_multisite": 100
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 94,
+          "conflict_preserved": 6
+        },
+        "citation_count": 95,
+        "doi_count": 49,
+        "multisite_count": 100,
+        "empty_site_count": 0,
+        "primary_only_count": 0,
+        "primary_plus_secondary_count": 100,
+        "primary_plus_secondary_plus_tertiary_count": 31
+      },
+      "broad_region_aux": {
+        "row_count": 23,
+        "source_breakdown": {
+          "MetXBioDB": 23
+        },
+        "source_family_breakdown": {
+          "metxbiodb_family": 23
+        },
+        "label_regime_breakdown": {
+          "broad_region": 23
+        },
+        "merge_policy_breakdown": {
+          "conflict_preserved": 23
+        },
+        "citation_count": 23,
+        "doi_count": 0,
+        "multisite_count": 23,
+        "empty_site_count": 0,
+        "empty_exact_site_count": 0,
+        "rows_with_broad_region_annotations": 9
+      },
+      "conflict_audit": {
+        "row_count": 325,
+        "source_breakdown": {
+          "ATTNSOM": 256,
+          "MetXBioDB": 43,
+          "CYP_DBs_external": 26
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 282,
+          "metxbiodb_family": 43
+        },
+        "label_regime_breakdown": {
+          "single_exact": 121,
+          "tiered_multisite": 100,
+          "multi_exact": 81,
+          "broad_region": 23
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 192,
+          "conflict_preserved": 78,
+          "exact_agreement": 41,
+          "single_source": 14
+        },
+        "citation_count": 308,
+        "doi_count": 151,
+        "multisite_count": 261,
+        "empty_site_count": 0,
+        "conflict_flag_counts": {
+          "multi_family_assignment": 307,
+          "site_set_mismatch": 198,
+          "label_regime_mismatch": 169,
+          "tier_assignment_mismatch": 100,
+          "contains_broad_region_label": 69,
+          "site_set_disjoint": 12
+        },
+        "counts_by_merge_policy_used": {
+          "partial_agreement_union": 192,
+          "conflict_preserved": 78,
+          "exact_agreement": 41,
+          "single_source": 14
+        },
+        "counts_by_source_combination": {
+          "ATTNSOM | CYP_DBs_external | MetXBioDB": 227,
+          "MetXBioDB": 40,
+          "ATTNSOM": 26,
+          "CYP_DBs_external": 26,
+          "ATTNSOM | CYP_DBs_external": 6
+        }
+      },
+      "outputs": {
+        "strict_exact_clean_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP1A2/strict_exact_clean.json",
+        "tiered_multisite_eval_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP1A2/tiered_multisite_eval.json",
+        "broad_region_aux_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP1A2/broad_region_aux.json",
+        "conflict_audit_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP1A2/conflict_audit.json",
+        "summary_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP1A2/downstream_subset_summary.json",
+        "breakdown_csv": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP1A2/downstream_subset_breakdown.csv"
+      },
+      "trainable": true,
+      "benchmarkable": true
+    },
+    "CYP2A6": {
+      "target_family": "CYP2A6",
+      "total_master_rows_for_family": 139,
+      "strict_exact_clean_policy": "Include only single_exact and multi_exact rows with non-empty exact atom labels; exclude broad_region, tiered_multisite, and conflict_preserved rows. partial_agreement_union rows are included when they retain usable exact labels and do not carry blocking conflicts.",
+      "tiered_multisite_eval_policy": "Include only tiered_multisite rows and preserve primary, secondary, tertiary, and all_labeled_site_atoms without flattening to a deterministic target.",
+      "broad_region_aux_policy": "Include only broad_region rows for weak-supervision / auxiliary use; preserve broad_region_annotations and do not treat this subset as a strict Top-1 benchmark.",
+      "conflict_audit_policy": "Include conflict_preserved rows and any row with non-empty conflict_flags for human review and source-conflict analysis.",
+      "strict_exact_clean": {
+        "row_count": 80,
+        "source_breakdown": {
+          "ATTNSOM": 68,
+          "MetXBioDB": 12
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 68,
+          "metxbiodb_family": 12
+        },
+        "label_regime_breakdown": {
+          "single_exact": 53,
+          "multi_exact": 27
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 45,
+          "exact_agreement": 25,
+          "single_source": 10
+        },
+        "citation_count": 80,
+        "doi_count": 34,
+        "multisite_count": 48,
+        "empty_site_count": 0,
+        "included_single_exact_count": 53,
+        "included_multi_exact_count": 27,
+        "excluded_due_to_conflict_count": 25,
+        "excluded_due_to_broad_or_tiered_regime_count": 34,
+        "included_partial_agreement_union_count": 45,
+        "strict_decision_counts": {
+          "excluded_conflict_preserved": 25,
+          "excluded_non_exact_regime": 34,
+          "included_exact_clean": 35,
+          "included_partial_agreement_union": 45
+        }
+      },
+      "tiered_multisite_eval": {
+        "row_count": 24,
+        "source_breakdown": {
+          "ATTNSOM": 23,
+          "CYP_DBs_external": 1
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 24
+        },
+        "label_regime_breakdown": {
+          "tiered_multisite": 24
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 23,
+          "conflict_preserved": 1
+        },
+        "citation_count": 24,
+        "doi_count": 15,
+        "multisite_count": 24,
+        "empty_site_count": 0,
+        "primary_only_count": 0,
+        "primary_plus_secondary_count": 24,
+        "primary_plus_secondary_plus_tertiary_count": 9
+      },
+      "broad_region_aux": {
+        "row_count": 10,
+        "source_breakdown": {
+          "MetXBioDB": 10
+        },
+        "source_family_breakdown": {
+          "metxbiodb_family": 10
+        },
+        "label_regime_breakdown": {
+          "broad_region": 10
+        },
+        "merge_policy_breakdown": {
+          "conflict_preserved": 10
+        },
+        "citation_count": 10,
+        "doi_count": 0,
+        "multisite_count": 10,
+        "empty_site_count": 0,
+        "empty_exact_site_count": 0,
+        "rows_with_broad_region_annotations": 3
+      },
+      "conflict_audit": {
+        "row_count": 135,
+        "source_breakdown": {
+          "ATTNSOM": 99,
+          "MetXBioDB": 24,
+          "CYP_DBs_external": 12
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 111,
+          "metxbiodb_family": 24
+        },
+        "label_regime_breakdown": {
+          "single_exact": 56,
+          "multi_exact": 45,
+          "tiered_multisite": 24,
+          "broad_region": 10
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 68,
+          "conflict_preserved": 36,
+          "exact_agreement": 21,
+          "single_source": 10
+        },
+        "citation_count": 131,
+        "doi_count": 54,
+        "multisite_count": 100,
+        "empty_site_count": 0,
+        "conflict_flag_counts": {
+          "multi_family_assignment": 118,
+          "label_regime_mismatch": 63,
+          "site_set_mismatch": 60,
+          "contains_broad_region_label": 30,
+          "tier_assignment_mismatch": 24,
+          "site_set_disjoint": 6
+        },
+        "counts_by_merge_policy_used": {
+          "partial_agreement_union": 68,
+          "conflict_preserved": 36,
+          "exact_agreement": 21,
+          "single_source": 10
+        },
+        "counts_by_source_combination": {
+          "ATTNSOM | CYP_DBs_external | MetXBioDB": 83,
+          "MetXBioDB": 22,
+          "ATTNSOM": 12,
+          "CYP_DBs_external": 12,
+          "ATTNSOM | CYP_DBs_external": 6
+        }
+      },
+      "outputs": {
+        "strict_exact_clean_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2A6/strict_exact_clean.json",
+        "tiered_multisite_eval_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2A6/tiered_multisite_eval.json",
+        "broad_region_aux_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2A6/broad_region_aux.json",
+        "conflict_audit_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2A6/conflict_audit.json",
+        "summary_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2A6/downstream_subset_summary.json",
+        "breakdown_csv": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2A6/downstream_subset_breakdown.csv"
+      },
+      "trainable": true,
+      "benchmarkable": true
+    },
+    "CYP2B6": {
+      "target_family": "CYP2B6",
+      "total_master_rows_for_family": 198,
+      "strict_exact_clean_policy": "Include only single_exact and multi_exact rows with non-empty exact atom labels; exclude broad_region, tiered_multisite, and conflict_preserved rows. partial_agreement_union rows are included when they retain usable exact labels and do not carry blocking conflicts.",
+      "tiered_multisite_eval_policy": "Include only tiered_multisite rows and preserve primary, secondary, tertiary, and all_labeled_site_atoms without flattening to a deterministic target.",
+      "broad_region_aux_policy": "Include only broad_region rows for weak-supervision / auxiliary use; preserve broad_region_annotations and do not treat this subset as a strict Top-1 benchmark.",
+      "conflict_audit_policy": "Include conflict_preserved rows and any row with non-empty conflict_flags for human review and source-conflict analysis.",
+      "strict_exact_clean": {
+        "row_count": 107,
+        "source_breakdown": {
+          "ATTNSOM": 97,
+          "MetXBioDB": 10
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 97,
+          "metxbiodb_family": 10
+        },
+        "label_regime_breakdown": {
+          "single_exact": 78,
+          "multi_exact": 29
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 69,
+          "exact_agreement": 29,
+          "single_source": 9
+        },
+        "citation_count": 107,
+        "doi_count": 48,
+        "multisite_count": 70,
+        "empty_site_count": 0,
+        "included_single_exact_count": 78,
+        "included_multi_exact_count": 29,
+        "excluded_due_to_conflict_count": 36,
+        "excluded_due_to_broad_or_tiered_regime_count": 55,
+        "included_partial_agreement_union_count": 69,
+        "strict_decision_counts": {
+          "excluded_conflict_preserved": 36,
+          "excluded_non_exact_regime": 55,
+          "included_exact_clean": 38,
+          "included_partial_agreement_union": 69
+        }
+      },
+      "tiered_multisite_eval": {
+        "row_count": 38,
+        "source_breakdown": {
+          "ATTNSOM": 36,
+          "CYP_DBs_external": 2
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 38
+        },
+        "label_regime_breakdown": {
+          "tiered_multisite": 38
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 33,
+          "conflict_preserved": 4,
+          "exact_agreement": 1
+        },
+        "citation_count": 36,
+        "doi_count": 26,
+        "multisite_count": 38,
+        "empty_site_count": 0,
+        "primary_only_count": 0,
+        "primary_plus_secondary_count": 38,
+        "primary_plus_secondary_plus_tertiary_count": 6
+      },
+      "broad_region_aux": {
+        "row_count": 17,
+        "source_breakdown": {
+          "MetXBioDB": 17
+        },
+        "source_family_breakdown": {
+          "metxbiodb_family": 17
+        },
+        "label_regime_breakdown": {
+          "broad_region": 17
+        },
+        "merge_policy_breakdown": {
+          "conflict_preserved": 17
+        },
+        "citation_count": 17,
+        "doi_count": 0,
+        "multisite_count": 17,
+        "empty_site_count": 0,
+        "empty_exact_site_count": 0,
+        "rows_with_broad_region_annotations": 6
+      },
+      "conflict_audit": {
+        "row_count": 196,
+        "source_breakdown": {
+          "ATTNSOM": 148,
+          "MetXBioDB": 29,
+          "CYP_DBs_external": 19
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 167,
+          "metxbiodb_family": 29
+        },
+        "label_regime_breakdown": {
+          "single_exact": 98,
+          "multi_exact": 43,
+          "tiered_multisite": 38,
+          "broad_region": 17
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 102,
+          "conflict_preserved": 57,
+          "exact_agreement": 28,
+          "single_source": 9
+        },
+        "citation_count": 194,
+        "doi_count": 92,
+        "multisite_count": 141,
+        "empty_site_count": 0,
+        "conflict_flag_counts": {
+          "multi_family_assignment": 195,
+          "site_set_mismatch": 115,
+          "label_regime_mismatch": 85,
+          "contains_broad_region_label": 51,
+          "tier_assignment_mismatch": 35,
+          "site_set_disjoint": 12
+        },
+        "counts_by_merge_policy_used": {
+          "partial_agreement_union": 102,
+          "conflict_preserved": 57,
+          "exact_agreement": 28,
+          "single_source": 9
+        },
+        "counts_by_source_combination": {
+          "ATTNSOM | CYP_DBs_external | MetXBioDB": 120,
+          "MetXBioDB": 28,
+          "ATTNSOM": 19,
+          "CYP_DBs_external": 19,
+          "ATTNSOM | CYP_DBs_external": 10
+        }
+      },
+      "outputs": {
+        "strict_exact_clean_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2B6/strict_exact_clean.json",
+        "tiered_multisite_eval_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2B6/tiered_multisite_eval.json",
+        "broad_region_aux_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2B6/broad_region_aux.json",
+        "conflict_audit_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2B6/conflict_audit.json",
+        "summary_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2B6/downstream_subset_summary.json",
+        "breakdown_csv": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2B6/downstream_subset_breakdown.csv"
+      },
+      "trainable": true,
+      "benchmarkable": true
+    },
+    "CYP2C19": {
+      "target_family": "CYP2C19",
+      "total_master_rows_for_family": 259,
+      "strict_exact_clean_policy": "Include only single_exact and multi_exact rows with non-empty exact atom labels; exclude broad_region, tiered_multisite, and conflict_preserved rows. partial_agreement_union rows are included when they retain usable exact labels and do not carry blocking conflicts.",
+      "tiered_multisite_eval_policy": "Include only tiered_multisite rows and preserve primary, secondary, tertiary, and all_labeled_site_atoms without flattening to a deterministic target.",
+      "broad_region_aux_policy": "Include only broad_region rows for weak-supervision / auxiliary use; preserve broad_region_annotations and do not treat this subset as a strict Top-1 benchmark.",
+      "conflict_audit_policy": "Include conflict_preserved rows and any row with non-empty conflict_flags for human review and source-conflict analysis.",
+      "strict_exact_clean": {
+        "row_count": 159,
+        "source_breakdown": {
+          "ATTNSOM": 140,
+          "MetXBioDB": 19
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 140,
+          "metxbiodb_family": 19
+        },
+        "label_regime_breakdown": {
+          "single_exact": 103,
+          "multi_exact": 56
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 97,
+          "exact_agreement": 49,
+          "single_source": 13
+        },
+        "citation_count": 159,
+        "doi_count": 79,
+        "multisite_count": 105,
+        "empty_site_count": 0,
+        "included_single_exact_count": 103,
+        "included_multi_exact_count": 56,
+        "excluded_due_to_conflict_count": 27,
+        "excluded_due_to_broad_or_tiered_regime_count": 73,
+        "included_partial_agreement_union_count": 97,
+        "strict_decision_counts": {
+          "excluded_conflict_preserved": 27,
+          "excluded_non_exact_regime": 73,
+          "included_exact_clean": 62,
+          "included_partial_agreement_union": 97
+        }
+      },
+      "tiered_multisite_eval": {
+        "row_count": 60,
+        "source_breakdown": {
+          "ATTNSOM": 59,
+          "CYP_DBs_external": 1
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 60
+        },
+        "label_regime_breakdown": {
+          "tiered_multisite": 60
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 58,
+          "conflict_preserved": 2
+        },
+        "citation_count": 60,
+        "doi_count": 31,
+        "multisite_count": 60,
+        "empty_site_count": 0,
+        "primary_only_count": 0,
+        "primary_plus_secondary_count": 60,
+        "primary_plus_secondary_plus_tertiary_count": 17
+      },
+      "broad_region_aux": {
+        "row_count": 13,
+        "source_breakdown": {
+          "MetXBioDB": 13
+        },
+        "source_family_breakdown": {
+          "metxbiodb_family": 13
+        },
+        "label_regime_breakdown": {
+          "broad_region": 13
+        },
+        "merge_policy_breakdown": {
+          "conflict_preserved": 13
+        },
+        "citation_count": 13,
+        "doi_count": 0,
+        "multisite_count": 13,
+        "empty_site_count": 0,
+        "empty_exact_site_count": 0,
+        "rows_with_broad_region_annotations": 6
+      },
+      "conflict_audit": {
+        "row_count": 259,
+        "source_breakdown": {
+          "ATTNSOM": 212,
+          "MetXBioDB": 33,
+          "CYP_DBs_external": 14
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 226,
+          "metxbiodb_family": 33
+        },
+        "label_regime_breakdown": {
+          "single_exact": 118,
+          "multi_exact": 68,
+          "tiered_multisite": 60,
+          "broad_region": 13
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 155,
+          "exact_agreement": 49,
+          "conflict_preserved": 42,
+          "single_source": 13
+        },
+        "citation_count": 259,
+        "doi_count": 126,
+        "multisite_count": 191,
+        "empty_site_count": 0,
+        "conflict_flag_counts": {
+          "multi_family_assignment": 258,
+          "site_set_mismatch": 160,
+          "label_regime_mismatch": 111,
+          "tier_assignment_mismatch": 57,
+          "contains_broad_region_label": 39,
+          "site_set_disjoint": 3
+        },
+        "counts_by_merge_policy_used": {
+          "partial_agreement_union": 155,
+          "exact_agreement": 49,
+          "conflict_preserved": 42,
+          "single_source": 13
+        },
+        "counts_by_source_combination": {
+          "ATTNSOM | CYP_DBs_external | MetXBioDB": 194,
+          "MetXBioDB": 27,
+          "ATTNSOM": 14,
+          "CYP_DBs_external": 14,
+          "ATTNSOM | CYP_DBs_external": 10
+        }
+      },
+      "outputs": {
+        "strict_exact_clean_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C19/strict_exact_clean.json",
+        "tiered_multisite_eval_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C19/tiered_multisite_eval.json",
+        "broad_region_aux_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C19/broad_region_aux.json",
+        "conflict_audit_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C19/conflict_audit.json",
+        "summary_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C19/downstream_subset_summary.json",
+        "breakdown_csv": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C19/downstream_subset_breakdown.csv"
+      },
+      "trainable": true,
+      "benchmarkable": true
+    },
+    "CYP2C8": {
+      "target_family": "CYP2C8",
+      "total_master_rows_for_family": 176,
+      "strict_exact_clean_policy": "Include only single_exact and multi_exact rows with non-empty exact atom labels; exclude broad_region, tiered_multisite, and conflict_preserved rows. partial_agreement_union rows are included when they retain usable exact labels and do not carry blocking conflicts.",
+      "tiered_multisite_eval_policy": "Include only tiered_multisite rows and preserve primary, secondary, tertiary, and all_labeled_site_atoms without flattening to a deterministic target.",
+      "broad_region_aux_policy": "Include only broad_region rows for weak-supervision / auxiliary use; preserve broad_region_annotations and do not treat this subset as a strict Top-1 benchmark.",
+      "conflict_audit_policy": "Include conflict_preserved rows and any row with non-empty conflict_flags for human review and source-conflict analysis.",
+      "strict_exact_clean": {
+        "row_count": 103,
+        "source_breakdown": {
+          "ATTNSOM": 91,
+          "MetXBioDB": 12
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 91,
+          "metxbiodb_family": 12
+        },
+        "label_regime_breakdown": {
+          "single_exact": 63,
+          "multi_exact": 40
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 67,
+          "exact_agreement": 26,
+          "single_source": 10
+        },
+        "citation_count": 102,
+        "doi_count": 46,
+        "multisite_count": 72,
+        "empty_site_count": 0,
+        "included_single_exact_count": 63,
+        "included_multi_exact_count": 40,
+        "excluded_due_to_conflict_count": 19,
+        "excluded_due_to_broad_or_tiered_regime_count": 54,
+        "included_partial_agreement_union_count": 67,
+        "strict_decision_counts": {
+          "excluded_conflict_preserved": 19,
+          "excluded_non_exact_regime": 54,
+          "included_exact_clean": 36,
+          "included_partial_agreement_union": 67
+        }
+      },
+      "tiered_multisite_eval": {
+        "row_count": 43,
+        "source_breakdown": {
+          "ATTNSOM": 40,
+          "CYP_DBs_external": 3
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 43
+        },
+        "label_regime_breakdown": {
+          "tiered_multisite": 43
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 36,
+          "conflict_preserved": 6,
+          "exact_agreement": 1
+        },
+        "citation_count": 41,
+        "doi_count": 23,
+        "multisite_count": 43,
+        "empty_site_count": 0,
+        "primary_only_count": 0,
+        "primary_plus_secondary_count": 43,
+        "primary_plus_secondary_plus_tertiary_count": 17
+      },
+      "broad_region_aux": {
+        "row_count": 11,
+        "source_breakdown": {
+          "MetXBioDB": 11
+        },
+        "source_family_breakdown": {
+          "metxbiodb_family": 11
+        },
+        "label_regime_breakdown": {
+          "broad_region": 11
+        },
+        "merge_policy_breakdown": {
+          "conflict_preserved": 11
+        },
+        "citation_count": 11,
+        "doi_count": 0,
+        "multisite_count": 11,
+        "empty_site_count": 0,
+        "empty_exact_site_count": 0,
+        "rows_with_broad_region_annotations": 4
+      },
+      "conflict_audit": {
+        "row_count": 176,
+        "source_breakdown": {
+          "ATTNSOM": 140,
+          "MetXBioDB": 24,
+          "CYP_DBs_external": 12
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 152,
+          "metxbiodb_family": 24
+        },
+        "label_regime_breakdown": {
+          "single_exact": 70,
+          "multi_exact": 52,
+          "tiered_multisite": 43,
+          "broad_region": 11
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 103,
+          "conflict_preserved": 36,
+          "exact_agreement": 27,
+          "single_source": 10
+        },
+        "citation_count": 171,
+        "doi_count": 81,
+        "multisite_count": 139,
+        "empty_site_count": 0,
+        "conflict_flag_counts": {
+          "multi_family_assignment": 176,
+          "site_set_mismatch": 104,
+          "label_regime_mismatch": 73,
+          "tier_assignment_mismatch": 42,
+          "contains_broad_region_label": 33,
+          "site_set_disjoint": 3
+        },
+        "counts_by_merge_policy_used": {
+          "partial_agreement_union": 103,
+          "conflict_preserved": 36,
+          "exact_agreement": 27,
+          "single_source": 10
+        },
+        "counts_by_source_combination": {
+          "ATTNSOM | CYP_DBs_external | MetXBioDB": 125,
+          "MetXBioDB": 22,
+          "ATTNSOM": 12,
+          "CYP_DBs_external": 12,
+          "ATTNSOM | CYP_DBs_external": 5
+        }
+      },
+      "outputs": {
+        "strict_exact_clean_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C8/strict_exact_clean.json",
+        "tiered_multisite_eval_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C8/tiered_multisite_eval.json",
+        "broad_region_aux_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C8/broad_region_aux.json",
+        "conflict_audit_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C8/conflict_audit.json",
+        "summary_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C8/downstream_subset_summary.json",
+        "breakdown_csv": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C8/downstream_subset_breakdown.csv"
+      },
+      "trainable": true,
+      "benchmarkable": true
+    },
+    "CYP2C9": {
+      "target_family": "CYP2C9",
+      "total_master_rows_for_family": 275,
+      "strict_exact_clean_policy": "Include only single_exact and multi_exact rows with non-empty exact atom labels; exclude broad_region, tiered_multisite, and conflict_preserved rows. partial_agreement_union rows are included when they retain usable exact labels and do not carry blocking conflicts.",
+      "tiered_multisite_eval_policy": "Include only tiered_multisite rows and preserve primary, secondary, tertiary, and all_labeled_site_atoms without flattening to a deterministic target.",
+      "broad_region_aux_policy": "Include only broad_region rows for weak-supervision / auxiliary use; preserve broad_region_annotations and do not treat this subset as a strict Top-1 benchmark.",
+      "conflict_audit_policy": "Include conflict_preserved rows and any row with non-empty conflict_flags for human review and source-conflict analysis.",
+      "strict_exact_clean": {
+        "row_count": 168,
+        "source_breakdown": {
+          "ATTNSOM": 148,
+          "MetXBioDB": 20
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 148,
+          "metxbiodb_family": 20
+        },
+        "label_regime_breakdown": {
+          "single_exact": 119,
+          "multi_exact": 49
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 91,
+          "exact_agreement": 60,
+          "single_source": 17
+        },
+        "citation_count": 167,
+        "doi_count": 82,
+        "multisite_count": 101,
+        "empty_site_count": 0,
+        "included_single_exact_count": 119,
+        "included_multi_exact_count": 49,
+        "excluded_due_to_conflict_count": 32,
+        "excluded_due_to_broad_or_tiered_regime_count": 75,
+        "included_partial_agreement_union_count": 91,
+        "strict_decision_counts": {
+          "excluded_conflict_preserved": 32,
+          "excluded_non_exact_regime": 75,
+          "included_exact_clean": 77,
+          "included_partial_agreement_union": 91
+        }
+      },
+      "tiered_multisite_eval": {
+        "row_count": 61,
+        "source_breakdown": {
+          "ATTNSOM": 60,
+          "CYP_DBs_external": 1
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 61
+        },
+        "label_regime_breakdown": {
+          "tiered_multisite": 61
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 58,
+          "conflict_preserved": 2,
+          "exact_agreement": 1
+        },
+        "citation_count": 59,
+        "doi_count": 33,
+        "multisite_count": 61,
+        "empty_site_count": 0,
+        "primary_only_count": 0,
+        "primary_plus_secondary_count": 60,
+        "primary_plus_secondary_plus_tertiary_count": 19
+      },
+      "broad_region_aux": {
+        "row_count": 14,
+        "source_breakdown": {
+          "MetXBioDB": 14
+        },
+        "source_family_breakdown": {
+          "metxbiodb_family": 14
+        },
+        "label_regime_breakdown": {
+          "broad_region": 14
+        },
+        "merge_policy_breakdown": {
+          "conflict_preserved": 14
+        },
+        "citation_count": 14,
+        "doi_count": 0,
+        "multisite_count": 14,
+        "empty_site_count": 0,
+        "empty_exact_site_count": 0,
+        "rows_with_broad_region_annotations": 5
+      },
+      "conflict_audit": {
+        "row_count": 263,
+        "source_breakdown": {
+          "ATTNSOM": 211,
+          "MetXBioDB": 36,
+          "CYP_DBs_external": 16
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 227,
+          "metxbiodb_family": 36
+        },
+        "label_regime_breakdown": {
+          "single_exact": 123,
+          "multi_exact": 65,
+          "tiered_multisite": 61,
+          "broad_region": 14
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 149,
+          "exact_agreement": 49,
+          "conflict_preserved": 48,
+          "single_source": 17
+        },
+        "citation_count": 258,
+        "doi_count": 124,
+        "multisite_count": 193,
+        "empty_site_count": 0,
+        "conflict_flag_counts": {
+          "multi_family_assignment": 259,
+          "site_set_mismatch": 141,
+          "label_regime_mismatch": 105,
+          "tier_assignment_mismatch": 58,
+          "contains_broad_region_label": 42,
+          "site_set_disjoint": 6
+        },
+        "counts_by_merge_policy_used": {
+          "partial_agreement_union": 149,
+          "exact_agreement": 49,
+          "conflict_preserved": 48,
+          "single_source": 17
+        },
+        "counts_by_source_combination": {
+          "ATTNSOM | CYP_DBs_external | MetXBioDB": 193,
+          "MetXBioDB": 33,
+          "ATTNSOM": 16,
+          "CYP_DBs_external": 16,
+          "ATTNSOM | CYP_DBs_external": 5
+        }
+      },
+      "outputs": {
+        "strict_exact_clean_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C9/strict_exact_clean.json",
+        "tiered_multisite_eval_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C9/tiered_multisite_eval.json",
+        "broad_region_aux_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C9/broad_region_aux.json",
+        "conflict_audit_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C9/conflict_audit.json",
+        "summary_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C9/downstream_subset_summary.json",
+        "breakdown_csv": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2C9/downstream_subset_breakdown.csv"
+      },
+      "trainable": true,
+      "benchmarkable": true
+    },
+    "CYP2D6": {
+      "target_family": "CYP2D6",
+      "total_master_rows_for_family": 327,
+      "strict_exact_clean_policy": "Include only single_exact and multi_exact rows with non-empty exact atom labels; exclude broad_region, tiered_multisite, and conflict_preserved rows. partial_agreement_union rows are included when they retain usable exact labels and do not carry blocking conflicts.",
+      "tiered_multisite_eval_policy": "Include only tiered_multisite rows and preserve primary, secondary, tertiary, and all_labeled_site_atoms without flattening to a deterministic target.",
+      "broad_region_aux_policy": "Include only broad_region rows for weak-supervision / auxiliary use; preserve broad_region_annotations and do not treat this subset as a strict Top-1 benchmark.",
+      "conflict_audit_policy": "Include conflict_preserved rows and any row with non-empty conflict_flags for human review and source-conflict analysis.",
+      "strict_exact_clean": {
+        "row_count": 197,
+        "source_breakdown": {
+          "ATTNSOM": 173,
+          "MetXBioDB": 24
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 173,
+          "metxbiodb_family": 24
+        },
+        "label_regime_breakdown": {
+          "single_exact": 133,
+          "multi_exact": 64
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 137,
+          "exact_agreement": 43,
+          "single_source": 17
+        },
+        "citation_count": 197,
+        "doi_count": 97,
+        "multisite_count": 145,
+        "empty_site_count": 0,
+        "included_single_exact_count": 133,
+        "included_multi_exact_count": 64,
+        "excluded_due_to_conflict_count": 43,
+        "excluded_due_to_broad_or_tiered_regime_count": 87,
+        "included_partial_agreement_union_count": 137,
+        "strict_decision_counts": {
+          "excluded_conflict_preserved": 43,
+          "excluded_non_exact_regime": 87,
+          "included_exact_clean": 60,
+          "included_partial_agreement_union": 137
+        }
+      },
+      "tiered_multisite_eval": {
+        "row_count": 72,
+        "source_breakdown": {
+          "ATTNSOM": 71,
+          "CYP_DBs_external": 1
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 72
+        },
+        "label_regime_breakdown": {
+          "tiered_multisite": 72
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 69,
+          "conflict_preserved": 2,
+          "exact_agreement": 1
+        },
+        "citation_count": 72,
+        "doi_count": 40,
+        "multisite_count": 72,
+        "empty_site_count": 0,
+        "primary_only_count": 0,
+        "primary_plus_secondary_count": 72,
+        "primary_plus_secondary_plus_tertiary_count": 21
+      },
+      "broad_region_aux": {
+        "row_count": 15,
+        "source_breakdown": {
+          "MetXBioDB": 15
+        },
+        "source_family_breakdown": {
+          "metxbiodb_family": 15
+        },
+        "label_regime_breakdown": {
+          "broad_region": 15
+        },
+        "merge_policy_breakdown": {
+          "conflict_preserved": 15
+        },
+        "citation_count": 15,
+        "doi_count": 0,
+        "multisite_count": 15,
+        "empty_site_count": 0,
+        "empty_exact_site_count": 0,
+        "rows_with_broad_region_annotations": 6
+      },
+      "conflict_audit": {
+        "row_count": 318,
+        "source_breakdown": {
+          "ATTNSOM": 254,
+          "MetXBioDB": 44,
+          "CYP_DBs_external": 20
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 274,
+          "metxbiodb_family": 44
+        },
+        "label_regime_breakdown": {
+          "single_exact": 146,
+          "multi_exact": 85,
+          "tiered_multisite": 72,
+          "broad_region": 15
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 200,
+          "conflict_preserved": 60,
+          "exact_agreement": 41,
+          "single_source": 17
+        },
+        "citation_count": 318,
+        "doi_count": 153,
+        "multisite_count": 255,
+        "empty_site_count": 0,
+        "conflict_flag_counts": {
+          "multi_family_assignment": 293,
+          "site_set_mismatch": 213,
+          "label_regime_mismatch": 128,
+          "tier_assignment_mismatch": 67,
+          "contains_broad_region_label": 45,
+          "site_set_disjoint": 18
+        },
+        "counts_by_merge_policy_used": {
+          "partial_agreement_union": 200,
+          "conflict_preserved": 60,
+          "exact_agreement": 41,
+          "single_source": 17
+        },
+        "counts_by_source_combination": {
+          "ATTNSOM | CYP_DBs_external | MetXBioDB": 236,
+          "MetXBioDB": 37,
+          "ATTNSOM": 20,
+          "CYP_DBs_external": 20,
+          "ATTNSOM | CYP_DBs_external": 5
+        }
+      },
+      "outputs": {
+        "strict_exact_clean_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2D6/strict_exact_clean.json",
+        "tiered_multisite_eval_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2D6/tiered_multisite_eval.json",
+        "broad_region_aux_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2D6/broad_region_aux.json",
+        "conflict_audit_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2D6/conflict_audit.json",
+        "summary_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2D6/downstream_subset_summary.json",
+        "breakdown_csv": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2D6/downstream_subset_breakdown.csv"
+      },
+      "trainable": true,
+      "benchmarkable": true
+    },
+    "CYP2E1": {
+      "target_family": "CYP2E1",
+      "total_master_rows_for_family": 190,
+      "strict_exact_clean_policy": "Include only single_exact and multi_exact rows with non-empty exact atom labels; exclude broad_region, tiered_multisite, and conflict_preserved rows. partial_agreement_union rows are included when they retain usable exact labels and do not carry blocking conflicts.",
+      "tiered_multisite_eval_policy": "Include only tiered_multisite rows and preserve primary, secondary, tertiary, and all_labeled_site_atoms without flattening to a deterministic target.",
+      "broad_region_aux_policy": "Include only broad_region rows for weak-supervision / auxiliary use; preserve broad_region_annotations and do not treat this subset as a strict Top-1 benchmark.",
+      "conflict_audit_policy": "Include conflict_preserved rows and any row with non-empty conflict_flags for human review and source-conflict analysis.",
+      "strict_exact_clean": {
+        "row_count": 107,
+        "source_breakdown": {
+          "ATTNSOM": 95,
+          "MetXBioDB": 12
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 95,
+          "metxbiodb_family": 12
+        },
+        "label_regime_breakdown": {
+          "single_exact": 71,
+          "multi_exact": 36
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 67,
+          "exact_agreement": 29,
+          "single_source": 11
+        },
+        "citation_count": 107,
+        "doi_count": 44,
+        "multisite_count": 68,
+        "empty_site_count": 0,
+        "included_single_exact_count": 71,
+        "included_multi_exact_count": 36,
+        "excluded_due_to_conflict_count": 29,
+        "excluded_due_to_broad_or_tiered_regime_count": 54,
+        "included_partial_agreement_union_count": 67,
+        "strict_decision_counts": {
+          "excluded_conflict_preserved": 29,
+          "excluded_non_exact_regime": 54,
+          "included_exact_clean": 40,
+          "included_partial_agreement_union": 67
+        }
+      },
+      "tiered_multisite_eval": {
+        "row_count": 38,
+        "source_breakdown": {
+          "ATTNSOM": 35,
+          "CYP_DBs_external": 3
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 38
+        },
+        "label_regime_breakdown": {
+          "tiered_multisite": 38
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 31,
+          "conflict_preserved": 6,
+          "exact_agreement": 1
+        },
+        "citation_count": 36,
+        "doi_count": 16,
+        "multisite_count": 38,
+        "empty_site_count": 0,
+        "primary_only_count": 0,
+        "primary_plus_secondary_count": 38,
+        "primary_plus_secondary_plus_tertiary_count": 11
+      },
+      "broad_region_aux": {
+        "row_count": 16,
+        "source_breakdown": {
+          "MetXBioDB": 16
+        },
+        "source_family_breakdown": {
+          "metxbiodb_family": 16
+        },
+        "label_regime_breakdown": {
+          "broad_region": 16
+        },
+        "merge_policy_breakdown": {
+          "conflict_preserved": 16
+        },
+        "citation_count": 16,
+        "doi_count": 0,
+        "multisite_count": 16,
+        "empty_site_count": 0,
+        "empty_exact_site_count": 0,
+        "rows_with_broad_region_annotations": 8
+      },
+      "conflict_audit": {
+        "row_count": 181,
+        "source_breakdown": {
+          "ATTNSOM": 135,
+          "MetXBioDB": 29,
+          "CYP_DBs_external": 17
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 152,
+          "metxbiodb_family": 29
+        },
+        "label_regime_breakdown": {
+          "single_exact": 69,
+          "multi_exact": 58,
+          "tiered_multisite": 38,
+          "broad_region": 16
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 89,
+          "conflict_preserved": 51,
+          "exact_agreement": 30,
+          "single_source": 11
+        },
+        "citation_count": 173,
+        "doi_count": 67,
+        "multisite_count": 144,
+        "empty_site_count": 0,
+        "conflict_flag_counts": {
+          "multi_family_assignment": 168,
+          "site_set_mismatch": 83,
+          "label_regime_mismatch": 80,
+          "contains_broad_region_label": 48,
+          "tier_assignment_mismatch": 35,
+          "site_set_disjoint": 3
+        },
+        "counts_by_merge_policy_used": {
+          "partial_agreement_union": 89,
+          "conflict_preserved": 51,
+          "exact_agreement": 30,
+          "single_source": 11
+        },
+        "counts_by_source_combination": {
+          "ATTNSOM | CYP_DBs_external | MetXBioDB": 108,
+          "MetXBioDB": 28,
+          "ATTNSOM": 17,
+          "CYP_DBs_external": 17,
+          "ATTNSOM | CYP_DBs_external": 11
+        }
+      },
+      "outputs": {
+        "strict_exact_clean_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2E1/strict_exact_clean.json",
+        "tiered_multisite_eval_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2E1/tiered_multisite_eval.json",
+        "broad_region_aux_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2E1/broad_region_aux.json",
+        "conflict_audit_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2E1/conflict_audit.json",
+        "summary_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2E1/downstream_subset_summary.json",
+        "breakdown_csv": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP2E1/downstream_subset_breakdown.csv"
+      },
+      "trainable": true,
+      "benchmarkable": true
+    },
+    "CYP3A4": {
+      "target_family": "CYP3A4",
+      "total_master_rows_for_family": 643,
+      "strict_exact_clean_policy": "Include only single_exact and multi_exact rows with non-empty exact atom labels; exclude broad_region, tiered_multisite, and conflict_preserved rows. partial_agreement_union rows are included when they retain usable exact labels and do not carry blocking conflicts.",
+      "tiered_multisite_eval_policy": "Include only tiered_multisite rows and preserve primary, secondary, tertiary, and all_labeled_site_atoms without flattening to a deterministic target.",
+      "broad_region_aux_policy": "Include only broad_region rows for weak-supervision / auxiliary use; preserve broad_region_annotations and do not treat this subset as a strict Top-1 benchmark.",
+      "conflict_audit_policy": "Include conflict_preserved rows and any row with non-empty conflict_flags for human review and source-conflict analysis.",
+      "strict_exact_clean": {
+        "row_count": 330,
+        "source_breakdown": {
+          "ATTNSOM": 239,
+          "Peng_external": 50,
+          "MetXBioDB": 22,
+          "Rudik_external": 19
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 239,
+          "peng_family": 50,
+          "metxbiodb_family": 22,
+          "rudik_family": 19
+        },
+        "label_regime_breakdown": {
+          "single_exact": 207,
+          "multi_exact": 123
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 185,
+          "single_source": 80,
+          "exact_agreement": 65
+        },
+        "citation_count": 261,
+        "doi_count": 81,
+        "multisite_count": 205,
+        "empty_site_count": 0,
+        "included_single_exact_count": 207,
+        "included_multi_exact_count": 123,
+        "excluded_due_to_conflict_count": 83,
+        "excluded_due_to_broad_or_tiered_regime_count": 230,
+        "included_partial_agreement_union_count": 185,
+        "strict_decision_counts": {
+          "excluded_conflict_preserved": 83,
+          "excluded_non_exact_regime": 230,
+          "included_exact_clean": 145,
+          "included_partial_agreement_union": 185
+        }
+      },
+      "tiered_multisite_eval": {
+        "row_count": 194,
+        "source_breakdown": {
+          "ATTNSOM": 188,
+          "CYP_DBs_external": 6
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 194
+        },
+        "label_regime_breakdown": {
+          "tiered_multisite": 194
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 179,
+          "conflict_preserved": 12,
+          "exact_agreement": 3
+        },
+        "citation_count": 192,
+        "doi_count": 81,
+        "multisite_count": 194,
+        "empty_site_count": 0,
+        "primary_only_count": 0,
+        "primary_plus_secondary_count": 192,
+        "primary_plus_secondary_plus_tertiary_count": 74
+      },
+      "broad_region_aux": {
+        "row_count": 36,
+        "source_breakdown": {
+          "MetXBioDB": 36
+        },
+        "source_family_breakdown": {
+          "metxbiodb_family": 36
+        },
+        "label_regime_breakdown": {
+          "broad_region": 36
+        },
+        "merge_policy_breakdown": {
+          "conflict_preserved": 36
+        },
+        "citation_count": 36,
+        "doi_count": 0,
+        "multisite_count": 36,
+        "empty_site_count": 0,
+        "empty_exact_site_count": 0,
+        "rows_with_broad_region_annotations": 15
+      },
+      "conflict_audit": {
+        "row_count": 545,
+        "source_breakdown": {
+          "ATTNSOM": 434,
+          "MetXBioDB": 64,
+          "CYP_DBs_external": 43,
+          "Rudik_external": 3,
+          "Peng_external": 1
+        },
+        "source_family_breakdown": {
+          "attnsom_family": 477,
+          "metxbiodb_family": 64,
+          "rudik_family": 3,
+          "peng_family": 1
+        },
+        "label_regime_breakdown": {
+          "tiered_multisite": 193,
+          "single_exact": 181,
+          "multi_exact": 135,
+          "broad_region": 36
+        },
+        "merge_policy_breakdown": {
+          "partial_agreement_union": 352,
+          "conflict_preserved": 131,
+          "exact_agreement": 50,
+          "single_source": 12
+        },
+        "citation_count": 531,
+        "doi_count": 194,
+        "multisite_count": 449,
+        "empty_site_count": 0,
+        "conflict_flag_counts": {
+          "multi_family_assignment": 429,
+          "site_set_mismatch": 366,
+          "label_regime_mismatch": 318,
+          "tier_assignment_mismatch": 189,
+          "contains_broad_region_label": 108,
+          "site_set_disjoint": 38
+        },
+        "counts_by_merge_policy_used": {
+          "partial_agreement_union": 352,
+          "conflict_preserved": 131,
+          "exact_agreement": 50,
+          "single_source": 12
+        },
+        "counts_by_source_combination": {
+          "ATTNSOM | CYP_DBs_external | MetXBioDB": 391,
+          "MetXBioDB": 53,
+          "ATTNSOM": 43,
+          "CYP_DBs_external": 43,
+          "ATTNSOM | CYP_DBs_external": 10,
+          "Rudik_external": 3,
+          "ATTNSOM | CYP_DBs_external | MetXBioDB | Peng_external": 1,
+          "Peng_external": 1
+        }
+      },
+      "outputs": {
+        "strict_exact_clean_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP3A4/strict_exact_clean.json",
+        "tiered_multisite_eval_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP3A4/tiered_multisite_eval.json",
+        "broad_region_aux_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP3A4/broad_region_aux.json",
+        "conflict_audit_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP3A4/conflict_audit.json",
+        "summary_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP3A4/downstream_subset_summary.json",
+        "breakdown_csv": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets/CYP3A4/downstream_subset_breakdown.csv"
+      },
+      "trainable": true,
+      "benchmarkable": true
+    }
+  },
+  "outputs_root": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/family_downstream_subsets",
+  "trainable_family_count": 9,
+  "benchmarkable_family_count": 9,
+  "insufficient_data_family_count": 0,
+  "trainable_families": [
+    "CYP1A2",
+    "CYP2A6",
+    "CYP2B6",
+    "CYP2C19",
+    "CYP2C8",
+    "CYP2C9",
+    "CYP2D6",
+    "CYP2E1",
+    "CYP3A4"
+  ],
+  "benchmarkable_families": [
+    "CYP1A2",
+    "CYP2A6",
+    "CYP2B6",
+    "CYP2C19",
+    "CYP2C8",
+    "CYP2C9",
+    "CYP2D6",
+    "CYP2E1",
+    "CYP3A4"
+  ],
+  "audit_only_families": []
+}

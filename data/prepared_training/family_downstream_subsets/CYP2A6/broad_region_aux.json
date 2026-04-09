@@ -1,0 +1,1887 @@
+{
+  "n_drugs": 10,
+  "n_site_labeled": 10,
+  "summary": {
+    "total_input_sources": 21,
+    "total_parsed_rows": 4759,
+    "total_retained_rows": 6124,
+    "total_final_merged_rows": 10,
+    "discovered_families": [
+      "CYP1A2",
+      "CYP2A6",
+      "CYP2B6",
+      "CYP2C19",
+      "CYP2C8",
+      "CYP2C9",
+      "CYP2D6",
+      "CYP2E1",
+      "CYP3A4"
+    ],
+    "label_regime_counts": {
+      "broad_region": 155,
+      "multi_exact": 669,
+      "single_exact": 1090,
+      "tiered_multisite": 630
+    },
+    "merge_policy_counts": {
+      "conflict_preserved": 179,
+      "exact_agreement": 387,
+      "partial_agreement_union": 1437,
+      "single_source": 181
+    },
+    "subset_name": "broad_region_aux",
+    "target_family": "CYP2A6"
+  },
+  "build_stats": {
+    "family_allowlist": [],
+    "source_specs": [
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/1A2.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP1A2",
+        "config_keys": []
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2A6.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2A6",
+        "config_keys": []
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2B6.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2B6",
+        "config_keys": []
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2C19.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2C19",
+        "config_keys": []
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2C8.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2C8",
+        "config_keys": []
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2C9.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2C9",
+        "config_keys": []
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2D6.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2D6",
+        "config_keys": []
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2E1.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2E1",
+        "config_keys": []
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP3A4",
+        "config_keys": []
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/1A2.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP1A2",
+        "config_keys": []
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2A6.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2A6",
+        "config_keys": []
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2B6.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2B6",
+        "config_keys": []
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2C19.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2C19",
+        "config_keys": []
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2C8.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2C8",
+        "config_keys": []
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2C9.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2C9",
+        "config_keys": []
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2D6.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2D6",
+        "config_keys": []
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2E1.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP2E1",
+        "config_keys": []
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "parser_family": "attnsom_tiered",
+        "fixed_family": "CYP3A4",
+        "config_keys": []
+      },
+      {
+        "source_name": "MetXBioDB",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+        "parser_family": "metxbio_multi_bom",
+        "fixed_family": "",
+        "config_keys": [
+          "citation_fields",
+          "confidence_override",
+          "doi_fields",
+          "flag_comments_field",
+          "id_fields",
+          "index_base",
+          "name_fields",
+          "source_detail_fields"
+        ]
+      },
+      {
+        "source_name": "Peng_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Peng_external_dataset/Peng_external_dataset.sdf",
+        "parser_family": "flat_atom_list",
+        "fixed_family": "CYP3A4",
+        "config_keys": [
+          "citation_fields",
+          "confidence_override",
+          "doi_fields",
+          "fixed_cyp",
+          "id_fields",
+          "index_base",
+          "name_fields",
+          "site_fields",
+          "source_detail_fields"
+        ]
+      },
+      {
+        "source_name": "Rudik_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Rudik_external_dataset/Rudik_external_dataset.sdf",
+        "parser_family": "flat_atom_list",
+        "fixed_family": "CYP3A4",
+        "config_keys": [
+          "citation_fields",
+          "confidence_override",
+          "doi_fields",
+          "fixed_cyp",
+          "id_fields",
+          "index_base",
+          "name_fields",
+          "site_fields",
+          "source_detail_fields"
+        ]
+      }
+    ],
+    "skipped_source_specs": [
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/HLM.sdf",
+        "reason": "unsupported_ambiguous_family",
+        "details": "HLM.sdf is present but not mapped to a specific enzyme family."
+      }
+    ],
+    "per_source_summary": [
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/1A2.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 271,
+        "retained_annotation_count": 271,
+        "retained_unique_molecule_count": 271,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP1A2"
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2A6.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 105,
+        "retained_annotation_count": 105,
+        "retained_unique_molecule_count": 105,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2A6"
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2B6.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 151,
+        "retained_annotation_count": 151,
+        "retained_unique_molecule_count": 151,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2B6"
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2C19.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 218,
+        "retained_annotation_count": 218,
+        "retained_unique_molecule_count": 218,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2C19"
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2C8.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 142,
+        "retained_annotation_count": 142,
+        "retained_unique_molecule_count": 142,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2C8"
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2C9.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 226,
+        "retained_annotation_count": 226,
+        "retained_unique_molecule_count": 226,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2C9"
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2D6.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 270,
+        "retained_annotation_count": 270,
+        "retained_unique_molecule_count": 270,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2D6"
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/2E1.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 145,
+        "retained_annotation_count": 145,
+        "retained_unique_molecule_count": 145,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2E1"
+      },
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 475,
+        "retained_annotation_count": 475,
+        "retained_unique_molecule_count": 475,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP3A4"
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/1A2.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 271,
+        "retained_annotation_count": 271,
+        "retained_unique_molecule_count": 271,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP1A2"
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2A6.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 105,
+        "retained_annotation_count": 105,
+        "retained_unique_molecule_count": 105,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2A6"
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2B6.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 151,
+        "retained_annotation_count": 151,
+        "retained_unique_molecule_count": 151,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2B6"
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2C19.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 218,
+        "retained_annotation_count": 218,
+        "retained_unique_molecule_count": 218,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2C19"
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2C8.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 142,
+        "retained_annotation_count": 142,
+        "retained_unique_molecule_count": 142,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2C8"
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2C9.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 226,
+        "retained_annotation_count": 226,
+        "retained_unique_molecule_count": 226,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2C9"
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2D6.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 270,
+        "retained_annotation_count": 270,
+        "retained_unique_molecule_count": 270,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2D6"
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/2E1.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 145,
+        "retained_annotation_count": 145,
+        "retained_unique_molecule_count": 145,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP2E1"
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 475,
+        "retained_annotation_count": 475,
+        "retained_unique_molecule_count": 475,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP3A4"
+      },
+      {
+        "source_name": "MetXBioDB",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+        "parser_family": "metxbio_multi_bom",
+        "parsed_count": 679,
+        "retained_annotation_count": 2046,
+        "retained_unique_molecule_count": 679,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": ""
+      },
+      {
+        "source_name": "Peng_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Peng_external_dataset/Peng_external_dataset.sdf",
+        "parser_family": "flat_atom_list",
+        "parsed_count": 54,
+        "retained_annotation_count": 52,
+        "retained_unique_molecule_count": 52,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 2,
+        "fixed_family": "CYP3A4"
+      },
+      {
+        "source_name": "Rudik_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Rudik_external_dataset/Rudik_external_dataset.sdf",
+        "parser_family": "flat_atom_list",
+        "parsed_count": 20,
+        "retained_annotation_count": 20,
+        "retained_unique_molecule_count": 20,
+        "excluded_non_target_family_count": 0,
+        "excluded_invalid_or_missing_label_count": 0,
+        "fixed_family": "CYP3A4"
+      }
+    ],
+    "property_scans": {
+      "ATTNSOM::1A2.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 46,
+          "ID": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 40,
+          "TERTIARY_SOM": 10
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "ATTNSOM::2A6.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 48,
+          "ID": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 22,
+          "TERTIARY_SOM": 9
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "ATTNSOM::2B6.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 52,
+          "ID": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 18,
+          "TERTIARY_SOM": 3
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "ATTNSOM::2C19.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 48,
+          "ID": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 18,
+          "TERTIARY_SOM": 4
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "ATTNSOM::2C8.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 53,
+          "ID": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 25,
+          "TERTIARY_SOM": 9
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "ATTNSOM::2C9.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 53,
+          "ID": 100,
+          "New_Or_Updated_From_Original_Merck_Dataset": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 27,
+          "TERTIARY_SOM": 12
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "ATTNSOM::2D6.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 63,
+          "ID": 100,
+          "New_Or_Updated_From_Original_Merck_Dataset": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 28,
+          "TERTIARY_SOM": 9
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "ATTNSOM::2E1.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 41,
+          "ID": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 22,
+          "TERTIARY_SOM": 8
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "ATTNSOM::3A4.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 25,
+          "ID": 100,
+          "New_Or_Updated_From_Original_Merck_Dataset": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 40,
+          "TERTIARY_SOM": 10
+        }
+      },
+      "CYP_DBs_external::1A2.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 46,
+          "ID": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 40,
+          "TERTIARY_SOM": 10
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "CYP_DBs_external::2A6.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 48,
+          "ID": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 23,
+          "TERTIARY_SOM": 9
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "CYP_DBs_external::2B6.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 52,
+          "ID": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 18,
+          "TERTIARY_SOM": 3
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "CYP_DBs_external::2C19.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 48,
+          "ID": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 18,
+          "TERTIARY_SOM": 4
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "CYP_DBs_external::2C8.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 53,
+          "ID": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 25,
+          "TERTIARY_SOM": 9
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "CYP_DBs_external::2C9.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 53,
+          "ID": 100,
+          "New_Or_Updated_From_Original_Merck_Dataset": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 27,
+          "TERTIARY_SOM": 12
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "CYP_DBs_external::2D6.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 63,
+          "ID": 100,
+          "New_Or_Updated_From_Original_Merck_Dataset": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 28,
+          "TERTIARY_SOM": 9
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "CYP_DBs_external::2E1.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 41,
+          "ID": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 22,
+          "TERTIARY_SOM": 8
+        },
+        "scan_fallback": "safe_property_keys_after_unicode_decode_error"
+      },
+      "CYP_DBs_external::3A4.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 25,
+          "ID": 100,
+          "New_Or_Updated_From_Original_Merck_Dataset": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 40,
+          "TERTIARY_SOM": 10
+        }
+      },
+      "MetXBioDB::metxbio data.cleaned.sdf": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "BOM_1A2": 100,
+          "BOM_2A6": 100,
+          "BOM_2B6": 100,
+          "BOM_2C19": 100,
+          "BOM_2C8": 100,
+          "BOM_2C9": 100,
+          "BOM_2D6": 100,
+          "BOM_2E1": 100,
+          "BOM_3A4": 100,
+          "FLAG_COMMENTS": 100,
+          "InChIKey": 100,
+          "PubChem_CID": 100,
+          "References": 100
+        }
+      },
+      "Peng_external::Peng_external_dataset.sdf": {
+        "scanned_records": 54,
+        "valid_records": 54,
+        "property_counts": {
+          "Name": 54,
+          "PRIMARY_SOM": 54,
+          "PotentialSOMs": 54,
+          "PredictSOMs": 25,
+          "PredictedSOMs": 29
+        }
+      },
+      "Rudik_external::Rudik_external_dataset.sdf": {
+        "scanned_records": 20,
+        "valid_records": 20,
+        "property_counts": {
+          "ID": 20,
+          "PRIMARY_SOM": 20
+        }
+      }
+    },
+    "duplicate_group_count": 2003,
+    "exact_agreement_merge_count": 387,
+    "partial_agreement_merge_count": 1437,
+    "conflict_preserved_count": 179,
+    "single_source_count": 181,
+    "citation_count": 2422,
+    "doi_count": 1065,
+    "site_provenance_preserved_count": 2544
+  },
+  "drugs": [
+    {
+      "id": "AGABNGOXUSXQDD-XKGFZTIGSA-N",
+      "molecule_name": "decursinol_angelate",
+      "name": "decursinol_angelate",
+      "canonical_smiles": "C/C=C(/C)C(=O)O[C@H]1Cc2cc3ccc(=O)oc3cc2OC1(C)C",
+      "smiles": "C/C=C(/C)C(=O)O[C@H]1Cc2cc3ccc(=O)oc3cc2OC1(C)C",
+      "inchi_key": "AGABNGOXUSXQDD-XKGFZTIGSA-N",
+      "formula": "C19H20O5",
+      "atom_count": 24,
+      "enzyme_family": "CYP2A6",
+      "primary_family": "CYP2A6",
+      "all_families": [
+        "CYP2A6"
+      ],
+      "target_family": "CYP2A6",
+      "family_confidence": "field_specific",
+      "enzyme_superfamily": "CYP",
+      "source_family_tag": "metxbiodb_family",
+      "source_family": "metxbiodb_family",
+      "target_cyp": "CYP2A6",
+      "primary_cyp": "CYP2A6",
+      "all_cyps": [
+        "CYP2A6"
+      ],
+      "site_atoms": [
+        9,
+        17
+      ],
+      "metabolism_sites": [
+        9,
+        17
+      ],
+      "som": [
+        {
+          "atom_idx": 9
+        },
+        {
+          "atom_idx": 17
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "MetXBioDB",
+      "source": "MetXBioDB",
+      "site_source": "MetXBioDB",
+      "source_record_id": "AGABNGOXUSXQDD-XKGFZTIGSA-N",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+      "source_details": [
+        "MetXBioDB",
+        "PubChem_CID=776123",
+        "InChIKey=AGABNGOXUSXQDD-XKGFZTIGSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Yoo et al.,Drug Metab. Disp.,35,1759,2007",
+      "doi": "",
+      "primary_site_atoms": [],
+      "secondary_site_atoms": [],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        9,
+        17
+      ],
+      "label_regime": "broad_region",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "MetXBioDB"
+      ],
+      "merged_from_source_families": [
+        "metxbiodb_family"
+      ],
+      "duplicate_group_id": "dup_b57b61b602772d74",
+      "merge_policy_used": "conflict_preserved",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "contains_broad_region_label"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "AGABNGOXUSXQDD-XKGFZTIGSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Yoo et al.,Drug Metab. Disp.,35,1759,2007",
+          "doi": "",
+          "label_regime": "broad_region",
+          "enzyme_family": "CYP2A6",
+          "target_family": "CYP2A6",
+          "family_confidence": "field_specific",
+          "primary_site_atoms": [],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            9,
+            17
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": []
+    },
+    {
+      "id": "GXBYFVGCMPJVJX-UHFFFAOYSA-N",
+      "molecule_name": "butadiene_monoxide",
+      "name": "butadiene_monoxide",
+      "canonical_smiles": "C=CC1CO1",
+      "smiles": "C=CC1CO1",
+      "inchi_key": "GXBYFVGCMPJVJX-UHFFFAOYSA-N",
+      "formula": "C4H6O",
+      "atom_count": 5,
+      "enzyme_family": "CYP2A6",
+      "primary_family": "CYP2A6",
+      "all_families": [
+        "CYP2A6",
+        "CYP2C9",
+        "CYP2E1"
+      ],
+      "target_family": "CYP2A6",
+      "family_confidence": "field_specific",
+      "enzyme_superfamily": "CYP",
+      "source_family_tag": "metxbiodb_family",
+      "source_family": "metxbiodb_family",
+      "target_cyp": "CYP2A6",
+      "primary_cyp": "CYP2A6",
+      "all_cyps": [
+        "CYP2A6",
+        "CYP2C9",
+        "CYP2E1"
+      ],
+      "site_atoms": [
+        0,
+        1
+      ],
+      "metabolism_sites": [
+        0,
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 0
+        },
+        {
+          "atom_idx": 1
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "MetXBioDB",
+      "source": "MetXBioDB",
+      "site_source": "MetXBioDB",
+      "source_record_id": "GXBYFVGCMPJVJX-UHFFFAOYSA-N",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+      "source_details": [
+        "MetXBioDB",
+        "PubChem_CID=13586",
+        "InChIKey=GXBYFVGCMPJVJX-UHFFFAOYSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Krause and Elfarra,Arch. Biochem. Biophys.,337,176,1997",
+      "doi": "",
+      "primary_site_atoms": [],
+      "secondary_site_atoms": [],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        0,
+        1
+      ],
+      "label_regime": "broad_region",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "MetXBioDB"
+      ],
+      "merged_from_source_families": [
+        "metxbiodb_family"
+      ],
+      "duplicate_group_id": "dup_6d9685900e89e74b",
+      "merge_policy_used": "conflict_preserved",
+      "conflict_flags": [
+        "contains_broad_region_label",
+        "label_regime_mismatch",
+        "multi_family_assignment"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "GXBYFVGCMPJVJX-UHFFFAOYSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Krause and Elfarra,Arch. Biochem. Biophys.,337,176,1997",
+          "doi": "",
+          "label_regime": "broad_region",
+          "enzyme_family": "CYP2A6",
+          "target_family": "CYP2A6",
+          "family_confidence": "field_specific",
+          "primary_site_atoms": [],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            0,
+            1
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": []
+    },
+    {
+      "id": "KAKZBPTYRLMSJV-UHFFFAOYSA-N",
+      "molecule_name": "butadiene",
+      "name": "butadiene",
+      "canonical_smiles": "C=CC=C",
+      "smiles": "C=CC=C",
+      "inchi_key": "KAKZBPTYRLMSJV-UHFFFAOYSA-N",
+      "formula": "C4H6",
+      "atom_count": 4,
+      "enzyme_family": "CYP2A6",
+      "primary_family": "CYP2A6",
+      "all_families": [
+        "CYP2A6",
+        "CYP2C9",
+        "CYP2E1"
+      ],
+      "target_family": "CYP2A6",
+      "family_confidence": "field_specific",
+      "enzyme_superfamily": "CYP",
+      "source_family_tag": "metxbiodb_family",
+      "source_family": "metxbiodb_family",
+      "target_cyp": "CYP2A6",
+      "primary_cyp": "CYP2A6",
+      "all_cyps": [
+        "CYP2A6",
+        "CYP2C9",
+        "CYP2E1"
+      ],
+      "site_atoms": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "metabolism_sites": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "som": [
+        {
+          "atom_idx": 0
+        },
+        {
+          "atom_idx": 1
+        },
+        {
+          "atom_idx": 2
+        },
+        {
+          "atom_idx": 3
+        }
+      ],
+      "site_count": 4,
+      "is_multisite": true,
+      "molecule_source": "MetXBioDB",
+      "source": "MetXBioDB",
+      "site_source": "MetXBioDB",
+      "source_record_id": "KAKZBPTYRLMSJV-UHFFFAOYSA-N",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+      "source_details": [
+        "MetXBioDB",
+        "PubChem_CID=7845",
+        "InChIKey=KAKZBPTYRLMSJV-UHFFFAOYSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "R.J. Deuscher and A.A. Elfarra, Arch. Biochem. Biophys., 1994, 311, 342-349\nR.S. and etc. Contributions of Human Enzymes in Carcinogen Metabolism, doi:10.1021/tx300132k",
+      "doi": "",
+      "primary_site_atoms": [],
+      "secondary_site_atoms": [],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "label_regime": "broad_region",
+      "broad_region_annotations": [
+        "The rate of metabolites of CYP2C9 and 2E1 may be low."
+      ],
+      "merged_from_sources": [
+        "MetXBioDB"
+      ],
+      "merged_from_source_families": [
+        "metxbiodb_family"
+      ],
+      "duplicate_group_id": "dup_8e175d592e4c0e9f",
+      "merge_policy_used": "conflict_preserved",
+      "conflict_flags": [
+        "contains_broad_region_label",
+        "label_regime_mismatch",
+        "multi_family_assignment"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "KAKZBPTYRLMSJV-UHFFFAOYSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "R.J. Deuscher and A.A. Elfarra, Arch. Biochem. Biophys., 1994, 311, 342-349\nR.S. and etc. Contributions of Human Enzymes in Carcinogen Metabolism, doi:10.1021/tx300132k",
+          "doi": "",
+          "label_regime": "broad_region",
+          "enzyme_family": "CYP2A6",
+          "target_family": "CYP2A6",
+          "family_confidence": "field_specific",
+          "primary_site_atoms": [],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "broad_region_annotations": [
+            "The rate of metabolites of CYP2C9 and 2E1 may be low."
+          ]
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": []
+    },
+    {
+      "id": "PPBRXRYQALVLMV-UHFFFAOYSA-N",
+      "molecule_name": "styrene",
+      "name": "styrene",
+      "canonical_smiles": "C=Cc1ccccc1",
+      "smiles": "C=Cc1ccccc1",
+      "inchi_key": "PPBRXRYQALVLMV-UHFFFAOYSA-N",
+      "formula": "C8H8",
+      "atom_count": 8,
+      "enzyme_family": "CYP2A6",
+      "primary_family": "CYP2A6",
+      "all_families": [
+        "CYP1A2",
+        "CYP2A6",
+        "CYP2B6",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP2D6",
+        "CYP2E1",
+        "CYP3A4"
+      ],
+      "target_family": "CYP2A6",
+      "family_confidence": "field_specific",
+      "enzyme_superfamily": "CYP",
+      "source_family_tag": "metxbiodb_family",
+      "source_family": "metxbiodb_family",
+      "target_cyp": "CYP2A6",
+      "primary_cyp": "CYP2A6",
+      "all_cyps": [
+        "CYP1A2",
+        "CYP2A6",
+        "CYP2B6",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP2D6",
+        "CYP2E1",
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        0,
+        1
+      ],
+      "metabolism_sites": [
+        0,
+        1
+      ],
+      "som": [
+        {
+          "atom_idx": 0
+        },
+        {
+          "atom_idx": 1
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "MetXBioDB",
+      "source": "MetXBioDB",
+      "site_source": "MetXBioDB",
+      "source_record_id": "PPBRXRYQALVLMV-UHFFFAOYSA-N",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+      "source_details": [
+        "MetXBioDB",
+        "PubChem_CID=7501",
+        "InChIKey=PPBRXRYQALVLMV-UHFFFAOYSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Nakajima et al.,Chem. Res. Toxicol.,7,891,1994 PMID:7696548",
+      "doi": "",
+      "primary_site_atoms": [],
+      "secondary_site_atoms": [],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        0,
+        1
+      ],
+      "label_regime": "broad_region",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "MetXBioDB"
+      ],
+      "merged_from_source_families": [
+        "metxbiodb_family"
+      ],
+      "duplicate_group_id": "dup_4237a3af62f06aee",
+      "merge_policy_used": "conflict_preserved",
+      "conflict_flags": [
+        "contains_broad_region_label",
+        "label_regime_mismatch",
+        "multi_family_assignment"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "PPBRXRYQALVLMV-UHFFFAOYSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Nakajima et al.,Chem. Res. Toxicol.,7,891,1994 PMID:7696548",
+          "doi": "",
+          "label_regime": "broad_region",
+          "enzyme_family": "CYP2A6",
+          "target_family": "CYP2A6",
+          "family_confidence": "field_specific",
+          "primary_site_atoms": [],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            0,
+            1
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": []
+    },
+    {
+      "id": "URRJUSLCXVXZOX-KNBMTAEXSA-N",
+      "molecule_name": "7-hydroxy-delta_8_tetrahydrocannabinol",
+      "name": "7-hydroxy-delta_8_tetrahydrocannabinol",
+      "canonical_smiles": "CCCCCc1cc(O)c2c(c1)OC(C)(C)[C@@H]1[C@@H](O)C=C(C)C[C@@H]21",
+      "smiles": "CCCCCc1cc(O)c2c(c1)OC(C)(C)[C@@H]1[C@@H](O)C=C(C)C[C@@H]21",
+      "inchi_key": "URRJUSLCXVXZOX-KNBMTAEXSA-N",
+      "formula": "C21H30O3",
+      "atom_count": 24,
+      "enzyme_family": "CYP2A6",
+      "primary_family": "CYP2A6",
+      "all_families": [
+        "CYP1A2",
+        "CYP2A6",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP3A4"
+      ],
+      "target_family": "CYP2A6",
+      "family_confidence": "field_specific",
+      "enzyme_superfamily": "CYP",
+      "source_family_tag": "metxbiodb_family",
+      "source_family": "metxbiodb_family",
+      "target_cyp": "CYP2A6",
+      "primary_cyp": "CYP2A6",
+      "all_cyps": [
+        "CYP1A2",
+        "CYP2A6",
+        "CYP2C8",
+        "CYP2C9",
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        0,
+        2
+      ],
+      "metabolism_sites": [
+        0,
+        2
+      ],
+      "som": [
+        {
+          "atom_idx": 0
+        },
+        {
+          "atom_idx": 2
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "MetXBioDB",
+      "source": "MetXBioDB",
+      "site_source": "MetXBioDB",
+      "source_record_id": "URRJUSLCXVXZOX-KNBMTAEXSA-N",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+      "source_details": [
+        "MetXBioDB",
+        "InChIKey=URRJUSLCXVXZOX-KNBMTAEXSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Matsunaga, T.; Kishi, N.; Higuchi, S.; Watanabe, K.; Ohshima, T.; Yamamoto, I. CYP3A4 is a Major Isoform Responsible for Oxidation of 7-Hydroxy-Delta(8)-Tetrahydrocannabinol to 7-Oxo-Delta(8)-Tetrahydrocannabinol in Human Liver Microsomes. Drug Metab. Dispos. 2000, 28, 1291-1296.",
+      "doi": "",
+      "primary_site_atoms": [],
+      "secondary_site_atoms": [],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        0,
+        2
+      ],
+      "label_regime": "broad_region",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "MetXBioDB"
+      ],
+      "merged_from_source_families": [
+        "metxbiodb_family"
+      ],
+      "duplicate_group_id": "dup_132649cff2a9f3fe",
+      "merge_policy_used": "conflict_preserved",
+      "conflict_flags": [
+        "contains_broad_region_label",
+        "label_regime_mismatch",
+        "multi_family_assignment",
+        "site_set_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "URRJUSLCXVXZOX-KNBMTAEXSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Matsunaga, T.; Kishi, N.; Higuchi, S.; Watanabe, K.; Ohshima, T.; Yamamoto, I. CYP3A4 is a Major Isoform Responsible for Oxidation of 7-Hydroxy-Delta(8)-Tetrahydrocannabinol to 7-Oxo-Delta(8)-Tetrahydrocannabinol in Human Liver Microsomes. Drug Metab. Dispos. 2000, 28, 1291-1296.",
+          "doi": "",
+          "label_regime": "broad_region",
+          "enzyme_family": "CYP2A6",
+          "target_family": "CYP2A6",
+          "family_confidence": "field_specific",
+          "primary_site_atoms": [],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            0,
+            2
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": []
+    },
+    {
+      "id": "BGEBZHIAGXMEMV-UHFFFAOYSA-N",
+      "molecule_name": "5-MOP",
+      "name": "5-MOP",
+      "canonical_smiles": "COc1c2ccoc2cc2oc(=O)ccc12",
+      "smiles": "COc1c2ccoc2cc2oc(=O)ccc12",
+      "inchi_key": "BGEBZHIAGXMEMV-UHFFFAOYSA-N",
+      "formula": "C12H8O4",
+      "atom_count": 16,
+      "enzyme_family": "CYP2A6",
+      "primary_family": "CYP2A6",
+      "all_families": [
+        "CYP2A6"
+      ],
+      "target_family": "CYP2A6",
+      "family_confidence": "field_specific",
+      "enzyme_superfamily": "CYP",
+      "source_family_tag": "metxbiodb_family",
+      "source_family": "metxbiodb_family",
+      "target_cyp": "CYP2A6",
+      "primary_cyp": "CYP2A6",
+      "all_cyps": [
+        "CYP2A6"
+      ],
+      "site_atoms": [
+        7,
+        9
+      ],
+      "metabolism_sites": [
+        7,
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 7
+        },
+        {
+          "atom_idx": 9
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "MetXBioDB",
+      "source": "MetXBioDB",
+      "site_source": "MetXBioDB",
+      "source_record_id": "BGEBZHIAGXMEMV-UHFFFAOYSA-N",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+      "source_details": [
+        "MetXBioDB",
+        "PubChem_CID=2355",
+        "InChIKey=BGEBZHIAGXMEMV-UHFFFAOYSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "L.L. Koenigs and W.F. Trager, Biochemistry, 37, 10047-10061",
+      "doi": "",
+      "primary_site_atoms": [],
+      "secondary_site_atoms": [],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        7,
+        9
+      ],
+      "label_regime": "broad_region",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "MetXBioDB"
+      ],
+      "merged_from_source_families": [
+        "metxbiodb_family"
+      ],
+      "duplicate_group_id": "dup_40e5b04f27ef0920",
+      "merge_policy_used": "conflict_preserved",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "contains_broad_region_label"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "BGEBZHIAGXMEMV-UHFFFAOYSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "L.L. Koenigs and W.F. Trager, Biochemistry, 37, 10047-10061",
+          "doi": "",
+          "label_regime": "broad_region",
+          "enzyme_family": "CYP2A6",
+          "target_family": "CYP2A6",
+          "family_confidence": "field_specific",
+          "primary_site_atoms": [],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            7,
+            9
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": []
+    },
+    {
+      "id": "QXKHYNVANLEOEG-UHFFFAOYSA-N",
+      "molecule_name": "8-MOP",
+      "name": "8-MOP",
+      "canonical_smiles": "COc1c2occc2cc2ccc(=O)oc12",
+      "smiles": "COc1c2occc2cc2ccc(=O)oc12",
+      "inchi_key": "QXKHYNVANLEOEG-UHFFFAOYSA-N",
+      "formula": "C12H8O4",
+      "atom_count": 16,
+      "enzyme_family": "CYP2A6",
+      "primary_family": "CYP2A6",
+      "all_families": [
+        "CYP2A6"
+      ],
+      "target_family": "CYP2A6",
+      "family_confidence": "field_specific",
+      "enzyme_superfamily": "CYP",
+      "source_family_tag": "metxbiodb_family",
+      "source_family": "metxbiodb_family",
+      "target_cyp": "CYP2A6",
+      "primary_cyp": "CYP2A6",
+      "all_cyps": [
+        "CYP2A6"
+      ],
+      "site_atoms": [
+        0,
+        12
+      ],
+      "metabolism_sites": [
+        0,
+        12
+      ],
+      "som": [
+        {
+          "atom_idx": 0
+        },
+        {
+          "atom_idx": 12
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "MetXBioDB",
+      "source": "MetXBioDB",
+      "site_source": "MetXBioDB",
+      "source_record_id": "QXKHYNVANLEOEG-UHFFFAOYSA-N",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+      "source_details": [
+        "MetXBioDB",
+        "PubChem_CID=4114",
+        "InChIKey=QXKHYNVANLEOEG-UHFFFAOYSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "L.L. Koenigs and W.F. Trager, Biochemistry, 37, 10047-10061",
+      "doi": "",
+      "primary_site_atoms": [],
+      "secondary_site_atoms": [],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        0,
+        12
+      ],
+      "label_regime": "broad_region",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "MetXBioDB"
+      ],
+      "merged_from_source_families": [
+        "metxbiodb_family"
+      ],
+      "duplicate_group_id": "dup_59847cf088ec29d1",
+      "merge_policy_used": "conflict_preserved",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "contains_broad_region_label"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "QXKHYNVANLEOEG-UHFFFAOYSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "L.L. Koenigs and W.F. Trager, Biochemistry, 37, 10047-10061",
+          "doi": "",
+          "label_regime": "broad_region",
+          "enzyme_family": "CYP2A6",
+          "target_family": "CYP2A6",
+          "family_confidence": "field_specific",
+          "primary_site_atoms": [],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            0,
+            12
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": []
+    },
+    {
+      "id": "FMWLUWPQPKEARP-UHFFFAOYSA-N",
+      "molecule_name": "bromodichloromethane",
+      "name": "bromodichloromethane",
+      "canonical_smiles": "ClC(Cl)Br",
+      "smiles": "ClC(Cl)Br",
+      "inchi_key": "FMWLUWPQPKEARP-UHFFFAOYSA-N",
+      "formula": "CHBrCl2",
+      "atom_count": 4,
+      "enzyme_family": "CYP2A6",
+      "primary_family": "CYP2A6",
+      "all_families": [
+        "CYP1A2",
+        "CYP2A6",
+        "CYP2E1",
+        "CYP3A4"
+      ],
+      "target_family": "CYP2A6",
+      "family_confidence": "field_specific",
+      "enzyme_superfamily": "CYP",
+      "source_family_tag": "metxbiodb_family",
+      "source_family": "metxbiodb_family",
+      "target_cyp": "CYP2A6",
+      "primary_cyp": "CYP2A6",
+      "all_cyps": [
+        "CYP1A2",
+        "CYP2A6",
+        "CYP2E1",
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        1,
+        3
+      ],
+      "metabolism_sites": [
+        1,
+        3
+      ],
+      "som": [
+        {
+          "atom_idx": 1
+        },
+        {
+          "atom_idx": 3
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "MetXBioDB",
+      "source": "MetXBioDB",
+      "site_source": "MetXBioDB",
+      "source_record_id": "FMWLUWPQPKEARP-UHFFFAOYSA-N",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+      "source_details": [
+        "MetXBioDB",
+        "PubChem_CID=6359",
+        "InChIKey=FMWLUWPQPKEARP-UHFFFAOYSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "John W. Allis and Guangyu Zhao, Chemico-Biological Interactions 140 (2002) 137-153 PMID: 12076521\nPMID: 9458004",
+      "doi": "",
+      "primary_site_atoms": [],
+      "secondary_site_atoms": [],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        1,
+        3
+      ],
+      "label_regime": "broad_region",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "MetXBioDB"
+      ],
+      "merged_from_source_families": [
+        "metxbiodb_family"
+      ],
+      "duplicate_group_id": "dup_5fc9102b546e9e36",
+      "merge_policy_used": "conflict_preserved",
+      "conflict_flags": [
+        "contains_broad_region_label",
+        "label_regime_mismatch",
+        "multi_family_assignment"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "FMWLUWPQPKEARP-UHFFFAOYSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "John W. Allis and Guangyu Zhao, Chemico-Biological Interactions 140 (2002) 137-153 PMID: 12076521\nPMID: 9458004",
+          "doi": "",
+          "label_regime": "broad_region",
+          "enzyme_family": "CYP2A6",
+          "target_family": "CYP2A6",
+          "family_confidence": "field_specific",
+          "primary_site_atoms": [],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            1,
+            3
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": []
+    },
+    {
+      "id": "ZCCUUQDIBDJBTK-UHFFFAOYSA-N",
+      "molecule_name": "psoralen",
+      "name": "psoralen",
+      "canonical_smiles": "O=c1ccc2cc3ccoc3cc2o1",
+      "smiles": "O=c1ccc2cc3ccoc3cc2o1",
+      "inchi_key": "ZCCUUQDIBDJBTK-UHFFFAOYSA-N",
+      "formula": "C11H6O3",
+      "atom_count": 14,
+      "enzyme_family": "CYP2A6",
+      "primary_family": "CYP2A6",
+      "all_families": [
+        "CYP2A6"
+      ],
+      "target_family": "CYP2A6",
+      "family_confidence": "field_specific",
+      "enzyme_superfamily": "CYP",
+      "source_family_tag": "metxbiodb_family",
+      "source_family": "metxbiodb_family",
+      "target_cyp": "CYP2A6",
+      "primary_cyp": "CYP2A6",
+      "all_cyps": [
+        "CYP2A6"
+      ],
+      "site_atoms": [
+        0,
+        10
+      ],
+      "metabolism_sites": [
+        0,
+        10
+      ],
+      "som": [
+        {
+          "atom_idx": 0
+        },
+        {
+          "atom_idx": 10
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "MetXBioDB",
+      "source": "MetXBioDB",
+      "site_source": "MetXBioDB",
+      "source_record_id": "ZCCUUQDIBDJBTK-UHFFFAOYSA-N",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+      "source_details": [
+        "MetXBioDB",
+        "PubChem_CID=6199",
+        "InChIKey=ZCCUUQDIBDJBTK-UHFFFAOYSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "L.L. Koenigs and W.F. Trager, Biochemistry, 37, 10047-10061",
+      "doi": "",
+      "primary_site_atoms": [],
+      "secondary_site_atoms": [],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        0,
+        10
+      ],
+      "label_regime": "broad_region",
+      "broad_region_annotations": [
+        "The reaction in CYP2A6 should be two steps. The first step is <13,14;EpOxidation>. Need to confirm."
+      ],
+      "merged_from_sources": [
+        "MetXBioDB"
+      ],
+      "merged_from_source_families": [
+        "metxbiodb_family"
+      ],
+      "duplicate_group_id": "dup_419c191827591111",
+      "merge_policy_used": "conflict_preserved",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "contains_broad_region_label"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "ZCCUUQDIBDJBTK-UHFFFAOYSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "L.L. Koenigs and W.F. Trager, Biochemistry, 37, 10047-10061",
+          "doi": "",
+          "label_regime": "broad_region",
+          "enzyme_family": "CYP2A6",
+          "target_family": "CYP2A6",
+          "family_confidence": "field_specific",
+          "primary_site_atoms": [],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            0,
+            10
+          ],
+          "broad_region_annotations": [
+            "The reaction in CYP2A6 should be two steps. The first step is <13,14;EpOxidation>. Need to confirm."
+          ]
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": []
+    },
+    {
+      "id": "IPOBOOXFSRWSHL-MRXNPFEDSA-N",
+      "molecule_name": "cibenzoline",
+      "name": "cibenzoline",
+      "canonical_smiles": "c1ccc(C2(c3ccccc3)C[C@@H]2C2=NCCN2)cc1",
+      "smiles": "c1ccc(C2(c3ccccc3)C[C@@H]2C2=NCCN2)cc1",
+      "inchi_key": "IPOBOOXFSRWSHL-MRXNPFEDSA-N",
+      "formula": "C18H18N2",
+      "atom_count": 20,
+      "enzyme_family": "CYP2A6",
+      "primary_family": "CYP2A6",
+      "all_families": [
+        "CYP2A6",
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "target_family": "CYP2A6",
+      "family_confidence": "field_specific",
+      "enzyme_superfamily": "CYP",
+      "source_family_tag": "metxbiodb_family",
+      "source_family": "metxbiodb_family",
+      "target_cyp": "CYP2A6",
+      "primary_cyp": "CYP2A6",
+      "all_cyps": [
+        "CYP2A6",
+        "CYP2D6",
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        10,
+        16
+      ],
+      "metabolism_sites": [
+        10,
+        16
+      ],
+      "som": [
+        {
+          "atom_idx": 10
+        },
+        {
+          "atom_idx": 16
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "MetXBioDB",
+      "source": "MetXBioDB",
+      "site_source": "MetXBioDB",
+      "source_record_id": "IPOBOOXFSRWSHL-MRXNPFEDSA-N",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+      "source_details": [
+        "MetXBioDB",
+        "PubChem_CID=76969192",
+        "InChIKey=IPOBOOXFSRWSHL-MRXNPFEDSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Niwa et al.,Drug Metab. Disp.,28,1128,2000\nZhou, S-F.; (2016); Cytochrome P450 2D6: Structure, Function, Regulation and Polymorphism; Edited by CRC Press; ISBN 9781466597884 - CAT# KE23693",
+      "doi": "",
+      "primary_site_atoms": [],
+      "secondary_site_atoms": [],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        10,
+        16
+      ],
+      "label_regime": "broad_region",
+      "broad_region_annotations": [
+        "<19,H;Hydroxylation> and <20,H;Hydroxylation> for CYP3A4 and 2D6 are reported in Yannick's sheet but not in the paper from Xenosite. \n<19,H;Hydroxylation> and <20,H;Hydroxylation> are reported as BoMs in Xenosite's dataset but can't be indentified in its reference. \nThe reaction type is <17,18;Dehydrogenation>."
+      ],
+      "merged_from_sources": [
+        "MetXBioDB"
+      ],
+      "merged_from_source_families": [
+        "metxbiodb_family"
+      ],
+      "duplicate_group_id": "dup_222b63bc128186e6",
+      "merge_policy_used": "conflict_preserved",
+      "conflict_flags": [
+        "contains_broad_region_label",
+        "label_regime_mismatch",
+        "multi_family_assignment"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "IPOBOOXFSRWSHL-MRXNPFEDSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Niwa et al.,Drug Metab. Disp.,28,1128,2000\nZhou, S-F.; (2016); Cytochrome P450 2D6: Structure, Function, Regulation and Polymorphism; Edited by CRC Press; ISBN 9781466597884 - CAT# KE23693",
+          "doi": "",
+          "label_regime": "broad_region",
+          "enzyme_family": "CYP2A6",
+          "target_family": "CYP2A6",
+          "family_confidence": "field_specific",
+          "primary_site_atoms": [],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            10,
+            16
+          ],
+          "broad_region_annotations": [
+            "<19,H;Hydroxylation> and <20,H;Hydroxylation> for CYP3A4 and 2D6 are reported in Yannick's sheet but not in the paper from Xenosite. \n<19,H;Hydroxylation> and <20,H;Hydroxylation> are reported as BoMs in Xenosite's dataset but can't be indentified in its reference. \nThe reaction type is <17,18;Dehydrogenation>."
+          ]
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": []
+    }
+  ]
+}
