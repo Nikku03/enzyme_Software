@@ -44,6 +44,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--hard-sources", default="attnsom,cyp_dbs_external")
     parser.add_argument("--gold-slice-path", default="")
     parser.add_argument("--gold-policy", default="keep_all")
+    parser.add_argument("--clean-label-slice-path", default="")
+    parser.add_argument("--hard-failure-slice-path", default="")
     parser.add_argument("--winner-top1-prob-threshold", type=float, default=-1.0)
     parser.add_argument("--winner-prob-gap-threshold", type=float, default=-1.0)
     parser.add_argument("--winner-candidate-k", type=int, default=-1)
@@ -103,6 +105,43 @@ def _load_gold_slice(path: Path) -> dict[tuple[str, str, int], dict[str, Any]]:
             "curated_true_site_indices": curated_true_site_indices if isinstance(curated_true_site_indices, list) else [],
             "curated_label_available": _parse_bool(row.get("curated_label_available", False)),
             "curated_confidence_label": str(row.get("curated_confidence_label", "") or ""),
+        }
+    return mapping
+
+
+def _load_curated_subset_slice(
+    path: Path,
+    *,
+    explicit_include_field: str = "",
+) -> dict[tuple[str, str, int], dict[str, Any]]:
+    if not path.exists():
+        raise FileNotFoundError(f"Curated subset file not found: {path}")
+    with path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    mapping: dict[tuple[str, str, int], dict[str, Any]] = {}
+    for row in rows:
+        key = (
+            str(row.get("split", "")).strip().lower(),
+            str(row.get("source", "")).strip().lower(),
+            _parse_int(row.get("molecule_key", 0), 0),
+        )
+        include_value = True
+        if explicit_include_field and explicit_include_field in row:
+            include_value = _parse_bool(row.get(explicit_include_field, False))
+        elif "gold_include" in row:
+            include_value = _parse_bool(row.get("gold_include", False))
+        curated_true_site_indices = _parse_json_cell(row.get("curated_true_site_indices", ""))
+        if isinstance(curated_true_site_indices, str):
+            curated_true_site_indices = _parse_json_cell(curated_true_site_indices)
+        mapping[key] = {
+            "subset_include": bool(include_value),
+            "curated_true_site_indices": curated_true_site_indices if isinstance(curated_true_site_indices, list) else [],
+            "review_status": str(row.get("review_status", "") or ""),
+            "label_confidence": str(row.get("label_confidence", "") or ""),
+            "atom_mapping_confidence": str(row.get("atom_mapping_confidence", "") or ""),
+            "literature_support_status": str(row.get("literature_support_status", "") or ""),
+            "curation_reason": str(row.get("curation_reason", "") or ""),
+            "curation_notes": str(row.get("curation_notes", "") or ""),
         }
     return mapping
 
@@ -222,6 +261,37 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
             writer.writerow(row)
 
 
+def _build_subset_rows(
+    rows: list[dict[str, Any]],
+    *,
+    subset_map: dict[tuple[str, str, int], dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    if not subset_map:
+        return []
+    subset_rows: list[dict[str, Any]] = []
+    for row in rows:
+        subset_entry = subset_map.get(_row_key(row))
+        if subset_entry and bool(subset_entry.get("subset_include", False)):
+            merged = dict(row)
+            merged["subset_entry"] = subset_entry
+            subset_rows.append(merged)
+    return subset_rows
+
+
+def _report_subset(
+    *,
+    name: str,
+    rows: list[dict[str, Any]],
+    subset_map: dict[tuple[str, str, int], dict[str, Any]] | None,
+) -> dict[str, Any]:
+    return {
+        "combined": _summarize_subset(rows, gold_map=subset_map or {}),
+        "val": _summarize_subset([row for row in rows if str(row.get("split")) == "val"], gold_map=subset_map or {}),
+        "test": _summarize_subset([row for row in rows if str(row.get("split")) == "test"], gold_map=subset_map or {}),
+        "subset_name": str(name),
+    }
+
+
 def main() -> None:
     args = _parse_args()
     checkpoint_path = Path(args.checkpoint).expanduser()
@@ -257,6 +327,20 @@ def main() -> None:
     gold_slice_path = Path(args.gold_slice_path).expanduser() if str(args.gold_slice_path).strip() else None
     if gold_slice_path is not None:
         gold_map = _load_gold_slice(gold_slice_path)
+    clean_label_slice_path = Path(args.clean_label_slice_path).expanduser() if str(args.clean_label_slice_path).strip() else None
+    hard_failure_slice_path = Path(args.hard_failure_slice_path).expanduser() if str(args.hard_failure_slice_path).strip() else None
+    clean_label_map = None
+    hard_failure_map = None
+    if clean_label_slice_path is not None:
+        clean_label_map = _load_curated_subset_slice(
+            clean_label_slice_path,
+            explicit_include_field="include_clean_label_eval",
+        )
+    if hard_failure_slice_path is not None:
+        hard_failure_map = _load_curated_subset_slice(
+            hard_failure_slice_path,
+            explicit_include_field="include_hard_failure_gold",
+        )
 
     trainer.model.eval()
     trainer.winner_head.eval()
@@ -308,6 +392,19 @@ def main() -> None:
         "test": _summarize_subset([row for row in gold_rows if str(row.get("split")) == "test"], gold_map=gold_map or {}),
     }
 
+    clean_label_rows = _build_subset_rows(all_rows, subset_map=clean_label_map)
+    hard_failure_rows = _build_subset_rows(all_rows, subset_map=hard_failure_map)
+    clean_label_summary = _report_subset(
+        name="clean_label_eval",
+        rows=clean_label_rows,
+        subset_map=clean_label_map,
+    ) if clean_label_map is not None else None
+    hard_failure_summary = _report_subset(
+        name="hard_failure_gold",
+        rows=hard_failure_rows,
+        subset_map=hard_failure_map,
+    ) if hard_failure_map is not None else None
+
     high_conf_rows = []
     if float(args.winner_top1_prob_threshold) >= 0.0 or float(args.winner_prob_gap_threshold) >= 0.0:
         for row in gold_rows:
@@ -340,14 +437,19 @@ def main() -> None:
     rows_with_gold_flags = []
     for row in all_rows:
         gold_entry = (gold_map or {}).get(_row_key(row), {})
+        clean_entry = (clean_label_map or {}).get(_row_key(row), {})
+        hard_entry = (hard_failure_map or {}).get(_row_key(row), {})
         merged = dict(row)
         merged["gold_include"] = bool(gold_entry.get("gold_include", False))
         merged["gold_exclusion_reason"] = str(gold_entry.get("gold_exclusion_reason", "") or "")
         merged["curated_true_site_indices"] = list(gold_entry.get("curated_true_site_indices") or [])
+        merged["include_clean_label_eval"] = bool(clean_entry.get("subset_include", False))
+        merged["include_hard_failure_gold"] = bool(hard_entry.get("subset_include", False))
         rows_with_gold_flags.append(merged)
 
-    eval_rows_path = output_dir / "gold_hard_source_eval_rows.csv"
-    report_path = output_dir / "gold_hard_source_eval_report.json"
+    legacy_mode = bool(gold_slice_path is not None and clean_label_slice_path is None and hard_failure_slice_path is None)
+    eval_rows_path = output_dir / ("gold_hard_source_eval_rows.csv" if legacy_mode else "curated_hard_source_eval_rows.csv")
+    report_path = output_dir / ("gold_hard_source_eval_report.json" if legacy_mode else "curated_hard_source_eval_report.json")
     _write_csv(eval_rows_path, rows_with_gold_flags)
 
     report = {
@@ -363,24 +465,73 @@ def main() -> None:
         "hard_source_names": list(hard_source_names),
         "gold_slice_path": str(gold_slice_path) if gold_slice_path is not None else "",
         "gold_policy": str(args.gold_policy),
+        "clean_label_slice_path": str(clean_label_slice_path) if clean_label_slice_path is not None else "",
+        "hard_failure_slice_path": str(hard_failure_slice_path) if hard_failure_slice_path is not None else "",
         "raw_benchmark": {
             "val": val_metrics,
             "test": test_metrics,
         },
         "raw_hard_source_subset": raw_hard_summary,
-        "gold_hard_source_subset": gold_summary,
         "high_confidence_subset": high_conf_summary,
         "output_rows_csv": str(eval_rows_path),
     }
+    if legacy_mode or gold_slice_path is not None:
+        report["gold_hard_source_subset"] = gold_summary
+    if clean_label_summary is not None:
+        report["clean_label_eval_subset"] = clean_label_summary
+    if hard_failure_summary is not None:
+        report["hard_failure_gold_subset"] = hard_failure_summary
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
+    if clean_label_summary is not None:
+        clean_report_path = output_dir / "clean_label_eval_report.json"
+        clean_report = {
+            "checkpoint_path": str(checkpoint_path),
+            "subset_name": "clean_label_eval",
+            "slice_path": str(clean_label_slice_path),
+            "winner_candidate_k": int(getattr(trainer, "frozen_shortlist_topk", 6)),
+            "raw_benchmark": report["raw_benchmark"],
+            "raw_hard_source_subset": raw_hard_summary,
+            "clean_label_eval_subset": clean_label_summary,
+        }
+        clean_report_path.write_text(json.dumps(clean_report, indent=2), encoding="utf-8")
+        _write_csv(output_dir / "clean_label_eval_rows.csv", clean_label_rows)
+
+    if hard_failure_summary is not None:
+        hard_report_path = output_dir / "hard_failure_gold_report.json"
+        hard_report = {
+            "checkpoint_path": str(checkpoint_path),
+            "subset_name": "hard_failure_gold",
+            "slice_path": str(hard_failure_slice_path),
+            "winner_candidate_k": int(getattr(trainer, "frozen_shortlist_topk", 6)),
+            "raw_benchmark": report["raw_benchmark"],
+            "raw_hard_source_subset": raw_hard_summary,
+            "hard_failure_gold_subset": hard_failure_summary,
+        }
+        hard_report_path.write_text(json.dumps(hard_report, indent=2), encoding="utf-8")
+        _write_csv(output_dir / "hard_failure_gold_rows.csv", hard_failure_rows)
+
     print(
-        "Gold hard-source eval complete | "
+        "Hard-source eval complete | "
         f"winner_k={int(getattr(trainer, 'frozen_shortlist_topk', 6))} | "
         f"raw_hard_top1={raw_hard_summary['combined']['end_to_end_top1']:.4f} | "
         f"gold_top1={gold_summary['combined']['end_to_end_top1']:.4f}",
         flush=True,
     )
+    if clean_label_summary is not None:
+        print(
+            "Clean-label subset | "
+            f"rows={clean_label_summary['combined']['total_examples']} | "
+            f"top1={clean_label_summary['combined']['end_to_end_top1']:.4f}",
+            flush=True,
+        )
+    if hard_failure_summary is not None:
+        print(
+            "Hard-failure subset | "
+            f"rows={hard_failure_summary['combined']['total_examples']} | "
+            f"top1={hard_failure_summary['combined']['end_to_end_top1']:.4f}",
+            flush=True,
+        )
     if high_conf_summary["enabled"]:
         print(
             "High-confidence subset | "
@@ -388,8 +539,8 @@ def main() -> None:
             f"top1={high_conf_summary['combined']['end_to_end_top1']:.4f}",
             flush=True,
         )
-    print(f"Gold eval rows: {eval_rows_path}", flush=True)
-    print(f"Gold eval report: {report_path}", flush=True)
+    print(f"Eval rows: {eval_rows_path}", flush=True)
+    print(f"Eval report: {report_path}", flush=True)
 
 
 if __name__ == "__main__":
