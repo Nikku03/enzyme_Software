@@ -1966,6 +1966,10 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_HARD_SOURCE_FINETUNE_LR_SCALE": "0.5",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
     },
+    "cyp3a4_two_head_shortlist_winner_v2_rebuild_hard_source_finetune_balanced_104x4": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_two_head_shortlist_winner_v2_rebuild_hard_source_finetune",
+        "HYBRID_COLAB_DATASET": "data/prepared_training/main8_cyp3a4_balanced_104x4.json",
+    },
     "cyp3a4_two_head_shortlist_winner_v2_rebuild_dual_winner_routing": {
         "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank",
         "HYBRID_COLAB_EPOCHS": "1",

@@ -1,0 +1,94 @@
+{
+  "input_dataset": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/main8_cyp3a4_augmented.json",
+  "output_dataset": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/main8_cyp3a4_balanced_104x4.json",
+  "seed_used": 42,
+  "per_source_target": 104,
+  "total_rows": 416,
+  "per_source_counts": {
+    "ATTNSOM": 104,
+    "AZ120": 104,
+    "DrugBank": 104,
+    "MetXBioDB": 104
+  },
+  "single_vs_multi_site_counts": {
+    "multi_site": 302,
+    "single_site": 114
+  },
+  "atom_count_bucket_counts": {
+    "16-25": 142,
+    "26-40": 208,
+    "41-60": 25,
+    "61+": 12,
+    "<=15": 29
+  },
+  "confidence_counts": {
+    "high": 163,
+    "medium": 15,
+    "validated": 238
+  },
+  "merged_metxbiodb_rows": 104,
+  "raw_source_counts_before_normalization": {
+    "ATTNSOM": 273,
+    "AZ120": 104,
+    "CYP_DBs_external": 29,
+    "DrugBank": 135,
+    "MetXBioDB": 119,
+    "MetaPred": 1,
+    "literature": 2,
+    "metxbiodb": 30,
+    "validated": 1
+  },
+  "normalized_source_counts_before_sampling": {
+    "ATTNSOM": 273,
+    "AZ120": 104,
+    "DrugBank": 135,
+    "MetXBioDB": 149,
+    "cyp_dbs_external": 29,
+    "literature": 2,
+    "metapred": 1,
+    "validated": 1
+  },
+  "discarded_by_raw_source": {
+    "CYP_DBs_external": 29,
+    "MetaPred": 1,
+    "literature": 2,
+    "validated": 1
+  },
+  "discarded_by_bucket": {
+    "ATTNSOM": 169,
+    "AZ120": 0,
+    "DrugBank": 31,
+    "MetXBioDB": 45,
+    "excluded_tail_source": 33
+  },
+  "skipped_schema_counts": {},
+  "sampled_original_source_counts": {
+    "ATTNSOM": 104,
+    "AZ120": 104,
+    "DrugBank": 104,
+    "MetXBioDB": 81,
+    "metxbiodb": 23
+  },
+  "source_names_before_normalization": [
+    "ATTNSOM",
+    "AZ120",
+    "CYP_DBs_external",
+    "DrugBank",
+    "MetXBioDB",
+    "MetaPred",
+    "literature",
+    "metxbiodb",
+    "validated"
+  ],
+  "source_names_after_normalization": [
+    "ATTNSOM",
+    "AZ120",
+    "DrugBank",
+    "MetXBioDB",
+    "cyp_dbs_external",
+    "literature",
+    "metapred",
+    "validated"
+  ],
+  "warnings": []
+}
