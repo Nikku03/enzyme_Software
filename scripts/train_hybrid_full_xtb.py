@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+print("=" * 60, flush=True)
+print("DEBUG: train_hybrid_full_xtb.py STARTED", flush=True)
+print(f"DEBUG: HYBRID_COLAB_USE_RELATIONAL_PROPOSER = {__import__('os').environ.get('HYBRID_COLAB_USE_RELATIONAL_PROPOSER', 'NOT SET')}", flush=True)
+print("=" * 60, flush=True)
+
 import argparse
 import hashlib
 import json
