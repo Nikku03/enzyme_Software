@@ -9,20 +9,23 @@ import torch.nn as nn
 class HGNNProjection(nn.Module):
     """Stub for HGNNProjection - Hyperbolic Graph Neural Network projection."""
     
-    def __init__(self, in_dim=128, out_dim=64, hidden_dim=None, num_layers=2, **kwargs):
+    def __init__(self, in_channels_16d=16, hidden_dim=128, poincare_dim=64, dropout=0.05, **kwargs):
         super().__init__()
-        hidden_dim = hidden_dim or out_dim
-        layers = []
-        dims = [in_dim] + [hidden_dim] * (num_layers - 1) + [out_dim]
-        for i in range(len(dims) - 1):
-            layers.append(nn.Linear(dims[i], dims[i+1]))
-            if i < len(dims) - 2:
-                layers.append(nn.SiLU())
-        self.net = nn.Sequential(*layers)
+        # Match the expected interface: input is 16d multivector, output is poincare_dim
+        self.net = nn.Sequential(
+            nn.Linear(in_channels_16d, hidden_dim),
+            nn.SiLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, poincare_dim),
+        )
     
     def forward(self, x, edge_index=None, edge_attr=None, batch=None, **kwargs):
-        """Forward pass - just applies MLP projection."""
-        return self.net(x)
+        # x shape: (num_atoms, 16) for a single molecule
+        # Need to aggregate to single embedding, then project
+        if x.dim() == 2 and x.size(0) > 1:
+            # Mean pool over atoms
+            x = x.mean(dim=0, keepdim=True)
+        return self.net(x).squeeze(0)
 
 
 __all__ = ['HGNNProjection']
