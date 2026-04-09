@@ -176,7 +176,7 @@ def _build_model_and_trainer(checkpoint: dict[str, Any], *, device: torch.device
     trainer.model.eval()
     trainer.winner_head.eval()
     return model, winner_head, trainer, {
-        "base_config": base_config,
+        "base_config": dict(getattr(base_config, "__dict__", {}) or {}),
         "branch_config": branch_config,
         "model_load_summary": {
             "missing_keys": list(getattr(model_result, "missing_keys", []) or []),
