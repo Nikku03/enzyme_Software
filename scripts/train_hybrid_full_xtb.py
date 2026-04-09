@@ -7327,8 +7327,22 @@ def main() -> None:
             base = getattr(wrapper, "base_lnn", None)
         if base is None:
             return
+        
+        # Get site_head params to exclude from freezing
+        site_head = None
+        impl = getattr(base, "impl", None)
+        if impl is not None:
+            site_head = getattr(impl, "site_head", None)
+        site_head_param_ids = set()
+        if site_head is not None:
+            site_head_param_ids = {id(p) for p in site_head.parameters()}
+            
         for param in base.parameters():
-            param.requires_grad = not frozen
+            # Keep site_head trainable even when backbone is frozen
+            if id(param) in site_head_param_ids:
+                param.requires_grad = True
+            else:
+                param.requires_grad = not frozen
         for _, module in frozen_named_modules:
             for param in module.parameters():
                 param.requires_grad = False
@@ -7354,6 +7368,16 @@ def main() -> None:
         _set_backbone_frozen(True)
         _backbone_frozen = True
         print(f"Backbone frozen for first {backbone_freeze_epochs} epochs.", flush=True)
+        # Debug: verify site_head is trainable
+        base = getattr(model, "base_lnn", None)
+        if base:
+            impl = getattr(base, "impl", None)
+            if impl:
+                site_head = getattr(impl, "site_head", None)
+                if site_head:
+                    trainable = sum(1 for p in site_head.parameters() if p.requires_grad)
+                    total = sum(1 for p in site_head.parameters())
+                    print(f"[DEBUG] site_head trainable params: {trainable}/{total}", flush=True)
 
     try:
         for epoch in range(args.epochs):
