@@ -13,14 +13,18 @@ try:
     from nexus.reasoning.metric_learner import HGNNProjection
     from nexus.reasoning_wave.analogical_fusion import NexusDualDecoder, PGWCrossAttention
     from nexus.reasoning_wave.metric_learner import WaveQuantumDistillationHead, quantum_distillation_loss
-    NEXUS_AVAILABLE = True
+    # Check if these are our stubs or real nexus by checking for a marker
+    _is_stub = getattr(HGNNProjection, '_IS_STUB', False)
+    NEXUS_AVAILABLE = not _is_stub
 except ImportError:
     # Use stub implementations
     NEXUS_AVAILABLE = False
+    _is_stub = True
     
     if TORCH_AVAILABLE:
         class HGNNProjection(nn.Module):
             """Stub for HGNNProjection when nexus is not available."""
+            _IS_STUB = True  # Marker to identify stubs
             def __init__(self, in_channels_16d=16, hidden_dim=128, poincare_dim=64, dropout=0.05, **kwargs):
                 super().__init__()
                 # Match the expected interface: input is 16d multivector, output is poincare_dim

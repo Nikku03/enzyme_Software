@@ -8,6 +8,7 @@ import torch.nn as nn
 
 class HGNNProjection(nn.Module):
     """Stub for HGNNProjection - Hyperbolic Graph Neural Network projection."""
+    _IS_STUB = True  # Marker to identify this as a stub
     
     def __init__(self, in_channels_16d=16, hidden_dim=128, poincare_dim=64, dropout=0.05, **kwargs):
         super().__init__()
