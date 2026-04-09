@@ -101,6 +101,8 @@ class ModelConfig:
     site_logit_bias_weight: float = 0.05
     site_ranking_weight: float = 0.5
     site_hard_negative_fraction: float = 0.5
+    site_top1_margin_weight: float = 0.0  # Phase 3: margin loss weight
+    site_top1_margin_value: float = 0.5   # Phase 3: margin value
     site_top1_margin_topk: int = 1
     site_top1_margin_decay: float = 1.0
     site_cover_weight: float = 0.0

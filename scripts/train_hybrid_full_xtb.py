@@ -408,6 +408,8 @@ def _collect_model_overrides() -> dict[str, int | float | str]:
         "HYBRID_COLAB_NEXUS_SIDEINFO_INIT_SCALE": (_env_float, "nexus_sideinfo_init_scale"),
         "HYBRID_COLAB_SITE_RANKING_WEIGHT": (_env_float, "site_ranking_weight"),
         "HYBRID_COLAB_SITE_HARD_NEGATIVE_FRACTION": (_env_float, "site_hard_negative_fraction"),
+        "HYBRID_COLAB_SITE_TOP1_MARGIN_WEIGHT": (_env_float, "site_top1_margin_weight"),
+        "HYBRID_COLAB_SITE_TOP1_MARGIN_VALUE": (_env_float, "site_top1_margin_value"),
         "HYBRID_COLAB_SITE_TOP1_MARGIN_TOPK": (_env_int, "site_top1_margin_topk"),
         "HYBRID_COLAB_SITE_TOP1_MARGIN_DECAY": (_env_float, "site_top1_margin_decay"),
         "HYBRID_COLAB_SITE_COVER_WEIGHT": (_env_float, "site_cover_weight"),
