@@ -18,6 +18,7 @@ from enzyme_software.liquid_nn_v2.model.hybrid_modules import LocalTunnelingBias
 from enzyme_software.liquid_nn_v2.model.liquid_branch import SharedMetabolismEncoder, scatter_mean
 from enzyme_software.liquid_nn_v2.model.physics_branch import PhysicsBranch
 from enzyme_software.liquid_nn_v2.model.priors import ManualEnginePriorEncoder, ResidualFusionHead
+from enzyme_software.liquid_nn_v2.model.relational_proposer import RelationalFusionHead
 from enzyme_software.liquid_nn_v2.model.steric_branch import Steric3DBranch
 
 
@@ -84,15 +85,32 @@ if TORCH_AVAILABLE:
                 dropout=config.dropout,
                 pooling_hidden_dim=config.group_pooling_hidden_dim,
             )
-            self.site_head = ResidualFusionHead(
-                input_dim=config.som_branch_dim,
-                output_dim=1,
-                prior_feature_dim=config.som_branch_dim if config.use_manual_engine_priors else 0,
-                hidden_dim=config.som_head_hidden_dim,
-                fusion_mode=config.manual_prior_fusion_mode,
-                dropout=config.dropout,
-                prior_scale_init=config.manual_prior_init_scale,
-            )
+            # Site head: either RelationalFusionHead (Phase 1) or ResidualFusionHead (original)
+            if getattr(config, 'use_relational_proposer', False):
+                self.site_head = RelationalFusionHead(
+                    input_dim=config.som_branch_dim,
+                    output_dim=1,
+                    prior_feature_dim=config.som_branch_dim if config.use_manual_engine_priors else 0,
+                    hidden_dim=getattr(config, 'relational_proposer_hidden_dim', None) or config.som_head_hidden_dim,
+                    fusion_mode=config.manual_prior_fusion_mode,
+                    dropout=getattr(config, 'relational_proposer_dropout', config.dropout),
+                    prior_scale_init=getattr(config, 'relational_proposer_prior_scale_init', config.manual_prior_init_scale),
+                    num_attention_heads=getattr(config, 'relational_proposer_num_heads', 4),
+                    num_attention_layers=getattr(config, 'relational_proposer_num_layers', 2),
+                    use_pairwise_aggregator=getattr(config, 'relational_proposer_use_pairwise', True),
+                )
+                self._use_relational_proposer = True
+            else:
+                self.site_head = ResidualFusionHead(
+                    input_dim=config.som_branch_dim,
+                    output_dim=1,
+                    prior_feature_dim=config.som_branch_dim if config.use_manual_engine_priors else 0,
+                    hidden_dim=config.som_head_hidden_dim,
+                    fusion_mode=config.manual_prior_fusion_mode,
+                    dropout=config.dropout,
+                    prior_scale_init=config.manual_prior_init_scale,
+                )
+                self._use_relational_proposer = False
             self.source_site_heads = nn.ModuleDict(
                 {
                     str(name): ResidualFusionHead(
@@ -337,6 +355,9 @@ if TORCH_AVAILABLE:
                 prior_features=encoded["prior_payload"].get("mol_prior_embedding") if self.config.use_manual_engine_priors else None,
             )
             som_features = self._apply_cyp_conditioning(som_payload["atom_features"], cyp_logits, encoded["batch"])
+            # Set batch for RelationalFusionHead if using relational proposer
+            if getattr(self, '_use_relational_proposer', False):
+                self.site_head.set_batch(encoded["batch"])
             site_logits, site_residual = self.site_head(
                 som_features,
                 prior_logits=encoded["prior_payload"].get("atom_prior_logits") if self.config.use_manual_engine_priors else None,
@@ -669,6 +690,9 @@ if TORCH_AVAILABLE:
                 prior_features=encoded["prior_payload"].get("mol_prior_embedding") if self.config.use_manual_engine_priors else None,
             )
             som_features = self._apply_cyp_conditioning(som_payload["atom_features"], cyp_logits, encoded["batch"])
+            # Set batch for RelationalFusionHead if using relational proposer
+            if getattr(self, '_use_relational_proposer', False):
+                self.site_head.set_batch(encoded["batch"])
             site_logits, site_residual = self.site_head(
                 som_features,
                 prior_logits=encoded["prior_payload"].get("atom_prior_logits") if self.config.use_manual_engine_priors else None,

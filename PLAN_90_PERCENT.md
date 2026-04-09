@@ -32,25 +32,37 @@
 
 ---
 
-## Phase 1: Architecture Surgery
+## Phase 1: Architecture Surgery ✅ COMPLETE
 **Goal:** Replace scalar proposer with relational version
 
 ### Tasks
-- [ ] Implement `RelationalProposer` with cross-attention
-- [ ] Keep backward compatibility (config flag)
-- [ ] A/B test: scalar vs relational on cleaned data
+- [x] Implement `RelationalSelfAttention` (cross-atom comparison)
+- [x] Implement `PairwiseAggregator` (proven 77% acc architecture)
+- [x] Implement `RelationalProposer` (full proposer module)
+- [x] Implement `RelationalFusionHead` (drop-in replacement)
+- [x] Add config options (`use_relational_proposer`, etc.)
+- [x] Integrate into model.py with backward compatibility
+- [x] Unit tests pass
+- [ ] A/B test on cleaned data (requires Colab GPU)
 - [ ] Expected lift: +8-12% recall@K
 
-### Design
+### Files Created
+- `src/enzyme_software/liquid_nn_v2/model/relational_proposer.py` (430 lines)
+- `scripts/phase1_relational_proposer_train.py` (training harness)
+
+### Parameter Comparison
+| Head | Parameters | Notes |
+|------|------------|-------|
+| ResidualFusionHead (baseline) | 37,350 | Scalar scoring |
+| RelationalFusionHead (phase1) | 168,292 | +cross-attention +pairwise |
+
+### Usage
 ```python
-class RelationalProposer(nn.Module):
-    def __init__(self, d_model, n_heads=4):
-        self.cross_attn = nn.MultiheadAttention(d_model, n_heads)
-        self.score_head = nn.Linear(d_model, 1)
-    
-    def forward(self, z):  # [n_atoms, d_model]
-        z_rel, _ = self.cross_attn(z, z, z)
-        return self.score_head(z_rel).squeeze(-1)
+# In config:
+config.use_relational_proposer = True
+config.relational_proposer_num_heads = 4
+config.relational_proposer_num_layers = 2
+config.relational_proposer_use_pairwise = True
 ```
 
 ---

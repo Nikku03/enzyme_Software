@@ -428,6 +428,15 @@ class ModelConfig:
     nexus_analogical_sideinfo_aux_weight: float = 0.0
     nexus_analogical_cyp_aux_scale: float = 0.10
     nexus_topology_feature_dim: int = 5   # per-atom global topology features (scaffold/centrality/carbonyl/size)
+    # Phase 1: Relational Proposer (replaces scalar site head with cross-atom attention)
+    use_relational_proposer: bool = False
+    relational_proposer_num_heads: int = 4
+    relational_proposer_num_layers: int = 2
+    relational_proposer_hidden_dim: Optional[int] = None  # defaults to som_branch_dim
+    relational_proposer_use_pairwise: bool = True  # include pairwise aggregator (proven 77% acc)
+    relational_proposer_dropout: float = 0.1
+    relational_proposer_residual_scale: float = 0.1
+    relational_proposer_prior_scale_init: float = 0.65
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
     cyp_names: Tuple[str, ...] = tuple(MAJOR_CYP_CLASSES)

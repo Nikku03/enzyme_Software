@@ -10,6 +10,7 @@ from .nexus_bridge import NexusHybridBridge
 from .physics_branch import PhysicsBranch
 from .pooling import ChemistryHierarchicalPooling, ExplicitGroupPooling, MoleculePooling
 from .priors import ManualEnginePriorEncoder, ResidualFusionHead
+from .relational_proposer import RelationalProposer, RelationalFusionHead, RelationalSelfAttention, PairwiseAggregator
 from .steric_branch import Steric3DBranch, StericFeatureProjector
 
 __all__ = [
@@ -37,9 +38,13 @@ __all__ = [
     "MoleculePooling",
     "NexusHybridBridge",
     "OutputRefinementHead",
+    "PairwiseAggregator",
     "PhaseAugmentedState",
     "PhysicsBranch",
     "PhysicsResidualBranch",
+    "RelationalFusionHead",
+    "RelationalProposer",
+    "RelationalSelfAttention",
     "ResidualFusionHead",
     "SharedMetabolismEncoder",
     "SiteHead",
