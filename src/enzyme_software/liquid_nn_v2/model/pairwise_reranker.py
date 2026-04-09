@@ -25,8 +25,12 @@ if TORCH_AVAILABLE:
         """Reranks top-K candidates using pairwise comparisons.
         
         Given atom embeddings and initial proposer scores, selects top-K candidates
-        and performs all-pairs comparisons using a trained pairwise head to produce
+        and performs pairwise comparisons using a trained pairwise head to produce
         a refined ranking.
+        
+        Supports two modes:
+        - "all_pairs": Tournament-style all-pairs comparison (original)
+        - "top1_vs_others": Only compare top-1 against others, swap if beaten (Option A)
         """
 
         def __init__(
@@ -35,6 +39,8 @@ if TORCH_AVAILABLE:
             *,
             top_k: int = 6,
             aggregation: str = "copeland",  # "copeland", "bradley_terry", "sum"
+            rerank_mode: str = "top1_vs_others",  # "all_pairs" or "top1_vs_others"
+            swap_threshold: float = 0.6,  # For top1_vs_others: min P(challenger > top1) to swap
             temperature: float = 1.0,
             min_candidates: int = 2,
         ):
@@ -43,10 +49,14 @@ if TORCH_AVAILABLE:
             Args:
                 pairwise_head: Trained PairwiseHead module
                 top_k: Number of top candidates to consider for reranking
-                aggregation: Method to aggregate pairwise scores
+                aggregation: Method to aggregate pairwise scores (for all_pairs mode)
                     - "copeland": Count wins minus losses (robust)
                     - "bradley_terry": Log-likelihood aggregation
                     - "sum": Sum of pairwise probabilities
+                rerank_mode: Reranking strategy
+                    - "top1_vs_others": Only compare top-1 vs others, swap if beaten (recommended)
+                    - "all_pairs": Full tournament-style comparison
+                swap_threshold: For top1_vs_others mode, minimum probability to trigger swap
                 temperature: Softmax temperature for final scores
                 min_candidates: Minimum candidates needed to rerank
             """
@@ -54,6 +64,8 @@ if TORCH_AVAILABLE:
             self.pairwise_head = pairwise_head
             self.top_k = int(top_k)
             self.aggregation = str(aggregation).lower()
+            self.rerank_mode = str(rerank_mode).lower()
+            self.swap_threshold = float(swap_threshold)
             self.temperature = float(temperature)
             self.min_candidates = int(min_candidates)
             
@@ -82,6 +94,117 @@ if TORCH_AVAILABLE:
                 score_gap.abs().view(-1),
             ], dim=-1)
 
+        def _rerank_top1_vs_others(
+            self,
+            atom_embeddings: torch.Tensor,  # [num_atoms, D]
+            proposer_scores: torch.Tensor,   # [num_atoms]
+            candidate_mask: Optional[torch.Tensor] = None,  # [num_atoms]
+        ) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]:
+            """Rerank using top-1 vs others strategy (Option A).
+            
+            Only compares the current top-1 against other candidates.
+            If a challenger beats top-1 with P > swap_threshold, swap them.
+            This matches the training setup where we compared (true, hard_neg) pairs.
+            
+            Returns:
+                reranked_scores: [num_atoms] tensor with updated scores
+                reranked_indices: [K] tensor with indices sorted by reranked score
+                metadata: Dict with reranking statistics
+            """
+            num_atoms = atom_embeddings.size(0)
+            device = atom_embeddings.device
+            
+            # Apply candidate mask if provided
+            if candidate_mask is not None:
+                valid_mask = candidate_mask.view(-1) > 0.5
+            else:
+                valid_mask = torch.ones(num_atoms, dtype=torch.bool, device=device)
+            
+            valid_indices = torch.where(valid_mask)[0]
+            num_valid = valid_indices.numel()
+            
+            # Not enough candidates to rerank
+            if num_valid < self.min_candidates:
+                return proposer_scores, torch.argsort(proposer_scores, descending=True), {
+                    "reranked": False,
+                    "num_candidates": float(num_valid),
+                    "reason": "insufficient_candidates",
+                }
+            
+            # Get top-K candidates
+            valid_scores = proposer_scores[valid_indices]
+            k = min(self.top_k, num_valid)
+            topk_local_indices = torch.argsort(valid_scores, descending=True)[:k]
+            topk_global_indices = valid_indices[topk_local_indices]
+            topk_embeddings = atom_embeddings[topk_global_indices]  # [K, D]
+            topk_scores = proposer_scores[topk_global_indices]  # [K]
+            
+            # Current top-1
+            top1_idx = 0  # Local index within top-K
+            top1_embedding = topk_embeddings[top1_idx]
+            top1_score = topk_scores[top1_idx]
+            
+            # Compare top-1 against all other candidates
+            # Build features for (challenger, top1) - asking "does challenger beat top1?"
+            challenger_features_list = []
+            for i in range(1, k):
+                # Feature: (challenger, top1) -> P(challenger > top1)
+                feat = self._build_pair_features(
+                    topk_embeddings[i],  # challenger
+                    top1_embedding,       # top1
+                    topk_scores[i],
+                    top1_score,
+                )
+                challenger_features_list.append(feat)
+            
+            if not challenger_features_list:
+                return proposer_scores, torch.argsort(proposer_scores, descending=True), {
+                    "reranked": False,
+                    "num_candidates": float(k),
+                    "reason": "no_challengers",
+                }
+            
+            # Run pairwise head
+            challenger_features = torch.stack(challenger_features_list, dim=0)  # [K-1, D_pair]
+            with torch.no_grad():
+                challenger_logits = self.pairwise_head(challenger_features).view(-1)  # [K-1]
+                challenger_probs = torch.sigmoid(challenger_logits)  # P(challenger > top1)
+            
+            # Find the best challenger that beats top-1
+            max_prob, max_challenger_local = torch.max(challenger_probs, dim=0)
+            max_challenger_idx = max_challenger_local.item() + 1  # +1 because we skipped top1 (idx 0)
+            
+            # Metadata
+            metadata = {
+                "reranked": True,
+                "num_candidates": float(k),
+                "rerank_mode": "top1_vs_others",
+                "max_challenger_prob": float(max_prob.item()),
+                "swap_threshold": self.swap_threshold,
+                "swapped": False,
+                "original_top1_local_idx": 0,
+                "new_top1_local_idx": 0,
+            }
+            
+            # Create output scores
+            reranked_scores = proposer_scores.clone()
+            
+            # If best challenger beats top-1 with sufficient confidence, swap
+            if max_prob.item() > self.swap_threshold:
+                # Swap: give the challenger the top-1 score and vice versa
+                top1_global = topk_global_indices[0]
+                challenger_global = topk_global_indices[max_challenger_idx]
+                
+                # Swap scores
+                reranked_scores[top1_global] = topk_scores[max_challenger_idx]
+                reranked_scores[challenger_global] = topk_scores[0]
+                
+                metadata["swapped"] = True
+                metadata["new_top1_local_idx"] = max_challenger_idx
+                metadata["swap_prob"] = float(max_prob.item())
+            
+            return reranked_scores, torch.argsort(reranked_scores, descending=True), metadata
+
         def _rerank_single_molecule(
             self,
             atom_embeddings: torch.Tensor,  # [num_atoms, D]
@@ -89,6 +212,26 @@ if TORCH_AVAILABLE:
             candidate_mask: Optional[torch.Tensor] = None,  # [num_atoms]
         ) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]:
             """Rerank candidates for a single molecule.
+            
+            Dispatches to appropriate reranking strategy based on self.rerank_mode.
+            
+            Returns:
+                reranked_scores: [num_atoms] tensor with updated scores
+                reranked_indices: [K] tensor with indices sorted by reranked score
+                metadata: Dict with reranking statistics
+            """
+            if self.rerank_mode == "top1_vs_others":
+                return self._rerank_top1_vs_others(atom_embeddings, proposer_scores, candidate_mask)
+            else:
+                return self._rerank_all_pairs(atom_embeddings, proposer_scores, candidate_mask)
+
+        def _rerank_all_pairs(
+            self,
+            atom_embeddings: torch.Tensor,  # [num_atoms, D]
+            proposer_scores: torch.Tensor,   # [num_atoms]
+            candidate_mask: Optional[torch.Tensor] = None,  # [num_atoms]
+        ) -> Tuple[torch.Tensor, torch.Tensor, Dict[str, float]]:
+            """Rerank using all-pairs tournament strategy (original method).
             
             Returns:
                 reranked_scores: [num_atoms] tensor with updated scores

@@ -511,6 +511,8 @@ def _collect_model_overrides() -> dict[str, int | float | str]:
         "HYBRID_COLAB_USE_PAIRWISE_RERANKER": (_env_bool, "use_pairwise_reranker"),
         "HYBRID_COLAB_PAIRWISE_RERANKER_TOP_K": (_env_int, "pairwise_reranker_top_k"),
         "HYBRID_COLAB_PAIRWISE_RERANKER_AGGREGATION": (_env_str, "pairwise_reranker_aggregation"),
+        "HYBRID_COLAB_PAIRWISE_RERANKER_MODE": (_env_str, "pairwise_reranker_mode"),
+        "HYBRID_COLAB_PAIRWISE_RERANKER_SWAP_THRESHOLD": (_env_float, "pairwise_reranker_swap_threshold"),
         "HYBRID_COLAB_PAIRWISE_RERANKER_TEMPERATURE": (_env_float, "pairwise_reranker_temperature"),
         "HYBRID_COLAB_PAIRWISE_RERANKER_CHECKPOINT": (_env_str, "pairwise_reranker_checkpoint"),
         "HYBRID_COLAB_ENABLE_PAIRWISE_PROBE": (_env_int, "enable_pairwise_probe"),
@@ -1052,6 +1054,8 @@ def _evaluate_with_pairwise_reranker(
     device,
     top_k: int = 6,
     aggregation: str = "copeland",
+    rerank_mode: str = "top1_vs_others",
+    swap_threshold: float = 0.6,
     temperature: float = 1.0,
 ) -> dict[str, float]:
     """Evaluate test set with pairwise reranker applied at inference time.
@@ -1067,6 +1071,8 @@ def _evaluate_with_pairwise_reranker(
         pairwise_head=pairwise_head,
         top_k=top_k,
         aggregation=aggregation,
+        rerank_mode=rerank_mode,
+        swap_threshold=swap_threshold,
         temperature=temperature,
     )
     reranker.to(device)
@@ -7308,6 +7314,8 @@ def main() -> None:
                 device=device,
                 top_k=int(getattr(base_config, "pairwise_reranker_top_k", 6)),
                 aggregation=str(getattr(base_config, "pairwise_reranker_aggregation", "copeland")),
+                rerank_mode=str(getattr(base_config, "pairwise_reranker_mode", "top1_vs_others")),
+                swap_threshold=float(getattr(base_config, "pairwise_reranker_swap_threshold", 0.6)),
                 temperature=float(getattr(base_config, "pairwise_reranker_temperature", 1.0)),
             )
             print(json.dumps(reranker_metrics, indent=2), flush=True)
@@ -7725,6 +7733,8 @@ def main() -> None:
             device=device,
             top_k=int(getattr(base_config, "pairwise_reranker_top_k", 6)),
             aggregation=str(getattr(base_config, "pairwise_reranker_aggregation", "copeland")),
+            rerank_mode=str(getattr(base_config, "pairwise_reranker_mode", "top1_vs_others")),
+            swap_threshold=float(getattr(base_config, "pairwise_reranker_swap_threshold", 0.6)),
             temperature=float(getattr(base_config, "pairwise_reranker_temperature", 1.0)),
         )
         print(json.dumps(reranker_metrics, indent=2), flush=True)

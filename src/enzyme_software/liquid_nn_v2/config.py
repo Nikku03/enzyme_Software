@@ -441,6 +441,8 @@ class ModelConfig:
     use_pairwise_reranker: bool = False
     pairwise_reranker_top_k: int = 6
     pairwise_reranker_aggregation: str = "copeland"  # "copeland", "bradley_terry", "sum"
+    pairwise_reranker_mode: str = "top1_vs_others"  # "top1_vs_others" (recommended) or "all_pairs"
+    pairwise_reranker_swap_threshold: float = 0.6  # For top1_vs_others: min P(challenger > top1) to swap
     pairwise_reranker_temperature: float = 1.0
     pairwise_reranker_checkpoint: Optional[str] = None  # path to pairwise head checkpoint
     learning_rate: float = 1e-3
