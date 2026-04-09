@@ -1,0 +1,5938 @@
+{
+  "description": "Cases requiring manual expert review",
+  "n_drugs": 73,
+  "drugs": [
+    {
+      "id": "DB04938",
+      "name": "Ospemifene",
+      "smiles": "OCCOc1ccc(/C(=C(/CCCl)c2ccccc2)c2ccccc2)cc1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        5
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        5
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.43875,
+      "quality_tier": "review",
+      "physics_top3": [
+        10,
+        1,
+        2
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [10, 1, 2]",
+      "atom_details": {
+        "5": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB05467",
+      "name": "Palovarotene",
+      "smiles": "CC1(C)CCC(C)(C)c2cc(Cn3cccn3)c(/C=C/c3ccc(C(=O)O)cc3)cc21",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        13
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        13
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.43875,
+      "quality_tier": "review",
+      "physics_top3": [
+        11,
+        18,
+        16
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [11, 18, 16]",
+      "atom_details": {
+        "13": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:YJUGYRAWLRIQHU-JJCPZVKWSA-N:CYP3A4",
+      "name": "alpha_dihydroergocryptine",
+      "smiles": "CC(C)[C@@]1(NC(=O)[C@@H]2C[C@H]3c4cccc5[nH]cc(c45)C[C@@H]3N(C)C2)O[C@@]2(O)[C@@H]3CCCN3C(=O)CN2C1=O",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        25,
+        28
+      ],
+      "curated_sites": [
+        28
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        25
+      ],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        22,
+        27,
+        20
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [25]; Physics predicts [22, 27, 20]",
+      "atom_details": {
+        "25": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "28": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:ac1c9deb8025:CYP3A4",
+      "name": "beta-artelinic acid",
+      "smiles": "C[C@H]1[C@@H](OCc2ccc(C(=O)O)cc2)O[C@@H]2O[C@@]3(C)CC[C@H]4[C@H](C)CC[C@@H]1[C@@]24OO3",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "curated_sites": [
+        15,
+        18
+      ],
+      "suspicious_sites": [
+        12,
+        13,
+        14,
+        16
+      ],
+      "invalid_sites": [
+        9,
+        10,
+        11,
+        17
+      ],
+      "quality_score": 0.31059000000000003,
+      "quality_tier": "review",
+      "physics_top3": [
+        4,
+        2,
+        15
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [9, 10, 11, 17]; Too many sites (10)",
+      "atom_details": {
+        "9": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "10": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "11": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "12": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "13": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "14": {
+          "symbol": "O",
+          "valid": true,
+          "reason": "Ether O - SoM is likely adjacent carbon",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "ETHER_OXYGEN"
+          ]
+        },
+        "15": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.7799999713897705,
+          "physics_pattern": "alpha_o",
+          "flags": []
+        },
+        "16": {
+          "symbol": "O",
+          "valid": true,
+          "reason": "Ether O - SoM is likely adjacent carbon",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "ETHER_OXYGEN"
+          ]
+        },
+        "17": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "18": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:XUKUURHRXDUEBC-KAYWLYCHSA-N:CYP3A4",
+      "name": "atorvastatin",
+      "smiles": "CC(C)c1c(C(=O)Nc2ccccc2)c(-c2ccccc2)c(-c2ccc(F)cc2)n1CC[C@@H](O)C[C@@H](O)CC(=O)O",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        10,
+        12,
+        16
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        10,
+        12,
+        16
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        35,
+        32,
+        7
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [35, 32, 7]",
+      "atom_details": {
+        "10": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "12": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "16": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:AHXICHPPXIGCBN-AQYLXIGCSA-N:CYP3A4",
+      "name": "bms_275183",
+      "smiles": "COC(=O)O[C@@]12CO[C@@H]1C[C@H](O)[C@@]1(C)C(=O)[C@H](OC(C)=O)C3=C(C)[C@@H](OC(=O)C(O)[C@@H](NC(=O)OC(C)(C)C)C(C)(C)C)C[C@@](O)([C@@H](OC(=O)c4ccccc4)[C@H]21)C3(C)C",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        24,
+        35,
+        50,
+        51,
+        55
+      ],
+      "curated_sites": [
+        24
+      ],
+      "suspicious_sites": [
+        51,
+        55
+      ],
+      "invalid_sites": [
+        35,
+        50
+      ],
+      "quality_score": 0.3132,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        23,
+        30
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [35, 50]; Physics predicts [0, 23, 30]",
+      "atom_details": {
+        "24": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.7799999713897705,
+          "physics_pattern": "alpha_o",
+          "flags": []
+        },
+        "35": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "50": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "51": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "55": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:RMRJXGBAOAMLHD-LDFHUFRKSA-N:CYP3A4",
+      "name": "buprenorphine",
+      "smiles": "CO[C@]12CC[C@@]3(C[C@@H]1[C@@](C)(O)C(C)(C)C)[C@H]1Cc4ccc(O)c5c4[C@@]3(CCN1CC1CC1)[C@H]2O5",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        11,
+        25
+      ],
+      "curated_sites": [
+        25
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        11
+      ],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        15,
+        26
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [11]; Physics predicts [0, 15, 26]",
+      "atom_details": {
+        "11": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "25": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:ARTRTLXKTHJPRW-ILZDJORESA-N:CYP3A4",
+      "name": "cqa_206_291",
+      "smiles": "CCN(CC)S(=O)(=O)N[C@H]1C[C@@H]2c3cccc4c3c(cn4CC)C[C@H]2N(C)C1",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        13,
+        15
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        13,
+        15
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        26,
+        1,
+        9
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [26, 1, 9]",
+      "atom_details": {
+        "13": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "15": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:XLMALTXPSGQGBX-GCJKJVERSA-N:CYP3A4",
+      "name": "dextropropoxyphene",
+      "smiles": "CCC(=O)O[C@](Cc1ccccc1)(c1ccccc1)[C@H](C)CN(C)C",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        8,
+        12
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        8,
+        12
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        6,
+        23,
+        24
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [6, 23, 24]",
+      "atom_details": {
+        "8": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "12": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:JTAGHJPZEDNHHA-UHFFFAOYSA-N:CYP3A4",
+      "name": "ecabapide",
+      "smiles": "CNC(=O)c1cccc(NCC(=O)NCCc2ccc(OC)c(OC)c2)c1",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        0,
+        11
+      ],
+      "curated_sites": [
+        0
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        11
+      ],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        24,
+        21,
+        15
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [11]; Physics predicts [24, 21, 15]",
+      "atom_details": {
+        "0": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8999999761581421,
+          "physics_pattern": "n_methyl",
+          "flags": []
+        },
+        "11": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:CBVCZFGXHXORBI-PXQQMZJSSA-N:CYP3A4",
+      "name": "indinavir",
+      "smiles": "CC(C)(C)NC(=O)[C@@H]1CN(Cc2cccnc2)CCN1C[C@@H](O)C[C@@H](Cc1ccccc1)C(=O)N[C@H]1c2ccccc2C[C@H]1O",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        5,
+        14
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        14
+      ],
+      "invalid_sites": [
+        5
+      ],
+      "quality_score": 0.2565,
+      "quality_tier": "review",
+      "physics_top3": [
+        10,
+        25,
+        8
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [5]; Physics predicts [10, 25, 8]",
+      "atom_details": {
+        "5": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "14": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:4fd9954f2ebc:CYP3A4",
+      "name": "laquinimod",
+      "smiles": "CCN(C(=O)c1c(O)c2c(Cl)cccc2n(C)c1=O)c1ccccc1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "curated_sites": [
+        0,
+        1,
+        2
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "quality_score": 0.2856,
+      "quality_tier": "review",
+      "physics_top3": [
+        1,
+        2,
+        15
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [3, 4, 5, 6, 7, 8]; Too many sites (9)",
+      "atom_details": {
+        "0": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        },
+        "1": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "2": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": []
+        },
+        "3": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "4": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "5": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "6": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "7": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:VKHAHZOOUSRJNA-GCNJZUOMSA-N:CYP3A4",
+      "name": "mifepristone",
+      "smiles": "CC#C[C@]1(O)CC[C@H]2[C@@H]3CCC4=CC(=O)CCC4=C3[C@@H](c3ccc(N(C)C)cc3)C[C@@]21C",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        21,
+        22,
+        27,
+        28
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        21,
+        22,
+        27,
+        28
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        25,
+        26,
+        10
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [25, 26, 10]",
+      "atom_details": {
+        "21": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "22": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "27": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "28": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:5f466a5c0056:CYP3A4",
+      "name": "nefazodone",
+      "smiles": "CCc1nn(CCCN2CCN(c3cccc(Cl)c3)CC2)c(=O)n1CCOc1ccccc1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "curated_sites": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "suspicious_sites": [
+        13,
+        14,
+        15
+      ],
+      "invalid_sites": [
+        2,
+        12
+      ],
+      "quality_score": 0.31745109375,
+      "quality_tier": "review",
+      "physics_top3": [
+        1,
+        7,
+        10
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES",
+        "EXCESSIVE_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [2, 12]; Too many sites (16)",
+      "atom_details": {
+        "0": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        },
+        "1": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.9300000071525574,
+          "physics_pattern": "benzylic_ch2",
+          "flags": []
+        },
+        "2": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "3": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": []
+        },
+        "4": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": []
+        },
+        "5": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "6": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "7": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "8": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.75,
+          "physics_pattern": "tert_amine_n",
+          "flags": []
+        },
+        "9": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "10": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "11": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": []
+        },
+        "12": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "13": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "14": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "15": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:2a89db954a37:CYP3A4",
+      "name": "(s)-oxybutynin",
+      "smiles": "CCN(CC)CC#CCOC(=O)[C@@](O)(c1ccccc1)C1CCCCC1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "curated_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        8
+      ],
+      "suspicious_sites": [
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "invalid_sites": [
+        6,
+        7,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "quality_score": 0.24365249999999997,
+      "quality_tier": "review",
+      "physics_top3": [
+        1,
+        3,
+        5
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES",
+        "EXCESSIVE_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [6, 7, 10, 11, 12, 13, 14]; Too many sites (19)",
+      "atom_details": {
+        "0": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        },
+        "1": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "2": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.75,
+          "physics_pattern": "tert_amine_n",
+          "flags": []
+        },
+        "3": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "4": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        },
+        "5": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "6": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "7": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "8": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.7799999713897705,
+          "physics_pattern": "alpha_o",
+          "flags": []
+        },
+        "10": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "11": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "12": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "13": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "14": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "15": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "16": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "17": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "18": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "19": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:CEOCDNVZRAIOQZ-UHFFFAOYSA-N:CYP3A4",
+      "name": "pentachlorobenzene",
+      "smiles": "Clc1cc(Cl)c(Cl)c(Cl)c1Cl",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        2
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        2
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.4095,
+      "quality_tier": "review",
+      "physics_top3": [
+        2,
+        0,
+        1
+      ],
+      "physics_agrees": true,
+      "flags": [],
+      "recommendation": "REVIEW NEEDED: ",
+      "atom_details": {
+        "2": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:IVVNZDGDKPTYHK-SNVBAGLBSA-N:CYP3A4",
+      "name": "pinacidil",
+      "smiles": "C[C@@H](N/C(=N\\C#N)Nc1ccncc1)C(C)(C)C",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        10,
+        12
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        10,
+        12
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        1,
+        2,
+        6
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [1, 2, 6]",
+      "atom_details": {
+        "10": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "12": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:578abddeed0c:CYP3A4",
+      "name": "reduced_haloperidol",
+      "smiles": "O[C@@H](CCCN1CCC(O)(c2ccc(Cl)cc2)CC1)c1ccc(F)cc1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "curated_sites": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "suspicious_sites": [
+        11
+      ],
+      "invalid_sites": [
+        0,
+        8,
+        9,
+        10
+      ],
+      "quality_score": 0.276451875,
+      "quality_tier": "review",
+      "physics_top3": [
+        6,
+        4,
+        18
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES",
+        "EXCESSIVE_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [0, 8, 9, 10]; Too many sites (12)",
+      "atom_details": {
+        "0": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "1": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.7799999713897705,
+          "physics_pattern": "alpha_o",
+          "flags": []
+        },
+        "2": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "3": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "4": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "5": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.75,
+          "physics_pattern": "tert_amine_n",
+          "flags": []
+        },
+        "6": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "7": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "9": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "10": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "11": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:bd8702948cd8:CYP3A4",
+      "name": "linomide",
+      "smiles": "CN(C(=O)c1c(O)c2ccccc2n(C)c1=O)c1ccccc1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "curated_sites": [
+        0,
+        1
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "quality_score": 0.26775000000000004,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        1,
+        13
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [2, 3, 4, 5, 6]; Too many sites (7)",
+      "atom_details": {
+        "0": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8999999761581421,
+          "physics_pattern": "n_methyl",
+          "flags": []
+        },
+        "1": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": []
+        },
+        "2": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "3": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "4": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "5": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "6": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:RXZBMPWDPOLZGW-FZWLNVMRSA-N:CYP3A4",
+      "name": "roxithromycin",
+      "smiles": "CC[C@H]1OC(=O)[C@H](C)[C@@H](O[C@@H]2C[C@](C)(OC)[C@H](O)[C@@H](C)O2)[C@H](C)[C@@H](O[C@@H]2O[C@H](C)C[C@@H](N(C)C)[C@H]2O)[C@](C)(O)C[C@@H](C)/C(=N\\OCOCCOC)[C@H](C)[C@@H](O)[C@]1(C)O",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        55,
+        56
+      ],
+      "curated_sites": [
+        56
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        55
+      ],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        15,
+        50,
+        32
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [55]; Physics predicts [15, 50, 32]",
+      "atom_details": {
+        "55": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "56": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:TWZNCTCQAGRUGQ-RRPNLBNLSA-N:CYP3A4",
+      "name": "serm_I",
+      "smiles": "Oc1ccc([C@H]2Sc3cc(O)ccc3O[C@H]2c2ccc(OCCN3CCCCC3)cc2)cc1",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        2,
+        16
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        2
+      ],
+      "invalid_sites": [
+        16
+      ],
+      "quality_score": 0.2565,
+      "quality_tier": "review",
+      "physics_top3": [
+        24,
+        28,
+        22
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [16]; Physics predicts [24, 28, 22]",
+      "atom_details": {
+        "2": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "16": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:MBGGBVCUIVRRBF-LJAQVGFWSA-N:CYP3A4",
+      "name": "sulfinpyrazone",
+      "smiles": "O=C1C(CC[S@](=O)c2ccccc2)C(=O)N(c2ccccc2)N1c1ccccc1",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        10
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        10
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        5,
+        15,
+        22
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [5, 15, 22]",
+      "atom_details": {
+        "10": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:CNPVJJQCETWNEU-CYFREDJKSA-N:CYP3A4",
+      "name": "vicriviroc",
+      "smiles": "COC[C@@H](c1ccc(C(F)(F)F)cc1)N1CCN(C2(C)CCN(C(=O)c3c(C)ncnc3C)CC2)C[C@@H]1C",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        3,
+        16,
+        18,
+        21,
+        26
+      ],
+      "curated_sites": [
+        3,
+        16,
+        21
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        18,
+        26
+      ],
+      "quality_score": 0.38880000000000003,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        27,
+        32
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [18, 26]; Physics predicts [0, 27, 32]",
+      "atom_details": {
+        "3": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "16": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "18": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "21": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "26": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:YEEZWCHGZNKEEK-UHFFFAOYSA-N:CYP3A4",
+      "name": "zafirlukast",
+      "smiles": "COc1cc(C(=O)NS(=O)(=O)c2ccccc2C)ccc1Cc1cn(C)c2ccc(NC(=O)OC3CCCC3)cc12",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        14
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        14
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        21,
+        17
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [0, 21, 17]",
+      "atom_details": {
+        "14": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:SPKBYQZELVEOLL-QDMKHBRRSA-N:CYP3A4",
+      "name": "zatosetron",
+      "smiles": "CN1[C@@H]2CC[C@H]1C[C@@H](NC(=O)c1cc(Cl)cc3c1OC(C)(C)C3)C2",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        12,
+        16
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        12
+      ],
+      "invalid_sites": [
+        16
+      ],
+      "quality_score": 0.2565,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        2,
+        7
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [16]; Physics predicts [0, 2, 7]",
+      "atom_details": {
+        "12": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "16": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB19353",
+      "name": "Benzgalantamine",
+      "smiles": "COc1ccc2c3c1O[C@H]1C[C@@H](OC(=O)c4ccccc4)C=C[C@@]31CCN(C)C2",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        17
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        17
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.43875,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        27,
+        25
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [0, 27, 25]",
+      "atom_details": {
+        "17": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB00564",
+      "name": "Carbamazepine",
+      "smiles": "NC(=O)N1c2ccccc2C=Cc2ccccc21",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        5
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        5
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.43875,
+      "quality_tier": "review",
+      "physics_top3": [
+        10,
+        0,
+        3
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [10, 0, 3]",
+      "atom_details": {
+        "5": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB11796",
+      "name": "Fostemsavir",
+      "smiles": "COc1cnc(-n2cnc(C)n2)c2c1c(C(=O)C(=O)N1CCN(C(=O)c3ccccc3)CC1)cn2COP(=O)(O)O",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        3,
+        5,
+        7
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        3,
+        7
+      ],
+      "invalid_sites": [
+        5
+      ],
+      "quality_score": 0.36000000000000004,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        10,
+        20
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [5]; Physics predicts [0, 10, 20]",
+      "atom_details": {
+        "3": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "5": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "7": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB12141",
+      "name": "Gilteritinib",
+      "smiles": "CCc1nc(C(N)=O)c(Nc2ccc(N3CCC(N4CCN(C)CC4)CC3)c(OC)c2)nc1NC1CCOCC1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        2,
+        3,
+        5
+      ],
+      "curated_sites": [
+        3
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        2,
+        5
+      ],
+      "quality_score": 0.36000000000000004,
+      "quality_tier": "review",
+      "physics_top3": [
+        29,
+        1,
+        22
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [2, 5]; Physics predicts [29, 1, 22]",
+      "atom_details": {
+        "2": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "3": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": []
+        },
+        "5": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB00557",
+      "name": "Hydroxyzine",
+      "smiles": "OCCOCCN1CCN(C(c2ccccc2)c2ccc(Cl)cc2)CC1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        12
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        12
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.43875,
+      "quality_tier": "review",
+      "physics_top3": [
+        7,
+        5,
+        10
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [7, 5, 10]",
+      "atom_details": {
+        "12": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB14568",
+      "name": "Ivosidenib",
+      "smiles": "N#Cc1ccnc(N2C(=O)CC[C@H]2C(=O)N(c2cncc(F)c2)[C@H](C(=O)NC2CC(F)(F)C2)c2ccccc2Cl)c1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        0,
+        2,
+        4
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        0,
+        4
+      ],
+      "invalid_sites": [
+        2
+      ],
+      "quality_score": 0.36000000000000004,
+      "quality_tier": "review",
+      "physics_top3": [
+        12,
+        23,
+        27
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [2]; Physics predicts [12, 23, 27]",
+      "atom_details": {
+        "0": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": [
+            "PRIMARY_AMINE"
+          ]
+        },
+        "2": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "4": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB15673",
+      "name": "Lenacapavir",
+      "smiles": "CC(C)(C#Cc1ccc(-c2ccc(Cl)c3c(NS(C)(=O)=O)nn(CC(F)(F)F)c23)c([C@H](Cc2cc(F)cc(F)c2)NC(=O)Cn2nc(C(F)(F)F)c3c2C(F)(F)[C@@H]2C[C@H]32)n1)S(C)(=O)=O",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        6,
+        8,
+        11
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        6,
+        11
+      ],
+      "invalid_sites": [
+        8
+      ],
+      "quality_score": 0.36000000000000004,
+      "quality_tier": "review",
+      "physics_top3": [
+        31,
+        30,
+        40
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [8]; Physics predicts [31, 30, 40]",
+      "atom_details": {
+        "6": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "11": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB11763",
+      "name": "Momelotinib",
+      "smiles": "N#CCNC(=O)c1ccc(-c2ccnc(Nc3ccc(N4CCOCC4)cc3)n2)cc1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        1,
+        3,
+        4
+      ],
+      "curated_sites": [
+        3
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        1,
+        4
+      ],
+      "quality_score": 0.36000000000000004,
+      "quality_tier": "review",
+      "physics_top3": [
+        2,
+        21,
+        25
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [1, 4]; Physics predicts [2, 21, 25]",
+      "atom_details": {
+        "1": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "3": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.699999988079071,
+          "physics_pattern": "sec_amine_n",
+          "flags": []
+        },
+        "4": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB08922",
+      "name": "Perospirone",
+      "smiles": "O=C1[C@H]2CCCC[C@H]2C(=O)N1CCCCN1CCN(c2nsc3ccccc23)CC1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        21
+      ],
+      "curated_sites": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        10,
+        11,
+        12
+      ],
+      "suspicious_sites": [
+        21
+      ],
+      "invalid_sites": [
+        0,
+        1,
+        8,
+        9
+      ],
+      "quality_score": 0.3631359374999999,
+      "quality_tier": "review",
+      "physics_top3": [
+        14,
+        11,
+        17
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES",
+        "EXCESSIVE_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [0, 1, 8, 9]; Too many sites (14)",
+      "atom_details": {
+        "0": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "1": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "2": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.44999998807907104,
+          "physics_pattern": "aliphatic_ch",
+          "flags": []
+        },
+        "3": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "4": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "5": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "6": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "7": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.44999998807907104,
+          "physics_pattern": "aliphatic_ch",
+          "flags": []
+        },
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "9": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "10": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.75,
+          "physics_pattern": "tert_amine_n",
+          "flags": []
+        },
+        "11": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "12": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "21": {
+          "symbol": "S",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.6000000238418579,
+          "physics_pattern": "",
+          "flags": [
+            "THIOETHER"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB01256",
+      "name": "Retapamulin",
+      "smiles": "C=C[C@]1(C)C[C@@H](OC(=O)CS[C@@H]2C[C@H]3CC[C@@H](C2)N3C)[C@]2(C)[C@H](C)CC[C@]3(CCC(=O)[C@H]32)[C@@H](C)[C@@H]1O",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        29,
+        32,
+        35
+      ],
+      "curated_sites": [
+        32
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        29,
+        35
+      ],
+      "quality_score": 0.36000000000000004,
+      "quality_tier": "review",
+      "physics_top3": [
+        19,
+        13,
+        16
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [29, 35]; Physics predicts [19, 13, 16]",
+      "atom_details": {
+        "29": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "32": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.44999998807907104,
+          "physics_pattern": "aliphatic_ch",
+          "flags": []
+        },
+        "35": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB12543",
+      "name": "Samidorphan",
+      "smiles": "NC(=O)c1ccc2c(c1O)[C@]13CCN(CC4CC4)[C@H](C2)[C@]1(O)CCC(=O)C3",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        0,
+        1,
+        8,
+        9,
+        10
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        0
+      ],
+      "invalid_sites": [
+        1,
+        8,
+        9,
+        10
+      ],
+      "quality_score": 0.24975,
+      "quality_tier": "review",
+      "physics_top3": [
+        12,
+        14,
+        18
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [1, 8, 9, 10]; Physics predicts [12, 14, 18]",
+      "atom_details": {
+        "0": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": [
+            "PRIMARY_AMINE"
+          ]
+        },
+        "1": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "9": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "10": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB00203",
+      "name": "Sildenafil",
+      "smiles": "CCCc1nn(C)c2c(=O)[nH]c(-c3cc(S(=O)(=O)N4CCN(C)CC4)ccc3OCC)nc12",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        3,
+        6,
+        7
+      ],
+      "curated_sites": [
+        6
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        3,
+        7
+      ],
+      "quality_score": 0.36000000000000004,
+      "quality_tier": "review",
+      "physics_top3": [
+        2,
+        22,
+        19
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [3, 7]; Physics predicts [2, 22, 19]",
+      "atom_details": {
+        "3": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "6": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        },
+        "7": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB09034",
+      "name": "Suvorexant",
+      "smiles": "Cc1ccc(-n2nccn2)c(C(=O)N2CCN(c3nc4cc(Cl)ccc4o3)CC[C@H]2C)c1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        1,
+        2
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        2
+      ],
+      "invalid_sites": [
+        1
+      ],
+      "quality_score": 0.320625,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        14,
+        15
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [1]; Physics predicts [0, 14, 15]",
+      "atom_details": {
+        "1": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "2": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "DB05294",
+      "name": "Vandetanib",
+      "smiles": "COc1cc2c(Nc3ccc(Br)cc3F)ncnc2cc1OCC1CCN(C)CC1",
+      "primary_cyp": "CYP3A4",
+      "source": "DrugBank",
+      "original_sites": [
+        9
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        9
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.43875,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        27,
+        25
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [0, 27, 25]",
+      "atom_details": {
+        "9": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:8bb2c5dfe5c1:CYP3A4",
+      "name": "4-(trifluoromethyl)-7-[2,5-bis(trifluoromethyl)benzyloxy]coumarin",
+      "smiles": "O=c1cc(C(F)(F)F)c2ccc(OCc3cc(C(F)(F)F)ccc3C(F)(F)F)cc2o1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        2,
+        9,
+        10
+      ],
+      "invalid_sites": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "quality_score": 0.14823613636363636,
+      "quality_tier": "review",
+      "physics_top3": [
+        13,
+        2,
+        9
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES",
+        "EXCESSIVE_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [0, 1, 3, 4, 5, 6, 7, 8]; Too many sites (11)",
+      "atom_details": {
+        "0": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "1": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "2": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "3": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "4": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "5": {
+          "symbol": "F",
+          "valid": false,
+          "reason": "Fluorine - not metabolized by CYP",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "IMPOSSIBLE_ATOM"
+          ]
+        },
+        "6": {
+          "symbol": "F",
+          "valid": false,
+          "reason": "Fluorine - not metabolized by CYP",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "IMPOSSIBLE_ATOM"
+          ]
+        },
+        "7": {
+          "symbol": "F",
+          "valid": false,
+          "reason": "Fluorine - not metabolized by CYP",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "IMPOSSIBLE_ATOM"
+          ]
+        },
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "9": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "10": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:4acb2f457101:CYP3A4",
+      "name": "Nimodipine",
+      "smiles": "COCCOC(=O)C1=C(C)NC(C)=C(C(=O)OC(C)C)C1c1cccc([N+](=O)[O-])c1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "curated_sites": [
+        9,
+        10
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        6,
+        7,
+        8,
+        11
+      ],
+      "quality_score": 0.336,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        9,
+        12
+      ],
+      "physics_agrees": true,
+      "flags": [],
+      "recommendation": "REVIEW NEEDED: Invalid sites [6, 7, 8, 11]",
+      "atom_details": {
+        "6": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "7": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.6499999761581421,
+          "physics_pattern": "alkene",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "9": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8500000238418579,
+          "physics_pattern": "allylic",
+          "flags": []
+        },
+        "10": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.699999988079071,
+          "physics_pattern": "sec_amine_n",
+          "flags": []
+        },
+        "11": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.6499999761581421,
+          "physics_pattern": "alkene",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:2018b4bf27d6:CYP3A4",
+      "name": "Pranidipine",
+      "smiles": "COC(=O)C1=C(C)NC(C)=C(C(=O)OC/C=C/c2ccccc2)C1c1cccc([N+](=O)[O-])c1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "curated_sites": [
+        0,
+        6,
+        7,
+        9,
+        14,
+        15,
+        16
+      ],
+      "suspicious_sites": [
+        1,
+        13,
+        18,
+        19,
+        20
+      ],
+      "invalid_sites": [
+        2,
+        3,
+        4,
+        5,
+        8,
+        10,
+        11,
+        12,
+        17
+      ],
+      "quality_score": 0.23115750000000002,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        6,
+        14
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES",
+        "EXCESSIVE_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [2, 3, 4, 5, 8, 10, 11, 12, 17]; Too many sites (21)",
+      "atom_details": {
+        "0": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.949999988079071,
+          "physics_pattern": "o_demethyl",
+          "flags": []
+        },
+        "1": {
+          "symbol": "O",
+          "valid": true,
+          "reason": "Ether O - SoM is likely adjacent carbon",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "ETHER_OXYGEN"
+          ]
+        },
+        "2": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "3": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "4": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.6499999761581421,
+          "physics_pattern": "alkene",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "5": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "6": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8500000238418579,
+          "physics_pattern": "allylic",
+          "flags": []
+        },
+        "7": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.699999988079071,
+          "physics_pattern": "sec_amine_n",
+          "flags": []
+        },
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.6499999761581421,
+          "physics_pattern": "alkene",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "9": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8500000238418579,
+          "physics_pattern": "allylic",
+          "flags": []
+        },
+        "10": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "11": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "12": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "13": {
+          "symbol": "O",
+          "valid": true,
+          "reason": "Ether O - SoM is likely adjacent carbon",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "ETHER_OXYGEN"
+          ]
+        },
+        "14": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8500000238418579,
+          "physics_pattern": "allylic",
+          "flags": []
+        },
+        "15": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.6499999761581421,
+          "physics_pattern": "alkene",
+          "flags": []
+        },
+        "16": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.44999998807907104,
+          "physics_pattern": "aliphatic_ch",
+          "flags": []
+        },
+        "17": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "18": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "19": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "20": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:60dbe377f105:CYP3A4",
+      "name": "ambroxol",
+      "smiles": "Nc1c(Br)cc(Br)cc1CN[C@H]1CC[C@@H](O)CC1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "curated_sites": [
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "suspicious_sites": [
+        0,
+        4,
+        7
+      ],
+      "invalid_sites": [
+        1,
+        2,
+        3,
+        5,
+        6,
+        8
+      ],
+      "quality_score": 0.23428125,
+      "quality_tier": "review",
+      "physics_top3": [
+        9,
+        11,
+        14
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES",
+        "EXCESSIVE_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [1, 2, 3, 5, 6, 8]; Too many sites (14)",
+      "atom_details": {
+        "0": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": [
+            "PRIMARY_AMINE"
+          ]
+        },
+        "1": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "2": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "3": {
+          "symbol": "Br",
+          "valid": false,
+          "reason": "Bromine - not a typical CYP SoM",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "IMPOSSIBLE_ATOM"
+          ]
+        },
+        "4": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "5": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "6": {
+          "symbol": "Br",
+          "valid": false,
+          "reason": "Bromine - not a typical CYP SoM",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "IMPOSSIBLE_ATOM"
+          ]
+        },
+        "7": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "9": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.9300000071525574,
+          "physics_pattern": "benzylic_ch2",
+          "flags": []
+        },
+        "10": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.699999988079071,
+          "physics_pattern": "sec_amine_n",
+          "flags": []
+        },
+        "11": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "12": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "13": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:1bb536fd58fc:CYP3A4",
+      "name": "bromperidol",
+      "smiles": "O=C(CCCN1CCC(O)(c2ccc(Br)cc2)CC1)c1ccc(F)cc1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "curated_sites": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "suspicious_sites": [
+        11,
+        12
+      ],
+      "invalid_sites": [
+        0,
+        1,
+        8,
+        9,
+        10,
+        13
+      ],
+      "quality_score": 0.24365249999999997,
+      "quality_tier": "review",
+      "physics_top3": [
+        6,
+        4,
+        18
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES",
+        "EXCESSIVE_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [0, 1, 8, 9, 10, 13]; Too many sites (14)",
+      "atom_details": {
+        "0": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "1": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "2": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "3": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "4": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "5": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.75,
+          "physics_pattern": "tert_amine_n",
+          "flags": []
+        },
+        "6": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "7": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "9": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "10": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "11": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "12": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "13": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:5205b6a09ec7:CYP3A4",
+      "name": "domperidone",
+      "smiles": "Oc1nc2ccccc2n1CCCN1CCC(n2c(O)nc3cc(Cl)ccc32)CC1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "curated_sites": [
+        2,
+        9,
+        10,
+        11
+      ],
+      "suspicious_sites": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "invalid_sites": [
+        0,
+        1,
+        3,
+        8
+      ],
+      "quality_score": 0.20884499999999995,
+      "quality_tier": "review",
+      "physics_top3": [
+        12,
+        14,
+        29
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "TOO_MANY_SITES",
+        "EXCESSIVE_SITES",
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [0, 1, 3, 8]; Physics predicts [12, 14, 29]; Too many sites (12)",
+      "atom_details": {
+        "0": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "1": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "2": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": []
+        },
+        "3": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "4": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "5": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "6": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "7": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "9": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": []
+        },
+        "10": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "11": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:8066aaf6e559:CYP3A4",
+      "name": "ebastine",
+      "smiles": "CC(C)(C)c1ccc(C(=O)CCCN2CCC(OC(c3ccccc3)c3ccccc3)CC2)cc1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "curated_sites": [
+        0,
+        2,
+        3,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "suspicious_sites": [
+        5,
+        6
+      ],
+      "invalid_sites": [
+        1,
+        4,
+        7,
+        8,
+        9
+      ],
+      "quality_score": 0.28224,
+      "quality_tier": "review",
+      "physics_top3": [
+        12,
+        14,
+        32
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES",
+        "EXCESSIVE_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [1, 4, 7, 8, 9]; Too many sites (17)",
+      "atom_details": {
+        "0": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        },
+        "1": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "2": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        },
+        "3": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        },
+        "4": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "5": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "6": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "7": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "9": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "10": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "11": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "12": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "13": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.75,
+          "physics_pattern": "tert_amine_n",
+          "flags": []
+        },
+        "14": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "15": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "16": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.7799999713897705,
+          "physics_pattern": "alpha_o",
+          "flags": []
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:dca743241d84:CYP3A4",
+      "name": "ecabapide",
+      "smiles": "CN=C(O)c1cccc(NCC(O)=NCCc2ccc(OC)c(OC)c2)c1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "curated_sites": [
+        10,
+        13,
+        14
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        11,
+        12
+      ],
+      "quality_score": 0.38880000000000003,
+      "quality_tier": "review",
+      "physics_top3": [
+        24,
+        21,
+        15
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [11, 12]; Physics predicts [24, 21, 15]",
+      "atom_details": {
+        "10": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "11": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "12": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "13": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": []
+        },
+        "14": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:f5765fdcbc42:CYP3A4",
+      "name": "gepirone",
+      "smiles": "CC1(C)CC(=O)N(CCCCN2CCN(c3ncccn3)CC2)C(=O)C1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "curated_sites": [
+        0,
+        2,
+        3,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        1,
+        4,
+        5
+      ],
+      "quality_score": 0.30328772727272724,
+      "quality_tier": "review",
+      "physics_top3": [
+        7,
+        13,
+        12
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES",
+        "EXCESSIVE_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [1, 4, 5]; Too many sites (11)",
+      "atom_details": {
+        "0": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        },
+        "1": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "2": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        },
+        "3": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "4": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "5": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "6": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.75,
+          "physics_pattern": "tert_amine_n",
+          "flags": []
+        },
+        "7": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "8": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "9": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "10": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:0e087cd716cb:CYP3A4",
+      "name": "isoursodeoxycholic acid",
+      "smiles": "C[C@H](CCC(=O)O)[C@H]1CC[C@H]2[C@@H]3[C@@H](O)C[C@@H]4C[C@@H](O)CC[C@]4(C)[C@H]3CC[C@]12C",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        21,
+        27
+      ],
+      "curated_sites": [
+        27
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        21
+      ],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        12,
+        17,
+        11
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [21]; Physics predicts [12, 17, 11]",
+      "atom_details": {
+        "21": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "27": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:23da7e5db4df:CYP3A4",
+      "name": "trazodone",
+      "smiles": "O=c1n(CCCN2CCN(c3cccc(Cl)c3)CC2)nc2ccccn12",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "curated_sites": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        0,
+        1,
+        10
+      ],
+      "quality_score": 0.30328772727272724,
+      "quality_tier": "review",
+      "physics_top3": [
+        7,
+        5,
+        8
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES",
+        "EXCESSIVE_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [0, 1, 10]; Too many sites (11)",
+      "atom_details": {
+        "0": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "1": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "2": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": []
+        },
+        "3": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "4": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        },
+        "5": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "6": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.75,
+          "physics_pattern": "tert_amine_n",
+          "flags": []
+        },
+        "7": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "8": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "9": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": []
+        },
+        "10": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "expanded_metx_test:723f81b1f5c5:CYP3A4",
+      "name": "ziprasidone",
+      "smiles": "OC1=Nc2cc(Cl)c(CCN3CCN(c4nsc5ccccc45)CC3)cc2C1",
+      "primary_cyp": "CYP3A4",
+      "source": "metxbiodb",
+      "original_sites": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "curated_sites": [
+        2,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "suspicious_sites": [
+        4
+      ],
+      "invalid_sites": [
+        0,
+        1,
+        3,
+        5,
+        6,
+        7
+      ],
+      "quality_score": 0.24365249999999997,
+      "quality_tier": "review",
+      "physics_top3": [
+        8,
+        12,
+        9
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES",
+        "EXCESSIVE_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [0, 1, 3, 5, 6, 7]; Too many sites (13)",
+      "atom_details": {
+        "0": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "1": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "2": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.5,
+          "physics_pattern": "",
+          "flags": []
+        },
+        "3": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "4": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "5": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "6": {
+          "symbol": "Cl",
+          "valid": false,
+          "reason": "Chlorine - not a typical CYP SoM (dehalogenation rare)",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "IMPOSSIBLE_ATOM"
+          ]
+        },
+        "7": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "8": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.9300000071525574,
+          "physics_pattern": "benzylic_ch2",
+          "flags": []
+        },
+        "9": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "10": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.75,
+          "physics_pattern": "tert_amine_n",
+          "flags": []
+        },
+        "11": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "12": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:FGXWKSZFVQUSTL-UHFFFAOYSA-N:CYP3A4",
+      "name": "domperidone",
+      "smiles": "O=c1[nH]c2ccccc2n1CCCN1CCC(n2c(=O)[nH]c3cc(Cl)ccc32)CC1",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        0,
+        13
+      ],
+      "curated_sites": [
+        13
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        0
+      ],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        12,
+        14,
+        29
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [0]; Physics predicts [12, 14, 29]",
+      "atom_details": {
+        "0": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        },
+        "13": {
+          "symbol": "N",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.75,
+          "physics_pattern": "tert_amine_n",
+          "flags": []
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:KSWPGVNFLOBEBO-UHFFFAOYSA-N:CYP3A4",
+      "name": "dy_9760e",
+      "smiles": "COc1cc2c(CCN3CCN(c4cccc(Cl)c4C)CC3)nn(Cc3c[nH]cn3)c2cc1OC",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        14
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        14
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        34,
+        24
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [0, 34, 24]",
+      "atom_details": {
+        "14": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:WGKIDCRTLNUROQ-UHFFFAOYSA-N:CYP3A4",
+      "name": "kr_33028",
+      "smiles": "N#Cc1cccc2sc(C(=O)NC(=N)N)cc12",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        3
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        3
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        11,
+        7,
+        13
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [11, 7, 13]",
+      "atom_details": {
+        "3": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:ULSUXBXHSYSGDT-UHFFFAOYSA-N:CYP3A4",
+      "name": "tangeretin",
+      "smiles": "COc1ccc(-c2cc(=O)c3c(OC)c(OC)c(OC)c(OC)c3o2)cc1",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        7
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        7
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        13,
+        19
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [0, 13, 19]",
+      "atom_details": {
+        "7": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:IBHYMKYJWOYNMU-KHECKTLASA-N:CYP3A4",
+      "name": "bisnor",
+      "smiles": "O=C(O)C/C=C\\C[C@H]1[C@@H]2CC[C@@H](C2)[C@@H]1NS(=O)(=O)c1ccccc1",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        1,
+        9
+      ],
+      "curated_sites": [
+        9
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        1
+      ],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        3,
+        6,
+        13
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [1]; Physics predicts [3, 6, 13]",
+      "atom_details": {
+        "1": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "9": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.4000000059604645,
+          "physics_pattern": "aliphatic_ch2",
+          "flags": []
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:VBGLYOIFKLUMQG-UHFFFAOYSA-N:CYP3A4",
+      "name": "delta9_tetrahydrocannabinol",
+      "smiles": "[C@H:1]12[c:2]3[c:5]([cH:11][c:18]([CH2:19][CH2:20][CH2:21][CH2:22][CH3:23])[cH:12][c:6]3[OH:13])[O:10][C:7]([CH3:14])([CH3:15])[C@@H:3]1[CH2:8][CH2:16][C:9]([CH3:17])=[CH:4]2",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        13,
+        14,
+        20
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        13
+      ],
+      "invalid_sites": [
+        14,
+        20
+      ],
+      "quality_score": 0.225,
+      "quality_tier": "review",
+      "physics_top3": [
+        5,
+        19,
+        21
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [14, 20]; Physics predicts [5, 19, 21]",
+      "atom_details": {
+        "13": {
+          "symbol": "O",
+          "valid": true,
+          "reason": "Ether O - SoM is likely adjacent carbon",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "ETHER_OXYGEN"
+          ]
+        },
+        "14": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "20": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.6499999761581421,
+          "physics_pattern": "alkene",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:IRLWJILLXJGJTD-UHFFFAOYSA-N:CYP3A4",
+      "name": "muraglitazar",
+      "smiles": "COc1ccc(OC(=O)N(CC(=O)O)Cc2ccc(OCCc3nc(-c4ccccc4)oc3C)cc2)cc1",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        4,
+        7,
+        8
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        4
+      ],
+      "invalid_sites": [
+        7,
+        8
+      ],
+      "quality_score": 0.225,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        14,
+        21
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [7, 8]; Physics predicts [0, 14, 21]",
+      "atom_details": {
+        "4": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "7": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "8": {
+          "symbol": "O",
+          "valid": false,
+          "reason": "Terminal oxygen is metabolite product, not SoM",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "TERMINAL_OXYGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "metxbiodb:ZBBHBTPTTSWHBA-XMMPIXPASA-N:CYP3A4",
+      "name": "nicardipine",
+      "smiles": "COC(=O)C1=C(C)NC(C)=C(C(=O)OCCN(C)Cc2ccccc2)[C@@H]1c1cccc([N+](=O)[O-])c1",
+      "primary_cyp": "CYP3A4",
+      "source": "MetXBioDB",
+      "original_sites": [
+        5,
+        15,
+        22
+      ],
+      "curated_sites": [
+        15
+      ],
+      "suspicious_sites": [
+        22
+      ],
+      "invalid_sites": [
+        5
+      ],
+      "quality_score": 0.351,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        18,
+        17
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [5]; Physics predicts [0, 18, 17]",
+      "atom_details": {
+        "5": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "15": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.8199999928474426,
+          "physics_pattern": "alpha_n",
+          "flags": []
+        },
+        "22": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "az120:a0fab1b06d95:CYP3A4",
+      "name": "Cmpd 1",
+      "smiles": "CCc1c(c2c(n1Cc3ccccc3)cccc2OCC(=O)O)C(=O)C(=O)N",
+      "primary_cyp": "CYP3A4",
+      "source": "AZ120",
+      "original_sites": [
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        9,
+        10,
+        11,
+        12
+      ],
+      "invalid_sites": [
+        8
+      ],
+      "quality_score": 0.4698,
+      "quality_tier": "review",
+      "physics_top3": [
+        1,
+        7,
+        19
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [8]; Physics predicts [1, 7, 19]",
+      "atom_details": {
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "9": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "10": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "11": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "12": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "az120:86885c8adb8a:CYP3A4",
+      "name": "Cmpd 33",
+      "smiles": "O=S1(=O)c2ccccc2CN1c1cncc(Oc2cccnc2)n1",
+      "primary_cyp": "CYP3A4",
+      "source": "AZ120",
+      "original_sites": [
+        1
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        1
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.61425,
+      "quality_tier": "review",
+      "physics_top3": [
+        9,
+        1,
+        10
+      ],
+      "physics_agrees": true,
+      "flags": [],
+      "recommendation": "REVIEW NEEDED: ",
+      "atom_details": {
+        "1": {
+          "symbol": "S",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.6000000238418579,
+          "physics_pattern": "",
+          "flags": [
+            "THIOETHER"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cyp_dbs:3A4:cp_199331",
+      "name": "cp_199331",
+      "smiles": "COc1ccc(NS(=O)(=O)C(F)(F)F)cc1C[C@@H]1COc2ccc(OCc3nc4cc(F)c(F)cc4s3)cc2[C@@H]1O",
+      "primary_cyp": "CYP3A4",
+      "source": "CYP_DBs_external",
+      "original_sites": [
+        24
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        24
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.32175,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        16,
+        25
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [0, 16, 25]",
+      "atom_details": {
+        "24": {
+          "symbol": "O",
+          "valid": true,
+          "reason": "Ether O - SoM is likely adjacent carbon",
+          "physics_score": 0.10000000149011612,
+          "physics_pattern": "",
+          "flags": [
+            "SUSPICIOUS_ATOM",
+            "ETHER_OXYGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cyp_dbs:3A4:estazolam",
+      "name": "estazolam",
+      "smiles": "Clc1ccc2c(c1)C(c1ccccc1)=NCc1nncn1-2",
+      "primary_cyp": "CYP3A4",
+      "source": "CYP_DBs_external",
+      "original_sites": [
+        12
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        12
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.32175,
+      "quality_tier": "review",
+      "physics_top3": [
+        14,
+        20,
+        18
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [14, 20, 18]",
+      "atom_details": {
+        "12": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cyp_dbs:3A4:ethiprole",
+      "name": "ethiprole",
+      "smiles": "CC[S@](=O)c1c(C#N)nn(-c2c(Cl)cc(C(F)(F)F)cc2Cl)c1N",
+      "primary_cyp": "CYP3A4",
+      "source": "CYP_DBs_external",
+      "original_sites": [
+        13,
+        17
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        13
+      ],
+      "invalid_sites": [
+        17
+      ],
+      "quality_score": 0.235125,
+      "quality_tier": "review",
+      "physics_top3": [
+        2,
+        7,
+        9
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [17]; Physics predicts [2, 7, 9]",
+      "atom_details": {
+        "13": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "17": {
+          "symbol": "F",
+          "valid": false,
+          "reason": "Fluorine - not metabolized by CYP",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "IMPOSSIBLE_ATOM"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cyp_dbs:3A4:fentanyl",
+      "name": "fentanyl",
+      "smiles": "CCC(=O)N(c1ccccc1)C1CCN(CCc2ccccc2)CC1",
+      "primary_cyp": "CYP3A4",
+      "source": "CYP_DBs_external",
+      "original_sites": [
+        7
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        7
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.32175,
+      "quality_tier": "review",
+      "physics_top3": [
+        16,
+        13,
+        11
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [16, 13, 11]",
+      "atom_details": {
+        "7": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cyp_dbs:3A4:isoquinoline",
+      "name": "isoquinoline",
+      "smiles": "c1ccc2cnccc2c1",
+      "primary_cyp": "CYP3A4",
+      "source": "CYP_DBs_external",
+      "original_sites": [
+        9
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        9
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.32175,
+      "quality_tier": "review",
+      "physics_top3": [
+        5,
+        0,
+        2
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [5, 0, 2]",
+      "atom_details": {
+        "9": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cyp_dbs:3A4:ly_333531",
+      "name": "ly_333531",
+      "smiles": "CN(C)C[C@@H]1CCn2cc(c3ccccc32)C2=C(C(=O)NC2=O)c2cn(c3ccccc23)CCO1",
+      "primary_cyp": "CYP3A4",
+      "source": "CYP_DBs_external",
+      "original_sites": [
+        30,
+        29
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        30,
+        29
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.32175,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        2,
+        3
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [0, 2, 3]",
+      "atom_details": {
+        "30": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "29": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cyp_dbs:3A4:mexazolam",
+      "name": "mexazolam",
+      "smiles": "C[C@@H]1CO[C@@]2(c3ccccc3Cl)c3cc(Cl)ccc3NC(=O)CN12",
+      "primary_cyp": "CYP3A4",
+      "source": "CYP_DBs_external",
+      "original_sites": [
+        7
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        7
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.32175,
+      "quality_tier": "review",
+      "physics_top3": [
+        1,
+        22,
+        2
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [1, 22, 2]",
+      "atom_details": {
+        "7": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cyp_dbs:3A4:naphthalene",
+      "name": "naphthalene",
+      "smiles": "c1ccc2ccccc2c1",
+      "primary_cyp": "CYP3A4",
+      "source": "CYP_DBs_external",
+      "original_sites": [
+        9,
+        8,
+        2,
+        3
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        9,
+        2
+      ],
+      "invalid_sites": [
+        8,
+        3
+      ],
+      "quality_score": 0.23316562500000002,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        1,
+        2
+      ],
+      "physics_agrees": true,
+      "flags": [
+        "TOO_MANY_SITES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [8, 3]; Too many sites (4)",
+      "atom_details": {
+        "9": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "8": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "2": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "3": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cyp_dbs:3A4:quinacrine",
+      "name": "quinacrine",
+      "smiles": "CCN(CC)CCC[C@@H](C)Nc1c2ccc(Cl)cc2nc2ccc(OC)cc12",
+      "primary_cyp": "CYP3A4",
+      "source": "CYP_DBs_external",
+      "original_sites": [
+        23,
+        22
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        22
+      ],
+      "invalid_sites": [
+        23
+      ],
+      "quality_score": 0.235125,
+      "quality_tier": "review",
+      "physics_top3": [
+        25,
+        1,
+        5
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [23]; Physics predicts [25, 1, 5]",
+      "atom_details": {
+        "23": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "22": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cyp_dbs:3A4:trans_phenylpropene",
+      "name": "trans_phenylpropene",
+      "smiles": "C/C=C/c1ccccc1",
+      "primary_cyp": "CYP3A4",
+      "source": "CYP_DBs_external",
+      "original_sites": [
+        8,
+        7,
+        6
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        8,
+        7,
+        6
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.2734875,
+      "quality_tier": "review",
+      "physics_top3": [
+        0,
+        1,
+        2
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "TOO_MANY_SITES",
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [0, 1, 2]; Too many sites (3)",
+      "atom_details": {
+        "8": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "7": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        },
+        "6": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cyp_dbs:3A4:uk_343664",
+      "name": "uk_343664",
+      "smiles": "CCCOc1ccc(S(=O)(=O)N2CCN(CC)CC2)cc1-c1nc2c(CC)n(Cc3ccccn3)nc2c(=O)[nH]1",
+      "primary_cyp": "CYP3A4",
+      "source": "CYP_DBs_external",
+      "original_sites": [
+        30
+      ],
+      "curated_sites": [],
+      "suspicious_sites": [
+        30
+      ],
+      "invalid_sites": [],
+      "quality_score": 0.32175,
+      "quality_tier": "review",
+      "physics_top3": [
+        25,
+        28,
+        15
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Physics predicts [25, 28, 15]",
+      "atom_details": {
+        "30": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.25,
+          "physics_pattern": "aromatic_ch",
+          "flags": [
+            "AROMATIC_CH"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cyp_dbs:3A4:cholic_acid",
+      "name": "cholic_acid",
+      "smiles": "C[C@H](CCC(=O)O)[C@H]1CC[C@H]2[C@@H]3[C@@H](O)C[C@H]4C[C@H](O)CC[C@]4(C)[C@H]3C[C@@H](O)[C@]12C",
+      "primary_cyp": "CYP3A4",
+      "source": "CYP_DBs_external",
+      "original_sites": [
+        27,
+        28
+      ],
+      "curated_sites": [
+        28
+      ],
+      "suspicious_sites": [],
+      "invalid_sites": [
+        27
+      ],
+      "quality_score": 0.32175,
+      "quality_tier": "review",
+      "physics_top3": [
+        12,
+        17,
+        25
+      ],
+      "physics_agrees": false,
+      "flags": [
+        "PHYSICS_DISAGREES"
+      ],
+      "recommendation": "REVIEW NEEDED: Invalid sites [27]; Physics predicts [12, 17, 25]",
+      "atom_details": {
+        "27": {
+          "symbol": "C",
+          "valid": false,
+          "reason": "Quaternary carbon (no H) cannot be hydroxylated",
+          "physics_score": 0.0,
+          "physics_pattern": "",
+          "flags": [
+            "NO_HYDROGEN"
+          ]
+        },
+        "28": {
+          "symbol": "C",
+          "valid": true,
+          "reason": "",
+          "physics_score": 0.3499999940395355,
+          "physics_pattern": "aliphatic_ch3",
+          "flags": []
+        }
+      }
+    }
+  ]
+}

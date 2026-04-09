@@ -1,0 +1,4068 @@
+{
+  "description": "High-confidence CYP3A4 SoM dataset",
+  "n_drugs": 128,
+  "quality": "gold",
+  "drugs": [
+    {
+      "id": "metxbiodb:RFFOTVCVTJUTAD-AOOOYVTPSA-N:CYP3A4",
+      "name": "1_4_cineole",
+      "smiles": "CC(C)[C@]12CC[C@](C)(CC1)O2",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1,
+        5
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        4,
+        8,
+        9
+      ],
+      "all_candidates": [
+        1,
+        5,
+        4,
+        8,
+        9
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:WEEGYLXZBRQIMU-WAAGHKOSSA-N:CYP3A4",
+      "name": "1_8_cineole",
+      "smiles": "CC1(C)O[C@]2(C)CC[C@H]1CC2",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        5,
+        8
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        6,
+        7,
+        9
+      ],
+      "all_candidates": [
+        8,
+        5,
+        6,
+        7,
+        9
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:BDOGTORASJEUBW-UHFFFAOYSA-N:CYP3A4",
+      "name": "7-butoxycoumarin",
+      "smiles": "CCCCOc1ccc2ccc(=O)oc2c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        3
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        1,
+        2,
+        0
+      ],
+      "all_candidates": [
+        3,
+        1,
+        2,
+        0
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:HYKWMZVCUBUWMM-UHFFFAOYSA-N:CYP3A4",
+      "name": "7-hexoxycoumarin",
+      "smiles": "CCCCCCOc1ccc2ccc(=O)oc2c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        2,
+        3,
+        5
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        1,
+        4,
+        0
+      ],
+      "all_candidates": [
+        2,
+        3,
+        5,
+        1,
+        4,
+        0
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:AUCNGVTWAHBDRJ-UHFFFAOYSA-N:CYP3A4",
+      "name": "7-pentoxycoumarin",
+      "smiles": "CCCCCOc1ccc2ccc(=O)oc2c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        2,
+        4
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        1,
+        3,
+        0
+      ],
+      "all_candidates": [
+        2,
+        4,
+        1,
+        3,
+        0
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00404",
+      "name": "Alprazolam",
+      "smiles": "Cc1nnc2n1-c1ccc(Cl)cc1C(c1ccccc1)=NC2",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        2,
+        3,
+        5
+      ],
+      "all_candidates": [
+        0,
+        2,
+        3,
+        5
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB01012",
+      "name": "Cinacalcet",
+      "smiles": "C[C@@H](NCCCc1cccc(C(F)(F)F)c1)c1cccc2ccccc12",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1,
+        3,
+        4,
+        5
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        2,
+        0,
+        7
+      ],
+      "all_candidates": [
+        1,
+        3,
+        4,
+        5,
+        2,
+        0,
+        7
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00843",
+      "name": "Donepezil",
+      "smiles": "COc1cc2c(cc1OC)C(=O)C(CC1CCN(Cc3ccccc3)CC1)C2",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        9,
+        13,
+        14
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        18,
+        16,
+        25
+      ],
+      "all_candidates": [
+        0,
+        9,
+        13,
+        14,
+        18,
+        16,
+        25
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00216",
+      "name": "Eletriptan",
+      "smiles": "CN1CCC[C@@H]1Cc1c[nH]c2ccc(CCS(=O)(=O)c3ccccc3)cc12",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        2,
+        5
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        6,
+        14,
+        1
+      ],
+      "all_candidates": [
+        0,
+        2,
+        5,
+        6,
+        14,
+        1
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00619",
+      "name": "Imatinib",
+      "smiles": "Cc1ccc(NC(=O)c2ccc(CN3CCN(C)CC3)cc2)cc1Nc1nccc(-c2cccnc2)n1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        12,
+        17,
+        14
+      ],
+      "all_candidates": [
+        0,
+        12,
+        17,
+        14
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB05039",
+      "name": "Indacaterol",
+      "smiles": "CCc1cc2c(cc1CC)CC(NC[C@H](O)c1ccc(O)c3[nH]c(=O)ccc13)C2",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1,
+        8,
+        11,
+        14
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        13,
+        12,
+        22
+      ],
+      "all_candidates": [
+        8,
+        1,
+        11,
+        14,
+        13,
+        12,
+        22
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB04817",
+      "name": "Metamizole",
+      "smiles": "Cc1c(N(C)CS(=O)(=O)O)c(=O)n(-c2ccccc2)n1C",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        5
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        0,
+        4,
+        6
+      ],
+      "all_candidates": [
+        5,
+        0,
+        4,
+        6
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:IJGFYZIMQQPUTE-VIFPVBQESA-N:CYP3A4",
+      "name": "NNAL",
+      "smiles": "CN(CCC[C@H](O)c1cccnc1)N=O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        5
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        0,
+        2,
+        1
+      ],
+      "all_candidates": [
+        5,
+        0,
+        2,
+        1
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:ZONTWFMTDBGILI-WDSKDSINSA-N:CYP3A4",
+      "name": "N_ac_DFEC",
+      "smiles": "CC(=O)N[C@@H](CSC(F)(F)[C@@H](OCF)C(F)F)C(=O)O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        4
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        6,
+        10,
+        12
+      ],
+      "all_candidates": [
+        4,
+        6,
+        10,
+        12
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:JAZJDNUIJLZFSZ-GZNKVARCSA-N:CYP3A4",
+      "name": "N_ac_FFVC",
+      "smiles": "CC(=O)N[C@@H](CS/C(F)=C(/OCF)C(F)F)C(=O)O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        4
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        6,
+        11,
+        3
+      ],
+      "all_candidates": [
+        4,
+        6,
+        11,
+        3
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB14881",
+      "name": "Oliceridine",
+      "smiles": "COc1ccsc1CNCC[C@@]1(c2ccccn2)CCOC2(CCCC2)C1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        9
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        0,
+        7,
+        19
+      ],
+      "all_candidates": [
+        9,
+        0,
+        7,
+        19
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00768",
+      "name": "Olopatadine",
+      "smiles": "CN(C)CC/C=C1/c2ccccc2COc2ccc(CC(=O)O)cc21",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1,
+        2
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        19,
+        0,
+        4
+      ],
+      "all_candidates": [
+        1,
+        2,
+        19,
+        0,
+        4
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB08864",
+      "name": "Rilpivirine",
+      "smiles": "Cc1cc(/C=C/C#N)cc(C)c1Nc1ccnc(Nc2ccc(C#N)cc2)n1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        4
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        10,
+        7,
+        12
+      ],
+      "all_candidates": [
+        0,
+        4,
+        10,
+        7,
+        12
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:HKODIGSRFALUTA-RCDLFFMESA-N:CYP3A4",
+      "name": "SENECIONINE",
+      "smiles": "C/C=C1/C[C@H](C)[C@@](C)(O)C(=O)OCC2=CCN3CC[C@@H](OC1=O)[C@@H]23",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        12
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        0,
+        3,
+        15
+      ],
+      "all_candidates": [
+        12,
+        0,
+        3,
+        15
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00938",
+      "name": "Salmeterol",
+      "smiles": "OCc1cc(C(O)CNCCCCCCOCCCCc2ccccc2)ccc1O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1,
+        9
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        19,
+        7,
+        5
+      ],
+      "all_candidates": [
+        1,
+        9,
+        19,
+        7,
+        5
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00911",
+      "name": "Tinidazole",
+      "smiles": "CCS(=O)(=O)CCn1c([N+](=O)[O-])cnc1C",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        6,
+        9
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        15,
+        2,
+        7
+      ],
+      "all_candidates": [
+        0,
+        9,
+        6,
+        15,
+        2,
+        7
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB15114",
+      "name": "Vamorolone",
+      "smiles": "C[C@@H]1C[C@H]2[C@@H]3CCC4=CC(=O)C=C[C@]4(C)C3=CC[C@]2(C)[C@@]1(O)C(=O)CO",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        4,
+        6,
+        8
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        17,
+        24,
+        7
+      ],
+      "all_candidates": [
+        8,
+        4,
+        6,
+        17,
+        24,
+        7
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00163",
+      "name": "Vitamin E",
+      "smiles": "Cc1c(C)c2c(c(C)c1O)CC[C@@](C)(CCC[C@H](C)CCC[C@H](C)CCCC(C)C)O2",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        3,
+        10
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        0,
+        7,
+        17
+      ],
+      "all_candidates": [
+        10,
+        3,
+        0,
+        7,
+        17
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00246",
+      "name": "Ziprasidone",
+      "smiles": "O=C1Cc2cc(CCN3CCN(c4nsc5ccccc45)CC3)c(Cl)cc2N1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        6,
+        7
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        9,
+        10,
+        21
+      ],
+      "all_candidates": [
+        6,
+        7,
+        9,
+        10,
+        21
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:VTNQPKFIQCLBDU-UHFFFAOYSA-N:CYP3A4",
+      "name": "acetochlor",
+      "smiles": "CCOCN(C(=O)CCl)c1c(C)cccc1CC",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        3
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        16,
+        11,
+        1
+      ],
+      "all_candidates": [
+        3,
+        16,
+        11,
+        1
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:USMNOWBWPHYOEA-MRTMQBJTSA-N:CYP3A4",
+      "name": "alpha_thujone",
+      "smiles": "CC(C)[C@]12CC(=O)[C@H](C)[C@H]1C2",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        9
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        1,
+        7,
+        4
+      ],
+      "all_candidates": [
+        9,
+        1,
+        7,
+        4
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:AGXLQRPCBKYRSR-JWETUGRJSA-N:CYP3A4",
+      "name": "beta_arteether",
+      "smiles": "CCO[C@H]1O[C@@H]2O[C@]3(C)CCC[C@H]4[C@H](C)CC[C@@H]([C@H]1C)[C@]24OO3",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        3,
+        5,
+        12
+      ],
+      "all_candidates": [
+        1,
+        3,
+        5,
+        12
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:USMNOWBWPHYOEA-XKSSXDPKSA-N:CYP3A4",
+      "name": "beta_thujone",
+      "smiles": "CC(C)[C@]12CC(=O)[C@@H](C)[C@H]1C2",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        9
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        1,
+        7,
+        4
+      ],
+      "all_candidates": [
+        9,
+        1,
+        7,
+        4
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:UMSGKTJDUHERQW-UHFFFAOYSA-N:CYP3A4",
+      "name": "brotizolam",
+      "smiles": "Cc1nnc2n1-c1sc(Br)cc1C(c1ccccc1Cl)=NC2",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        7,
+        2,
+        3
+      ],
+      "all_candidates": [
+        0,
+        7,
+        2,
+        3
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:IYFNEFQTYQPVOC-KRWDZBQOSA-N:CYP3A4",
+      "name": "da_8159",
+      "smiles": "CCCOc1ccc(S(=O)(=O)NCC[C@@H]2CCCN2C)cc1-c1nc2c(CCC)nn(C)c2c(=O)[nH]1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        2,
+        12,
+        13,
+        14,
+        19
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        26,
+        17,
+        18
+      ],
+      "all_candidates": [
+        2,
+        12,
+        13,
+        14,
+        19,
+        26,
+        17,
+        18
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:UVTNFZQICZKOEM-NRFANRHFSA-N:CYP3A4",
+      "name": "disopyramide",
+      "smiles": "CC(C)N(CC[C@](C(N)=O)(c1ccccc1)c1ccccn1)C(C)C",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        4,
+        22,
+        3
+      ],
+      "all_candidates": [
+        1,
+        4,
+        22,
+        3
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB01248",
+      "name": "Docetaxel",
+      "smiles": "CC(=O)O[C@@]12CO[C@@H]1C[C@H](O)[C@@]1(C)C(=O)[C@H](O)C3=C(C)[C@@H](OC(=O)[C@H](O)[C@@H](NC(=O)OC(C)(C)C)c4ccccc4)C[C@@](O)([C@@H](OC(=O)c4ccccc4)[C@H]21)C3(C)C",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        26
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        19,
+        5,
+        7
+      ],
+      "all_candidates": [
+        0,
+        26,
+        19,
+        5,
+        7
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:HAPOVYFOVVWLRS-SSDOTTSWSA-N:CYP3A4",
+      "name": "ethosuximide",
+      "smiles": "CC[C@]1(C)CC(=O)NC1=O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        7,
+        4,
+        0
+      ],
+      "all_candidates": [
+        1,
+        7,
+        4,
+        0
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:IZBNNCFOBMGTQX-UHFFFAOYSA-N:CYP3A4",
+      "name": "etoperidone",
+      "smiles": "CCc1nn(CCCN2CCN(c3cccc(Cl)c3)CC2)c(=O)n1CC",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        10
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        1,
+        7,
+        9
+      ],
+      "all_candidates": [
+        10,
+        1,
+        7,
+        9
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:OKRZOXIQNKYTBL-ZNPYSLGISA-N:CYP3A4",
+      "name": "fk_506_M1",
+      "smiles": "C=CC[C@@H]1/C=C(\\C)C[C@H](C)C[C@H](OC)[C@@H](O)[C@H]2C[C@@H](C)[C@@](O)(O2)C(=O)C(=O)N2CCCC[C@H]2C(=O)O[C@H](/C(C)=C/[C@@H]2CC[C@@H](O)[C@H](OC)C2)[C@H](C)[C@@H](O)CC1=O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        13
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        47,
+        2,
+        6
+      ],
+      "all_candidates": [
+        13,
+        47,
+        2,
+        6
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "expanded_metx_test:b604a4c5b501:CYP3A4",
+      "name": "(+)-halofantrine",
+      "smiles": "CCCCN(CCCC)CC[C@@H](O)c1cc2c(Cl)cc(Cl)cc2c2cc(C(F)(F)F)ccc12",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        5,
+        6,
+        7,
+        8
+      ],
+      "source": "metxbiodb",
+      "quality": "gold",
+      "hard_negatives": [
+        3,
+        9,
+        11
+      ],
+      "all_candidates": [
+        8,
+        5,
+        6,
+        7,
+        3,
+        9,
+        11
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:UWKQSNNFCGGAFS-XIFFEERXSA-N:CYP3A4",
+      "name": "irinotecan",
+      "smiles": "CCc1c2c(nc3ccc(OC(=O)N4CCC(N5CCCCC5)CC4)cc13)-c1cc3c(c(=O)n1C2)COC(=O)[C@]3(O)CC",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        14,
+        18,
+        22,
+        24
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        1,
+        16,
+        35
+      ],
+      "all_candidates": [
+        24,
+        18,
+        14,
+        22,
+        1,
+        16,
+        35
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:QSENXEKZWYFFJK-FKLTURBQSA-N:CYP3A4",
+      "name": "ivermectin",
+      "smiles": "CO[C@H]1C[C@H](O[C@H]2[C@H](C)O[C@@H](O[C@@H]3/C(C)=C/C[C@@H]4CC[C@@H](C[C@]5(CC[C@H](C(C)C)CO5)O4)OC(=O)[C@@H]4C=C(C)[C@@H](O)[C@@H]5CC/C(=C\\C=C\\[C@@H]3C)[C@]45O)C[C@@H]2OC)O[C@@H](C)[C@@H]1O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        2,
+        4,
+        36,
+        57
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        55,
+        14,
+        16
+      ],
+      "all_candidates": [
+        0,
+        2,
+        4,
+        36,
+        57,
+        55,
+        14,
+        16
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:RCOWGILQXUPXEW-CEBPFEQASA-N:CYP3A4",
+      "name": "lilopristone",
+      "smiles": "CN(C)c1ccc([C@H]2C[C@@]3(C)[C@@H](CC[C@@]3(O)/C=C/CO)[C@@H]3CCC4=CC(=O)CCC4=C32)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        2
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        18,
+        22,
+        28
+      ],
+      "all_candidates": [
+        0,
+        2,
+        18,
+        22,
+        28
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:PCZOHLXUXFIOCF-BXMDZJJMSA-N:CYP3A4",
+      "name": "lovastatin",
+      "smiles": "CC[C@H](C)C(=O)O[C@H]1C[C@@H](C)C=C2C=C[C@H](C)[C@H](CC[C@@H]3C[C@@H](O)CC(=O)O3)[C@H]21",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        22
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        7,
+        20,
+        11
+      ],
+      "all_candidates": [
+        22,
+        7,
+        20,
+        11
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "expanded_metx_test:248e0ca75a2a:CYP3A4",
+      "name": "Midazolam",
+      "smiles": "Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        5
+      ],
+      "source": "literature",
+      "quality": "gold",
+      "hard_negatives": [
+        2,
+        21,
+        22
+      ],
+      "all_candidates": [
+        0,
+        5,
+        2,
+        21,
+        22
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "expanded_metx_test:b999d31f6c10:CYP3A4",
+      "name": "Nifedipine",
+      "smiles": "COC(=O)C1=C(C)NC(C)=C(C(=O)OC)C1c1ccccc1[N+](=O)[O-]",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        7,
+        14,
+        15
+      ],
+      "source": "literature",
+      "quality": "gold",
+      "hard_negatives": [
+        6,
+        9,
+        4
+      ],
+      "all_candidates": [
+        0,
+        15,
+        14,
+        7,
+        6,
+        9,
+        4
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:KPRTURMJVWXURQ-UHFFFAOYSA-N:CYP3A4",
+      "name": "no_1886",
+      "smiles": "CCOP(=O)(Cc1ccc(C(=O)Nc2ccc(Br)cc2C#N)cc1)OCC",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        5,
+        25,
+        12
+      ],
+      "all_candidates": [
+        1,
+        5,
+        25,
+        12
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:IEXUMDBQLIVNHZ-MKNNCVFRSA-N:CYP3A4",
+      "name": "onapristone",
+      "smiles": "CN(C)c1ccc([C@H]2C[C@]3(C)[C@H](CC[C@]3(O)CCCO)[C@@H]3CCC4=CC(=O)CCC4=C32)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        2
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        22,
+        28,
+        18
+      ],
+      "all_candidates": [
+        0,
+        2,
+        22,
+        28,
+        18
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:SVCNNZDUGWLODJ-RAYFHMIRSA-N:CYP3A4",
+      "name": "riddelliine",
+      "smiles": "C=C1C/C(=C/C)C(=O)O[C@@H]2CCN3CC=C(COC(=O)[C@@]1(O)CO)[C@H]23",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        11,
+        13,
+        24
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        2,
+        5,
+        16
+      ],
+      "all_candidates": [
+        24,
+        11,
+        13,
+        2,
+        5,
+        16
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:QGBIFMJAQARMNQ-QISPFCDLSA-N:CYP3A4",
+      "name": "rpr_106541",
+      "smiles": "CCC[C@@H]1O[C@@H]2C[C@H]3[C@@H]4C[C@H](F)C5=CC(=O)CC[C@]5(C)[C@@]4(F)[C@@H](O)C[C@]3(C)[C@]2(SC)O1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        22
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        28,
+        3,
+        5
+      ],
+      "all_candidates": [
+        22,
+        28,
+        3,
+        5
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:XWLXKKNPFMNSFA-SRIRLJBESA-N:CYP3A4",
+      "name": "simvastatin_hydroxy_acid",
+      "smiles": "CCC(C)(C)C(=O)O[C@H]1C[C@@H](C)C=C2C=C[C@H](C)[C@H](CC[C@H](O)C[C@@H](O)CC(=O)O)[C@H]21",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        8,
+        16
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        21,
+        24,
+        12
+      ],
+      "all_candidates": [
+        8,
+        16,
+        21,
+        24,
+        12
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB12001",
+      "name": "Abemaciclib",
+      "smiles": "CCN1CCN(Cc2ccc(Nc3ncc(F)c(-c4cc(F)c5nc(C)n(C(C)C)c5c4)n3)nc2)CC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        6
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        25,
+        1,
+        3
+      ],
+      "all_candidates": [
+        6,
+        25,
+        1,
+        3
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB12015",
+      "name": "Alpelisib",
+      "smiles": "Cc1nc(NC(=O)N2CCC[C@H]2C(N)=O)sc1-c1ccnc(C(C)(C)C(F)(F)F)c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        10
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        8,
+        11,
+        7
+      ],
+      "all_candidates": [
+        0,
+        10,
+        8,
+        11,
+        7
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB01118",
+      "name": "Amiodarone",
+      "smiles": "CCCCc1oc2ccccc2c1C(=O)c1cc(I)c(OCCN(CC)CC)c(I)c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1,
+        2,
+        3
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        22,
+        24,
+        26
+      ],
+      "all_candidates": [
+        1,
+        2,
+        3,
+        22,
+        24,
+        26
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00972",
+      "name": "Azelastine",
+      "smiles": "CN1CCCC(n2nc(Cc3ccc(Cl)cc3)c3ccccc3c2=O)CC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        2,
+        5
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        9,
+        26,
+        1
+      ],
+      "all_candidates": [
+        0,
+        2,
+        5,
+        9,
+        26,
+        1
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00924",
+      "name": "Cyclobenzaprine",
+      "smiles": "CN(C)CCC=C1c2ccccc2C=Cc2ccccc21",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        2,
+        3
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        4,
+        1,
+        5
+      ],
+      "all_candidates": [
+        0,
+        2,
+        3,
+        4,
+        1,
+        5
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB06700",
+      "name": "Desvenlafaxine",
+      "smiles": "CN(C)CC(c1ccc(O)cc1)C1(O)CCCCC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        2,
+        3
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        1,
+        4,
+        14
+      ],
+      "all_candidates": [
+        0,
+        2,
+        3,
+        1,
+        4,
+        14
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00514",
+      "name": "Dextromethorphan",
+      "smiles": "COc1ccc2c(c1)[C@]13CCCC[C@@H]1[C@H](C2)N(C)CC3",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        9,
+        10,
+        11,
+        15
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        17,
+        14,
+        18
+      ],
+      "all_candidates": [
+        0,
+        9,
+        10,
+        11,
+        15,
+        17,
+        14,
+        18
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB11986",
+      "name": "Entrectinib",
+      "smiles": "CN1CCN(c2ccc(C(=O)Nc3n[nH]c4ccc(Cc5cc(F)cc(F)c5)cc34)c(NC3CCOCC3)c2)CC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        13
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        19,
+        32,
+        39
+      ],
+      "all_candidates": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        13,
+        19,
+        32,
+        39
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00977",
+      "name": "Ethinylestradiol",
+      "smiles": "C#C[C@]1(O)CC[C@H]2[C@@H]3CCc4cc(O)ccc4[C@H]3CC[C@@]21C",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        6,
+        7,
+        17
+      ],
+      "all_candidates": [
+        0,
+        6,
+        7,
+        17
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB09166",
+      "name": "Etizolam",
+      "smiles": "CCc1cc2c(s1)-n1c(C)nnc1CN=C2c1ccccc1Cl",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        9,
+        6,
+        7
+      ],
+      "all_candidates": [
+        1,
+        9,
+        6,
+        7
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB06414",
+      "name": "Etravirine",
+      "smiles": "Cc1cc(C#N)cc(C)c1Oc1nc(Nc2ccc(C#N)cc2)nc(N)c1Br",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        8,
+        5,
+        12
+      ],
+      "all_candidates": [
+        0,
+        8,
+        5,
+        12
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB01016",
+      "name": "Glyburide",
+      "smiles": "COc1ccc(Cl)cc1C(=O)NCCc1ccc(S(=O)(=O)NC(=O)NC2CCCCC2)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        13
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        0,
+        12,
+        25
+      ],
+      "all_candidates": [
+        13,
+        0,
+        12,
+        25
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB01018",
+      "name": "Guanfacine",
+      "smiles": "N=C(N)NC(=O)Cc1c(Cl)cccc1Cl",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        6
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        3,
+        0,
+        2
+      ],
+      "all_candidates": [
+        6,
+        3,
+        0,
+        2
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB01611",
+      "name": "Hydroxychloroquine",
+      "smiles": "CCN(CCO)CCCC(C)Nc1ccnc2cc(Cl)ccc12",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        1,
+        3,
+        6,
+        7,
+        8
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        9,
+        4,
+        2
+      ],
+      "all_candidates": [
+        0,
+        1,
+        3,
+        6,
+        7,
+        8,
+        9,
+        4,
+        2
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB01026",
+      "name": "Ketoconazole",
+      "smiles": "CC(=O)N1CCN(c2ccc(OCC3COC(Cn4ccnc4)(c4ccc(Cl)cc4Cl)O3)cc2)CC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        3,
+        4,
+        5,
+        6
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        34,
+        35,
+        12
+      ],
+      "all_candidates": [
+        0,
+        3,
+        4,
+        5,
+        6,
+        34,
+        35,
+        12
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00448",
+      "name": "Lansoprazole",
+      "smiles": "Cc1c(OCC(F)(F)F)ccnc1CS(=O)c1nc2ccccc2[nH]1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        13,
+        4,
+        14
+      ],
+      "all_candidates": [
+        0,
+        13,
+        4,
+        14
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB16217",
+      "name": "Leniolisib",
+      "smiles": "CCC(=O)N1CC[C@H](Nc2ncnc3c2CN(c2cnc(OC)c(C(F)(F)F)c2)CC3)C1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1,
+        12,
+        15
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        22,
+        5,
+        7
+      ],
+      "all_candidates": [
+        1,
+        12,
+        15,
+        22,
+        5,
+        7
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB09237",
+      "name": "Levamlodipine",
+      "smiles": "CCOC(=O)C1=C(COCCN)NC(C)=C(C(=O)OC)[C@@H]1c1ccccc1Cl",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1,
+        7
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        19,
+        14,
+        10
+      ],
+      "all_candidates": [
+        1,
+        7,
+        19,
+        14,
+        10
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB01002",
+      "name": "Levobupivacaine",
+      "smiles": "CCCCN1CCCC[C@H]1C(=O)Nc1c(C)cccc1C",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        9,
+        15
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        20,
+        3,
+        5
+      ],
+      "all_candidates": [
+        9,
+        15,
+        20,
+        3,
+        5
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00333",
+      "name": "Methadone",
+      "smiles": "CCC(=O)C(CC(C)N(C)C)(c1ccccc1)c1ccccc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        6,
+        9,
+        10
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        8,
+        1,
+        5
+      ],
+      "all_candidates": [
+        9,
+        10,
+        6,
+        8,
+        1,
+        5
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB12005",
+      "name": "Nirogacestat",
+      "smiles": "CCC[C@H](N[C@H]1CCc2cc(F)cc(F)c2C1)C(=O)Nc1cn(C(C)(C)CNCC(C)(C)C)cn1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        3,
+        5
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        26,
+        28,
+        4
+      ],
+      "all_candidates": [
+        3,
+        5,
+        26,
+        28,
+        4
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00957",
+      "name": "Norgestimate",
+      "smiles": "C#C[C@]1(OC(C)=O)CC[C@H]2[C@@H]3CCC4=C/C(=N/O)CC[C@@H]4[C@H]3CC[C@@]21CC",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        16,
+        18
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        12,
+        13,
+        0
+      ],
+      "all_candidates": [
+        16,
+        18,
+        12,
+        13,
+        0
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB06670",
+      "name": "Odanacatib",
+      "smiles": "CC(C)(F)C[C@H](N[C@@H](c1ccc(-c2ccc(S(C)(=O)=O)cc2)cc1)C(F)(F)F)C(=O)NC1(C#N)CC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        4,
+        5,
+        7
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        6,
+        30,
+        16
+      ],
+      "all_candidates": [
+        4,
+        5,
+        7,
+        6,
+        30,
+        16
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB11730",
+      "name": "Ribociclib",
+      "smiles": "CN(C)C(=O)c1cc2cnc(Nc3ccc(N4CCNCC4)cn3)nc2n1C1CCCC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        2
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        17,
+        18,
+        20
+      ],
+      "all_candidates": [
+        0,
+        2,
+        17,
+        18,
+        20
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB04934",
+      "name": "Rifalazil",
+      "smiles": "CO[C@H]1/C=C/O[C@@]2(C)Oc3c(C)c(O)c4c(=O)c(c5oc6cc(N7CCN(CC(C)C)CC7)cc(O)c6nc-5c4c3C2=O)NC(=O)/C(C)=C\\C=C\\[C@H](C)[C@H](O)[C@@H](C)[C@@H](O)[C@@H](C)[C@H](OC(C)=O)[C@@H]1C",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        2,
+        3,
+        11
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        0,
+        47,
+        24
+      ],
+      "all_candidates": [
+        11,
+        2,
+        3,
+        0,
+        47,
+        24
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB06654",
+      "name": "Safinamide",
+      "smiles": "C[C@H](NCc1ccc(OCc2cccc(F)c2)cc1)C(N)=O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1,
+        3
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        9,
+        2,
+        20
+      ],
+      "all_candidates": [
+        1,
+        3,
+        9,
+        2,
+        20
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB01104",
+      "name": "Sertraline",
+      "smiles": "CN[C@H]1CC[C@@H](c2ccc(Cl)c(Cl)c2)c2ccccc21",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        2,
+        3,
+        5
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        1,
+        4,
+        7
+      ],
+      "all_candidates": [
+        0,
+        2,
+        3,
+        5,
+        1,
+        4,
+        7
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00398",
+      "name": "Sorafenib",
+      "smiles": "CNC(=O)c1cc(Oc2ccc(NC(=O)Nc3ccc(Cl)c(C(F)(F)F)c3)cc2)ccn1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        0,
+        12,
+        15
+      ],
+      "all_candidates": [
+        1,
+        0,
+        12,
+        15
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00706",
+      "name": "Tamsulosin",
+      "smiles": "CCOc1ccccc1OCCN[C@H](C)Cc1ccc(OC)c(S(N)(=O)=O)c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        11,
+        13,
+        14,
+        15
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        21,
+        1,
+        10
+      ],
+      "all_candidates": [
+        0,
+        11,
+        13,
+        14,
+        15,
+        21,
+        1,
+        10
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00755",
+      "name": "Tretinoin",
+      "smiles": "CC1=C(/C=C/C(C)=C/C=C/C(C)=C/C(=O)O)C(C)(C)CCC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        3
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        6,
+        11,
+        21
+      ],
+      "all_candidates": [
+        0,
+        3,
+        6,
+        11,
+        21
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB09082",
+      "name": "Vilanterol",
+      "smiles": "OCc1cc([C@@H](O)CNCCCCCCOCCOCc2c(Cl)cccc2Cl)ccc1O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1,
+        9,
+        11,
+        13
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        19,
+        7,
+        5
+      ],
+      "all_candidates": [
+        1,
+        11,
+        13,
+        9,
+        19,
+        7,
+        5
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "expanded_metx_test:50962eadb184:CYP3A4",
+      "name": "tropisetron",
+      "smiles": "CN1[C@@H]2CC[C@H]1CC(OC(=O)c1c[nH]c3ccccc13)C2",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "metxbiodb",
+      "quality": "gold",
+      "hard_negatives": [
+        2,
+        5,
+        7
+      ],
+      "all_candidates": [
+        0,
+        2,
+        5,
+        7
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00683",
+      "name": "Midazolam",
+      "smiles": "Cn1cnc(N=C2c3cc(F)ccc3-c3ccc(Cl)cc32)c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        3
+      ],
+      "source": "validated",
+      "quality": "gold",
+      "hard_negatives": [
+        1,
+        5,
+        0
+      ],
+      "all_candidates": [
+        3,
+        1,
+        5,
+        0
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:ASVDRLYVNFOSCI-UHFFFAOYSA-N:CYP3A4",
+      "name": "6_methylchrysene",
+      "smiles": "Cc1cc2c3ccccc3ccc2c2ccccc12",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        2,
+        5,
+        6
+      ],
+      "all_candidates": [
+        0,
+        2,
+        5,
+        6
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:ATALOFNDEOCMKK-OITMNORJSA-N:CYP3A4",
+      "name": "aprepitant",
+      "smiles": "C[C@@H](O[C@H]1OCCN(Cc2n[nH]c(=O)[nH]2)[C@H]1c1ccc(F)cc1)c1cc(C(F)(F)F)cc(C(F)(F)F)c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        6,
+        15
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        8,
+        1,
+        3
+      ],
+      "all_candidates": [
+        0,
+        6,
+        15,
+        8,
+        1,
+        3
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:SLFGIOIONGJGRT-CQSZACIVSA-N:CYP3A4",
+      "name": "cyamemazine",
+      "smiles": "C[C@H](CN(C)C)CN1c2ccccc2Sc2ccc(C#N)cc21",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        2,
+        3,
+        4,
+        6
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        5,
+        14,
+        7
+      ],
+      "all_candidates": [
+        2,
+        3,
+        4,
+        6,
+        5,
+        14,
+        7
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "DB00783",
+      "name": "Estradiol",
+      "smiles": "C[C@]12CC[C@@H]3c4ccc(O)cc4CC[C@H]3[C@@H]1CC[C@@H]2O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        4,
+        17
+      ],
+      "source": "DrugBank",
+      "quality": "gold",
+      "hard_negatives": [
+        18,
+        14,
+        15
+      ],
+      "all_candidates": [
+        17,
+        4,
+        18,
+        14,
+        15
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:PPTYJKAXVCCBDU-UHFFFAOYSA-N:CYP3A4",
+      "name": "flunitrazepam",
+      "smiles": "CN1C(=O)CN=C(c2ccccc2F)c2cc([N+](=O)[O-])ccc21",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        0,
+        5,
+        17
+      ],
+      "all_candidates": [
+        1,
+        0,
+        5,
+        17
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:IZXJPGLOYYDHRM-UHFFFAOYSA-N:CYP3A4",
+      "name": "2n_propylquinoline",
+      "smiles": "CCCc1ccc2ccccc2n1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        2
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        12,
+        1,
+        4
+      ],
+      "all_candidates": [
+        0,
+        2,
+        12,
+        1,
+        4
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:HOMGKSMUEGBAAB-CQSZACIVSA-N:CYP3A4",
+      "name": "ifosfamide",
+      "smiles": "O=[P@]1(NCCCl)OCCCN1CCCl",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        2,
+        9,
+        11
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        3,
+        7,
+        10
+      ],
+      "all_candidates": [
+        9,
+        2,
+        11,
+        3,
+        7,
+        10
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "metxbiodb:RHJLQMVZXQKJKB-FPHSVDBKSA-N:CYP3A4",
+      "name": "k_11777",
+      "smiles": "CN1CCN(C(=O)N[C@@H](Cc2ccccc2)C(=O)N[C@H](/C=C/S(=O)(=O)c2ccccc2)CCc2ccccc2)CC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        9,
+        20
+      ],
+      "source": "MetXBioDB",
+      "quality": "gold",
+      "hard_negatives": [
+        32,
+        0,
+        2
+      ],
+      "all_candidates": [
+        9,
+        20,
+        32,
+        0,
+        2
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:0d6b0dade480:CYP3A4",
+      "name": "Cmpd 3",
+      "smiles": "C[C@H](CO)Nc1cc(NS(C)(=O)=O)nc(SCc2cccc(F)c2F)n1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1,
+        2
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        16,
+        9,
+        15
+      ],
+      "all_candidates": [
+        1,
+        2,
+        16,
+        9,
+        15
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:1f7685bf74fb:CYP3A4",
+      "name": "Cmpd 8",
+      "smiles": "C[C@H](CO)Oc1nc(SCc2cccc(F)c2F)nc2nc(N)sc12",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        2,
+        9
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        1,
+        8,
+        23
+      ],
+      "all_candidates": [
+        9,
+        2,
+        1,
+        8,
+        23
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:812a8d98bd65:CYP3A4",
+      "name": "Cmpd 14",
+      "smiles": "Cc1c-2c(on1)COc3cccc(c3)CCCS(=O)(=O)NCc4ccc2cc4",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        6
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        0,
+        21,
+        17
+      ],
+      "all_candidates": [
+        6,
+        0,
+        21,
+        17
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:7dbc78964a62:CYP3A4",
+      "name": "Cmpd 31",
+      "smiles": "Cc1ccc(-n2nc(C)c3cnc(-c4ccc([C@H]5C[C@@H]5C(=O)O)cc4F)cc32)nc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        8,
+        5,
+        6
+      ],
+      "all_candidates": [
+        0,
+        8,
+        5,
+        6
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:c97f87e3b568:CYP3A4",
+      "name": "Cmpd 32",
+      "smiles": "Cc1ccc(-n2nc(C)c3ccc(-c4ccc([C@H]5C[C@@H]5C(=O)O)cc4)cc32)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        8,
+        5,
+        6
+      ],
+      "all_candidates": [
+        0,
+        8,
+        5,
+        6
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:0a1f85eef80a:CYP3A4",
+      "name": "Cmpd 35",
+      "smiles": "CCOc1cc(c(cc1N2CCOCC2)C(=O)Nc3nc4ccc(cc4s3)S(=O)(=O)CCCN5CCN(CC5)C)Cl",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        1,
+        10,
+        11,
+        13,
+        14
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        39,
+        32,
+        34
+      ],
+      "all_candidates": [
+        1,
+        10,
+        11,
+        13,
+        14,
+        39,
+        32,
+        34
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:6ec3d7675dc8:CYP3A4",
+      "name": "Cmpd 37",
+      "smiles": "CC(C)(C(=O)N[C@H](COCc1ccccc1)C(=O)N2CCC3=NN(C(=O)[C@@]3(C2)Cc4ccccc4)C)N",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        2,
+        9
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        28,
+        35,
+        6
+      ],
+      "all_candidates": [
+        0,
+        9,
+        2,
+        28,
+        35,
+        6
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:9dd2a72cb32d:CYP3A4",
+      "name": "Cmpd 39",
+      "smiles": "CN1CCN(CC1)CCCS(=O)(=O)c2ccc3c(c2)sc(n3)NC(=O)NC(=O)c4ccccc4Cl",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        1
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        2,
+        3,
+        5
+      ],
+      "all_candidates": [
+        0,
+        1,
+        2,
+        3,
+        5
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:71d73e8dbf09:CYP3A4",
+      "name": "Cmpd 40",
+      "smiles": "CC(C)(C)NC(=O)NCCN1CCC(CC1)(CNC(=O)c2cc(cc(c2)Cl)Cl)O",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        9
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        8,
+        11,
+        15
+      ],
+      "all_candidates": [
+        9,
+        8,
+        11,
+        15
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:20205d68a8cf:CYP3A4",
+      "name": "Cmpd 41",
+      "smiles": "CC(C)(C)NC(=O)NCCN1CCC(CC1)(CNC(=O)c2cc(cc(c2)Cl)Cl)CO",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        2,
+        3,
+        9
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        8,
+        11,
+        15
+      ],
+      "all_candidates": [
+        0,
+        9,
+        2,
+        3,
+        8,
+        11,
+        15
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:f902a6cc2915:CYP3A4",
+      "name": "Cmpd 42",
+      "smiles": "CCC[C@@H](CN1CC(O)C1)N(C)C(=O)c1ccc(F)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        6,
+        9,
+        11
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        3,
+        4,
+        7
+      ],
+      "all_candidates": [
+        9,
+        11,
+        6,
+        3,
+        4,
+        7
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:b9f0bbf6b063:CYP3A4",
+      "name": "Cmpd 43",
+      "smiles": "CN(C(=O)c1ccc(F)c(C(F)(F)F)c1)[C@H](CN1CC(O)C1)C1CC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        17,
+        18
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        15,
+        16,
+        21
+      ],
+      "all_candidates": [
+        0,
+        17,
+        18,
+        15,
+        16,
+        21
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:a02678088682:CYP3A4",
+      "name": "Cmpd 44",
+      "smiles": "Cc1cc(C(=O)N(C)[C@H](CN2CC(O)(C3CC3)C2)C2CC2)ccc1F",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        7,
+        11,
+        17
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        8,
+        9,
+        6
+      ],
+      "all_candidates": [
+        0,
+        17,
+        11,
+        7,
+        8,
+        9,
+        6
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:663e28c02d66:CYP3A4",
+      "name": "Cmpd 45",
+      "smiles": "CCC[C@@H](CN1CC(O)C1)N(C)C(=O)c1ccc(F)c(C)c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        5,
+        6,
+        9
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        11,
+        20,
+        3
+      ],
+      "all_candidates": [
+        9,
+        5,
+        6,
+        11,
+        20,
+        3
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:4d692945c4b0:CYP3A4",
+      "name": "Cmpd 46",
+      "smiles": "CO[C@H](C)[C@@H](CN1CCCC1)N(C)C(=O)c1ccc(F)c(C)c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        7,
+        10
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        12,
+        21,
+        4
+      ],
+      "all_candidates": [
+        0,
+        10,
+        7,
+        12,
+        21,
+        4
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:c21d7bf6514a:CYP3A4",
+      "name": "Cmpd 47",
+      "smiles": "CN(C(=O)c1ccc(Cl)cc1)[C@H](CN1CC(O)C1)C1CC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        14
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        11,
+        12,
+        17
+      ],
+      "all_candidates": [
+        0,
+        14,
+        11,
+        12,
+        17
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:e57772e44c9e:CYP3A4",
+      "name": "Cmpd 48",
+      "smiles": "CN(C(=O)c1ccc(Br)cc1)[C@H](CN1CC(O)C1)C1CC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0,
+        14
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        11,
+        12,
+        17
+      ],
+      "all_candidates": [
+        0,
+        14,
+        11,
+        12,
+        17
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:c6ff80349ab9:CYP3A4",
+      "name": "Cmpd 49",
+      "smiles": "CCC[C@@H](CN1CC(O)C1)N(C)C(=O)c1ccc(F)c(F)c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        4,
+        5,
+        6,
+        9,
+        11
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        3,
+        7,
+        10
+      ],
+      "all_candidates": [
+        4,
+        5,
+        6,
+        9,
+        11,
+        3,
+        7,
+        10
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:c384f2fb48d3:CYP3A4",
+      "name": "Cmpd 50",
+      "smiles": "CC(C)[C@@H](CN1CC(C1)O)N(C)C(=O)c2ccc(cc2)Cl",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        5,
+        6,
+        8,
+        11
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        3,
+        4,
+        7
+      ],
+      "all_candidates": [
+        8,
+        11,
+        5,
+        6,
+        3,
+        4,
+        7
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:0ea00ee11700:CYP3A4",
+      "name": "Cmpd 51",
+      "smiles": "CCC[C@@H](CN1CC(O)C1)N(C)C(=O)c1ccc(Cl)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        4,
+        5,
+        6,
+        9,
+        11
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        3,
+        7,
+        10
+      ],
+      "all_candidates": [
+        4,
+        5,
+        6,
+        9,
+        11,
+        3,
+        7,
+        10
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:5d79b3d7a1c4:CYP3A4",
+      "name": "Cmpd 52",
+      "smiles": "CC(C)C[C@@H](CN1CC(O)C1)N(C)C(=O)c1ccc(F)c(F)c1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        6,
+        7,
+        10,
+        12
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        4,
+        5,
+        8
+      ],
+      "all_candidates": [
+        10,
+        12,
+        6,
+        7,
+        4,
+        5,
+        8
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:690b1b60577f:CYP3A4",
+      "name": "Cmpd 53",
+      "smiles": "CC[C@H](C)[C@@H](CN1CC(O)C1)N(C)C(=O)c1ccc(C#N)cc1F",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        6,
+        7,
+        10,
+        12
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        4,
+        5,
+        8
+      ],
+      "all_candidates": [
+        10,
+        12,
+        6,
+        7,
+        4,
+        5,
+        8
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:dd95c9cdaafe:CYP3A4",
+      "name": "Cmpd 54",
+      "smiles": "CN(C(=O)c1ccc(C#N)cc1)[C@H](CN1CC(O)C1)C1CCC1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        15
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        0,
+        12,
+        13
+      ],
+      "all_candidates": [
+        15,
+        0,
+        12,
+        13
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:3df4abd9488b:CYP3A4",
+      "name": "Cmpd 64",
+      "smiles": "COc1ccc(-c2nnc(C(=O)N3CC(Oc4ccc(CN5CCC(C)(CO)C5)cc4C)C3)o2)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        20,
+        31,
+        13
+      ],
+      "all_candidates": [
+        0,
+        20,
+        31,
+        13
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:7b30b2663949:CYP3A4",
+      "name": "Cmpd 65",
+      "smiles": "COc1ccc(-c2nnc(C(=O)N3CC(Oc4ccc(CN5CCC(C)(O)C5)cc4)C3)o2)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        20,
+        13,
+        22
+      ],
+      "all_candidates": [
+        0,
+        20,
+        13,
+        22
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:c6a72d5d9880:CYP3A4",
+      "name": "Cmpd 67",
+      "smiles": "COc1ccc(-c2nnc(C(=O)N3CC(Oc4ccc(CN(C)C)c(C)c4)C3)o2)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        20,
+        22,
+        23
+      ],
+      "all_candidates": [
+        0,
+        20,
+        22,
+        23
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:53fad209b921:CYP3A4",
+      "name": "Cmpd 71",
+      "smiles": "COc1ccc(-c2nnc(C(=O)N3CC(Oc4ccc(CN5CCC(F)(CO)CC5)cc4)C3)o2)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        20,
+        13,
+        22
+      ],
+      "all_candidates": [
+        0,
+        20,
+        13,
+        22
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:9aa723f3f326:CYP3A4",
+      "name": "Cmpd 73",
+      "smiles": "COc1ccc(-c2nnc(C(=O)N3CC(Oc4ccc(CN5CCC6(CCOC6)C5)cc4)C3)o2)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        20,
+        13,
+        22
+      ],
+      "all_candidates": [
+        0,
+        20,
+        13,
+        22
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:13b3c586e579:CYP3A4",
+      "name": "Cmpd 74",
+      "smiles": "COc1ccc(-c2nnc(C(=O)N3CC(Oc4ccc(CN5CCC(C)(CO)CC5)cc4)C3)o2)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        20,
+        13,
+        22
+      ],
+      "all_candidates": [
+        0,
+        20,
+        13,
+        22
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:2cb0b6d85c74:CYP3A4",
+      "name": "Cmpd 76",
+      "smiles": "COc1ccc(-c2nnc(C(=O)N3CC(Oc4ccc(CN5CCCC(C)(O)CC5)cc4)C3)o2)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        20,
+        13,
+        22
+      ],
+      "all_candidates": [
+        0,
+        20,
+        13,
+        22
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:247ebd556673:CYP3A4",
+      "name": "Cmpd 77",
+      "smiles": "COc1ccc(-c2nnc(C(=O)N3CC(Oc4ccc(CN5CC6(CCCO6)C5)cc4)C3)o2)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        20,
+        13,
+        22
+      ],
+      "all_candidates": [
+        0,
+        20,
+        13,
+        22
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:85932eea025b:CYP3A4",
+      "name": "Cmpd 79",
+      "smiles": "COc1ccc(-c2nnc(C(=O)N3CC(Oc4ccc(CN5CC6(COC6)C5)cc4C)C3)o2)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        20,
+        30,
+        13
+      ],
+      "all_candidates": [
+        0,
+        20,
+        30,
+        13
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:83ae09d87cad:CYP3A4",
+      "name": "Cmpd 81",
+      "smiles": "COc1ccc(-c2nnc(C(=O)N3CC(Oc4ccc(CN5CC(C)(O)C5)c(C)c4)C3)o2)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        20,
+        28,
+        13
+      ],
+      "all_candidates": [
+        0,
+        20,
+        28,
+        13
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:b24acd7bb3ad:CYP3A4",
+      "name": "Cmpd 84",
+      "smiles": "COc1ccc(cc1)c2nnc(o2)C(=O)N3CC(C3)Oc4ccc(cc4)CN5CC6(C5)CCOC6",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        26,
+        16,
+        18
+      ],
+      "all_candidates": [
+        0,
+        26,
+        16,
+        18
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:55c256554000:CYP3A4",
+      "name": "Cmpd 85",
+      "smiles": "COc1ccc(-c2nnc(C(=O)N3CC(Oc4ccc(CN5CCCC(O)CC5)cc4)C3)o2)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        20,
+        13,
+        22
+      ],
+      "all_candidates": [
+        0,
+        20,
+        13,
+        22
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:527b81903bbf:CYP3A4",
+      "name": "Cmpd 86",
+      "smiles": "N#Cc1ccc(N2N=C3c4ccc(C(=O)N5CCC(O)CC5)nc4CC[C@H]3[C@H]2C2CCCC2)cc1Cl",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        15,
+        16,
+        17,
+        18,
+        20,
+        21
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        27,
+        0,
+        6
+      ],
+      "all_candidates": [
+        15,
+        16,
+        17,
+        18,
+        20,
+        21,
+        27,
+        0,
+        6
+      ],
+      "labels": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:4fc4c27aa169:CYP3A4",
+      "name": "Cmpd 91",
+      "smiles": "NC(=O)NC(=O)C(Nc1ccc2c(c1)CCC2)c1ccccc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        6,
+        7
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        3,
+        0,
+        14
+      ],
+      "all_candidates": [
+        6,
+        7,
+        3,
+        0,
+        14
+      ],
+      "labels": [
+        1,
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:b9d3265de262:CYP3A4",
+      "name": "Cmpd 104",
+      "smiles": "Cc1cc(-c2ccc(C(=O)[C@@H]3CCCC[C@H]3C(=O)Nc3cnn(C)c3C(=O)NOC(C)(C)C)cc2)[nH]n1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        18,
+        21,
+        22
+      ],
+      "all_candidates": [
+        0,
+        18,
+        21,
+        22
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:c415da9cdbe4:CYP3A4",
+      "name": "Cmpd 105",
+      "smiles": "COc1ccc(-c2nnc(C(=O)N3CC(Oc4ccc(CN5CC6(COC6)C5)c(C)c4)C3)o2)cc1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        0
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        20,
+        29,
+        13
+      ],
+      "all_candidates": [
+        0,
+        20,
+        29,
+        13
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "az120:e4fa9df9e6ec:CYP3A4",
+      "name": "Cmpd 117",
+      "smiles": "CC1(c2ccc(Cl)cn2)Oc2cccc(C3CCN(Cc4nc5ccc(C(=O)O)cc5n4C[C@@H]4CCO4)CC3)c2O1",
+      "primary_cyp": "CYP3A4",
+      "site_atoms": [
+        19
+      ],
+      "source": "AZ120",
+      "quality": "gold",
+      "hard_negatives": [
+        17,
+        37,
+        33
+      ],
+      "all_candidates": [
+        19,
+        17,
+        37,
+        33
+      ],
+      "labels": [
+        1,
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}
