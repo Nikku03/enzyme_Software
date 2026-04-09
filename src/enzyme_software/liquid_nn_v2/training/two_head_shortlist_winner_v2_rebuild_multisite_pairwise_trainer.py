@@ -366,12 +366,19 @@ if TORCH_AVAILABLE:
                     "shortlist_pairwise_example_count": 0.0,
                     "shortlist_hard_negative_count": 0.0,
                 }
+            site_labels = batch["site_labels"].view(-1)
+            supervision_mask = self._supervision_mask(batch)
+            if supervision_mask is not None:
+                supervision_mask = supervision_mask.view(-1)
+            candidate_mask = self._candidate_mask(batch)
+            if candidate_mask is not None:
+                candidate_mask = candidate_mask.view(-1)
             shortlist_loss, shortlist_stats = self.shortlist_loss_wrapper.site_loss(
                 masked_shortlist_logits,
-                batch["site_labels"],
+                site_labels,
                 batch["batch"],
-                supervision_mask=self._supervision_mask(batch),
-                candidate_mask=self._candidate_mask(batch),
+                supervision_mask=supervision_mask,
+                candidate_mask=candidate_mask,
                 edge_index=batch.get("edge_index"),
                 atom_coordinates=batch.get("atom_coordinates"),
             )
