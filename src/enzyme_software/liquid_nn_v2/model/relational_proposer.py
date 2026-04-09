@@ -413,6 +413,11 @@ if TORCH_AVAILABLE:
             """
             Same interface as ResidualFusionHead.
             """
+            # DEBUG: Print once to verify this path is being used
+            if not hasattr(self, '_debug_printed'):
+                print(f"[DEBUG] RelationalFusionHead.forward() called! features.shape={features.shape}", flush=True)
+                self._debug_printed = True
+                
             device = features.device
             N = features.size(0)
             
