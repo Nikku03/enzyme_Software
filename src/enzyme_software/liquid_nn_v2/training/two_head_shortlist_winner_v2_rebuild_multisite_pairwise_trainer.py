@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections import OrderedDict, defaultdict
 
 from enzyme_software.liquid_nn_v2._compat import F, TORCH_AVAILABLE, require_torch, torch
+from enzyme_software.liquid_nn_v2.training.hard_negative_mining import compute_hard_negative_margin_loss
+from enzyme_software.liquid_nn_v2.training.loss import AdaptiveLossV2
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_trainer import (
     TwoHeadShortlistWinnerV2RebuildTrainer,
 )
@@ -39,6 +41,10 @@ if TORCH_AVAILABLE:
             shortlist_hard_negative_rank_max: int = 12,
             shortlist_hard_negative_loss_weight: float = 0.0,
             shortlist_hard_negative_mode: str = "top_false",
+            shortlist_pairwise_margin: float = 0.20,
+            shortlist_pairwise_loss_weight: float = 0.0,
+            shortlist_hard_negative_max_per_true: int = 3,
+            shortlist_hard_negative_sample_mode: str = "top_false_only",
             device=None,
         ):
             super().__init__(
@@ -68,21 +74,32 @@ if TORCH_AVAILABLE:
             self.shortlist_hard_negative_rank_max = max(self.shortlist_hard_negative_rank_min, int(shortlist_hard_negative_rank_max))
             self.shortlist_hard_negative_loss_weight = max(0.0, float(shortlist_hard_negative_loss_weight))
             self.shortlist_hard_negative_mode = str(shortlist_hard_negative_mode or "top_false").strip().lower()
+            self.shortlist_pairwise_margin = max(0.0, float(shortlist_pairwise_margin))
+            self.shortlist_pairwise_loss_weight = max(
+                0.0,
+                float(shortlist_pairwise_loss_weight if float(shortlist_pairwise_loss_weight) > 0.0 else shortlist_hard_negative_loss_weight),
+            )
+            self.shortlist_hard_negative_max_per_true = max(1, int(shortlist_hard_negative_max_per_true))
+            self.shortlist_hard_negative_sample_mode = str(
+                shortlist_hard_negative_sample_mode or "top_false_only"
+            ).strip().lower()
             self.source_vocab = tuple(self.SOURCE_VOCAB)
             self.source_to_index = {name: idx for idx, name in enumerate(self.source_vocab)}
             self._active_split_name = "unknown"
+            base_impl = getattr(getattr(self.model, "base_lnn", None), "impl", None)
+            self.proposer_head = getattr(base_impl, "site_head", None)
+            self.source_site_heads = getattr(base_impl, "source_site_heads", None)
+            self.shortlist_loss_wrapper = None
+            self.shortlist_site_shortlist_weight = 0.0
+            self.shortlist_site_hard_negative_weight = 0.0
+            self.shortlist_use_top_score_hard_neg = False
+            self.shortlist_use_graph_local_hard_neg = False
+            self.shortlist_use_3d_local_hard_neg = False
+            self.shortlist_use_rank_weighted_shortlist = False
+            self.shortlist_use_rank_weighted_hard_neg = False
             if self.shortlist_enable_hard_negative_emphasis:
-                raise NotImplementedError(
-                    "shortlist hard-negative emphasis is intentionally unsupported in this branch because "
-                    "the shortlist provider remains frozen."
-                )
-            self.trainable_module_summary = [
-                {
-                    "name": "winner_head_v2_rebuild_multisite_pairwise",
-                    "lr": float(self.learning_rate),
-                    "param_count": int(sum(param.numel() for param in self.winner_head.parameters() if param.requires_grad)),
-                }
-            ]
+                self._configure_shortlist_hard_negative_training()
+            self.trainable_module_summary = self._build_trainable_module_summary()
             self.restore_summary = OrderedDict(self.restore_summary)
             self.restore_summary["multisite_pairwise"] = OrderedDict(
                 [
@@ -101,9 +118,274 @@ if TORCH_AVAILABLE:
                     ("shortlist_hard_negative_rank_window", [int(self.shortlist_hard_negative_rank_min), int(self.shortlist_hard_negative_rank_max)]),
                     ("shortlist_hard_negative_loss_weight", float(self.shortlist_hard_negative_loss_weight)),
                     ("shortlist_hard_negative_mode", str(self.shortlist_hard_negative_mode)),
+                    ("shortlist_pairwise_margin", float(self.shortlist_pairwise_margin)),
+                    ("shortlist_pairwise_loss_weight", float(self.shortlist_pairwise_loss_weight)),
+                    ("shortlist_hard_negative_max_per_true", int(self.shortlist_hard_negative_max_per_true)),
+                    ("shortlist_hard_negative_sample_mode", str(self.shortlist_hard_negative_sample_mode)),
                     ("source_vocab", list(self.source_vocab)),
                 ]
             )
+
+        def _iter_trainable_source_head_modules(self):
+            if self.source_site_heads is None:
+                return []
+            if hasattr(self.source_site_heads, "items"):
+                return list(self.source_site_heads.items())
+            return []
+
+        def _rebuild_optimizer(self):
+            param_groups = [
+                {
+                    "params": [param for param in self.winner_head.parameters() if param.requires_grad],
+                    "lr": float(self.learning_rate),
+                    "weight_decay": float(self.weight_decay),
+                }
+            ]
+            proposer_params = []
+            if self.proposer_head is not None:
+                proposer_params.extend([param for param in self.proposer_head.parameters() if param.requires_grad])
+            for _source_name, source_head in self._iter_trainable_source_head_modules():
+                proposer_params.extend([param for param in source_head.parameters() if param.requires_grad])
+            if proposer_params:
+                param_groups.append(
+                    {
+                        "params": proposer_params,
+                        "lr": float(self.learning_rate),
+                        "weight_decay": float(self.weight_decay),
+                    }
+                )
+            self.optimizer = torch.optim.AdamW(param_groups)
+
+        def _build_trainable_module_summary(self):
+            summary = [
+                {
+                    "name": "winner_head_v2_rebuild_multisite_pairwise",
+                    "lr": float(self.learning_rate),
+                    "param_count": int(sum(param.numel() for param in self.winner_head.parameters() if param.requires_grad)),
+                }
+            ]
+            if self.proposer_head is not None and any(param.requires_grad for param in self.proposer_head.parameters()):
+                summary.append(
+                    {
+                        "name": "base_lnn.impl.site_head",
+                        "lr": float(self.learning_rate),
+                        "param_count": int(sum(param.numel() for param in self.proposer_head.parameters() if param.requires_grad)),
+                    }
+                )
+            source_param_count = 0
+            for _source_name, source_head in self._iter_trainable_source_head_modules():
+                source_param_count += int(sum(param.numel() for param in source_head.parameters() if param.requires_grad))
+            if source_param_count > 0:
+                summary.append(
+                    {
+                        "name": "base_lnn.impl.source_site_heads",
+                        "lr": float(self.learning_rate),
+                        "param_count": int(source_param_count),
+                    }
+                )
+            return summary
+
+        def _configure_shortlist_hard_negative_training(self):
+            if self.proposer_head is not None:
+                for param in self.proposer_head.parameters():
+                    param.requires_grad = True
+            for _source_name, source_head in self._iter_trainable_source_head_modules():
+                for param in source_head.parameters():
+                    param.requires_grad = True
+            shortlist_topk = max(1, int(self.shortlist_hard_negative_rank_max - self.shortlist_hard_negative_rank_min + 1))
+            mode = str(self.shortlist_hard_negative_mode or "top_false").strip().lower()
+            sample_mode = str(self.shortlist_hard_negative_sample_mode or "top_false_only").strip().lower()
+            use_rank_window = mode in {"rank_window", "top_false_plus_rank_window"}
+            use_pairwise = mode in {"top_false", "top_false_plus_rank_window", "near_true_neighbors"}
+            use_top_score = False
+            use_graph_local = False
+            use_3d_local = False
+            if use_pairwise:
+                if sample_mode == "all_hard_false":
+                    use_top_score = True
+                    use_graph_local = True
+                    use_3d_local = True
+                elif mode == "near_true_neighbors":
+                    use_graph_local = True
+                    use_3d_local = True
+                else:
+                    use_top_score = True
+            self.shortlist_site_shortlist_weight = (
+                float(self.shortlist_hard_negative_loss_weight) if use_rank_window else 0.0
+            )
+            self.shortlist_site_hard_negative_weight = (
+                float(self.shortlist_pairwise_loss_weight) if use_pairwise else 0.0
+            )
+            self.shortlist_use_top_score_hard_neg = bool(use_top_score)
+            self.shortlist_use_graph_local_hard_neg = bool(use_graph_local)
+            self.shortlist_use_3d_local_hard_neg = bool(use_3d_local)
+            self.shortlist_use_rank_weighted_shortlist = bool(use_rank_window)
+            self.shortlist_use_rank_weighted_hard_neg = bool(
+                self.shortlist_hard_negative_mode in {"top_false_plus_rank_window", "rank_window"}
+            )
+            model_config = getattr(self.model, "config", None)
+            self.shortlist_loss_wrapper = AdaptiveLossV2(
+                tau_reg_weight=0.0,
+                energy_loss_weight=0.0,
+                deliberation_loss_weight=0.0,
+                site_label_smoothing=float(getattr(model_config, "site_label_smoothing", 0.0)),
+                site_top1_margin_weight=float(getattr(model_config, "site_top1_margin_weight", 0.0)),
+                site_top1_margin_value=float(getattr(model_config, "site_top1_margin_value", 0.5)),
+                site_ranking_weight=float(getattr(model_config, "site_ranking_weight", 0.5)),
+                site_hard_negative_fraction=float(getattr(model_config, "site_hard_negative_fraction", 0.5)),
+                site_top1_margin_topk=int(getattr(model_config, "site_top1_margin_topk", 1)),
+                site_top1_margin_decay=float(getattr(model_config, "site_top1_margin_decay", 1.0)),
+                site_cover_weight=float(getattr(model_config, "site_cover_weight", 0.0)),
+                site_cover_margin=float(getattr(model_config, "site_cover_margin", 0.20)),
+                site_cover_topk=int(getattr(model_config, "site_cover_topk", 5)),
+                site_shortlist_weight=float(self.shortlist_site_shortlist_weight),
+                site_shortlist_temperature=float(getattr(model_config, "site_shortlist_temperature", 0.70)),
+                site_shortlist_topk=int(shortlist_topk),
+                site_use_rank_weighted_shortlist=bool(self.shortlist_use_rank_weighted_shortlist),
+                site_hard_negative_weight=float(self.shortlist_site_hard_negative_weight),
+                site_hard_negative_margin=float(self.shortlist_pairwise_margin),
+                site_hard_negative_max_per_true=int(self.shortlist_hard_negative_max_per_true),
+                site_use_top_score_hard_neg=bool(self.shortlist_use_top_score_hard_neg),
+                site_use_graph_local_hard_neg=bool(self.shortlist_use_graph_local_hard_neg),
+                site_use_3d_local_hard_neg=bool(self.shortlist_use_3d_local_hard_neg),
+                site_use_rank_weighted_hard_neg=bool(self.shortlist_use_rank_weighted_hard_neg),
+            ).to(self.device)
+            for param in self.shortlist_loss_wrapper.parameters():
+                param.requires_grad = False
+            self.shortlist_loss_wrapper.eval()
+            self._rebuild_optimizer()
+            self.frozen_module_summary = [
+                name
+                for name in list(self.frozen_module_summary)
+                if name not in {"base_lnn.impl.site_head", "base_lnn.impl.source_site_heads"}
+            ]
+
+        def _forward_shortlist_provider(self, batch):
+            self.model.eval()
+            if self.shortlist_enable_hard_negative_emphasis:
+                if self.proposer_head is not None:
+                    self.proposer_head.train()
+                for _source_name, source_head in self._iter_trainable_source_head_modules():
+                    source_head.train()
+                return self.model(batch)
+            return super()._forward_shortlist_provider(batch)
+
+        def _shortlist_hard_negative_epoch_stats(
+            self,
+            *,
+            merged_site_scores,
+            merged_site_labels,
+            merged_site_batch,
+            merged_site_supervision_mask,
+            merged_candidate_mask,
+            merged_edge_index,
+            merged_atom_coordinates,
+        ):
+            if not self.shortlist_enable_hard_negative_emphasis:
+                return {
+                    "shortlist_pairwise_example_count": 0.0,
+                    "shortlist_hard_negative_count": 0.0,
+                    "shortlist_top_false_beats_true_fraction": 0.0,
+                }
+            hard_negative_loss, hard_negative_stats = compute_hard_negative_margin_loss(
+                merged_site_scores,
+                merged_site_labels,
+                merged_site_batch,
+                margin=float(self.shortlist_pairwise_margin),
+                supervision_mask=merged_site_supervision_mask,
+                candidate_mask=merged_candidate_mask,
+                edge_index=merged_edge_index,
+                atom_coordinates=merged_atom_coordinates,
+                use_top_score=bool(self.shortlist_use_top_score_hard_neg),
+                use_graph_local=bool(self.shortlist_use_graph_local_hard_neg),
+                use_3d_local=bool(self.shortlist_use_3d_local_hard_neg),
+                max_hard_negs_per_true=int(self.shortlist_hard_negative_max_per_true),
+                use_rank_weighting=bool(self.shortlist_use_rank_weighted_hard_neg),
+            )
+            _ = hard_negative_loss
+            return {
+                "shortlist_pairwise_example_count": float(hard_negative_stats.get("top_score_hard_neg_molecule_count", 0.0)),
+                "shortlist_hard_negative_count": float(hard_negative_stats.get("hard_negative_pair_count", 0.0)),
+                "shortlist_top_false_beats_true_fraction": 1.0
+                - float(hard_negative_stats.get("top_score_true_beats_fraction", 0.0)),
+            }
+
+        def _shortlist_rank_window_stats(self, shortlist_scores, batch):
+            batch_index = batch["batch"].view(-1)
+            site_labels = batch["site_labels"].view(-1) > 0.5
+            supervision = (
+                self._supervision_mask(batch).view(-1) > 0.5
+                if self._supervision_mask(batch) is not None
+                else torch.ones_like(site_labels, dtype=torch.bool)
+            )
+            ranking = (
+                self._candidate_mask(batch).view(-1) > 0.5
+                if self._candidate_mask(batch) is not None
+                else torch.ones_like(site_labels, dtype=torch.bool)
+            )
+            valid = supervision & ranking
+            num_molecules = int(batch_index.max().item()) + 1 if batch_index.numel() else 0
+            rank_window_false_count = 0
+            rank_window_true_recovery_count = 0
+            rank_min = int(self.shortlist_hard_negative_rank_min)
+            rank_max = int(self.shortlist_hard_negative_rank_max)
+            for mol_idx in range(num_molecules):
+                mol_valid = (batch_index == mol_idx) & valid
+                if not bool(mol_valid.any()):
+                    continue
+                mol_scores = shortlist_scores[mol_valid]
+                mol_labels = site_labels[mol_valid]
+                order = torch.argsort(mol_scores, descending=True)
+                ordered_labels = mol_labels[order]
+                start = min(max(0, rank_min - 1), int(ordered_labels.numel()))
+                end = min(rank_max, int(ordered_labels.numel()))
+                if end <= start:
+                    continue
+                window_labels = ordered_labels[start:end]
+                rank_window_false_count += int((~window_labels).sum().item())
+                if bool(window_labels.any().item()) and not bool(ordered_labels[:start].any().item()):
+                    rank_window_true_recovery_count += 1
+            return {
+                "shortlist_rank_window_false_count": float(rank_window_false_count),
+                "shortlist_rank_window_true_recovery_count": float(rank_window_true_recovery_count),
+            }
+
+        def _shortlist_auxiliary_loss(self, masked_shortlist_logits, batch):
+            zero = masked_shortlist_logits.sum() * 0.0
+            if not self.shortlist_enable_hard_negative_emphasis or self.shortlist_loss_wrapper is None:
+                return zero, {
+                    "shortlist_loss_base_component": 0.0,
+                    "shortlist_loss_hard_negative_component": 0.0,
+                    "shortlist_pairwise_example_count": 0.0,
+                    "shortlist_hard_negative_count": 0.0,
+                }
+            shortlist_loss, shortlist_stats = self.shortlist_loss_wrapper.site_loss(
+                masked_shortlist_logits,
+                batch["site_labels"],
+                batch["batch"],
+                supervision_mask=self._supervision_mask(batch),
+                candidate_mask=self._candidate_mask(batch),
+                edge_index=batch.get("edge_index"),
+                atom_coordinates=batch.get("atom_coordinates"),
+            )
+            weighted_shortlist_component = float(self.shortlist_site_shortlist_weight) * float(
+                shortlist_stats.get("shortlist_loss", 0.0)
+            )
+            weighted_pairwise_component = float(self.shortlist_site_hard_negative_weight) * float(
+                shortlist_stats.get("hard_negative_loss_raw", 0.0)
+            )
+            shortlist_hard_negative_component = weighted_shortlist_component + weighted_pairwise_component
+            shortlist_loss_base_component = max(
+                0.0,
+                float(shortlist_stats.get("site_loss", 0.0)) - float(shortlist_hard_negative_component),
+            )
+            metrics = {
+                "shortlist_loss_base_component": float(shortlist_loss_base_component),
+                "shortlist_loss_hard_negative_component": float(shortlist_hard_negative_component),
+                "shortlist_pairwise_example_count": float(shortlist_stats.get("hard_negative_pair_count", 0.0)),
+                "shortlist_hard_negative_count": float(shortlist_stats.get("hard_negative_pair_count", 0.0)),
+            }
+            return shortlist_loss, metrics
 
         def _source_index(self, source: str) -> int:
             normalized = str(source or "unknown").strip().lower() or "unknown"
@@ -348,13 +630,18 @@ if TORCH_AVAILABLE:
                 raise FloatingPointError("Non-finite frozen shortlist scores detected")
             examples, shortlist_metrics = self._build_winner_examples(atom_features, shortlist_scores, batch)
             winner_loss, winner_loss_stats = self._winner_loss(examples)
-            total_loss = float(self.winner_v2_loss_weight) * winner_loss
+            shortlist_aux_loss, shortlist_aux_stats = self._shortlist_auxiliary_loss(masked_shortlist_logits, batch)
+            rank_window_stats = self._shortlist_rank_window_stats(shortlist_scores, batch)
+            total_loss = (float(self.winner_v2_loss_weight) * winner_loss) + shortlist_aux_loss
             if not bool(torch.isfinite(total_loss)):
                 raise FloatingPointError("Non-finite two-head multisite-pairwise total loss detected")
             metrics = {
                 "winner_loss": float(winner_loss.detach().item()),
+                "shortlist_aux_loss": float(shortlist_aux_loss.detach().item()),
                 "total_loss": float(total_loss.detach().item()),
                 **shortlist_metrics,
+                **shortlist_aux_stats,
+                **rank_window_stats,
                 **winner_loss_stats,
             }
             return total_loss, shortlist_scores, examples, metrics
@@ -493,6 +780,24 @@ if TORCH_AVAILABLE:
                 batch_metrics_rows=batch_metrics_rows,
                 winner_examples=winner_examples,
             )
+            merged_site_scores = torch.cat(shortlist_scores, dim=0)
+            merged_site_labels = torch.cat(site_labels, dim=0)
+            merged_site_batch = torch.cat(site_batches, dim=0)
+            merged_site_supervision_mask = torch.cat(site_supervision_masks, dim=0)
+            merged_candidate_mask = torch.cat(candidate_masks, dim=0)
+            merged_edge_index = (
+                torch.cat(merged_edge_parts, dim=1) if merged_edge_parts else torch.zeros((2, 0), dtype=torch.long)
+            )
+            merged_atom_coordinates = torch.cat(merged_coord_parts, dim=0) if merged_coord_parts else None
+            shortlist_epoch_stats = self._shortlist_hard_negative_epoch_stats(
+                merged_site_scores=merged_site_scores,
+                merged_site_labels=merged_site_labels,
+                merged_site_batch=merged_site_batch,
+                merged_site_supervision_mask=merged_site_supervision_mask,
+                merged_candidate_mask=merged_candidate_mask,
+                merged_edge_index=merged_edge_index,
+                merged_atom_coordinates=merged_atom_coordinates,
+            )
             pairwise_example_count, pairwise_hard_false_count = self._count_pairwise_stats(winner_examples)
             if self._active_split_name == "train":
                 metrics["multisite_train_example_count"] = float(
@@ -509,8 +814,23 @@ if TORCH_AVAILABLE:
             metrics["winner_source_embedding_dim"] = int(self.winner_source_embedding_dim)
             metrics["winner_use_source_bias"] = bool(self.winner_use_source_bias)
             metrics["shortlist_enable_hard_negative_emphasis"] = bool(self.shortlist_enable_hard_negative_emphasis)
+            metrics["shortlist_hard_negative_loss_weight"] = float(self.shortlist_hard_negative_loss_weight)
+            metrics["shortlist_hard_negative_mode"] = str(self.shortlist_hard_negative_mode)
+            metrics["shortlist_hard_negative_rank_window"] = [
+                int(self.shortlist_hard_negative_rank_min),
+                int(self.shortlist_hard_negative_rank_max),
+            ]
+            metrics["shortlist_pairwise_margin"] = float(self.shortlist_pairwise_margin)
+            metrics["shortlist_pairwise_loss_weight"] = float(self.shortlist_pairwise_loss_weight)
+            metrics["shortlist_hard_negative_max_per_true"] = int(self.shortlist_hard_negative_max_per_true)
+            metrics["shortlist_hard_negative_sample_mode"] = str(self.shortlist_hard_negative_sample_mode)
             metrics["winner_pairwise_example_count"] = float(pairwise_example_count)
             metrics["winner_pairwise_hard_false_count"] = float(pairwise_hard_false_count)
+            metrics["shortlist_pairwise_example_count"] = float(shortlist_epoch_stats.get("shortlist_pairwise_example_count", 0.0))
+            metrics["shortlist_hard_negative_count"] = float(shortlist_epoch_stats.get("shortlist_hard_negative_count", 0.0))
+            metrics["shortlist_top_false_beats_true_fraction"] = float(
+                shortlist_epoch_stats.get("shortlist_top_false_beats_true_fraction", 0.0)
+            )
             metrics["multisite_pairwise_restore_summary"] = dict(self.restore_summary)
             metrics["multisite_pairwise_source_conditioning_enabled"] = bool(
                 self.winner_use_source_embedding or self.winner_use_source_bias

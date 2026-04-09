@@ -718,6 +718,10 @@ def _collect_model_overrides() -> dict[str, int | float | str]:
         "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_RANK_MAX": (_env_int, "shortlist_hard_negative_rank_max"),
         "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_LOSS_WEIGHT": (_env_float, "shortlist_hard_negative_loss_weight"),
         "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_MODE": (_env_str, "shortlist_hard_negative_mode"),
+        "HYBRID_COLAB_SHORTLIST_PAIRWISE_MARGIN": (_env_float, "shortlist_pairwise_margin"),
+        "HYBRID_COLAB_SHORTLIST_PAIRWISE_LOSS_WEIGHT": (_env_float, "shortlist_pairwise_loss_weight"),
+        "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_MAX_PER_TRUE": (_env_int, "shortlist_hard_negative_max_per_true"),
+        "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_SAMPLE_MODE": (_env_str, "shortlist_hard_negative_sample_mode"),
     }
     overrides: dict[str, int | float | str] = {}
     for env_name, (parser, field_name) in mapping.items():
@@ -2842,6 +2846,12 @@ def _save_two_head_shortlist_winner_v2_rebuild_multisite_pairwise_state(
         ],
         "shortlist_hard_negative_loss_weight": float(getattr(base_config, "shortlist_hard_negative_loss_weight", 0.0)),
         "shortlist_hard_negative_mode": str(getattr(base_config, "shortlist_hard_negative_mode", "top_false")),
+        "shortlist_pairwise_margin": float(getattr(base_config, "shortlist_pairwise_margin", 0.20)),
+        "shortlist_pairwise_loss_weight": float(getattr(base_config, "shortlist_pairwise_loss_weight", 0.0)),
+        "shortlist_hard_negative_max_per_true": int(getattr(base_config, "shortlist_hard_negative_max_per_true", 3)),
+        "shortlist_hard_negative_sample_mode": str(
+            getattr(base_config, "shortlist_hard_negative_sample_mode", "top_false_only")
+        ),
         "restore_summary": dict(restore_summary or {}),
     }
     checkpoint = {
@@ -4994,6 +5004,12 @@ def main() -> None:
             shortlist_hard_negative_rank_max=int(getattr(base_config, "shortlist_hard_negative_rank_max", 12)),
             shortlist_hard_negative_loss_weight=float(getattr(base_config, "shortlist_hard_negative_loss_weight", 0.0)),
             shortlist_hard_negative_mode=str(getattr(base_config, "shortlist_hard_negative_mode", "top_false")),
+            shortlist_pairwise_margin=float(getattr(base_config, "shortlist_pairwise_margin", 0.20)),
+            shortlist_pairwise_loss_weight=float(getattr(base_config, "shortlist_pairwise_loss_weight", 0.0)),
+            shortlist_hard_negative_max_per_true=int(getattr(base_config, "shortlist_hard_negative_max_per_true", 3)),
+            shortlist_hard_negative_sample_mode=str(
+                getattr(base_config, "shortlist_hard_negative_sample_mode", "top_false_only")
+            ),
             device=device,
         )
         restore_summary = dict(getattr(multisite_pairwise_trainer, "restore_summary", {}) or {})

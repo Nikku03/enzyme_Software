@@ -306,6 +306,10 @@ class ModelConfig:
     shortlist_hard_negative_rank_max: int = 12
     shortlist_hard_negative_loss_weight: float = 0.0
     shortlist_hard_negative_mode: str = "top_false"
+    shortlist_pairwise_margin: float = 0.20
+    shortlist_pairwise_loss_weight: float = 0.0
+    shortlist_hard_negative_max_per_true: int = 3
+    shortlist_hard_negative_sample_mode: str = "top_false_only"
     candidate_mask_mode: str = "hard"
     candidate_mask_logit_bias: float = 2.0
     disable_cyp_task: bool = False
@@ -760,8 +764,21 @@ class ModelConfig:
         )
         self.shortlist_hard_negative_loss_weight = max(0.0, float(self.shortlist_hard_negative_loss_weight))
         self.shortlist_hard_negative_mode = str(self.shortlist_hard_negative_mode or "top_false").strip().lower()
-        if self.shortlist_hard_negative_mode not in {"top_false", "rank_window", "near_true_neighbors"}:
+        if self.shortlist_hard_negative_mode not in {
+            "top_false",
+            "rank_window",
+            "top_false_plus_rank_window",
+            "near_true_neighbors",
+        }:
             self.shortlist_hard_negative_mode = "top_false"
+        self.shortlist_pairwise_margin = max(0.0, float(self.shortlist_pairwise_margin))
+        self.shortlist_pairwise_loss_weight = max(0.0, float(self.shortlist_pairwise_loss_weight))
+        self.shortlist_hard_negative_max_per_true = max(1, int(self.shortlist_hard_negative_max_per_true))
+        self.shortlist_hard_negative_sample_mode = str(
+            self.shortlist_hard_negative_sample_mode or "top_false_only"
+        ).strip().lower()
+        if self.shortlist_hard_negative_sample_mode not in {"top_false_only", "rank_window", "all_hard_false"}:
+            self.shortlist_hard_negative_sample_mode = "top_false_only"
         self.candidate_mask_mode = str(self.candidate_mask_mode).strip().lower() or "hard"
         if self.candidate_mask_mode not in {"hard", "soft", "off"}:
             self.candidate_mask_mode = "hard"

@@ -2023,6 +2023,18 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_WINNER_USE_SOURCE_BIAS": "0",
         "HYBRID_COLAB_SHORTLIST_ENABLE_HARD_NEGATIVE_EMPHASIS": "0",
     },
+    "cyp3a4_two_head_shortlist_winner_v2_rebuild_exact_plus_tiered_shortlist_hardneg": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_two_head_shortlist_winner_v2_rebuild_exact_plus_tiered",
+        "HYBRID_COLAB_SHORTLIST_ENABLE_HARD_NEGATIVE_EMPHASIS": "1",
+        "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_MODE": "top_false_plus_rank_window",
+        "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_RANK_MIN": "2",
+        "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_RANK_MAX": "12",
+        "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_LOSS_WEIGHT": "0.25",
+        "HYBRID_COLAB_SHORTLIST_PAIRWISE_MARGIN": "0.20",
+        "HYBRID_COLAB_SHORTLIST_PAIRWISE_LOSS_WEIGHT": "0.25",
+        "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_MAX_PER_TRUE": "3",
+        "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_SAMPLE_MODE": "top_false_only",
+    },
     "cyp3a4_two_head_shortlist_winner_v2_rebuild_dual_winner_routing": {
         "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank",
         "HYBRID_COLAB_EPOCHS": "1",
