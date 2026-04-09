@@ -352,9 +352,13 @@ if TORCH_AVAILABLE:
                 
                 # Original prediction
                 if mol_candidate_mask is not None:
-                    valid_scores = torch.where(mol_candidate_mask > 0.5, mol_scores, torch.tensor(-1e9, device=device))
+                    valid_scores = torch.where(
+                        mol_candidate_mask.view(-1) > 0.5, 
+                        mol_scores.view(-1), 
+                        torch.full_like(mol_scores.view(-1), -1e9)
+                    )
                 else:
-                    valid_scores = mol_scores
+                    valid_scores = mol_scores.view(-1)
                 original_top1_local = torch.argmax(valid_scores)
                 original_is_correct = mol_labels[original_top1_local].item()
                 
@@ -365,9 +369,13 @@ if TORCH_AVAILABLE:
                     mol_candidate_mask,
                 )
                 if mol_candidate_mask is not None:
-                    valid_reranked = torch.where(mol_candidate_mask > 0.5, mol_reranked, torch.tensor(-1e9, device=device))
+                    valid_reranked = torch.where(
+                        mol_candidate_mask.view(-1) > 0.5, 
+                        mol_reranked.view(-1), 
+                        torch.full_like(mol_reranked.view(-1), -1e9)
+                    )
                 else:
-                    valid_reranked = mol_reranked
+                    valid_reranked = mol_reranked.view(-1)
                 reranked_top1_local = torch.argmax(valid_reranked)
                 reranked_is_correct = mol_labels[reranked_top1_local].item()
                 
