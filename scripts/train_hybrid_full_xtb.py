@@ -4084,6 +4084,10 @@ def main() -> None:
     live_analogical_vote_inputs = _env_flag("HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS", "1")
     model_overrides = _collect_model_overrides()
     
+    # DEBUG: Always print model_overrides for relational proposer
+    print(f"DEBUG model_overrides keys: {list(model_overrides.keys())}", flush=True)
+    print(f"DEBUG use_relational_proposer in overrides: {model_overrides.get('use_relational_proposer', 'NOT SET')}", flush=True)
+    
     # Print Phase 1 relational proposer config if enabled
     if model_overrides.get('use_relational_proposer'):
         print("=" * 60, flush=True)

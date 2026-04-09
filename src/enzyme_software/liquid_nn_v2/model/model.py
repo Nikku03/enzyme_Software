@@ -86,7 +86,9 @@ if TORCH_AVAILABLE:
                 pooling_hidden_dim=config.group_pooling_hidden_dim,
             )
             # Site head: either RelationalFusionHead (Phase 1) or ResidualFusionHead (original)
-            if getattr(config, 'use_relational_proposer', False):
+            _use_relational = getattr(config, 'use_relational_proposer', False)
+            print(f"[DEBUG] use_relational_proposer config value: {_use_relational} (type: {type(_use_relational)})", flush=True)
+            if _use_relational:
                 self.site_head = RelationalFusionHead(
                     input_dim=config.som_branch_dim,
                     output_dim=1,
