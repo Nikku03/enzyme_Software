@@ -157,10 +157,14 @@ if TORCH_AVAILABLE:
                 if total <= 0:
                     return {
                         "shortlist_recall_at_6": 0.0,
+                        "shortlist_recall_at_12": 0.0,
+                        "shortlist_recall_at_train_k": 0.0,
                         "winner_acc_given_hit": 0.0,
                         "end_to_end_top1": 0.0,
                     }
                 hit_at_6_count = int(sum(1 for example in examples if bool(example.get("hit_at_6", False))))
+                hit_at_12_count = int(sum(1 for example in examples if bool(example.get("hit_at_12", False))))
+                hit_at_train_k_count = int(sum(1 for example in examples if bool(example.get("hit", False))))
                 winner_hit_count = 0
                 end_to_end_top1 = 0
                 winner_eval_count = int(sum(1 for example in examples if bool(example.get("hit", False))))
@@ -175,6 +179,8 @@ if TORCH_AVAILABLE:
                         winner_hit_count += int(top1_hit)
                 return {
                     "shortlist_recall_at_6": float(hit_at_6_count) / float(total),
+                    "shortlist_recall_at_12": float(hit_at_12_count) / float(total),
+                    "shortlist_recall_at_train_k": float(hit_at_train_k_count) / float(total),
                     "winner_acc_given_hit": float(winner_hit_count) / float(winner_eval_count) if winner_eval_count > 0 else 0.0,
                     "end_to_end_top1": float(end_to_end_top1) / float(total),
                 }
@@ -193,8 +199,11 @@ if TORCH_AVAILABLE:
             metrics["hard_source_end_to_end_top1"] = float(hard_subset_metrics["end_to_end_top1"])
             metrics["hard_source_winner_acc_given_hit"] = float(hard_subset_metrics["winner_acc_given_hit"])
             metrics["hard_source_shortlist_recall_at_6"] = float(hard_subset_metrics["shortlist_recall_at_6"])
+            metrics["hard_source_shortlist_recall_at_12"] = float(hard_subset_metrics["shortlist_recall_at_12"])
             metrics["non_hard_source_end_to_end_top1"] = float(non_hard_subset_metrics["end_to_end_top1"])
             metrics["non_hard_source_winner_acc_given_hit"] = float(non_hard_subset_metrics["winner_acc_given_hit"])
+            metrics["non_hard_source_shortlist_recall_at_6"] = float(non_hard_subset_metrics["shortlist_recall_at_6"])
+            metrics["non_hard_source_shortlist_recall_at_12"] = float(non_hard_subset_metrics["shortlist_recall_at_12"])
             metrics["hard_source_finetune_source_weighting_enabled"] = False
             metrics["hard_source_finetune_soft_multi_positive_enabled"] = False
             return metrics

@@ -246,10 +246,15 @@ class ModelConfig:
     winner_v2_3_hard_sources: str = "attnsom,cyp_dbs_external"
     winner_v2_3_log_feature_summary: bool = True
     enable_two_head_shortlist_winner_v2_rebuild: bool = False
+    enable_two_head_shortlist_winner_v2_rebuild_top12: bool = False
     winner_v2_rebuild_hidden_dim: Optional[int] = None
     winner_v2_rebuild_dropout: float = 0.1
     winner_v2_rebuild_loss_weight: float = 1.0
     winner_v2_rebuild_log_restore_summary: bool = True
+    two_head_shortlist_eval_topk: int = 6
+    two_head_shortlist_winner_topk: int = 6
+    two_head_keep_aux_metrics_at_6: bool = True
+    two_head_log_dual_k_metrics: bool = True
     enable_two_head_shortlist_winner_v2_rebuild_hard_source_finetune: bool = False
     hard_source_names: str = "attnsom,cyp_dbs_external"
     hard_source_finetune_require_hit: bool = True
@@ -633,12 +638,19 @@ class ModelConfig:
         self.winner_v2_3_hard_sources = str(self.winner_v2_3_hard_sources or "").strip().lower()
         self.winner_v2_3_log_feature_summary = bool(self.winner_v2_3_log_feature_summary)
         self.enable_two_head_shortlist_winner_v2_rebuild = bool(self.enable_two_head_shortlist_winner_v2_rebuild)
+        self.enable_two_head_shortlist_winner_v2_rebuild_top12 = bool(
+            self.enable_two_head_shortlist_winner_v2_rebuild_top12
+        )
         self.winner_v2_rebuild_hidden_dim = (
             None if self.winner_v2_rebuild_hidden_dim is None else max(1, int(self.winner_v2_rebuild_hidden_dim))
         )
         self.winner_v2_rebuild_dropout = min(max(float(self.winner_v2_rebuild_dropout), 0.0), 0.5)
         self.winner_v2_rebuild_loss_weight = max(0.0, float(self.winner_v2_rebuild_loss_weight))
         self.winner_v2_rebuild_log_restore_summary = bool(self.winner_v2_rebuild_log_restore_summary)
+        self.two_head_shortlist_eval_topk = max(1, int(self.two_head_shortlist_eval_topk))
+        self.two_head_shortlist_winner_topk = max(1, int(self.two_head_shortlist_winner_topk))
+        self.two_head_keep_aux_metrics_at_6 = bool(self.two_head_keep_aux_metrics_at_6)
+        self.two_head_log_dual_k_metrics = bool(self.two_head_log_dual_k_metrics)
         self.enable_two_head_shortlist_winner_v2_rebuild_hard_source_finetune = bool(
             self.enable_two_head_shortlist_winner_v2_rebuild_hard_source_finetune
         )

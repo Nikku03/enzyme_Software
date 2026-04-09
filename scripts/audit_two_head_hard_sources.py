@@ -24,8 +24,8 @@ from enzyme_software.liquid_nn_v2.experiments.hybrid_full_xtb.dataset import spl
 from enzyme_software.liquid_nn_v2.model.two_head_shortlist_winner import WinnerHeadV2, winner_v2_feature_dim
 from enzyme_software.liquid_nn_v2.training.hard_negative_mining import _bfs_shortest_paths, _build_local_adjacency
 from enzyme_software.liquid_nn_v2.training.pairwise_probe import apply_candidate_mask_to_site_logits
-from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_hard_source_finetune_trainer import (
-    TwoHeadShortlistWinnerV2RebuildHardSourceFinetuneTrainer,
+from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_trainer import (
+    TwoHeadShortlistWinnerV2RebuildTrainer,
 )
 
 
@@ -34,7 +34,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--checkpoint",
         required=True,
-        help="Path to a two_head_shortlist_winner_v2_rebuild_hard_source_finetune best checkpoint.",
+        help="Path to a two_head_shortlist_winner_v2_rebuild-family best checkpoint.",
     )
     parser.add_argument("--dataset", default="data/prepared_training/main8_cyp3a4_augmented.json")
     parser.add_argument("--structure-sdf", default="3D structures.sdf")
@@ -128,12 +128,27 @@ def _load_checkpoint(path: Path, *, device: torch.device) -> dict[str, Any]:
     return checkpoint
 
 
+def _resolve_rebuild_branch_config(checkpoint: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    config_block = dict(checkpoint.get("config") or {})
+    if config_block.get("two_head_shortlist_winner_v2_rebuild_hard_source_finetune"):
+        return (
+            "two_head_shortlist_winner_v2_rebuild_hard_source_finetune",
+            dict(config_block.get("two_head_shortlist_winner_v2_rebuild_hard_source_finetune") or {}),
+        )
+    if config_block.get("two_head_shortlist_winner_v2_rebuild"):
+        return (
+            "two_head_shortlist_winner_v2_rebuild",
+            dict(config_block.get("two_head_shortlist_winner_v2_rebuild") or {}),
+        )
+    raise KeyError("Checkpoint does not look like a supported two-head rebuild-family checkpoint")
+
+
 def _build_model_and_trainer(checkpoint: dict[str, Any], *, device: torch.device) -> tuple[Any, Any, Any, dict[str, Any]]:
     config_block = dict(checkpoint.get("config") or {})
     base_model_config = dict(config_block.get("base_model") or {})
-    branch_config = dict(config_block.get("two_head_shortlist_winner_v2_rebuild_hard_source_finetune") or {})
+    branch_name, branch_config = _resolve_rebuild_branch_config(checkpoint)
     if not base_model_config or not branch_config:
-        raise KeyError("Checkpoint does not look like a two_head_shortlist_winner_v2_rebuild_hard_source_finetune checkpoint")
+        raise KeyError("Checkpoint does not look like a supported two_head_shortlist_winner_v2_rebuild-family checkpoint")
 
     base_config = ModelConfig(**base_model_config)
     base_model = LiquidMetabolismNetV2(base_config)
@@ -158,7 +173,7 @@ def _build_model_and_trainer(checkpoint: dict[str, Any], *, device: torch.device
     ).to(device)
     winner_result = winner_head.load_state_dict(checkpoint.get("winner_head_state_dict") or {}, strict=True)
 
-    trainer = TwoHeadShortlistWinnerV2RebuildHardSourceFinetuneTrainer(
+    trainer = TwoHeadShortlistWinnerV2RebuildTrainer(
         model=model,
         winner_head=winner_head,
         learning_rate=0.0,
@@ -167,15 +182,12 @@ def _build_model_and_trainer(checkpoint: dict[str, Any], *, device: torch.device
         frozen_shortlist_topk=int(branch_config.get("frozen_shortlist_topk", 6)),
         winner_v2_rebuild_loss_weight=float(branch_config.get("winner_v2_rebuild_loss_weight", 1.0)),
         shortlist_checkpoint_path=str(branch_config.get("frozen_shortlist_checkpoint_path", "")),
-        hard_source_names=str(branch_config.get("hard_source_names", "attnsom,cyp_dbs_external")),
-        hard_source_finetune_require_hit=bool(branch_config.get("hard_source_finetune_require_hit", True)),
-        hard_source_finetune_skip_non_hard_sources=bool(branch_config.get("hard_source_finetune_skip_non_hard_sources", True)),
-        winner_finetune_init_checkpoint_path=str(branch_config.get("winner_finetune_init_checkpoint_path", "")),
         device=device,
     )
     trainer.model.eval()
     trainer.winner_head.eval()
     return model, winner_head, trainer, {
+        "branch_name": branch_name,
         "base_config": dict(getattr(base_config, "__dict__", {}) or {}),
         "branch_config": branch_config,
         "model_load_summary": {
@@ -249,7 +261,7 @@ def _winner_topk_lists(
 
 def _build_audit_rows_for_loader(
     *,
-    trainer: TwoHeadShortlistWinnerV2RebuildHardSourceFinetuneTrainer,
+    trainer: TwoHeadShortlistWinnerV2RebuildTrainer,
     loader,
     split_name: str,
     hard_source_names: set[str],

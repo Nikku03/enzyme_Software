@@ -70,6 +70,7 @@ if TORCH_AVAILABLE:
                     ("source_weighting_behavior", "disabled"),
                     ("loss_type", "hard_cross_entropy"),
                     ("train_only_on_hits", True),
+                    ("winner_candidate_k", int(self.frozen_shortlist_topk)),
                 ]
             )
 
@@ -152,6 +153,7 @@ if TORCH_AVAILABLE:
                         "hit": hit_at_train_k,
                         "hit_at_6": hit_at_6,
                         "hit_at_12": hit_at_12,
+                        "rescued_by_12": bool(hit_at_12 and not hit_at_6),
                         "true_rank": true_rank,
                         "trainable": bool(hit_at_train_k or (not self.winner_v2_train_only_on_hits)),
                         "target_index": target_index,
@@ -223,6 +225,10 @@ if TORCH_AVAILABLE:
             hit_at_6_count = int(sum(1 for ex in winner_examples if bool(ex.get("hit_at_6", False))))
             hit_at_12_count = int(sum(1 for ex in winner_examples if bool(ex.get("hit_at_12", False))))
             hit_at_train_k_count = int(sum(1 for ex in winner_examples if bool(ex.get("hit", False))))
+            rescued_by_12_count = int(sum(1 for ex in winner_examples if bool(ex.get("rescued_by_12", False))))
+            true_rank_7_to_12_count = int(
+                sum(1 for ex in winner_examples if 7 <= int(float(ex.get("true_rank", 0.0)) or 0) <= 12)
+            )
             true_rank_values = [float(ex.get("true_rank", 0.0)) for ex in winner_examples if float(ex.get("true_rank", 0.0)) > 0.0]
             shortlist_candidate_count_mean = (
                 float(sum(int(ex["selected_indices"].numel()) for ex in winner_examples)) / float(valid_molecule_count)
@@ -232,20 +238,66 @@ if TORCH_AVAILABLE:
 
             source_counts = defaultdict(int)
             source_hit_at_6 = defaultdict(int)
+            source_hit_at_12 = defaultdict(int)
+            source_hit_at_train_k = defaultdict(int)
             for example in winner_examples:
                 source = str(example.get("source") or "unknown")
                 source_counts[source] += 1
                 source_hit_at_6[source] += int(bool(example.get("hit_at_6", False)))
+                source_hit_at_12[source] += int(bool(example.get("hit_at_12", False)))
+                source_hit_at_train_k[source] += int(bool(example.get("hit", False)))
             source_recall = {
                 source: float(source_hit_at_6[source]) / float(source_counts[source])
                 for source in sorted(source_counts)
                 if source_counts[source] > 0
             }
+            source_recall_at_12 = {
+                source: float(source_hit_at_12[source]) / float(source_counts[source])
+                for source in sorted(source_counts)
+                if source_counts[source] > 0
+            }
+            source_recall_at_train_k = {
+                source: float(source_hit_at_train_k[source]) / float(source_counts[source])
+                for source in sorted(source_counts)
+                if source_counts[source] > 0
+            }
+
+            hard_source_names = {
+                token.strip().lower()
+                for token in str(getattr(self.model.config, "hard_source_names", "") or "").split(",")
+                if token.strip()
+            }
+            hard_source_examples = [
+                example
+                for example in winner_examples
+                if str(example.get("source") or "unknown").strip().lower() in hard_source_names
+            ]
+            non_hard_source_examples = [
+                example
+                for example in winner_examples
+                if str(example.get("source") or "unknown").strip().lower() not in hard_source_names
+            ]
+
+            def _subset_shortlist_metrics(subset_examples):
+                total = int(len(subset_examples))
+                if total <= 0:
+                    return {
+                        "shortlist_recall_at_6": 0.0,
+                        "shortlist_recall_at_12": 0.0,
+                        "shortlist_recall_at_train_k": 0.0,
+                    }
+                return {
+                    "shortlist_recall_at_6": float(sum(1 for ex in subset_examples if bool(ex.get("hit_at_6", False)))) / float(total),
+                    "shortlist_recall_at_12": float(sum(1 for ex in subset_examples if bool(ex.get("hit_at_12", False)))) / float(total),
+                    "shortlist_recall_at_train_k": float(sum(1 for ex in subset_examples if bool(ex.get("hit", False)))) / float(total),
+                }
 
             shortlist_recall_at_6 = float(hit_at_6_count) / float(valid_molecule_count) if valid_molecule_count > 0 else 0.0
             shortlist_recall_at_12 = float(hit_at_12_count) / float(valid_molecule_count) if valid_molecule_count > 0 else 0.0
             shortlist_hit_fraction = float(hit_at_train_k_count) / float(valid_molecule_count) if valid_molecule_count > 0 else 0.0
             shortlist_true_site_rank_mean = float(sum(true_rank_values) / len(true_rank_values)) if true_rank_values else 0.0
+            hard_subset_shortlist_metrics = _subset_shortlist_metrics(hard_source_examples)
+            non_hard_subset_shortlist_metrics = _subset_shortlist_metrics(non_hard_source_examples)
 
             metrics = {
                 "shortlist_top1_acc": float(shortlist_metrics.get("site_top1_acc_all_molecules", 0.0)),
@@ -253,12 +305,19 @@ if TORCH_AVAILABLE:
                 "shortlist_top3_acc": float(shortlist_metrics.get("site_top3_acc_all_molecules", 0.0)),
                 "shortlist_recall_at_6": shortlist_recall_at_6,
                 "shortlist_recall_at_12": shortlist_recall_at_12,
+                "shortlist_hit_fraction_at_6": shortlist_recall_at_6,
+                "shortlist_hit_fraction_at_12": shortlist_recall_at_12,
+                "shortlist_hit_fraction_at_train_k": shortlist_hit_fraction,
                 "shortlist_true_site_rank_mean": shortlist_true_site_rank_mean,
+                "shortlist_true_rank_7_to_12_count": float(true_rank_7_to_12_count),
                 "shortlist_candidate_count_mean": shortlist_candidate_count_mean,
                 "shortlist_top_score_hard_neg_rank_mean": float(hard_neg_stats.get("top_score_hard_neg_rank_mean", 0.0)),
                 "shortlist_top_score_margin_mean": float(hard_neg_stats.get("top_score_margin_mean", 0.0)),
                 "shortlist_top_score_true_beats_fraction": float(hard_neg_stats.get("top_score_true_beats_fraction", 0.0)),
                 "shortlist_source_recall_at_6": source_recall,
+                "shortlist_source_recall_at_12": source_recall_at_12,
+                "shortlist_source_recall_at_train_k": source_recall_at_train_k,
+                "winner_candidate_k": float(int(self.frozen_shortlist_topk)),
                 "frozen_shortlist_checkpoint_path": str(self.shortlist_checkpoint_path or ""),
             }
             if batch_metrics_rows:
@@ -277,25 +336,43 @@ if TORCH_AVAILABLE:
                         continue
                     metrics[key] = float(sum(float(row.get(key, 0.0)) for row in batch_metrics_rows) / len(batch_metrics_rows))
             metrics.update(self._winner_eval_metrics(winner_examples))
+            metrics["winner_eval_molecule_count"] = float(sum(1 for ex in winner_examples if bool(ex.get("hit", False))))
+            metrics["winner_trainable_molecule_count"] = float(
+                sum(1 for ex in winner_examples if bool(ex.get("trainable", False)) and int(ex.get("target_index", -1)) >= 0)
+            )
             metrics["shortlist_hit_fraction"] = shortlist_hit_fraction
-            if int(self.frozen_shortlist_topk) == 6:
-                absdiff = abs(float(metrics.get("shortlist_hit_fraction", 0.0)) - float(metrics.get("shortlist_recall_at_6", 0.0)))
-                metrics["shortlist_hit_fraction_minus_recall6_absdiff"] = float(absdiff)
-                metrics["shortlist_metric_consistency_ok"] = bool(absdiff <= 1.0e-12)
-                if float(metrics.get("shortlist_hit_fraction", 0.0)) > 0.0 and float(metrics.get("shortlist_recall_at_6", 0.0)) <= 0.0:
-                    raise RuntimeError("Inconsistent shortlist metrics: hit_fraction > 0 but recall_at_6 <= 0 for topk=6")
-            else:
-                metrics["shortlist_hit_fraction_minus_recall6_absdiff"] = float("nan")
-                metrics["shortlist_metric_consistency_ok"] = True
+            metrics["shortlist_valid_molecule_count"] = float(valid_molecule_count)
+            metrics["shortlist_hit_count_at_6"] = float(hit_at_6_count)
+            metrics["shortlist_hit_count_at_12"] = float(hit_at_12_count)
+            metrics["shortlist_hit_count_at_train_k"] = float(hit_at_train_k_count)
+            metrics["shortlist_rescued_by_12_count"] = float(rescued_by_12_count)
+            metrics["shortlist_rescued_by_12_fraction"] = (
+                float(rescued_by_12_count) / float(valid_molecule_count) if valid_molecule_count > 0 else 0.0
+            )
+            absdiff_6 = abs(float(metrics.get("shortlist_hit_fraction_at_6", 0.0)) - float(metrics.get("shortlist_recall_at_6", 0.0)))
+            absdiff_12 = abs(float(metrics.get("shortlist_hit_fraction_at_12", 0.0)) - float(metrics.get("shortlist_recall_at_12", 0.0)))
+            metrics["shortlist_hit_fraction_minus_recall6_absdiff"] = float(absdiff_6)
+            metrics["shortlist_hit_fraction_minus_recall12_absdiff"] = float(absdiff_12)
+            metrics["shortlist_metric_consistency_ok"] = bool(max(absdiff_6, absdiff_12) <= 1.0e-12)
+            if float(metrics.get("shortlist_hit_fraction_at_6", 0.0)) > 0.0 and float(metrics.get("shortlist_recall_at_6", 0.0)) <= 0.0:
+                raise RuntimeError("Inconsistent shortlist metrics: hit_fraction_at_6 > 0 but recall_at_6 <= 0")
+            if float(metrics.get("shortlist_hit_fraction_at_12", 0.0)) > 0.0 and float(metrics.get("shortlist_recall_at_12", 0.0)) <= 0.0:
+                raise RuntimeError("Inconsistent shortlist metrics: hit_fraction_at_12 > 0 but recall_at_12 <= 0")
             metrics["shortlist_metric_debug"] = {
                 "num_valid_molecules": int(valid_molecule_count),
                 "num_hit_at_6": int(hit_at_6_count),
                 "num_hit_at_12": int(hit_at_12_count),
                 "num_hit_at_train_k": int(hit_at_train_k_count),
+                "num_rescued_by_12": int(rescued_by_12_count),
                 "mean_hit_at_6": float(shortlist_recall_at_6),
+                "mean_hit_at_12": float(shortlist_recall_at_12),
                 "mean_hit_at_train_k": float(shortlist_hit_fraction),
                 "metric_definition": "molecule-level any-true-site-in-topk",
             }
+            metrics["hard_source_shortlist_recall_at_6"] = float(hard_subset_shortlist_metrics["shortlist_recall_at_6"])
+            metrics["hard_source_shortlist_recall_at_12"] = float(hard_subset_shortlist_metrics["shortlist_recall_at_12"])
+            metrics["non_hard_source_shortlist_recall_at_6"] = float(non_hard_subset_shortlist_metrics["shortlist_recall_at_6"])
+            metrics["non_hard_source_shortlist_recall_at_12"] = float(non_hard_subset_shortlist_metrics["shortlist_recall_at_12"])
             metrics["v2_rebuild_matches_original_feature_dim"] = bool(
                 int(self.winner_feature_dim) == int(getattr(self.winner_head, "feature_dim", 0))
             )

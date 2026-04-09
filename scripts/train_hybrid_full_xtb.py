@@ -601,10 +601,18 @@ def _collect_model_overrides() -> dict[str, int | float | str]:
         "HYBRID_COLAB_WINNER_V2_3_HARD_SOURCES": (_env_str, "winner_v2_3_hard_sources"),
         "HYBRID_COLAB_WINNER_V2_3_LOG_FEATURE_SUMMARY": (_env_int, "winner_v2_3_log_feature_summary"),
         "HYBRID_COLAB_ENABLE_TWO_HEAD_SHORTLIST_WINNER_V2_REBUILD": (_env_int, "enable_two_head_shortlist_winner_v2_rebuild"),
+        "HYBRID_COLAB_ENABLE_TWO_HEAD_SHORTLIST_WINNER_V2_REBUILD_TOP12": (
+            _env_int,
+            "enable_two_head_shortlist_winner_v2_rebuild_top12",
+        ),
         "HYBRID_COLAB_WINNER_V2_REBUILD_HIDDEN_DIM": (_env_int, "winner_v2_rebuild_hidden_dim"),
         "HYBRID_COLAB_WINNER_V2_REBUILD_DROPOUT": (_env_float, "winner_v2_rebuild_dropout"),
         "HYBRID_COLAB_WINNER_V2_REBUILD_LOSS_WEIGHT": (_env_float, "winner_v2_rebuild_loss_weight"),
         "HYBRID_COLAB_WINNER_V2_REBUILD_LOG_RESTORE_SUMMARY": (_env_int, "winner_v2_rebuild_log_restore_summary"),
+        "HYBRID_COLAB_TWO_HEAD_SHORTLIST_EVAL_TOPK": (_env_int, "two_head_shortlist_eval_topk"),
+        "HYBRID_COLAB_TWO_HEAD_SHORTLIST_WINNER_TOPK": (_env_int, "two_head_shortlist_winner_topk"),
+        "HYBRID_COLAB_TWO_HEAD_KEEP_AUX_METRICS_AT_6": (_env_int, "two_head_keep_aux_metrics_at_6"),
+        "HYBRID_COLAB_TWO_HEAD_LOG_DUAL_K_METRICS": (_env_int, "two_head_log_dual_k_metrics"),
         "HYBRID_COLAB_ENABLE_TWO_HEAD_SHORTLIST_WINNER_V2_REBUILD_HARD_SOURCE_FINETUNE": (
             _env_int,
             "enable_two_head_shortlist_winner_v2_rebuild_hard_source_finetune",
@@ -2505,12 +2513,21 @@ def _save_two_head_shortlist_winner_v2_rebuild_state(
             "two_head_shortlist_winner_v2_rebuild": {
                 "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
                 "frozen_shortlist_topk": int(getattr(base_config, "frozen_shortlist_topk", 6)),
+                "enable_two_head_shortlist_winner_v2_rebuild_top12": bool(
+                    getattr(base_config, "enable_two_head_shortlist_winner_v2_rebuild_top12", False)
+                ),
                 "winner_v2_rebuild_hidden_dim": getattr(base_config, "winner_v2_rebuild_hidden_dim", None),
                 "winner_v2_rebuild_dropout": float(getattr(base_config, "winner_v2_rebuild_dropout", 0.1)),
                 "winner_v2_rebuild_loss_weight": float(getattr(base_config, "winner_v2_rebuild_loss_weight", 1.0)),
                 "winner_v2_rebuild_log_restore_summary": bool(
                     getattr(base_config, "winner_v2_rebuild_log_restore_summary", True)
                 ),
+                "two_head_shortlist_eval_topk": int(getattr(base_config, "two_head_shortlist_eval_topk", 6)),
+                "two_head_shortlist_winner_topk": int(
+                    getattr(base_config, "two_head_shortlist_winner_topk", getattr(base_config, "frozen_shortlist_topk", 6))
+                ),
+                "two_head_keep_aux_metrics_at_6": bool(getattr(base_config, "two_head_keep_aux_metrics_at_6", True)),
+                "two_head_log_dual_k_metrics": bool(getattr(base_config, "two_head_log_dual_k_metrics", True)),
                 "restore_summary": dict(restore_summary or {}),
             },
         },
@@ -2604,12 +2621,21 @@ def _save_two_head_shortlist_winner_v2_rebuild_state(
                 "test_metrics": test_metrics,
                 "history": history,
                 "frozen_shortlist_topk": int(getattr(base_config, "frozen_shortlist_topk", 6)),
+                "enable_two_head_shortlist_winner_v2_rebuild_top12": bool(
+                    getattr(base_config, "enable_two_head_shortlist_winner_v2_rebuild_top12", False)
+                ),
                 "winner_v2_rebuild_hidden_dim": getattr(base_config, "winner_v2_rebuild_hidden_dim", None),
                 "winner_v2_rebuild_dropout": float(getattr(base_config, "winner_v2_rebuild_dropout", 0.1)),
                 "winner_v2_rebuild_loss_weight": float(getattr(base_config, "winner_v2_rebuild_loss_weight", 1.0)),
                 "winner_v2_rebuild_log_restore_summary": bool(
                     getattr(base_config, "winner_v2_rebuild_log_restore_summary", True)
                 ),
+                "two_head_shortlist_eval_topk": int(getattr(base_config, "two_head_shortlist_eval_topk", 6)),
+                "two_head_shortlist_winner_topk": int(
+                    getattr(base_config, "two_head_shortlist_winner_topk", getattr(base_config, "frozen_shortlist_topk", 6))
+                ),
+                "two_head_keep_aux_metrics_at_6": bool(getattr(base_config, "two_head_keep_aux_metrics_at_6", True)),
+                "two_head_log_dual_k_metrics": bool(getattr(base_config, "two_head_log_dual_k_metrics", True)),
                 "trainable_module_summary": list(trainable_module_summary or []),
                 "frozen_module_summary": list(frozen_module_summary or []),
                 "seed": int(getattr(args, "seed", 0)),
@@ -3556,6 +3582,7 @@ def main() -> None:
             "enable_two_head_shortlist_winner_v2_2",
             "enable_two_head_shortlist_winner_v2_3",
             "enable_two_head_shortlist_winner_v2_rebuild",
+            "enable_two_head_shortlist_winner_v2_rebuild_top12",
             "enable_two_head_shortlist_winner_v2_rebuild_hard_source_finetune",
             "enable_two_head_shortlist_winner_v2_rebuild_dual_winner_routing",
             "enable_two_head_shortlist_winner_v2_rebuild_context_features",
@@ -4310,7 +4337,9 @@ def main() -> None:
         )
         return
 
-    if bool(getattr(base_config, "enable_two_head_shortlist_winner_v2_rebuild", False)):
+    if bool(getattr(base_config, "enable_two_head_shortlist_winner_v2_rebuild", False)) or bool(
+        getattr(base_config, "enable_two_head_shortlist_winner_v2_rebuild_top12", False)
+    ):
         atom_dim = int(getattr(base_config, "som_branch_dim", getattr(base_config, "hidden_dim", 128)))
         winner_feature_dim = winner_v2_feature_dim(
             atom_dim,
@@ -4327,12 +4356,16 @@ def main() -> None:
             hidden_dim=(int(winner_hidden_dim) if winner_hidden_dim is not None and int(winner_hidden_dim) > 0 else None),
             dropout=float(getattr(base_config, "winner_v2_rebuild_dropout", 0.1)),
         )
+        winner_candidate_k = int(getattr(base_config, "two_head_shortlist_winner_topk", getattr(base_config, "frozen_shortlist_topk", 6)))
+        shortlist_eval_topk = int(getattr(base_config, "two_head_shortlist_eval_topk", 6))
+        if bool(getattr(base_config, "enable_two_head_shortlist_winner_v2_rebuild_top12", False)) and winner_candidate_k < 12:
+            winner_candidate_k = 12
         two_head_v2_rebuild_trainer = TwoHeadShortlistWinnerV2RebuildTrainer(
             model=model,
             winner_head=winner_head,
             learning_rate=args.learning_rate,
             weight_decay=args.weight_decay,
-            frozen_shortlist_topk=int(getattr(base_config, "frozen_shortlist_topk", 6)),
+            frozen_shortlist_topk=winner_candidate_k,
             winner_v2_rebuild_loss_weight=float(getattr(base_config, "winner_v2_rebuild_loss_weight", 1.0)),
             shortlist_checkpoint_path=str(frozen_shortlist_checkpoint_path),
             device=device,
@@ -4341,6 +4374,8 @@ def main() -> None:
         print(
             "two_head_shortlist_winner_v2_rebuild enabled | "
             f"frozen_shortlist={frozen_shortlist_checkpoint_path} | "
+            f"winner_candidate_k={winner_candidate_k} | "
+            f"shortlist_eval_topk={shortlist_eval_topk} | "
             f"trainable_modules={two_head_v2_rebuild_trainer.trainable_module_summary} | "
             f"frozen_modules={two_head_v2_rebuild_trainer.frozen_module_summary} | "
             f"restore_summary={restore_summary}",
@@ -4353,11 +4388,13 @@ def main() -> None:
         best_winner_head_state = None
         epochs_without_improvement = 0
 
+        selection_shortlist_key = "shortlist_recall_at_12" if shortlist_eval_topk >= 12 else "shortlist_recall_at_6"
+
         def _two_head_v2_rebuild_selection_tuple(metrics: dict[str, object]) -> tuple[float, float, float]:
             return (
                 float(metrics.get("end_to_end_top1", 0.0)),
-                float(metrics.get("winner_acc_given_hit", 0.0)),
-                float(metrics.get("shortlist_recall_at_6", 0.0)),
+                float(metrics.get("winner_acc_given_hit_at_k", metrics.get("winner_acc_given_hit", 0.0))),
+                float(metrics.get(selection_shortlist_key, 0.0)),
             )
 
         try:
@@ -4382,14 +4419,19 @@ def main() -> None:
                     epochs_without_improvement += 1
 
                 if bool(getattr(base_config, "winner_v2_rebuild_log_restore_summary", True)):
-                    print(
+                    message = (
                         f"Epoch {epoch + 1:3d} | "
                         f"winner_loss={train_metrics.get('winner_loss', 0.0):.4f} | "
                         f"val_shortlist_r6={val_metrics.get('shortlist_recall_at_6', 0.0):.3f} | "
-                        f"val_winner={val_metrics.get('winner_acc_given_hit', 0.0):.3f} | "
-                        f"val_e2e_top1={val_metrics.get('end_to_end_top1', 0.0):.3f}",
-                        flush=True,
+                        f"val_winner@k={val_metrics.get('winner_acc_given_hit_at_k', val_metrics.get('winner_acc_given_hit', 0.0)):.3f} | "
+                        f"val_e2e_top1={val_metrics.get('end_to_end_top1', 0.0):.3f}"
                     )
+                    if bool(getattr(base_config, "two_head_log_dual_k_metrics", True)):
+                        message += (
+                            f" | val_shortlist_r12={val_metrics.get('shortlist_recall_at_12', 0.0):.3f}"
+                            f" | rescued7_12={int(val_metrics.get('shortlist_rescued_by_12_count', 0.0))}"
+                        )
+                    print(message, flush=True)
 
                 _save_two_head_shortlist_winner_v2_rebuild_state(
                     model=model,

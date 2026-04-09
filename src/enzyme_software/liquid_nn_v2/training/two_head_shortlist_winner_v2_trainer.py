@@ -282,7 +282,18 @@ if TORCH_AVAILABLE:
             winner_top3 = 0
             end_to_end_top1 = 0
             end_to_end_top3 = 0
-            source_rows = defaultdict(lambda: {"n": 0, "shortlist_hit": 0.0, "winner_hit": 0.0, "end_to_end_top1": 0.0})
+            rescued_by_12_count = 0
+            winner_miss_among_rescued_by_12_count = 0
+            source_rows = defaultdict(
+                lambda: {
+                    "n": 0,
+                    "shortlist_hit": 0.0,
+                    "shortlist_hit_at_12": 0.0,
+                    "shortlist_hit_at_train_k": 0.0,
+                    "winner_hit": 0.0,
+                    "end_to_end_top1": 0.0,
+                }
+            )
             total_examples = len(examples)
             for example in examples:
                 logits = self.winner_head(example["winner_features"]).view(-1)
@@ -290,19 +301,26 @@ if TORCH_AVAILABLE:
                 labels = example["selected_labels"] > 0.5
                 top1_hit = bool(labels[order[0]].item()) if int(order.numel()) > 0 else False
                 top3_hit = bool(labels[order[: min(3, int(order.numel()))]].any().item()) if int(order.numel()) > 0 else False
+                rescued_by_12 = bool(example.get("rescued_by_12", False))
                 if top1_hit:
                     end_to_end_top1 += 1
                 if top3_hit:
                     end_to_end_top3 += 1
+                if rescued_by_12:
+                    rescued_by_12_count += 1
                 source_row = source_rows[str(example["source"])]
                 source_row["n"] += 1
-                source_row["shortlist_hit"] += float(example["hit"])
+                source_row["shortlist_hit"] += float(bool(example.get("hit_at_6", example["hit"])))
+                source_row["shortlist_hit_at_12"] += float(bool(example.get("hit_at_12", example["hit"])))
+                source_row["shortlist_hit_at_train_k"] += float(example["hit"])
                 source_row["end_to_end_top1"] += float(top1_hit)
                 if example["hit"]:
                     winner_top1 += int(top1_hit)
                     winner_top2 += int(bool(labels[order[: min(2, int(order.numel()))]].any().item()))
                     winner_top3 += int(top3_hit)
                     source_row["winner_hit"] += float(top1_hit)
+                    if rescued_by_12 and not top1_hit:
+                        winner_miss_among_rescued_by_12_count += 1
             source_breakdown = {}
             for name, row in sorted(source_rows.items()):
                 n = int(row["n"])
@@ -310,17 +328,23 @@ if TORCH_AVAILABLE:
                 source_breakdown[name] = {
                     "n": n,
                     "shortlist_recall_at_6": float(row["shortlist_hit"]) / float(n) if n > 0 else 0.0,
+                    "shortlist_recall_at_12": float(row["shortlist_hit_at_12"]) / float(n) if n > 0 else 0.0,
+                    "shortlist_recall_at_train_k": float(row["shortlist_hit_at_train_k"]) / float(n) if n > 0 else 0.0,
                     "winner_acc_given_hit": float(row["winner_hit"]) / float(hit_n) if hit_n > 0 else 0.0,
                     "end_to_end_top1": float(row["end_to_end_top1"]) / float(n) if n > 0 else 0.0,
                 }
             return {
                 "winner_acc_given_hit": float(winner_top1) / float(winner_eval_count) if winner_eval_count > 0 else 0.0,
+                "winner_acc_given_hit_at_k": float(winner_top1) / float(winner_eval_count) if winner_eval_count > 0 else 0.0,
                 "winner_top2_given_hit": float(winner_top2) / float(winner_eval_count) if winner_eval_count > 0 else 0.0,
                 "winner_top3_given_hit": float(winner_top3) / float(winner_eval_count) if winner_eval_count > 0 else 0.0,
                 "winner_eval_molecule_count": float(winner_eval_count),
                 "end_to_end_top1": float(end_to_end_top1) / float(total_examples) if total_examples > 0 else 0.0,
                 "end_to_end_top3": float(end_to_end_top3) / float(total_examples) if total_examples > 0 else 0.0,
                 "end_to_end_hit_then_win_fraction": float(end_to_end_top1) / float(total_examples) if total_examples > 0 else 0.0,
+                "shortlist_rescued_by_12_count": float(rescued_by_12_count),
+                "shortlist_rescued_by_12_fraction": float(rescued_by_12_count) / float(total_examples) if total_examples > 0 else 0.0,
+                "winner_miss_among_rescued_by_12_count": float(winner_miss_among_rescued_by_12_count),
                 "source_breakdown": source_breakdown,
             }
 

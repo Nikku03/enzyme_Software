@@ -1914,6 +1914,15 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_WINNER_V2_REBUILD_LOG_RESTORE_SUMMARY": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
     },
+    "cyp3a4_two_head_shortlist_winner_v2_rebuild_top12": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_two_head_shortlist_winner_v2_rebuild",
+        "HYBRID_COLAB_ENABLE_TWO_HEAD_SHORTLIST_WINNER_V2_REBUILD_TOP12": "1",
+        "HYBRID_COLAB_FROZEN_SHORTLIST_TOPK": "12",
+        "HYBRID_COLAB_TWO_HEAD_SHORTLIST_EVAL_TOPK": "12",
+        "HYBRID_COLAB_TWO_HEAD_SHORTLIST_WINNER_TOPK": "12",
+        "HYBRID_COLAB_TWO_HEAD_KEEP_AUX_METRICS_AT_6": "1",
+        "HYBRID_COLAB_TWO_HEAD_LOG_DUAL_K_METRICS": "1",
+    },
     "cyp3a4_two_head_shortlist_winner_v2_rebuild_hard_source_finetune": {
         "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank",
         "HYBRID_COLAB_EPOCHS": "10",
@@ -1957,6 +1966,12 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_WINNER_CONTEXT_USE_GEOMETRY_PROXY_FEATURES": "1",
         "HYBRID_COLAB_WINNER_CONTEXT_USE_ONLY_EXISTING_REPO_FEATURES": "1",
         "HYBRID_COLAB_FREEZE_NEXUS_MEMORY": "1",
+    },
+    "cyp3a4_gold_hard_source_eval": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank",
+        "HYBRID_COLAB_SCRIPT_MODE": "gold_hard_source_eval",
+        "HYBRID_COLAB_HARD_SOURCE_NAMES": "attnsom,cyp_dbs_external",
+        "HYBRID_COLAB_GOLD_HARD_SOURCE_POLICY": "exclude_ambiguous",
     },
     "cyp3a4_sideinfo_fullrank_phase5a_baseline_seed22": {
         "HYBRID_COLAB_DATASET": "data/prepared_training/main8_cyp3a4_augmented.json",
@@ -2400,9 +2415,10 @@ def main() -> None:
         raise ValueError(f"Unknown HYBRID_COLAB_PRESET={preset!r}. Valid presets: {valid}")
 
     overridden_keys = _apply_preset(PRESETS[preset])
+    script_mode = os.environ.get("HYBRID_COLAB_SCRIPT_MODE", "train").strip().lower() or "train"
 
     requested_dataset = Path(os.environ["HYBRID_COLAB_DATASET"])
-    if not requested_dataset.exists():
+    if script_mode in {"train", "gold_hard_source_eval"} and not requested_dataset.exists():
         raise FileNotFoundError(
             "Requested dataset not found: "
             f"{requested_dataset}. Set HYBRID_COLAB_DATASET to an existing path before launching training."
@@ -2469,62 +2485,92 @@ def main() -> None:
             )
         os.environ["HYBRID_COLAB_BENCHMARK_DATASETS"] = ",".join(str(path) for path in resolved_benchmarks)
 
-    argv = [
-        str(REPO_DIR / "scripts" / "train_hybrid_full_xtb.py"),
-        "--dataset",
-        os.environ["HYBRID_COLAB_DATASET"],
-        "--structure-sdf",
-        os.environ["HYBRID_COLAB_STRUCTURE_SDF"],
-        "--checkpoint",
-        checkpoint,
-        "--xtb-cache-dir",
-        xtb_cache_dir,
-        "--epochs",
-        os.environ["HYBRID_COLAB_EPOCHS"],
-        "--batch-size",
-        os.environ["HYBRID_COLAB_BATCH_SIZE"],
-        "--learning-rate",
-        os.environ["HYBRID_COLAB_LR"],
-        "--weight-decay",
-        os.environ["HYBRID_COLAB_WD"],
-        "--split-mode",
-        os.environ["HYBRID_COLAB_SPLIT_MODE"],
-        "--seed",
-        os.environ["HYBRID_COLAB_SEED"],
-        "--output-dir",
-        output_dir,
-        "--artifact-dir",
-        artifact_dir,
-        "--manual-feature-cache-dir",
-        manual_cache_dir,
-        "--early-stopping-patience",
-        os.environ["HYBRID_COLAB_EARLY_STOPPING_PATIENCE"],
-        "--early-stopping-metric",
-        os.environ["HYBRID_COLAB_EARLY_STOPPING_METRIC"],
-        "--train-ratio",
-        os.environ.get("HYBRID_COLAB_TRAIN_RATIO", "0.80"),
-        "--val-ratio",
-        os.environ.get("HYBRID_COLAB_VAL_RATIO", "0.10"),
-    ]
+    argv = []
+    if script_mode == "gold_hard_source_eval":
+        argv = [
+            str(REPO_DIR / "scripts" / "evaluate_gold_hard_source.py"),
+            "--dataset",
+            os.environ["HYBRID_COLAB_DATASET"],
+            "--structure-sdf",
+            os.environ["HYBRID_COLAB_STRUCTURE_SDF"],
+            "--checkpoint",
+            checkpoint,
+            "--xtb-cache-dir",
+            xtb_cache_dir,
+            "--batch-size",
+            os.environ["HYBRID_COLAB_BATCH_SIZE"],
+            "--seed",
+            os.environ["HYBRID_COLAB_SEED"],
+            "--train-ratio",
+            os.environ.get("HYBRID_COLAB_TRAIN_RATIO", "0.80"),
+            "--val-ratio",
+            os.environ.get("HYBRID_COLAB_VAL_RATIO", "0.10"),
+            "--split-mode",
+            os.environ["HYBRID_COLAB_SPLIT_MODE"],
+            "--target-cyp",
+            os.environ.get("HYBRID_COLAB_TARGET_CYP", ""),
+            "--output-dir",
+            artifact_dir,
+            "--device",
+            os.environ.get("HYBRID_COLAB_DEVICE", "cuda"),
+        ]
+        hard_sources = os.environ.get("HYBRID_COLAB_HARD_SOURCE_NAMES", "").strip()
+        if hard_sources:
+            argv.extend(["--hard-sources", hard_sources])
+        gold_slice_path = os.environ.get("HYBRID_COLAB_GOLD_HARD_SOURCE_SLICE_PATH", "").strip()
+        if gold_slice_path:
+            argv.extend(["--gold-slice-path", gold_slice_path])
+        gold_policy = os.environ.get("HYBRID_COLAB_GOLD_HARD_SOURCE_POLICY", "").strip()
+        if gold_policy:
+            argv.extend(["--gold-policy", gold_policy])
+        winner_prob_threshold = os.environ.get("HYBRID_COLAB_GOLD_EVAL_TOP1_PROB_THRESHOLD", "").strip()
+        if winner_prob_threshold:
+            argv.extend(["--winner-top1-prob-threshold", winner_prob_threshold])
+        winner_gap_threshold = os.environ.get("HYBRID_COLAB_GOLD_EVAL_PROB_GAP_THRESHOLD", "").strip()
+        if winner_gap_threshold:
+            argv.extend(["--winner-prob-gap-threshold", winner_gap_threshold])
+        winner_candidate_k = os.environ.get("HYBRID_COLAB_GOLD_EVAL_WINNER_TOPK", "").strip()
+        if winner_candidate_k:
+            argv.extend(["--winner-candidate-k", winner_candidate_k])
+    else:
+        argv = [
+            str(REPO_DIR / "scripts" / "train_hybrid_full_xtb.py"),
+            "--dataset",
+            os.environ["HYBRID_COLAB_DATASET"],
+            "--structure-sdf",
+            os.environ["HYBRID_COLAB_STRUCTURE_SDF"],
+            "--checkpoint",
+            checkpoint,
+            "--xtb-cache-dir",
+            xtb_cache_dir,
+            "--epochs",
+            os.environ["HYBRID_COLAB_EPOCHS"],
+            "--batch-size",
+            os.environ["HYBRID_COLAB_BATCH_SIZE"],
+            "--learning-rate",
+            os.environ["HYBRID_COLAB_LR"],
+            "--weight-decay",
+            os.environ["HYBRID_COLAB_WD"],
+            "--split-mode",
+            os.environ["HYBRID_COLAB_SPLIT_MODE"],
+            "--seed",
+            os.environ["HYBRID_COLAB_SEED"],
+            "--output-dir",
+            output_dir,
+            "--artifact-dir",
+            artifact_dir,
+            "--manual-feature-cache-dir",
+            manual_cache_dir,
+            "--early-stopping-patience",
+            os.environ["HYBRID_COLAB_EARLY_STOPPING_PATIENCE"],
+            "--early-stopping-metric",
+            os.environ["HYBRID_COLAB_EARLY_STOPPING_METRIC"],
+            "--train-ratio",
+            os.environ.get("HYBRID_COLAB_TRAIN_RATIO", "0.80"),
+            "--val-ratio",
+            os.environ.get("HYBRID_COLAB_VAL_RATIO", "0.10"),
+        ]
 
-    limit = int(os.environ.get("HYBRID_COLAB_LIMIT", "0") or "0")
-    if limit > 0:
-        argv.extend(["--limit", str(limit)])
-    if os.environ.get("HYBRID_COLAB_SITE_LABELED_ONLY", "1").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.append("--site-labeled-only")
-    if os.environ.get("HYBRID_COLAB_COMPUTE_XTB_IF_MISSING", "0").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.append("--compute-xtb-if-missing")
-    if os.environ.get("HYBRID_COLAB_FREEZE_NEXUS_MEMORY", "0").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.append("--freeze-nexus-memory")
-    backbone_freeze = int(os.environ.get("HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS", "0") or "0")
-    if backbone_freeze > 0:
-        argv.extend(["--backbone-freeze-epochs", str(backbone_freeze)])
-    backbone_thaw_lr_scale = os.environ.get("HYBRID_COLAB_BACKBONE_THAW_LR_SCALE", "").strip()
-    if backbone_thaw_lr_scale:
-        argv.extend(["--backbone-thaw-lr-scale", backbone_thaw_lr_scale])
-    if os.environ.get("HYBRID_COLAB_INCLUDE_XENOSITE", "1").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.extend(["--xenosite-manifest", xenosite_manifest])
-        argv.extend(["--xenosite-topk", os.environ["HYBRID_COLAB_XENOSITE_TOPK"]])
     precedent_logbook = os.environ.get("HYBRID_COLAB_PRECEDENT_LOGBOOK", "").strip()
     disable_precedent_logbook = os.environ.get("HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK", "1").strip().lower() in {
         "1",
@@ -2532,54 +2578,73 @@ def main() -> None:
         "yes",
         "on",
     }
-    # An explicit logbook path should win over the preset default disable flag.
-    if disable_precedent_logbook and not precedent_logbook:
-        argv.append("--disable-precedent-logbook")
     target_cyp = os.environ.get("HYBRID_COLAB_TARGET_CYP", "").strip()
-    if target_cyp:
-        argv.extend(["--target-cyp", target_cyp])
-    confidence_allowlist = os.environ.get("HYBRID_COLAB_CONFIDENCE_ALLOWLIST", "").strip()
-    if confidence_allowlist:
-        argv.extend(["--confidence-allowlist", confidence_allowlist])
-    train_source_allowlist = os.environ.get("HYBRID_COLAB_TRAIN_SOURCE_ALLOWLIST", "").strip()
-    if train_source_allowlist:
-        argv.extend(["--train-source-allowlist", train_source_allowlist])
-    if os.environ.get("HYBRID_COLAB_BASE_LNN_FIRST", "0").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.append("--base-lnn-first")
-    if os.environ.get("HYBRID_COLAB_NEXUS_SIDEINFO_ONLY", "0").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.append("--nexus-sideinfo-only")
-    if os.environ.get("HYBRID_COLAB_USE_CANDIDATE_MASK", "0").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.append("--use-candidate-mask")
-    candidate_mask_mode = os.environ.get("HYBRID_COLAB_CANDIDATE_MASK_MODE", "").strip()
-    if candidate_mask_mode:
-        argv.extend(["--candidate-mask-mode", candidate_mask_mode])
-    candidate_mask_logit_bias = os.environ.get("HYBRID_COLAB_CANDIDATE_MASK_LOGIT_BIAS", "").strip()
-    if candidate_mask_logit_bias:
-        argv.extend(["--candidate-mask-logit-bias", candidate_mask_logit_bias])
-    if os.environ.get("HYBRID_COLAB_BALANCE_TRAIN_SOURCES", "0").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.append("--balance-train-sources")
-    if os.environ.get("HYBRID_COLAB_SITE_ONLY_TARGET_CYP", "0").strip().lower() in {"1", "true", "yes", "on"}:
-        argv.append("--site-only-target-cyp")
-    freeze_base_modules = os.environ.get("HYBRID_COLAB_FREEZE_BASE_MODULES", "").strip()
-    if freeze_base_modules:
-        argv.extend(["--freeze-base-modules", freeze_base_modules])
     benchmark_datasets = os.environ.get("HYBRID_COLAB_BENCHMARK_DATASETS", "").strip()
-    if benchmark_datasets:
-        argv.extend(["--benchmark-datasets", benchmark_datasets])
-    benchmark_batch_size = os.environ.get("HYBRID_COLAB_BENCHMARK_BATCH_SIZE", "").strip()
-    if benchmark_batch_size:
-        argv.extend(["--benchmark-batch-size", benchmark_batch_size])
-    benchmark_every = os.environ.get("HYBRID_COLAB_BENCHMARK_EVERY", "").strip()
-    if benchmark_every:
-        argv.extend(["--benchmark-every", benchmark_every])
     benchmark_selection_metric = os.environ.get("HYBRID_COLAB_BENCHMARK_SELECTION_METRIC", "").strip()
-    if benchmark_selection_metric:
-        argv.extend(["--benchmark-selection-metric", benchmark_selection_metric])
     benchmark_selection_weight = os.environ.get("HYBRID_COLAB_BENCHMARK_SELECTION_WEIGHT", "").strip()
-    if benchmark_selection_weight:
-        argv.extend(["--benchmark-selection-weight", benchmark_selection_weight])
-    if precedent_logbook:
-        argv.extend(["--precedent-logbook", precedent_logbook])
+
+    if script_mode == "train":
+        limit = int(os.environ.get("HYBRID_COLAB_LIMIT", "0") or "0")
+        if limit > 0:
+            argv.extend(["--limit", str(limit)])
+        if os.environ.get("HYBRID_COLAB_SITE_LABELED_ONLY", "1").strip().lower() in {"1", "true", "yes", "on"}:
+            argv.append("--site-labeled-only")
+        if os.environ.get("HYBRID_COLAB_COMPUTE_XTB_IF_MISSING", "0").strip().lower() in {"1", "true", "yes", "on"}:
+            argv.append("--compute-xtb-if-missing")
+        if os.environ.get("HYBRID_COLAB_FREEZE_NEXUS_MEMORY", "0").strip().lower() in {"1", "true", "yes", "on"}:
+            argv.append("--freeze-nexus-memory")
+        backbone_freeze = int(os.environ.get("HYBRID_COLAB_BACKBONE_FREEZE_EPOCHS", "0") or "0")
+        if backbone_freeze > 0:
+            argv.extend(["--backbone-freeze-epochs", str(backbone_freeze)])
+        backbone_thaw_lr_scale = os.environ.get("HYBRID_COLAB_BACKBONE_THAW_LR_SCALE", "").strip()
+        if backbone_thaw_lr_scale:
+            argv.extend(["--backbone-thaw-lr-scale", backbone_thaw_lr_scale])
+        if os.environ.get("HYBRID_COLAB_INCLUDE_XENOSITE", "1").strip().lower() in {"1", "true", "yes", "on"}:
+            argv.extend(["--xenosite-manifest", xenosite_manifest])
+            argv.extend(["--xenosite-topk", os.environ["HYBRID_COLAB_XENOSITE_TOPK"]])
+        if disable_precedent_logbook and not precedent_logbook:
+            argv.append("--disable-precedent-logbook")
+        if target_cyp:
+            argv.extend(["--target-cyp", target_cyp])
+        confidence_allowlist = os.environ.get("HYBRID_COLAB_CONFIDENCE_ALLOWLIST", "").strip()
+        if confidence_allowlist:
+            argv.extend(["--confidence-allowlist", confidence_allowlist])
+        train_source_allowlist = os.environ.get("HYBRID_COLAB_TRAIN_SOURCE_ALLOWLIST", "").strip()
+        if train_source_allowlist:
+            argv.extend(["--train-source-allowlist", train_source_allowlist])
+        if os.environ.get("HYBRID_COLAB_BASE_LNN_FIRST", "0").strip().lower() in {"1", "true", "yes", "on"}:
+            argv.append("--base-lnn-first")
+        if os.environ.get("HYBRID_COLAB_NEXUS_SIDEINFO_ONLY", "0").strip().lower() in {"1", "true", "yes", "on"}:
+            argv.append("--nexus-sideinfo-only")
+        if os.environ.get("HYBRID_COLAB_USE_CANDIDATE_MASK", "0").strip().lower() in {"1", "true", "yes", "on"}:
+            argv.append("--use-candidate-mask")
+        candidate_mask_mode = os.environ.get("HYBRID_COLAB_CANDIDATE_MASK_MODE", "").strip()
+        if candidate_mask_mode:
+            argv.extend(["--candidate-mask-mode", candidate_mask_mode])
+        candidate_mask_logit_bias = os.environ.get("HYBRID_COLAB_CANDIDATE_MASK_LOGIT_BIAS", "").strip()
+        if candidate_mask_logit_bias:
+            argv.extend(["--candidate-mask-logit-bias", candidate_mask_logit_bias])
+        if os.environ.get("HYBRID_COLAB_BALANCE_TRAIN_SOURCES", "0").strip().lower() in {"1", "true", "yes", "on"}:
+            argv.append("--balance-train-sources")
+        if os.environ.get("HYBRID_COLAB_SITE_ONLY_TARGET_CYP", "0").strip().lower() in {"1", "true", "yes", "on"}:
+            argv.append("--site-only-target-cyp")
+        freeze_base_modules = os.environ.get("HYBRID_COLAB_FREEZE_BASE_MODULES", "").strip()
+        if freeze_base_modules:
+            argv.extend(["--freeze-base-modules", freeze_base_modules])
+        if benchmark_datasets:
+            argv.extend(["--benchmark-datasets", benchmark_datasets])
+        benchmark_batch_size = os.environ.get("HYBRID_COLAB_BENCHMARK_BATCH_SIZE", "").strip()
+        if benchmark_batch_size:
+            argv.extend(["--benchmark-batch-size", benchmark_batch_size])
+        benchmark_every = os.environ.get("HYBRID_COLAB_BENCHMARK_EVERY", "").strip()
+        if benchmark_every:
+            argv.extend(["--benchmark-every", benchmark_every])
+        if benchmark_selection_metric:
+            argv.extend(["--benchmark-selection-metric", benchmark_selection_metric])
+        if benchmark_selection_weight:
+            argv.extend(["--benchmark-selection-weight", benchmark_selection_weight])
+        if precedent_logbook:
+            argv.extend(["--precedent-logbook", precedent_logbook])
 
     with _capture_console_log(console_log_path, console_jsonl_path):
         print("Hybrid LNN Colab wrapper")
@@ -2617,8 +2682,9 @@ def main() -> None:
             print(f"{key}={os.environ[key]}")
         print()
 
+        print(f"script_mode={script_mode}")
         sys.argv = argv
-        runpy.run_path(str(REPO_DIR / "scripts" / "train_hybrid_full_xtb.py"), run_name="__main__")
+        runpy.run_path(str(Path(argv[0])), run_name="__main__")
 
 
 if __name__ == "__main__":
