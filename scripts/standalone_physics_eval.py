@@ -145,21 +145,41 @@ if __name__ == "__main__":
     dataset_path = "/content/enzyme_Software/data/prepared_training/main8_site_conservative_singlecyp_clean_symm.json"
     
     with open(dataset_path, "r") as f:
-        all_data = json.load(f)
+        raw_data = json.load(f)
+    
+    # Handle nested format - drugs are under "drugs" key
+    if isinstance(raw_data, dict) and "drugs" in raw_data:
+        all_data = raw_data["drugs"]
+    elif isinstance(raw_data, list):
+        all_data = raw_data
+    else:
+        print(f"Unexpected data format: {type(raw_data)}")
+        all_data = []
     
     # Filter for CYP3A4
     test_data = []
     for item in all_data:
-        cyp = str(item.get("cyp", "")).upper()
+        if not isinstance(item, dict):
+            continue
+        cyp = str(item.get("primary_cyp", "") or item.get("cyp", "")).upper()
         if "CYP3A4" not in cyp:
             continue
-        site_labels = item.get("site_labels") or item.get("som_indices") or []
+        # Try different field names for site labels
+        site_labels = (
+            item.get("site_atoms") or 
+            item.get("metabolism_sites") or 
+            item.get("site_labels") or 
+            item.get("som_indices") or 
+            []
+        )
         if isinstance(site_labels, list) and len(site_labels) > 0:
             sites = [int(s) for s in site_labels if isinstance(s, (int, float)) and s >= 0]
             if sites:
                 test_data.append({
-                    "smiles": item["smiles"],
+                    "smiles": item.get("smiles", ""),
                     "site_labels": sites,
+                    "name": item.get("name", ""),
+                    "source": item.get("source", ""),
                 })
     
     print(f"Loaded {len(test_data)} CYP3A4 molecules")
