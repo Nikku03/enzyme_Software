@@ -1455,6 +1455,10 @@ if TORCH_AVAILABLE:
         def _apply_nexus_bridge(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
             if self.nexus_bridge is None:
                 return outputs
+            # Skip nexus bridge if using stubs (NEXUS_AVAILABLE is False)
+            from enzyme_software.liquid_nn_v2.model.nexus_bridge import NEXUS_AVAILABLE
+            if not NEXUS_AVAILABLE:
+                return outputs
             atom_features = outputs.get("atom_features")
             if atom_features is None:
                 return outputs
