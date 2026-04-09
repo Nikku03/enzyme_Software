@@ -7295,6 +7295,24 @@ def main() -> None:
         setattr(test_loader, "_split_name", "test")
         test_metrics = probe_trainer.evaluate_loader(test_loader)
         print(json.dumps({"pairwise_probe_test_metrics": test_metrics}, indent=2), flush=True)
+        
+        # Phase 2: Pairwise Reranker evaluation (also available in pairwise probe mode)
+        if bool(getattr(base_config, "use_pairwise_reranker", False)):
+            print("\n" + "=" * 60, flush=True)
+            print("PHASE 2: PAIRWISE RERANKER EVALUATION", flush=True)
+            print("=" * 60, flush=True)
+            reranker_metrics = _evaluate_with_pairwise_reranker(
+                model=model,
+                pairwise_head=pairwise_head,
+                loader=test_loader,
+                device=device,
+                top_k=int(getattr(base_config, "pairwise_reranker_top_k", 6)),
+                aggregation=str(getattr(base_config, "pairwise_reranker_aggregation", "copeland")),
+                temperature=float(getattr(base_config, "pairwise_reranker_temperature", 1.0)),
+            )
+            print(json.dumps(reranker_metrics, indent=2), flush=True)
+            test_metrics.update(reranker_metrics)
+        
         latest_path, best_path, archive_path, report_path = _save_pairwise_probe_state(
             model=model,
             pairwise_head=pairwise_head,
