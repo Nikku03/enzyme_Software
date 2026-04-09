@@ -437,6 +437,12 @@ class ModelConfig:
     relational_proposer_dropout: float = 0.1
     relational_proposer_residual_scale: float = 0.1
     relational_proposer_prior_scale_init: float = 0.65
+    # Phase 2: Pairwise Reranker (inference-time reranking using pairwise head)
+    use_pairwise_reranker: bool = False
+    pairwise_reranker_top_k: int = 6
+    pairwise_reranker_aggregation: str = "copeland"  # "copeland", "bradley_terry", "sum"
+    pairwise_reranker_temperature: float = 1.0
+    pairwise_reranker_checkpoint: Optional[str] = None  # path to pairwise head checkpoint
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
     cyp_names: Tuple[str, ...] = tuple(MAJOR_CYP_CLASSES)

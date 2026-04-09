@@ -40,6 +40,7 @@ from enzyme_software.liquid_nn_v2.features.steric_features import StructureLibra
 from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_DIM
 from enzyme_software.liquid_nn_v2.model.distilled_proposer_head import DistilledProposerHead
 from enzyme_software.liquid_nn_v2.model.pairwise_head import PairwiseHead
+from enzyme_software.liquid_nn_v2.model.pairwise_reranker import PairwiseReranker
 from enzyme_software.liquid_nn_v2.model.two_head_shortlist_winner import (
     ShortlistHead,
     WinnerHead,
@@ -506,6 +507,12 @@ def _collect_model_overrides() -> dict[str, int | float | str]:
         "HYBRID_COLAB_RELATIONAL_PROPOSER_RESIDUAL_SCALE": (_env_float, "relational_proposer_residual_scale"),
         "HYBRID_COLAB_RELATIONAL_PROPOSER_HIDDEN_DIM": (_env_int, "relational_proposer_hidden_dim"),
         "HYBRID_COLAB_RELATIONAL_PROPOSER_PRIOR_SCALE_INIT": (_env_float, "relational_proposer_prior_scale_init"),
+        # Phase 2: Pairwise Reranker (inference-time reranking)
+        "HYBRID_COLAB_USE_PAIRWISE_RERANKER": (_env_bool, "use_pairwise_reranker"),
+        "HYBRID_COLAB_PAIRWISE_RERANKER_TOP_K": (_env_int, "pairwise_reranker_top_k"),
+        "HYBRID_COLAB_PAIRWISE_RERANKER_AGGREGATION": (_env_str, "pairwise_reranker_aggregation"),
+        "HYBRID_COLAB_PAIRWISE_RERANKER_TEMPERATURE": (_env_float, "pairwise_reranker_temperature"),
+        "HYBRID_COLAB_PAIRWISE_RERANKER_CHECKPOINT": (_env_str, "pairwise_reranker_checkpoint"),
         "HYBRID_COLAB_ENABLE_PAIRWISE_PROBE": (_env_int, "enable_pairwise_probe"),
         "HYBRID_COLAB_PAIRWISE_PROBE_DROPOUT": (_env_float, "pairwise_probe_dropout"),
         "HYBRID_COLAB_PAIRWISE_PROBE_HIDDEN_SCALE": (_env_float, "pairwise_probe_hidden_scale"),
@@ -1034,6 +1041,109 @@ def _aggregate_benchmark_metrics(
         "count": float(len(values)),
         "min": float(min(values)),
         "max": float(max(values)),
+    }
+
+
+def _evaluate_with_pairwise_reranker(
+    *,
+    model,
+    pairwise_head,
+    loader,
+    device,
+    top_k: int = 6,
+    aggregation: str = "copeland",
+    temperature: float = 1.0,
+) -> dict[str, float]:
+    """Evaluate test set with pairwise reranker applied at inference time.
+    
+    Returns metrics showing the impact of reranking on prediction quality.
+    """
+    if pairwise_head is None:
+        return {"reranker_error": "no_pairwise_head"}
+    
+    from enzyme_software.liquid_nn_v2.training.utils import collate_molecule_graphs, move_to_device
+    
+    reranker = PairwiseReranker(
+        pairwise_head=pairwise_head,
+        top_k=top_k,
+        aggregation=aggregation,
+        temperature=temperature,
+    )
+    reranker.to(device)
+    reranker.eval()
+    model.eval()
+    
+    # Accumulate metrics across batches
+    total_molecules = 0
+    original_correct = 0
+    reranked_correct = 0
+    corrected = 0
+    harmed = 0
+    unchanged = 0
+    
+    with torch.no_grad():
+        for batch in loader:
+            if batch is None:
+                continue
+            batch = move_to_device(batch, device)
+            
+            # Get model outputs
+            outputs = model(batch)
+            atom_features = outputs.get("atom_features")
+            site_logits = outputs.get("site_logits")
+            
+            if atom_features is None or site_logits is None:
+                continue
+            
+            site_labels = batch.get("site_labels")
+            batch_index = batch.get("batch")
+            candidate_mask = batch.get("candidate_mask", batch.get("candidate_train_mask"))
+            
+            if site_labels is None or batch_index is None:
+                continue
+            
+            # Apply candidate mask to site logits
+            if candidate_mask is not None:
+                mask = candidate_mask.to(device=site_logits.device, dtype=site_logits.dtype).view_as(site_logits)
+                masked_logits = torch.where(mask > 0.5, site_logits, torch.full_like(site_logits, -20.0))
+            else:
+                masked_logits = site_logits
+            
+            # Get reranker metrics with labels
+            reranker_metrics = reranker.rerank_with_labels(
+                atom_embeddings=atom_features,
+                proposer_scores=masked_logits.view(-1),
+                batch_index=batch_index,
+                site_labels=site_labels,
+                candidate_mask=candidate_mask,
+            )
+            
+            total_molecules += int(reranker_metrics.get("total_molecules", 0))
+            original_correct += int(reranker_metrics.get("original_top1_acc", 0) * reranker_metrics.get("total_molecules", 0))
+            reranked_correct += int(reranker_metrics.get("reranked_top1_acc", 0) * reranker_metrics.get("total_molecules", 0))
+            corrected += int(reranker_metrics.get("reranker_corrected_count", 0))
+            harmed += int(reranker_metrics.get("reranker_harmed_count", 0))
+            unchanged += int(reranker_metrics.get("reranker_unchanged_count", 0))
+    
+    if total_molecules == 0:
+        return {"reranker_error": "no_molecules"}
+    
+    original_acc = original_correct / total_molecules
+    reranked_acc = reranked_correct / total_molecules
+    
+    return {
+        "reranker_total_molecules": float(total_molecules),
+        "reranker_original_top1_acc": original_acc,
+        "reranker_reranked_top1_acc": reranked_acc,
+        "reranker_lift": reranked_acc - original_acc,
+        "reranker_lift_pct": 100.0 * (reranked_acc - original_acc),
+        "reranker_corrected_count": float(corrected),
+        "reranker_harmed_count": float(harmed),
+        "reranker_unchanged_count": float(unchanged),
+        "reranker_corrected_fraction": float(corrected) / max(1, total_molecules),
+        "reranker_harmed_fraction": float(harmed) / max(1, total_molecules),
+        "reranker_top_k": float(top_k),
+        "reranker_aggregation": aggregation,
     }
 
 
@@ -7584,6 +7694,25 @@ def main() -> None:
     setattr(test_loader, "_split_name", "test")
     test_metrics = trainer.evaluate_loader(test_loader)
     print(json.dumps(test_metrics, indent=2), flush=True)
+    
+    # Phase 2: Pairwise Reranker evaluation
+    if bool(getattr(base_config, "use_pairwise_reranker", False)) and pairwise_head is not None:
+        print("\n" + "=" * 60, flush=True)
+        print("PHASE 2: PAIRWISE RERANKER EVALUATION", flush=True)
+        print("=" * 60, flush=True)
+        reranker_metrics = _evaluate_with_pairwise_reranker(
+            model=model,
+            pairwise_head=pairwise_head,
+            loader=test_loader,
+            device=device,
+            top_k=int(getattr(base_config, "pairwise_reranker_top_k", 6)),
+            aggregation=str(getattr(base_config, "pairwise_reranker_aggregation", "copeland")),
+            temperature=float(getattr(base_config, "pairwise_reranker_temperature", 1.0)),
+        )
+        print(json.dumps(reranker_metrics, indent=2), flush=True)
+        # Merge reranker metrics into test_metrics
+        test_metrics.update(reranker_metrics)
+    
     if benchmark_loaders:
         final_benchmark_metrics = _evaluate_benchmarks(
             model=model,
