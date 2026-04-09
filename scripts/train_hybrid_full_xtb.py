@@ -368,6 +368,9 @@ def _env_str(name: str) -> str | None:
 
 def _collect_model_overrides() -> dict[str, int | float | str]:
     mapping = {
+        "HYBRID_COLAB_TRAIN_DATASET": (_env_str, "train_dataset"),
+        "HYBRID_COLAB_VAL_DATASET": (_env_str, "val_dataset"),
+        "HYBRID_COLAB_TEST_DATASET": (_env_str, "test_dataset"),
         "HYBRID_COLAB_NEXUS_WAVE_HIDDEN_DIM": (_env_int, "nexus_wave_hidden_dim"),
         "HYBRID_COLAB_NEXUS_GRAPH_DIM": (_env_int, "nexus_graph_dim"),
         "HYBRID_COLAB_NEXUS_MEMORY_CAPACITY": (_env_int, "nexus_memory_capacity"),
@@ -762,6 +765,44 @@ def _json_rows(path: Path) -> list[dict]:
     if isinstance(payload, dict):
         return list(payload.get("drugs", payload))
     return list(payload)
+
+
+def _resolve_optional_path(raw: str) -> Path | None:
+    text = str(raw or "").strip()
+    if not text:
+        return None
+    return Path(text)
+
+
+def _load_explicit_split_datasets(
+    *,
+    train_dataset: str,
+    val_dataset: str,
+    test_dataset: str,
+) -> tuple[list[dict], list[dict], list[dict], dict[str, str]] | None:
+    train_path = _resolve_optional_path(train_dataset)
+    val_path = _resolve_optional_path(val_dataset)
+    test_path = _resolve_optional_path(test_dataset)
+    if train_path is None and val_path is None and test_path is None:
+        return None
+    if train_path is None or val_path is None or test_path is None:
+        raise ValueError("Explicit split loading requires --train-dataset, --val-dataset, and --test-dataset together")
+    if not train_path.exists():
+        raise FileNotFoundError(f"Train dataset not found: {train_path}")
+    if not val_path.exists():
+        raise FileNotFoundError(f"Val dataset not found: {val_path}")
+    if not test_path.exists():
+        raise FileNotFoundError(f"Test dataset not found: {test_path}")
+    return (
+        _load_drugs(train_path),
+        _load_drugs(val_path),
+        _load_drugs(test_path),
+        {
+            "train": str(train_path),
+            "val": str(val_path),
+            "test": str(test_path),
+        },
+    )
 
 
 def _has_site_labels(drug: dict) -> bool:
@@ -3630,6 +3671,9 @@ def main() -> None:
     require_torch()
     parser = argparse.ArgumentParser(description="Train hybrid model with full xTB manual priors")
     parser.add_argument("--dataset", default="data/training_dataset_drugbank.json")
+    parser.add_argument("--train-dataset", default="")
+    parser.add_argument("--val-dataset", default="")
+    parser.add_argument("--test-dataset", default="")
     parser.add_argument("--structure-sdf", default="3D structures.sdf")
     parser.add_argument("--checkpoint", default="checkpoints/hybrid_lnn_latest.pt")
     parser.add_argument("--xtb-cache-dir", default="cache/full_xtb")
@@ -3700,8 +3744,15 @@ def main() -> None:
     early_stopping_enabled = early_stopping_patience > 0
     reproducibility_metadata = _apply_reproducibility_lock(int(args.seed))
 
+    explicit_split = _load_explicit_split_datasets(
+        train_dataset=str(getattr(args, "train_dataset", "") or ""),
+        val_dataset=str(getattr(args, "val_dataset", "") or ""),
+        test_dataset=str(getattr(args, "test_dataset", "") or ""),
+    )
+    if explicit_split is not None:
+        args.split_mode = "explicit_files"
     dataset_path = Path(args.dataset)
-    if not dataset_path.exists():
+    if explicit_split is None and not dataset_path.exists():
         raise FileNotFoundError(f"Dataset not found: {dataset_path}")
 
     device = _resolve_device(args.device)
@@ -3738,8 +3789,16 @@ def main() -> None:
     if episode_log_path is not None:
         print(f"Episode log: {episode_log_path}", flush=True)
 
-    drugs = _load_drugs(dataset_path)
-    print(f"Loaded {len(drugs)} drugs", flush=True)
+    if explicit_split is not None:
+        train_drugs, val_drugs, test_drugs, explicit_split_paths = explicit_split
+        print(
+            "Loaded explicit split datasets | "
+            f"train={len(train_drugs)} val={len(val_drugs)} test={len(test_drugs)}",
+            flush=True,
+        )
+    else:
+        drugs = _load_drugs(dataset_path)
+        print(f"Loaded {len(drugs)} drugs", flush=True)
     if args.nexus_sideinfo_only:
         args.disable_nexus_bridge = False
         args.base_lnn_first = False
@@ -3749,7 +3808,7 @@ def main() -> None:
         args.freeze_nexus_memory = True
         args.skip_nexus_memory_rebuild = True
         print("base_lnn_first=1 | NEXUS bridge disabled for this run", flush=True)
-    if str(args.target_cyp or "").strip():
+    if explicit_split is None and str(args.target_cyp or "").strip():
         target_cyp = str(args.target_cyp).strip()
         drugs = [drug for drug in drugs if _primary_cyp(drug) == target_cyp]
         print(f"Filtered target_cyp={target_cyp}: {len(drugs)}", flush=True)
@@ -3757,27 +3816,65 @@ def main() -> None:
             args.use_candidate_mask = True
             print("Auto-enabled CYP3A4 candidate masking for base_lnn_first run", flush=True)
     confidence_allowlist = _parse_csv_tokens(args.confidence_allowlist)
-    if confidence_allowlist:
-        allowed = {token.lower() for token in confidence_allowlist}
-        drugs = [drug for drug in drugs if str(drug.get("confidence") or "").strip().lower() in allowed]
-        print(f"Filtered confidence_allowlist={confidence_allowlist}: {len(drugs)}", flush=True)
-    if args.site_labeled_only:
-        drugs = [drug for drug in drugs if _has_site_labels(drug)]
-        print(f"Site-labeled: {len(drugs)}", flush=True)
-    if args.limit is not None:
-        drugs = drugs[: int(args.limit)]
-        print(f"Limited to: {len(drugs)}", flush=True)
-    if not drugs:
-        raise RuntimeError("No training drugs remain after target/confidence/site filters")
+    if explicit_split is None:
+        if confidence_allowlist:
+            allowed = {token.lower() for token in confidence_allowlist}
+            drugs = [drug for drug in drugs if str(drug.get("confidence") or "").strip().lower() in allowed]
+            print(f"Filtered confidence_allowlist={confidence_allowlist}: {len(drugs)}", flush=True)
+        if args.site_labeled_only:
+            drugs = [drug for drug in drugs if _has_site_labels(drug)]
+            print(f"Site-labeled: {len(drugs)}", flush=True)
+        if args.limit is not None:
+            drugs = drugs[: int(args.limit)]
+            print(f"Limited to: {len(drugs)}", flush=True)
+        if not drugs:
+            raise RuntimeError("No training drugs remain after target/confidence/site filters")
 
-    train_drugs, val_drugs, test_drugs = split_drugs(
-        drugs,
-        seed=args.seed,
-        train_ratio=args.train_ratio,
-        val_ratio=args.val_ratio,
-        mode=args.split_mode,
-    )
-    print(f"Split mode: {args.split_mode}", flush=True)
+        train_drugs, val_drugs, test_drugs = split_drugs(
+            drugs,
+            seed=args.seed,
+            train_ratio=args.train_ratio,
+            val_ratio=args.val_ratio,
+            mode=args.split_mode,
+        )
+        print(f"Split mode: {args.split_mode}", flush=True)
+    else:
+        if confidence_allowlist:
+            allowed = {token.lower() for token in confidence_allowlist}
+            train_drugs = [drug for drug in train_drugs if str(drug.get("confidence") or "").strip().lower() in allowed]
+            val_drugs = [drug for drug in val_drugs if str(drug.get("confidence") or "").strip().lower() in allowed]
+            test_drugs = [drug for drug in test_drugs if str(drug.get("confidence") or "").strip().lower() in allowed]
+            print(
+                f"Applied confidence_allowlist to explicit splits={confidence_allowlist}: "
+                f"train={len(train_drugs)} val={len(val_drugs)} test={len(test_drugs)}",
+                flush=True,
+            )
+        if str(args.target_cyp or "").strip():
+            target_cyp = str(args.target_cyp).strip()
+            train_drugs = [drug for drug in train_drugs if _primary_cyp(drug) == target_cyp]
+            val_drugs = [drug for drug in val_drugs if _primary_cyp(drug) == target_cyp]
+            test_drugs = [drug for drug in test_drugs if _primary_cyp(drug) == target_cyp]
+            print(
+                f"Applied target_cyp to explicit splits={target_cyp}: "
+                f"train={len(train_drugs)} val={len(val_drugs)} test={len(test_drugs)}",
+                flush=True,
+            )
+        if args.site_labeled_only:
+            train_drugs = [drug for drug in train_drugs if _has_site_labels(drug)]
+            val_drugs = [drug for drug in val_drugs if _has_site_labels(drug)]
+            test_drugs = [drug for drug in test_drugs if _has_site_labels(drug)]
+            print(
+                "Applied site_labeled_only to explicit splits: "
+                f"train={len(train_drugs)} val={len(val_drugs)} test={len(test_drugs)}",
+                flush=True,
+            )
+        print(
+            "Split mode: explicit_files | "
+            f"train={explicit_split_paths['train']} | "
+            f"val={explicit_split_paths['val']} | "
+            f"test={explicit_split_paths['test']}",
+            flush=True,
+        )
     train_source_allowlist = _parse_csv_tokens(args.train_source_allowlist)
     if train_source_allowlist:
         train_drugs = _filter_by_sources(train_drugs, train_source_allowlist)
@@ -3812,6 +3909,8 @@ def main() -> None:
         "val": _split_summary(val_drugs),
         "test": _split_summary(test_drugs),
     }
+    if explicit_split is not None:
+        split_summary["explicit_split_paths"] = dict(explicit_split_paths)
     for split_name, split_items in (("train", train_drugs), ("val", val_drugs), ("test", test_drugs)):
         summary = split_summary[split_name]
         print(

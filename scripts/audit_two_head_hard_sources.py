@@ -22,11 +22,18 @@ import train_hybrid_full_xtb as train_script
 from enzyme_software.liquid_nn_v2 import HybridLNNModel, LiquidMetabolismNetV2, ModelConfig
 from enzyme_software.liquid_nn_v2.data.dataset_loader import _extract_site_atoms
 from enzyme_software.liquid_nn_v2.experiments.hybrid_full_xtb.dataset import split_drugs
-from enzyme_software.liquid_nn_v2.model.two_head_shortlist_winner import WinnerHeadV2, winner_v2_feature_dim
+from enzyme_software.liquid_nn_v2.model.two_head_shortlist_winner import (
+    WinnerHeadV2,
+    WinnerHeadV2Context,
+    winner_v2_feature_dim,
+)
 from enzyme_software.liquid_nn_v2.training.hard_negative_mining import _bfs_shortest_paths, _build_local_adjacency
 from enzyme_software.liquid_nn_v2.training.pairwise_probe import apply_candidate_mask_to_site_logits
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_trainer import (
     TwoHeadShortlistWinnerV2RebuildTrainer,
+)
+from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_multisite_pairwise_trainer import (
+    TwoHeadShortlistWinnerV2RebuildMultisitePairwiseTrainer,
 )
 
 
@@ -271,6 +278,11 @@ def _load_checkpoint(path: Path, *, device: torch.device) -> dict[str, Any]:
 
 def _resolve_rebuild_branch_config(checkpoint: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     config_block = dict(checkpoint.get("config") or {})
+    if config_block.get("two_head_shortlist_winner_v2_rebuild_multisite_pairwise"):
+        return (
+            "two_head_shortlist_winner_v2_rebuild_multisite_pairwise",
+            dict(config_block.get("two_head_shortlist_winner_v2_rebuild_multisite_pairwise") or {}),
+        )
     if config_block.get("two_head_shortlist_winner_v2_rebuild_hard_source_finetune"):
         return (
             "two_head_shortlist_winner_v2_rebuild_hard_source_finetune",
@@ -307,24 +319,65 @@ def _build_model_and_trainer(checkpoint: dict[str, Any], *, device: torch.device
         use_3d_local_features=True,
     )
     winner_hidden_dim = branch_config.get("winner_v2_rebuild_hidden_dim", None)
-    winner_head = WinnerHeadV2(
-        winner_feature_dim,
-        hidden_dim=(int(winner_hidden_dim) if winner_hidden_dim is not None and int(winner_hidden_dim) > 0 else None),
-        dropout=float(branch_config.get("winner_v2_rebuild_dropout", 0.1)),
-    ).to(device)
+    if branch_name == "two_head_shortlist_winner_v2_rebuild_multisite_pairwise":
+        winner_head = WinnerHeadV2Context(
+            winner_feature_dim,
+            source_vocab_size=5,
+            source_embedding_dim=int(branch_config.get("winner_source_embedding_dim", 8) or 8),
+            use_source_features=bool(branch_config.get("winner_use_source_embedding", True)),
+            use_source_bias=bool(branch_config.get("winner_use_source_bias", True)),
+            use_hard_source_indicator=False,
+            hidden_dim=(int(winner_hidden_dim) if winner_hidden_dim is not None and int(winner_hidden_dim) > 0 else None),
+            dropout=float(branch_config.get("winner_v2_rebuild_dropout", 0.1)),
+        ).to(device)
+    else:
+        winner_head = WinnerHeadV2(
+            winner_feature_dim,
+            hidden_dim=(int(winner_hidden_dim) if winner_hidden_dim is not None and int(winner_hidden_dim) > 0 else None),
+            dropout=float(branch_config.get("winner_v2_rebuild_dropout", 0.1)),
+        ).to(device)
     winner_result = winner_head.load_state_dict(checkpoint.get("winner_head_state_dict") or {}, strict=True)
 
-    trainer = TwoHeadShortlistWinnerV2RebuildTrainer(
-        model=model,
-        winner_head=winner_head,
-        learning_rate=0.0,
-        weight_decay=0.0,
-        max_grad_norm=0.0,
-        frozen_shortlist_topk=int(branch_config.get("frozen_shortlist_topk", 6)),
-        winner_v2_rebuild_loss_weight=float(branch_config.get("winner_v2_rebuild_loss_weight", 1.0)),
-        shortlist_checkpoint_path=str(branch_config.get("frozen_shortlist_checkpoint_path", "")),
-        device=device,
-    )
+    if branch_name == "two_head_shortlist_winner_v2_rebuild_multisite_pairwise":
+        trainer = TwoHeadShortlistWinnerV2RebuildMultisitePairwiseTrainer(
+            model=model,
+            winner_head=winner_head,
+            learning_rate=0.0,
+            weight_decay=0.0,
+            max_grad_norm=0.0,
+            frozen_shortlist_topk=int(branch_config.get("frozen_shortlist_topk", 6)),
+            winner_v2_rebuild_loss_weight=float(branch_config.get("winner_v2_rebuild_loss_weight", 1.0)),
+            shortlist_checkpoint_path=str(branch_config.get("frozen_shortlist_checkpoint_path", "")),
+            winner_use_multi_positive_targets=bool(branch_config.get("winner_use_multi_positive_targets", True)),
+            winner_multi_positive_mode=str(branch_config.get("winner_multi_positive_mode", "softmax_uniform")),
+            winner_multi_positive_only_for_multisite=bool(branch_config.get("winner_multi_positive_only_for_multisite", True)),
+            winner_multisite_loss_weight=float(branch_config.get("winner_multisite_loss_weight", 1.0)),
+            winner_enable_pairwise_ranking=bool(branch_config.get("winner_enable_pairwise_ranking", True)),
+            winner_pairwise_margin=float(branch_config.get("winner_pairwise_margin", 0.2)),
+            winner_pairwise_loss_weight=float(branch_config.get("winner_pairwise_loss_weight", 0.5)),
+            winner_pairwise_sample_mode=str(branch_config.get("winner_pairwise_sample_mode", "hard_false_only")),
+            winner_use_source_embedding=bool(branch_config.get("winner_use_source_embedding", True)),
+            winner_source_embedding_dim=int(branch_config.get("winner_source_embedding_dim", 8)),
+            winner_use_source_bias=bool(branch_config.get("winner_use_source_bias", True)),
+            shortlist_enable_hard_negative_emphasis=bool(branch_config.get("shortlist_enable_hard_negative_emphasis", False)),
+            shortlist_hard_negative_rank_min=int((branch_config.get("shortlist_hard_negative_rank_window") or [2, 12])[0]),
+            shortlist_hard_negative_rank_max=int((branch_config.get("shortlist_hard_negative_rank_window") or [2, 12])[-1]),
+            shortlist_hard_negative_loss_weight=float(branch_config.get("shortlist_hard_negative_loss_weight", 0.0)),
+            shortlist_hard_negative_mode=str(branch_config.get("shortlist_hard_negative_mode", "top_false")),
+            device=device,
+        )
+    else:
+        trainer = TwoHeadShortlistWinnerV2RebuildTrainer(
+            model=model,
+            winner_head=winner_head,
+            learning_rate=0.0,
+            weight_decay=0.0,
+            max_grad_norm=0.0,
+            frozen_shortlist_topk=int(branch_config.get("frozen_shortlist_topk", 6)),
+            winner_v2_rebuild_loss_weight=float(branch_config.get("winner_v2_rebuild_loss_weight", 1.0)),
+            shortlist_checkpoint_path=str(branch_config.get("frozen_shortlist_checkpoint_path", "")),
+            device=device,
+        )
     trainer.model.eval()
     trainer.winner_head.eval()
     return model, winner_head, trainer, {
@@ -364,21 +417,38 @@ def _make_loader_args(args: argparse.Namespace, checkpoint: dict[str, Any]) -> a
 
 
 def _load_split_drugs(args: argparse.Namespace, loader_args: argparse.Namespace) -> tuple[list[dict], list[dict], list[dict]]:
-    dataset_path = Path(args.dataset)
-    if not dataset_path.exists():
-        raise FileNotFoundError(f"Dataset not found: {dataset_path}")
-    drugs = train_script._load_drugs(dataset_path)
+    explicit_split = train_script._load_explicit_split_datasets(
+        train_dataset=str(getattr(args, "train_dataset", "") or ""),
+        val_dataset=str(getattr(args, "val_dataset", "") or ""),
+        test_dataset=str(getattr(args, "test_dataset", "") or ""),
+    )
+    if explicit_split is not None:
+        train_drugs, val_drugs, test_drugs, _ = explicit_split
+    else:
+        dataset_path = Path(args.dataset)
+        if not dataset_path.exists():
+            raise FileNotFoundError(f"Dataset not found: {dataset_path}")
+        drugs = train_script._load_drugs(dataset_path)
+        target_cyp = str(loader_args.target_cyp or "").strip()
+        if target_cyp:
+            drugs = [drug for drug in drugs if str(drug.get("cyp") or drug.get("primary_cyp") or "").strip() == target_cyp]
+        drugs = [drug for drug in drugs if bool(_extract_site_atoms(drug))]
+        train_drugs, val_drugs, test_drugs = split_drugs(
+            drugs,
+            seed=int(loader_args.seed),
+            train_ratio=float(args.train_ratio),
+            val_ratio=float(args.val_ratio),
+            mode=str(loader_args.split_mode),
+        )
+        return train_drugs, val_drugs, test_drugs
     target_cyp = str(loader_args.target_cyp or "").strip()
     if target_cyp:
-        drugs = [drug for drug in drugs if str(drug.get("cyp") or drug.get("primary_cyp") or "").strip() == target_cyp]
-    drugs = [drug for drug in drugs if bool(_extract_site_atoms(drug))]
-    train_drugs, val_drugs, test_drugs = split_drugs(
-        drugs,
-        seed=int(loader_args.seed),
-        train_ratio=float(args.train_ratio),
-        val_ratio=float(args.val_ratio),
-        mode=str(loader_args.split_mode),
-    )
+        train_drugs = [drug for drug in train_drugs if str(drug.get("cyp") or drug.get("primary_cyp") or "").strip() == target_cyp]
+        val_drugs = [drug for drug in val_drugs if str(drug.get("cyp") or drug.get("primary_cyp") or "").strip() == target_cyp]
+        test_drugs = [drug for drug in test_drugs if str(drug.get("cyp") or drug.get("primary_cyp") or "").strip() == target_cyp]
+    train_drugs = [drug for drug in train_drugs if bool(_extract_site_atoms(drug))]
+    val_drugs = [drug for drug in val_drugs if bool(_extract_site_atoms(drug))]
+    test_drugs = [drug for drug in test_drugs if bool(_extract_site_atoms(drug))]
     return train_drugs, val_drugs, test_drugs
 
 
@@ -405,7 +475,7 @@ def _build_audit_rows_for_loader(
     trainer: TwoHeadShortlistWinnerV2RebuildTrainer,
     loader,
     split_name: str,
-    hard_source_names: set[str],
+    hard_source_names: set[str] | None,
     winner_small_margin_threshold: float,
     shortlist_small_margin_threshold: float,
     near_cutoff_rank: int,
@@ -457,7 +527,7 @@ def _build_audit_rows_for_loader(
             for mol_idx in range(num_molecules):
                 meta = dict(metadata[mol_idx] or {}) if mol_idx < len(metadata) and isinstance(metadata[mol_idx], dict) else {}
                 source = _normalize_source(meta.get("source") or meta.get("data_source"))
-                if source not in hard_source_names:
+                if hard_source_names is not None and source not in hard_source_names:
                     continue
                 attnsom_tiers = (
                     _resolve_attnsom_tiers_for_meta(meta, attnsom_tier_lookup)
@@ -630,9 +700,15 @@ def _build_audit_rows_for_loader(
                     "smiles": str(meta.get("smiles", "")),
                     "primary_cyp": str(meta.get("primary_cyp", "")),
                     "site_source": str(meta.get("site_source", "")),
+                    "training_regime": str(meta.get("training_regime", "")),
+                    "label_regime": str(meta.get("label_regime", "")),
                     "true_site_indices": list(true_local_indices),
                     "true_site_count": int(len(true_local_indices)),
                     "is_multi_site": bool(is_multi_site),
+                    "primary_site_atoms": [int(v) for v in list(meta.get("primary_site_atoms", []) or [])],
+                    "secondary_site_atoms": [int(v) for v in list(meta.get("secondary_site_atoms", []) or [])],
+                    "tertiary_site_atoms": [int(v) for v in list(meta.get("tertiary_site_atoms", []) or [])],
+                    "all_labeled_site_atoms": [int(v) for v in list(meta.get("all_labeled_site_atoms", []) or [])],
                     "deterministic_target_candidate_index": deterministic_target_index,
                     "deterministic_target_atom_index": deterministic_target_atom_index,
                     "shortlist_candidate_count": int(candidate_count),

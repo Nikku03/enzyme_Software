@@ -115,6 +115,9 @@ def _capture_console_log(log_path: Path, jsonl_path: Path | None = None):
 
 LOCKED_PRESET_KEYS = {
     "HYBRID_COLAB_DATASET",
+    "HYBRID_COLAB_TRAIN_DATASET",
+    "HYBRID_COLAB_VAL_DATASET",
+    "HYBRID_COLAB_TEST_DATASET",
     "HYBRID_COLAB_STRUCTURE_SDF",
     "HYBRID_COLAB_SPLIT_MODE",
     "HYBRID_COLAB_LIMIT",
@@ -1994,6 +1997,32 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_WINNER_USE_SOURCE_BIAS": "1",
         "HYBRID_COLAB_SHORTLIST_ENABLE_HARD_NEGATIVE_EMPHASIS": "0",
     },
+    "cyp3a4_two_head_shortlist_winner_v2_rebuild_strict_exact_clean": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_two_head_shortlist_winner_v2_rebuild",
+        "HYBRID_COLAB_DATASET": "data/prepared_training/cyp3a4_phase12_splits/cyp3a4_strict_exact_clean_train.json",
+        "HYBRID_COLAB_TRAIN_DATASET": "data/prepared_training/cyp3a4_phase12_splits/cyp3a4_strict_exact_clean_train.json",
+        "HYBRID_COLAB_VAL_DATASET": "data/prepared_training/cyp3a4_phase12_splits/cyp3a4_strict_exact_clean_val.json",
+        "HYBRID_COLAB_TEST_DATASET": "data/prepared_training/cyp3a4_phase12_splits/cyp3a4_strict_exact_clean_test.json",
+    },
+    "cyp3a4_two_head_shortlist_winner_v2_rebuild_exact_plus_tiered": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_two_head_shortlist_winner_v2_rebuild",
+        "HYBRID_COLAB_DATASET": "data/prepared_training/cyp3a4_phase12_splits/cyp3a4_exact_plus_tiered_train.json",
+        "HYBRID_COLAB_TRAIN_DATASET": "data/prepared_training/cyp3a4_phase12_splits/cyp3a4_exact_plus_tiered_train.json",
+        "HYBRID_COLAB_VAL_DATASET": "data/prepared_training/cyp3a4_phase12_splits/cyp3a4_exact_plus_tiered_val.json",
+        "HYBRID_COLAB_TEST_DATASET": "data/prepared_training/cyp3a4_phase12_splits/cyp3a4_exact_plus_tiered_test.json",
+        "HYBRID_COLAB_ENABLE_TWO_HEAD_SHORTLIST_WINNER_V2_REBUILD_MULTISITE_PAIRWISE": "1",
+        "HYBRID_COLAB_WINNER_USE_MULTI_POSITIVE_TARGETS": "1",
+        "HYBRID_COLAB_WINNER_MULTI_POSITIVE_MODE": "softmax_uniform",
+        "HYBRID_COLAB_WINNER_MULTI_POSITIVE_ONLY_FOR_MULTISITE": "1",
+        "HYBRID_COLAB_WINNER_MULTISITE_LOSS_WEIGHT": "1.0",
+        "HYBRID_COLAB_WINNER_ENABLE_PAIRWISE_RANKING": "1",
+        "HYBRID_COLAB_WINNER_PAIRWISE_MARGIN": "0.2",
+        "HYBRID_COLAB_WINNER_PAIRWISE_LOSS_WEIGHT": "0.5",
+        "HYBRID_COLAB_WINNER_PAIRWISE_SAMPLE_MODE": "hard_false_only",
+        "HYBRID_COLAB_WINNER_USE_SOURCE_EMBEDDING": "0",
+        "HYBRID_COLAB_WINNER_USE_SOURCE_BIAS": "0",
+        "HYBRID_COLAB_SHORTLIST_ENABLE_HARD_NEGATIVE_EMPHASIS": "0",
+    },
     "cyp3a4_two_head_shortlist_winner_v2_rebuild_dual_winner_routing": {
         "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank",
         "HYBRID_COLAB_EPOCHS": "1",
@@ -2479,11 +2508,27 @@ def main() -> None:
     script_mode = os.environ.get("HYBRID_COLAB_SCRIPT_MODE", "train").strip().lower() or "train"
 
     requested_dataset = Path(os.environ["HYBRID_COLAB_DATASET"])
-    if script_mode in {"train", "gold_hard_source_eval"} and not requested_dataset.exists():
+    explicit_train_dataset = os.environ.get("HYBRID_COLAB_TRAIN_DATASET", "").strip()
+    explicit_val_dataset = os.environ.get("HYBRID_COLAB_VAL_DATASET", "").strip()
+    explicit_test_dataset = os.environ.get("HYBRID_COLAB_TEST_DATASET", "").strip()
+    explicit_split_enabled = bool(explicit_train_dataset or explicit_val_dataset or explicit_test_dataset)
+    if script_mode in {"train", "gold_hard_source_eval"} and not explicit_split_enabled and not requested_dataset.exists():
         raise FileNotFoundError(
             "Requested dataset not found: "
             f"{requested_dataset}. Set HYBRID_COLAB_DATASET to an existing path before launching training."
         )
+    if explicit_split_enabled:
+        missing = [
+            path
+            for path in (explicit_train_dataset, explicit_val_dataset, explicit_test_dataset)
+            if not path or not Path(path).exists()
+        ]
+        if missing:
+            raise FileNotFoundError(
+                "Explicit split dataset(s) not found or incomplete. "
+                "Set HYBRID_COLAB_TRAIN_DATASET, HYBRID_COLAB_VAL_DATASET, and HYBRID_COLAB_TEST_DATASET "
+                f"to existing paths. Missing: {missing}"
+            )
 
     output_dir = os.environ.get(
         "HYBRID_COLAB_OUTPUT_DIR",
@@ -2640,6 +2685,12 @@ def main() -> None:
             "--val-ratio",
             os.environ.get("HYBRID_COLAB_VAL_RATIO", "0.10"),
         ]
+        if explicit_train_dataset:
+            argv.extend(["--train-dataset", explicit_train_dataset])
+        if explicit_val_dataset:
+            argv.extend(["--val-dataset", explicit_val_dataset])
+        if explicit_test_dataset:
+            argv.extend(["--test-dataset", explicit_test_dataset])
 
     precedent_logbook = os.environ.get("HYBRID_COLAB_PRECEDENT_LOGBOOK", "").strip()
     disable_precedent_logbook = os.environ.get("HYBRID_COLAB_DISABLE_PRECEDENT_LOGBOOK", "1").strip().lower() in {

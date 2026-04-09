@@ -222,6 +222,13 @@ class CYPMetabolismDataset(Dataset):
             "auxiliary_site_only": bool(drug.get("auxiliary_site_only", False)),
             "site_source": str(drug.get("site_source", "")),
             "molecule_key": int(stable_molecule_key(smiles, primary_cyp=cyp)),
+            "training_regime": str(drug.get("training_regime", "")),
+            "label_regime": str(drug.get("label_regime", "")),
+            "primary_site_atoms": [int(v) for v in list(drug.get("primary_site_atoms", []) or []) if isinstance(v, int)],
+            "secondary_site_atoms": [int(v) for v in list(drug.get("secondary_site_atoms", []) or []) if isinstance(v, int)],
+            "tertiary_site_atoms": [int(v) for v in list(drug.get("tertiary_site_atoms", []) or []) if isinstance(v, int)],
+            "all_labeled_site_atoms": [int(v) for v in list(drug.get("all_labeled_site_atoms", []) or []) if isinstance(v, int)],
+            "source_family": str(drug.get("source_family", "")),
         }
         graph.example_name = str(drug.get("name", ""))
         graph.example_confidence = confidence_value
