@@ -69,7 +69,6 @@ if TORCH_AVAILABLE:
             self.winner_use_source_embedding = bool(winner_use_source_embedding)
             self.winner_source_embedding_dim = max(1, int(winner_source_embedding_dim))
             self.winner_use_source_bias = bool(winner_use_source_bias)
-            self.shortlist_enable_hard_negative_emphasis = bool(shortlist_enable_hard_negative_emphasis)
             self.shortlist_hard_negative_rank_min = max(1, int(shortlist_hard_negative_rank_min))
             self.shortlist_hard_negative_rank_max = max(self.shortlist_hard_negative_rank_min, int(shortlist_hard_negative_rank_max))
             self.shortlist_hard_negative_loss_weight = max(0.0, float(shortlist_hard_negative_loss_weight))
@@ -83,9 +82,16 @@ if TORCH_AVAILABLE:
             self.shortlist_hard_negative_sample_mode = str(
                 shortlist_hard_negative_sample_mode or "top_false_only"
             ).strip().lower()
+            self.shortlist_hard_negative_requested_flag = bool(shortlist_enable_hard_negative_emphasis)
+            self.shortlist_enable_hard_negative_emphasis = bool(
+                self.shortlist_hard_negative_requested_flag
+                or self.shortlist_hard_negative_loss_weight > 0.0
+                or self.shortlist_pairwise_loss_weight > 0.0
+            )
             self.source_vocab = tuple(self.SOURCE_VOCAB)
             self.source_to_index = {name: idx for idx, name in enumerate(self.source_vocab)}
             self._active_split_name = "unknown"
+            self._shortlist_hard_negative_warning_emitted = False
             base_impl = getattr(getattr(self.model, "base_lnn", None), "impl", None)
             self.proposer_head = getattr(base_impl, "site_head", None)
             self.source_site_heads = getattr(base_impl, "source_site_heads", None)
@@ -114,6 +120,7 @@ if TORCH_AVAILABLE:
                     ("winner_use_source_embedding", bool(self.winner_use_source_embedding)),
                     ("winner_source_embedding_dim", int(self.winner_source_embedding_dim)),
                     ("winner_use_source_bias", bool(self.winner_use_source_bias)),
+                    ("shortlist_hard_negative_requested_flag", bool(self.shortlist_hard_negative_requested_flag)),
                     ("shortlist_enable_hard_negative_emphasis", bool(self.shortlist_enable_hard_negative_emphasis)),
                     ("shortlist_hard_negative_rank_window", [int(self.shortlist_hard_negative_rank_min), int(self.shortlist_hard_negative_rank_max)]),
                     ("shortlist_hard_negative_loss_weight", float(self.shortlist_hard_negative_loss_weight)),
@@ -304,7 +311,7 @@ if TORCH_AVAILABLE:
             )
             _ = hard_negative_loss
             return {
-                "shortlist_pairwise_example_count": float(hard_negative_stats.get("top_score_hard_neg_molecule_count", 0.0)),
+                "shortlist_pairwise_example_count": float(hard_negative_stats.get("hard_negative_pair_count", 0.0)),
                 "shortlist_hard_negative_count": float(hard_negative_stats.get("hard_negative_pair_count", 0.0)),
                 "shortlist_top_false_beats_true_fraction": 1.0
                 - float(hard_negative_stats.get("top_score_true_beats_fraction", 0.0)),
@@ -646,6 +653,36 @@ if TORCH_AVAILABLE:
             }
             return total_loss, shortlist_scores, examples, metrics
 
+        def _maybe_warn_shortlist_aux_inactive(self, metrics):
+            if self._active_split_name != "train":
+                metrics["shortlist_hard_negative_warning_emitted"] = 0.0
+                return
+            if not bool(self.shortlist_enable_hard_negative_emphasis):
+                metrics["shortlist_hard_negative_warning_emitted"] = 0.0
+                return
+            if self._shortlist_hard_negative_warning_emitted:
+                metrics["shortlist_hard_negative_warning_emitted"] = 1.0
+                return
+            shortlist_aux_loss = float(metrics.get("shortlist_aux_loss", 0.0))
+            shortlist_hard_negative_count = float(metrics.get("shortlist_hard_negative_count", 0.0))
+            shortlist_pairwise_example_count = float(metrics.get("shortlist_pairwise_example_count", 0.0))
+            shortlist_rank_window_false_count = float(metrics.get("shortlist_rank_window_false_count", 0.0))
+            if (
+                shortlist_aux_loss == 0.0
+                and shortlist_hard_negative_count == 0.0
+                and shortlist_pairwise_example_count == 0.0
+                and shortlist_rank_window_false_count == 0.0
+            ):
+                print(
+                    "WARNING: shortlist hard-negative emphasis is effectively enabled but produced zero "
+                    "auxiliary activity for this epoch. Check candidate masks, supervision masks, or preset wiring.",
+                    flush=True,
+                )
+                self._shortlist_hard_negative_warning_emitted = True
+                metrics["shortlist_hard_negative_warning_emitted"] = 1.0
+                return
+            metrics["shortlist_hard_negative_warning_emitted"] = 0.0
+
         def _winner_eval_metrics(self, examples):
             winner_eval_count = 0
             winner_top1 = 0
@@ -813,6 +850,7 @@ if TORCH_AVAILABLE:
             metrics["winner_use_source_embedding"] = bool(self.winner_use_source_embedding)
             metrics["winner_source_embedding_dim"] = int(self.winner_source_embedding_dim)
             metrics["winner_use_source_bias"] = bool(self.winner_use_source_bias)
+            metrics["shortlist_hard_negative_requested_flag"] = bool(self.shortlist_hard_negative_requested_flag)
             metrics["shortlist_enable_hard_negative_emphasis"] = bool(self.shortlist_enable_hard_negative_emphasis)
             metrics["shortlist_hard_negative_loss_weight"] = float(self.shortlist_hard_negative_loss_weight)
             metrics["shortlist_hard_negative_mode"] = str(self.shortlist_hard_negative_mode)
@@ -835,6 +873,7 @@ if TORCH_AVAILABLE:
             metrics["multisite_pairwise_source_conditioning_enabled"] = bool(
                 self.winner_use_source_embedding or self.winner_use_source_bias
             )
+            self._maybe_warn_shortlist_aux_inactive(metrics)
             return metrics
 
         def train_loader_epoch(self, loader):

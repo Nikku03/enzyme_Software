@@ -2035,6 +2035,10 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_MAX_PER_TRUE": "3",
         "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_SAMPLE_MODE": "top_false_only",
     },
+    "cyp3a4_two_head_shortlist_winner_v2_rebuild_multisite_pairwise_shortlist_hardneg_live": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_two_head_shortlist_winner_v2_rebuild_exact_plus_tiered_shortlist_hardneg",
+        "HYBRID_COLAB_SHORTLIST_ENABLE_HARD_NEGATIVE_EMPHASIS": "1",
+    },
     "cyp3a4_two_head_shortlist_winner_v2_rebuild_dual_winner_routing": {
         "HYBRID_COLAB_PRESET_BASE": "cyp3a4_sideinfo_fullrank",
         "HYBRID_COLAB_EPOCHS": "1",

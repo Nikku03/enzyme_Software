@@ -2818,6 +2818,7 @@ def _save_two_head_shortlist_winner_v2_rebuild_multisite_pairwise_state(
     best_val_metrics = dict((best_val_entry or {}).get("val") or {})
     best_train_metrics = dict((best_val_entry or {}).get("train") or {})
     effective_split_summary = _effective_split_summary(split_summary)
+    trainer_restore_summary = dict((restore_summary or {}).get("multisite_pairwise") or {})
     branch_config = {
         "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
         "frozen_shortlist_topk": int(getattr(base_config, "frozen_shortlist_topk", 6)),
@@ -2838,19 +2839,70 @@ def _save_two_head_shortlist_winner_v2_rebuild_multisite_pairwise_state(
         "winner_source_embedding_dim": int(getattr(base_config, "winner_source_embedding_dim", 8)),
         "winner_use_source_bias": bool(getattr(base_config, "winner_use_source_bias", True)),
         "shortlist_enable_hard_negative_emphasis": bool(
-            getattr(base_config, "shortlist_enable_hard_negative_emphasis", False)
+            trainer_restore_summary.get(
+                "shortlist_enable_hard_negative_emphasis",
+                getattr(base_config, "shortlist_enable_hard_negative_emphasis", False),
+            )
+        ),
+        "shortlist_hard_negative_requested_flag": bool(
+            trainer_restore_summary.get(
+                "shortlist_hard_negative_requested_flag",
+                getattr(base_config, "shortlist_enable_hard_negative_emphasis", False),
+            )
         ),
         "shortlist_hard_negative_rank_window": [
-            int(getattr(base_config, "shortlist_hard_negative_rank_min", 2)),
-            int(getattr(base_config, "shortlist_hard_negative_rank_max", 12)),
+            int(
+                (
+                    trainer_restore_summary.get("shortlist_hard_negative_rank_window") or [
+                        int(getattr(base_config, "shortlist_hard_negative_rank_min", 2)),
+                        int(getattr(base_config, "shortlist_hard_negative_rank_max", 12)),
+                    ]
+                )[0]
+            ),
+            int(
+                (
+                    trainer_restore_summary.get("shortlist_hard_negative_rank_window") or [
+                        int(getattr(base_config, "shortlist_hard_negative_rank_min", 2)),
+                        int(getattr(base_config, "shortlist_hard_negative_rank_max", 12)),
+                    ]
+                )[1]
+            ),
         ],
-        "shortlist_hard_negative_loss_weight": float(getattr(base_config, "shortlist_hard_negative_loss_weight", 0.0)),
-        "shortlist_hard_negative_mode": str(getattr(base_config, "shortlist_hard_negative_mode", "top_false")),
-        "shortlist_pairwise_margin": float(getattr(base_config, "shortlist_pairwise_margin", 0.20)),
-        "shortlist_pairwise_loss_weight": float(getattr(base_config, "shortlist_pairwise_loss_weight", 0.0)),
-        "shortlist_hard_negative_max_per_true": int(getattr(base_config, "shortlist_hard_negative_max_per_true", 3)),
+        "shortlist_hard_negative_loss_weight": float(
+            trainer_restore_summary.get(
+                "shortlist_hard_negative_loss_weight",
+                getattr(base_config, "shortlist_hard_negative_loss_weight", 0.0),
+            )
+        ),
+        "shortlist_hard_negative_mode": str(
+            trainer_restore_summary.get(
+                "shortlist_hard_negative_mode",
+                getattr(base_config, "shortlist_hard_negative_mode", "top_false"),
+            )
+        ),
+        "shortlist_pairwise_margin": float(
+            trainer_restore_summary.get(
+                "shortlist_pairwise_margin",
+                getattr(base_config, "shortlist_pairwise_margin", 0.20),
+            )
+        ),
+        "shortlist_pairwise_loss_weight": float(
+            trainer_restore_summary.get(
+                "shortlist_pairwise_loss_weight",
+                getattr(base_config, "shortlist_pairwise_loss_weight", 0.0),
+            )
+        ),
+        "shortlist_hard_negative_max_per_true": int(
+            trainer_restore_summary.get(
+                "shortlist_hard_negative_max_per_true",
+                getattr(base_config, "shortlist_hard_negative_max_per_true", 3),
+            )
+        ),
         "shortlist_hard_negative_sample_mode": str(
-            getattr(base_config, "shortlist_hard_negative_sample_mode", "top_false_only")
+            trainer_restore_summary.get(
+                "shortlist_hard_negative_sample_mode",
+                getattr(base_config, "shortlist_hard_negative_sample_mode", "top_false_only"),
+            )
         ),
         "restore_summary": dict(restore_summary or {}),
     }
