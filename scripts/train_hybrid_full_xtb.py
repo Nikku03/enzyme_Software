@@ -366,6 +366,14 @@ def _env_str(name: str) -> str | None:
     return raw or None
 
 
+def _env_bool(name: str) -> bool | None:
+    """Convert env var to bool. Returns None if not set, True/False otherwise."""
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return None
+    return raw.lower() in {"1", "true", "yes", "on"}
+
+
 def _collect_model_overrides() -> dict[str, int | float | str]:
     mapping = {
         "HYBRID_COLAB_NEXUS_WAVE_HIDDEN_DIM": (_env_int, "nexus_wave_hidden_dim"),
@@ -485,10 +493,10 @@ def _collect_model_overrides() -> dict[str, int | float | str]:
         "HYBRID_COLAB_SOURCE_SITE_AUX_WEIGHT": (_env_float, "source_site_aux_weight"),
         "HYBRID_COLAB_SOURCE_SITE_BLEND_WEIGHT": (_env_float, "source_site_blend_weight"),
         # Phase 1: Relational Proposer
-        "HYBRID_COLAB_USE_RELATIONAL_PROPOSER": (_env_int, "use_relational_proposer"),
+        "HYBRID_COLAB_USE_RELATIONAL_PROPOSER": (_env_bool, "use_relational_proposer"),
         "HYBRID_COLAB_RELATIONAL_PROPOSER_NUM_HEADS": (_env_int, "relational_proposer_num_heads"),
         "HYBRID_COLAB_RELATIONAL_PROPOSER_NUM_LAYERS": (_env_int, "relational_proposer_num_layers"),
-        "HYBRID_COLAB_RELATIONAL_PROPOSER_USE_PAIRWISE": (_env_int, "relational_proposer_use_pairwise"),
+        "HYBRID_COLAB_RELATIONAL_PROPOSER_USE_PAIRWISE": (_env_bool, "relational_proposer_use_pairwise"),
         "HYBRID_COLAB_RELATIONAL_PROPOSER_DROPOUT": (_env_float, "relational_proposer_dropout"),
         "HYBRID_COLAB_RELATIONAL_PROPOSER_RESIDUAL_SCALE": (_env_float, "relational_proposer_residual_scale"),
         "HYBRID_COLAB_RELATIONAL_PROPOSER_HIDDEN_DIM": (_env_int, "relational_proposer_hidden_dim"),
@@ -4075,6 +4083,16 @@ def main() -> None:
     live_wave_vote_inputs = _env_flag("HYBRID_COLAB_LIVE_WAVE_VOTE_INPUTS", "1")
     live_analogical_vote_inputs = _env_flag("HYBRID_COLAB_LIVE_ANALOGICAL_VOTE_INPUTS", "1")
     model_overrides = _collect_model_overrides()
+    
+    # Print Phase 1 relational proposer config if enabled
+    if model_overrides.get('use_relational_proposer'):
+        print("=" * 60, flush=True)
+        print("PHASE 1: RELATIONAL PROPOSER ENABLED", flush=True)
+        print(f"  num_heads: {model_overrides.get('relational_proposer_num_heads', 4)}", flush=True)
+        print(f"  num_layers: {model_overrides.get('relational_proposer_num_layers', 2)}", flush=True)
+        print(f"  use_pairwise: {model_overrides.get('relational_proposer_use_pairwise', True)}", flush=True)
+        print("=" * 60, flush=True)
+    
     base_config = ModelConfig.light_advanced(
         use_manual_engine_priors=manual_engine_enabled,
         use_3d_branch=True,
