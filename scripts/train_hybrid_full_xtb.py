@@ -3875,6 +3875,9 @@ def main() -> None:
             f"test={explicit_split_paths['test']}",
             flush=True,
         )
+        # Keep the downstream dataset-level summaries aligned with the filtered
+        # explicit split contents instead of assuming a single source dataset.
+        drugs = [*train_drugs, *val_drugs, *test_drugs]
     train_source_allowlist = _parse_csv_tokens(args.train_source_allowlist)
     if train_source_allowlist:
         train_drugs = _filter_by_sources(train_drugs, train_source_allowlist)
