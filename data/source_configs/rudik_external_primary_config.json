@@ -1,0 +1,11 @@
+{
+  "fixed_cyp": "CYP3A4",
+  "site_fields": ["PRIMARY_SOM"],
+  "id_fields": ["ID", "_Name"],
+  "name_fields": ["ID", "_Name"],
+  "citation_fields": ["Citation"],
+  "doi_fields": ["DOI"],
+  "source_detail_fields": [],
+  "index_base": 1,
+  "confidence_override": "medium"
+}

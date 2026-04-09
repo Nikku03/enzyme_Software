@@ -1,0 +1,12 @@
+{
+  "fixed_cyp": "CYP3A4",
+  "bom_field": "BOM_3A4",
+  "flag_comments_field": "FLAG_COMMENTS",
+  "id_fields": ["InChIKey", "PubChem_CID", "_Name"],
+  "name_fields": ["_Name", "InChIKey", "PubChem_CID"],
+  "citation_fields": ["References"],
+  "doi_fields": ["DOI"],
+  "source_detail_fields": ["PubChem_CID", "InChIKey"],
+  "index_base": 0,
+  "confidence_override": "medium"
+}

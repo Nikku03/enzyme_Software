@@ -202,6 +202,35 @@ def _source_detail_strings(annotation: dict[str, Any]) -> list[str]:
     return [value for value in values if str(value).strip()]
 
 
+def _parse_metxbio_bom_annotation(raw: str) -> list[dict[str, Any]]:
+    parsed: list[dict[str, Any]] = []
+    for line in str(raw or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if not (line.startswith("<") and ">" in line):
+            continue
+        body = line[1 : line.index(">")]
+        parts = [part.strip() for part in body.split(";")]
+        if len(parts) < 2:
+            continue
+        locus = parts[0]
+        reaction = parts[1]
+        locus_parts = [token.strip() for token in locus.split(",") if token.strip()]
+        if not locus_parts:
+            continue
+        if len(locus_parts) >= 2 and all(part.isdigit() for part in locus_parts[:2]):
+            atoms = [int(locus_parts[0]) - 1, int(locus_parts[1]) - 1]
+            if min(atoms) >= 0:
+                parsed.append({"kind": "bond", "atoms": atoms, "reaction": reaction})
+            continue
+        if locus_parts[0].isdigit():
+            atom_idx = int(locus_parts[0]) - 1
+            if atom_idx >= 0:
+                parsed.append({"kind": "atom", "atom": atom_idx, "reaction": reaction})
+    return parsed
+
+
 def _parse_attnsom_record(mol: Chem.Mol, *, source_name: str, source_file: Path, target_cyp: str) -> dict[str, Any] | None:
     canonical_smiles, mapping, canonical_mol = _canonical_identity_from_mol(mol)
     if canonical_smiles is None or mapping is None:
@@ -316,9 +345,40 @@ def _parse_generic_record(
         for field_name in site_fields:
             tokens.extend(_parse_index_tokens(_safe_mol_prop(mol, str(field_name)), index_base=index_base))
         all_atoms = _remap_indices(tokens, mapping)
+    elif parser_family == "metxbio_bom":
+        raw = _safe_mol_prop(mol, str(config.get("bom_field") or "BOM_3A4"))
+        parsed = _parse_metxbio_bom_annotation(raw)
+        atom_sites = _remap_indices(
+            sorted({int(item["atom"]) for item in parsed if item["kind"] == "atom"}),
+            mapping,
+        )
+        bond_sites = _remap_indices(
+            sorted({int(atom) for item in parsed if item["kind"] == "bond" for atom in item["atoms"]}),
+            mapping,
+        )
+        all_atoms = sorted(set(atom_sites + bond_sites))
+        flag_comments_field = str(config.get("flag_comments_field") or "FLAG_COMMENTS")
+        broad_regions = [str(_safe_mol_prop(mol, flag_comments_field))] if str(_safe_mol_prop(mol, flag_comments_field)).strip() else []
+        primary = list(atom_sites)
+        secondary = []
+        tertiary = []
+        if atom_sites:
+            label_regime_default = "multi_exact" if len(atom_sites) > 1 else "single_exact"
+        elif bond_sites:
+            label_regime_default = "broad_region"
+        else:
+            label_regime_default = "unknown"
     else:
         raise ValueError(f"Unsupported parser_family={parser_family}")
-    broad_regions = [str(_safe_mol_prop(mol, field)) for field in broad_region_fields if str(_safe_mol_prop(mol, field)).strip()]
+    if parser_family != "metxbio_bom":
+        broad_regions = [str(_safe_mol_prop(mol, field)) for field in broad_region_fields if str(_safe_mol_prop(mol, field)).strip()]
+        label_regime_default = _infer_label_regime(
+            primary=primary,
+            secondary=secondary,
+            tertiary=tertiary,
+            all_atoms=all_atoms,
+            broad_region_annotations=broad_regions,
+        )
     if not all_atoms and not broad_regions:
         return None
     record_id = _first_nonempty_prop(mol, [str(v) for v in id_fields if str(v).strip()]) or source_name
@@ -332,13 +392,7 @@ def _parse_generic_record(
             source_details.append(f"{field}={value}")
     source_details = _dedupe_sorted([value for value in source_details if str(value).strip()])
     label_regime_override = str(config.get("label_regime_override") or "").strip()
-    label_regime = label_regime_override or _infer_label_regime(
-        primary=primary,
-        secondary=secondary,
-        tertiary=tertiary,
-        all_atoms=all_atoms,
-        broad_region_annotations=broad_regions,
-    )
+    label_regime = label_regime_override or label_regime_default
     return {
         "molecule_name": str(name),
         "name": str(name),
@@ -693,7 +747,7 @@ def main() -> None:
                     source_file=input_sdf,
                     target_cyp=target_cyp,
                 )
-            elif parser_family in {"flat_atom_list", "tiered_atom_lists"}:
+            elif parser_family in {"flat_atom_list", "tiered_atom_lists", "metxbio_bom"}:
                 record = _parse_generic_record(
                     mol,
                     source_name=source_name,
