@@ -261,6 +261,19 @@ class ModelConfig:
     hard_source_finetune_skip_non_hard_sources: bool = True
     winner_finetune_init_checkpoint_path: str = ""
     hard_source_finetune_lr_scale: float = 0.5
+    enable_two_head_shortlist_winner_v2_rebuild_boundary_reranker: bool = False
+    boundary_reranker_shortlist_k: int = 12
+    boundary_reranker_output_k: int = 6
+    boundary_reranker_train_on_rescued_only: bool = True
+    boundary_reranker_train_on_hits_only: bool = True
+    boundary_reranker_use_pairwise_mode: bool = False
+    boundary_reranker_use_listwise_mode: bool = True
+    boundary_reranker_hidden_dim: Optional[int] = None
+    boundary_reranker_dropout: float = 0.1
+    boundary_reranker_loss_weight: float = 1.0
+    boundary_reranker_focus_true_rank_min: int = 7
+    boundary_reranker_focus_true_rank_max: int = 12
+    boundary_reranker_winner_init_checkpoint_path: str = ""
     enable_two_head_shortlist_winner_v2_rebuild_dual_winner_routing: bool = False
     global_winner_checkpoint_path: str = ""
     hard_source_winner_checkpoint_path: str = ""
@@ -659,6 +672,30 @@ class ModelConfig:
         self.hard_source_finetune_skip_non_hard_sources = bool(self.hard_source_finetune_skip_non_hard_sources)
         self.winner_finetune_init_checkpoint_path = str(self.winner_finetune_init_checkpoint_path or "").strip()
         self.hard_source_finetune_lr_scale = max(0.0, float(self.hard_source_finetune_lr_scale))
+        self.enable_two_head_shortlist_winner_v2_rebuild_boundary_reranker = bool(
+            self.enable_two_head_shortlist_winner_v2_rebuild_boundary_reranker
+        )
+        self.boundary_reranker_shortlist_k = max(2, int(self.boundary_reranker_shortlist_k))
+        self.boundary_reranker_output_k = max(1, int(self.boundary_reranker_output_k))
+        if self.boundary_reranker_output_k > self.boundary_reranker_shortlist_k:
+            self.boundary_reranker_output_k = int(self.boundary_reranker_shortlist_k)
+        self.boundary_reranker_train_on_rescued_only = bool(self.boundary_reranker_train_on_rescued_only)
+        self.boundary_reranker_train_on_hits_only = bool(self.boundary_reranker_train_on_hits_only)
+        self.boundary_reranker_use_pairwise_mode = bool(self.boundary_reranker_use_pairwise_mode)
+        self.boundary_reranker_use_listwise_mode = bool(self.boundary_reranker_use_listwise_mode)
+        self.boundary_reranker_hidden_dim = (
+            None if self.boundary_reranker_hidden_dim is None else max(1, int(self.boundary_reranker_hidden_dim))
+        )
+        self.boundary_reranker_dropout = min(max(float(self.boundary_reranker_dropout), 0.0), 0.5)
+        self.boundary_reranker_loss_weight = max(0.0, float(self.boundary_reranker_loss_weight))
+        self.boundary_reranker_focus_true_rank_min = max(1, int(self.boundary_reranker_focus_true_rank_min))
+        self.boundary_reranker_focus_true_rank_max = max(
+            self.boundary_reranker_focus_true_rank_min,
+            int(self.boundary_reranker_focus_true_rank_max),
+        )
+        self.boundary_reranker_winner_init_checkpoint_path = str(
+            self.boundary_reranker_winner_init_checkpoint_path or ""
+        ).strip()
         self.enable_two_head_shortlist_winner_v2_rebuild_dual_winner_routing = bool(
             self.enable_two_head_shortlist_winner_v2_rebuild_dual_winner_routing
         )
