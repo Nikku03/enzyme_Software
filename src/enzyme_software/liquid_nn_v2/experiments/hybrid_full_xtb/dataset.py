@@ -16,7 +16,7 @@ try:
 except Exception:  # pragma: no cover - optional dependency at import time
     Chem = None
 
-from enzyme_software.liquid_nn_v2._compat import require_torch
+from enzyme_software.liquid_nn_v2._compat import require_torch, torch
 from enzyme_software.liquid_nn_v2.data.dataset_loader import CYPMetabolismDataset, collate_fn
 from enzyme_software.liquid_nn_v2.features.micropattern_features import CHEMISTRY_PRIOR_PATTERN_DEFS, chemistry_prior_matrix
 from enzyme_software.liquid_nn_v2.features.steric_features import StructureLibrary
