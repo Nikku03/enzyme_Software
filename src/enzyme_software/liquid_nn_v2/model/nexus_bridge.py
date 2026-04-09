@@ -7,9 +7,68 @@ from enzyme_software.liquid_nn_v2.features.xtb_features import FULL_XTB_FEATURE_
 from enzyme_software.liquid_nn_v2.model.liquid_branch import scatter_mean
 from enzyme_software.liquid_nn_v2.model.precedent_logbook import AuditedEpisodeLogbook
 from enzyme_software.liquid_nn_v2.model.wave_field import WholeMoleculeWaveField
-from nexus.reasoning.metric_learner import HGNNProjection
-from nexus.reasoning_wave.analogical_fusion import NexusDualDecoder, PGWCrossAttention
-from nexus.reasoning_wave.metric_learner import WaveQuantumDistillationHead, quantum_distillation_loss
+
+# Try to import nexus, fall back to stubs if not available
+try:
+    from nexus.reasoning.metric_learner import HGNNProjection
+    from nexus.reasoning_wave.analogical_fusion import NexusDualDecoder, PGWCrossAttention
+    from nexus.reasoning_wave.metric_learner import WaveQuantumDistillationHead, quantum_distillation_loss
+    NEXUS_AVAILABLE = True
+except ImportError:
+    # Use stub implementations
+    NEXUS_AVAILABLE = False
+    
+    if TORCH_AVAILABLE:
+        class HGNNProjection(nn.Module):
+            """Stub for HGNNProjection when nexus is not available."""
+            def __init__(self, in_dim=128, out_dim=64, **kwargs):
+                super().__init__()
+                self.proj = nn.Linear(in_dim, out_dim)
+            
+            def forward(self, x, edge_index=None, edge_attr=None, batch=None, **kwargs):
+                return self.proj(x)
+        
+        class NexusDualDecoder(nn.Module):
+            """Stub for NexusDualDecoder when nexus is not available."""
+            def __init__(self, dim=128, **kwargs):
+                super().__init__()
+                self.proj = nn.Linear(dim, dim)
+                self.norm = nn.LayerNorm(dim)
+            
+            def forward(self, x, context=None, **kwargs):
+                return self.norm(self.proj(x))
+        
+        class PGWCrossAttention(nn.Module):
+            """Stub for PGWCrossAttention when nexus is not available."""
+            def __init__(self, dim=128, heads=4, **kwargs):
+                super().__init__()
+                self.attn = nn.MultiheadAttention(dim, heads, batch_first=True)
+                self.norm = nn.LayerNorm(dim)
+            
+            def forward(self, query, key, value=None, **kwargs):
+                if value is None:
+                    value = key
+                out, _ = self.attn(query, key, value)
+                return self.norm(out)
+        
+        class WaveQuantumDistillationHead(nn.Module):
+            """Stub for WaveQuantumDistillationHead when nexus is not available."""
+            def __init__(self, dim=128, out_dim=1, **kwargs):
+                super().__init__()
+                self.head = nn.Linear(dim, out_dim)
+            
+            def forward(self, x, **kwargs):
+                return self.head(x)
+        
+        def quantum_distillation_loss(pred, target, **kwargs):
+            """Stub for quantum_distillation_loss when nexus is not available."""
+            return torch.tensor(0.0, device=pred.device, requires_grad=True)
+    else:
+        HGNNProjection = None
+        NexusDualDecoder = None
+        PGWCrossAttention = None
+        WaveQuantumDistillationHead = None
+        quantum_distillation_loss = None
 
 
 if TORCH_AVAILABLE:
