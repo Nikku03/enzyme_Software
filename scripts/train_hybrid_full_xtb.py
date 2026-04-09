@@ -68,6 +68,9 @@ from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_hard_source_finetune_trainer import (
     TwoHeadShortlistWinnerV2RebuildHardSourceFinetuneTrainer,
 )
+from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_multisite_pairwise_trainer import (
+    TwoHeadShortlistWinnerV2RebuildMultisitePairwiseTrainer,
+)
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_rebuild_trainer import TwoHeadShortlistWinnerV2RebuildTrainer
 from enzyme_software.liquid_nn_v2.training.two_head_shortlist_winner_v2_trainer import TwoHeadShortlistWinnerV2Trainer
 from enzyme_software.liquid_nn_v2.training.trainer import Trainer
@@ -692,6 +695,29 @@ def _collect_model_overrides() -> dict[str, int | float | str]:
             "winner_context_use_only_existing_repo_features",
         ),
         "HYBRID_COLAB_WINNER_CONTEXT_INIT_CHECKPOINT": (_env_str, "winner_context_init_checkpoint_path"),
+        "HYBRID_COLAB_ENABLE_TWO_HEAD_SHORTLIST_WINNER_V2_REBUILD_MULTISITE_PAIRWISE": (
+            _env_int,
+            "enable_two_head_shortlist_winner_v2_rebuild_multisite_pairwise",
+        ),
+        "HYBRID_COLAB_WINNER_USE_MULTI_POSITIVE_TARGETS": (_env_int, "winner_use_multi_positive_targets"),
+        "HYBRID_COLAB_WINNER_MULTI_POSITIVE_MODE": (_env_str, "winner_multi_positive_mode"),
+        "HYBRID_COLAB_WINNER_MULTI_POSITIVE_ONLY_FOR_MULTISITE": (
+            _env_int,
+            "winner_multi_positive_only_for_multisite",
+        ),
+        "HYBRID_COLAB_WINNER_MULTISITE_LOSS_WEIGHT": (_env_float, "winner_multisite_loss_weight"),
+        "HYBRID_COLAB_WINNER_ENABLE_PAIRWISE_RANKING": (_env_int, "winner_enable_pairwise_ranking"),
+        "HYBRID_COLAB_WINNER_PAIRWISE_MARGIN": (_env_float, "winner_pairwise_margin"),
+        "HYBRID_COLAB_WINNER_PAIRWISE_LOSS_WEIGHT": (_env_float, "winner_pairwise_loss_weight"),
+        "HYBRID_COLAB_WINNER_PAIRWISE_SAMPLE_MODE": (_env_str, "winner_pairwise_sample_mode"),
+        "HYBRID_COLAB_WINNER_USE_SOURCE_EMBEDDING": (_env_int, "winner_use_source_embedding"),
+        "HYBRID_COLAB_WINNER_SOURCE_EMBEDDING_DIM": (_env_int, "winner_source_embedding_dim"),
+        "HYBRID_COLAB_WINNER_USE_SOURCE_BIAS": (_env_int, "winner_use_source_bias"),
+        "HYBRID_COLAB_SHORTLIST_ENABLE_HARD_NEGATIVE_EMPHASIS": (_env_int, "shortlist_enable_hard_negative_emphasis"),
+        "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_RANK_MIN": (_env_int, "shortlist_hard_negative_rank_min"),
+        "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_RANK_MAX": (_env_int, "shortlist_hard_negative_rank_max"),
+        "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_LOSS_WEIGHT": (_env_float, "shortlist_hard_negative_loss_weight"),
+        "HYBRID_COLAB_SHORTLIST_HARD_NEGATIVE_MODE": (_env_str, "shortlist_hard_negative_mode"),
     }
     overrides: dict[str, int | float | str] = {}
     for env_name, (parser, field_name) in mapping.items():
@@ -2709,6 +2735,164 @@ def _save_two_head_shortlist_winner_v2_rebuild_state(
     return latest_path, best_path, archive_path, report_path
 
 
+def _save_two_head_shortlist_winner_v2_rebuild_multisite_pairwise_state(
+    *,
+    model,
+    winner_head,
+    optimizer_state,
+    trainable_module_summary,
+    frozen_module_summary,
+    frozen_shortlist_checkpoint_path: Path,
+    output_dir: Path,
+    artifact_dir: Path,
+    args,
+    history,
+    best_epoch: int,
+    best_selection,
+    best_model_state,
+    best_winner_head_state,
+    base_config,
+    checkpoint_path: Path,
+    split_mode: str,
+    split_summary: dict[str, object],
+    restore_summary: dict[str, object],
+    reproducibility_metadata: dict[str, object],
+    warm_start_checkpoint_metadata: dict[str, object],
+    frozen_shortlist_checkpoint_metadata: dict[str, object],
+    checkpoint_identity_match: dict[str, object],
+    test_metrics=None,
+    status: str = "running",
+):
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    latest_path = output_dir / "two_head_shortlist_winner_v2_rebuild_multisite_pairwise_latest.pt"
+    best_path = output_dir / "two_head_shortlist_winner_v2_rebuild_multisite_pairwise_best.pt"
+    archive_path = output_dir / f"two_head_shortlist_winner_v2_rebuild_multisite_pairwise_{timestamp}.pt"
+    report_path = artifact_dir / f"two_head_shortlist_winner_v2_rebuild_multisite_pairwise_report_{timestamp}.json"
+    history_len = int(len(history))
+    final_epoch = int(history[-1]["epoch"]) if history else 0
+    last_train_metrics = dict(history[-1].get("train") or {}) if history else {}
+    last_val_metrics = dict(history[-1].get("val") or {}) if history else {}
+    best_val_entry = next((row for row in history if int(row.get("epoch", 0)) == int(best_epoch)), None) if history else None
+    best_val_metrics = dict((best_val_entry or {}).get("val") or {})
+    best_train_metrics = dict((best_val_entry or {}).get("train") or {})
+    effective_split_summary = _effective_split_summary(split_summary)
+    branch_config = {
+        "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
+        "frozen_shortlist_topk": int(getattr(base_config, "frozen_shortlist_topk", 6)),
+        "winner_v2_rebuild_hidden_dim": getattr(base_config, "winner_v2_rebuild_hidden_dim", None),
+        "winner_v2_rebuild_dropout": float(getattr(base_config, "winner_v2_rebuild_dropout", 0.1)),
+        "winner_v2_rebuild_loss_weight": float(getattr(base_config, "winner_v2_rebuild_loss_weight", 1.0)),
+        "winner_use_multi_positive_targets": bool(getattr(base_config, "winner_use_multi_positive_targets", True)),
+        "winner_multi_positive_mode": str(getattr(base_config, "winner_multi_positive_mode", "softmax_uniform")),
+        "winner_multi_positive_only_for_multisite": bool(
+            getattr(base_config, "winner_multi_positive_only_for_multisite", True)
+        ),
+        "winner_multisite_loss_weight": float(getattr(base_config, "winner_multisite_loss_weight", 1.0)),
+        "winner_enable_pairwise_ranking": bool(getattr(base_config, "winner_enable_pairwise_ranking", True)),
+        "winner_pairwise_margin": float(getattr(base_config, "winner_pairwise_margin", 0.2)),
+        "winner_pairwise_loss_weight": float(getattr(base_config, "winner_pairwise_loss_weight", 0.5)),
+        "winner_pairwise_sample_mode": str(getattr(base_config, "winner_pairwise_sample_mode", "hard_false_only")),
+        "winner_use_source_embedding": bool(getattr(base_config, "winner_use_source_embedding", True)),
+        "winner_source_embedding_dim": int(getattr(base_config, "winner_source_embedding_dim", 8)),
+        "winner_use_source_bias": bool(getattr(base_config, "winner_use_source_bias", True)),
+        "shortlist_enable_hard_negative_emphasis": bool(
+            getattr(base_config, "shortlist_enable_hard_negative_emphasis", False)
+        ),
+        "shortlist_hard_negative_rank_window": [
+            int(getattr(base_config, "shortlist_hard_negative_rank_min", 2)),
+            int(getattr(base_config, "shortlist_hard_negative_rank_max", 12)),
+        ],
+        "shortlist_hard_negative_loss_weight": float(getattr(base_config, "shortlist_hard_negative_loss_weight", 0.0)),
+        "shortlist_hard_negative_mode": str(getattr(base_config, "shortlist_hard_negative_mode", "top_false")),
+        "restore_summary": dict(restore_summary or {}),
+    }
+    checkpoint = {
+        "model_state_dict": _initialized_state_dict(model),
+        "winner_head_state_dict": _initialized_state_dict(winner_head),
+        "optimizer_state_dict": optimizer_state,
+        "config": {
+            "base_model": base_config.__dict__,
+            "two_head_shortlist_winner_v2_rebuild_multisite_pairwise": branch_config,
+        },
+        "training_config": TrainingConfig(
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            early_stopping_patience=args.early_stopping_patience,
+        ).__dict__,
+        "two_head_shortlist_winner_v2_rebuild_multisite_pairwise_enabled": True,
+        "checkpoint_source": str(checkpoint_path),
+        "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
+        "restore_summary": dict(restore_summary or {}),
+        "best_epoch": int(best_epoch),
+        "best_selection": list(best_selection) if best_selection is not None else None,
+        "history_len": history_len,
+        "final_epoch": final_epoch,
+        "split_mode": split_mode,
+        "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+        "split_summary": split_summary,
+        "effective_split_summary": effective_split_summary,
+        "last_train_metrics": last_train_metrics,
+        "last_val_metrics": last_val_metrics,
+        "best_train_metrics": best_train_metrics,
+        "best_val_metrics": best_val_metrics,
+        "test_metrics": test_metrics,
+        "history": history,
+        "status": status,
+        "trainable_module_summary": list(trainable_module_summary or []),
+        "frozen_module_summary": list(frozen_module_summary or []),
+        "seed": int(getattr(args, "seed", 0)),
+        "reproducibility_metadata": dict(reproducibility_metadata or {}),
+        "warm_start_checkpoint_metadata": dict(warm_start_checkpoint_metadata or {}),
+        "frozen_shortlist_checkpoint_metadata": dict(frozen_shortlist_checkpoint_metadata or {}),
+        "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+    }
+    torch.save(checkpoint, latest_path)
+    torch.save(checkpoint, archive_path)
+    if best_model_state is not None:
+        best_checkpoint = dict(checkpoint)
+        best_checkpoint["model_state_dict"] = best_model_state
+        best_checkpoint["winner_head_state_dict"] = best_winner_head_state
+        best_checkpoint["status"] = f"{status}_best"
+        torch.save(best_checkpoint, best_path)
+    report_path.write_text(
+        json.dumps(
+            {
+                "status": status,
+                "two_head_shortlist_winner_v2_rebuild_multisite_pairwise_enabled": True,
+                "checkpoint_source": str(checkpoint_path),
+                "frozen_shortlist_checkpoint_path": str(frozen_shortlist_checkpoint_path),
+                "restore_summary": dict(restore_summary or {}),
+                "branch_config": branch_config,
+                "best_epoch": int(best_epoch),
+                "best_selection": list(best_selection) if best_selection is not None else None,
+                "history_len": history_len,
+                "final_epoch": final_epoch,
+                "split_mode": split_mode,
+                "target_cyp": str(getattr(args, "target_cyp", "") or ""),
+                "split_summary": split_summary,
+                "effective_split_summary": effective_split_summary,
+                "last_train_metrics": last_train_metrics,
+                "last_val_metrics": last_val_metrics,
+                "best_train_metrics": best_train_metrics,
+                "best_val_metrics": best_val_metrics,
+                "test_metrics": test_metrics,
+                "history": history,
+                "trainable_module_summary": list(trainable_module_summary or []),
+                "frozen_module_summary": list(frozen_module_summary or []),
+                "seed": int(getattr(args, "seed", 0)),
+                "reproducibility_metadata": dict(reproducibility_metadata or {}),
+                "warm_start_checkpoint_metadata": dict(warm_start_checkpoint_metadata or {}),
+                "frozen_shortlist_checkpoint_metadata": dict(frozen_shortlist_checkpoint_metadata or {}),
+                "checkpoint_identity_match": dict(checkpoint_identity_match or {}),
+            },
+            indent=2,
+        )
+    )
+    return latest_path, best_path, archive_path, report_path
+
+
 def _save_two_head_shortlist_winner_v2_rebuild_hard_source_finetune_state(
     *,
     model,
@@ -4634,6 +4818,251 @@ def main() -> None:
             history=history,
             best_epoch=best_epoch,
             best_selection=best_selection,
+            base_config=base_config,
+            checkpoint_path=checkpoint_path,
+            split_mode=args.split_mode,
+            split_summary=split_summary,
+            restore_summary=restore_summary,
+            reproducibility_metadata=reproducibility_metadata,
+            warm_start_checkpoint_metadata=warm_start_checkpoint_metadata,
+            frozen_shortlist_checkpoint_metadata=frozen_shortlist_checkpoint_metadata,
+            checkpoint_identity_match=checkpoint_identity_match,
+            test_metrics=test_metrics,
+            status="completed",
+        )
+        print(
+            json.dumps(
+                {
+                    "status": "completed",
+                    "latest_checkpoint": str(latest_path),
+                    "best_checkpoint": str(best_path),
+                    "archive_checkpoint": str(archive_path),
+                    "report": str(report_path),
+                },
+                indent=2,
+            ),
+            flush=True,
+        )
+        return
+
+    if bool(getattr(base_config, "enable_two_head_shortlist_winner_v2_rebuild_multisite_pairwise", False)):
+        atom_dim = int(getattr(base_config, "som_branch_dim", getattr(base_config, "hidden_dim", 128)))
+        winner_feature_dim = winner_v2_feature_dim(
+            atom_dim,
+            use_existing_candidate_features=True,
+            use_score_gap_features=True,
+            use_rank_features=True,
+            use_pairwise_features=True,
+            use_graph_local_features=True,
+            use_3d_local_features=True,
+        )
+        winner_hidden_dim = getattr(base_config, "winner_v2_rebuild_hidden_dim", None)
+        winner_head = WinnerHeadV2Context(
+            winner_feature_dim,
+            source_vocab_size=5,
+            source_embedding_dim=int(getattr(base_config, "winner_source_embedding_dim", 8)),
+            use_source_features=bool(getattr(base_config, "winner_use_source_embedding", True)),
+            use_source_bias=bool(getattr(base_config, "winner_use_source_bias", True)),
+            use_hard_source_indicator=False,
+            hidden_dim=(int(winner_hidden_dim) if winner_hidden_dim is not None and int(winner_hidden_dim) > 0 else None),
+            dropout=float(getattr(base_config, "winner_v2_rebuild_dropout", 0.1)),
+        )
+        multisite_pairwise_trainer = TwoHeadShortlistWinnerV2RebuildMultisitePairwiseTrainer(
+            model=model,
+            winner_head=winner_head,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            frozen_shortlist_topk=int(getattr(base_config, "frozen_shortlist_topk", 6)),
+            winner_v2_rebuild_loss_weight=float(getattr(base_config, "winner_v2_rebuild_loss_weight", 1.0)),
+            shortlist_checkpoint_path=str(frozen_shortlist_checkpoint_path),
+            winner_use_multi_positive_targets=bool(getattr(base_config, "winner_use_multi_positive_targets", True)),
+            winner_multi_positive_mode=str(getattr(base_config, "winner_multi_positive_mode", "softmax_uniform")),
+            winner_multi_positive_only_for_multisite=bool(
+                getattr(base_config, "winner_multi_positive_only_for_multisite", True)
+            ),
+            winner_multisite_loss_weight=float(getattr(base_config, "winner_multisite_loss_weight", 1.0)),
+            winner_enable_pairwise_ranking=bool(getattr(base_config, "winner_enable_pairwise_ranking", True)),
+            winner_pairwise_margin=float(getattr(base_config, "winner_pairwise_margin", 0.2)),
+            winner_pairwise_loss_weight=float(getattr(base_config, "winner_pairwise_loss_weight", 0.5)),
+            winner_pairwise_sample_mode=str(getattr(base_config, "winner_pairwise_sample_mode", "hard_false_only")),
+            winner_use_source_embedding=bool(getattr(base_config, "winner_use_source_embedding", True)),
+            winner_source_embedding_dim=int(getattr(base_config, "winner_source_embedding_dim", 8)),
+            winner_use_source_bias=bool(getattr(base_config, "winner_use_source_bias", True)),
+            shortlist_enable_hard_negative_emphasis=bool(
+                getattr(base_config, "shortlist_enable_hard_negative_emphasis", False)
+            ),
+            shortlist_hard_negative_rank_min=int(getattr(base_config, "shortlist_hard_negative_rank_min", 2)),
+            shortlist_hard_negative_rank_max=int(getattr(base_config, "shortlist_hard_negative_rank_max", 12)),
+            shortlist_hard_negative_loss_weight=float(getattr(base_config, "shortlist_hard_negative_loss_weight", 0.0)),
+            shortlist_hard_negative_mode=str(getattr(base_config, "shortlist_hard_negative_mode", "top_false")),
+            device=device,
+        )
+        restore_summary = dict(getattr(multisite_pairwise_trainer, "restore_summary", {}) or {})
+        print(
+            "two_head_shortlist_winner_v2_rebuild_multisite_pairwise enabled | "
+            f"frozen_shortlist={frozen_shortlist_checkpoint_path} | "
+            f"trainable_modules={multisite_pairwise_trainer.trainable_module_summary} | "
+            f"frozen_modules={multisite_pairwise_trainer.frozen_module_summary} | "
+            f"restore_summary={restore_summary}",
+            flush=True,
+        )
+        history = []
+        best_epoch = 0
+        best_selection = None
+        best_model_state = None
+        best_winner_head_state = None
+        epochs_without_improvement = 0
+
+        def _two_head_v2_rebuild_multisite_pairwise_selection_tuple(metrics: dict[str, object]) -> tuple[float, float, float]:
+            return (
+                float(metrics.get("end_to_end_top1", 0.0)),
+                float(metrics.get("winner_acc_given_hit", 0.0)),
+                float(metrics.get("shortlist_recall_at_6", 0.0)),
+            )
+
+        try:
+            for epoch in range(args.epochs):
+                setattr(train_loader, "_current_epoch", epoch)
+                setattr(train_loader, "_split_name", "train")
+                train_metrics = multisite_pairwise_trainer.train_loader_epoch(train_loader)
+
+                setattr(val_loader, "_current_epoch", epoch)
+                setattr(val_loader, "_split_name", "val")
+                val_metrics = multisite_pairwise_trainer.evaluate_loader(val_loader)
+                history.append({"epoch": epoch + 1, "train": train_metrics, "val": val_metrics})
+
+                selection = _two_head_v2_rebuild_multisite_pairwise_selection_tuple(val_metrics)
+                if best_selection is None or selection > best_selection:
+                    best_selection = selection
+                    best_epoch = epoch + 1
+                    best_model_state = _initialized_state_dict(model)
+                    best_winner_head_state = _initialized_state_dict(winner_head)
+                    epochs_without_improvement = 0
+                else:
+                    epochs_without_improvement += 1
+
+                print(
+                    f"Epoch {epoch + 1:3d} | "
+                    f"winner_loss={train_metrics.get('winner_loss', 0.0):.4f} | "
+                    f"winner_ce={train_metrics.get('winner_loss_ce_component', 0.0):.4f} | "
+                    f"winner_pair={train_metrics.get('winner_loss_pairwise_component', 0.0):.4f} | "
+                    f"pair_ex={int(train_metrics.get('winner_pairwise_example_count', 0.0))} | "
+                    f"val_winner={val_metrics.get('winner_acc_given_hit', 0.0):.3f} | "
+                    f"val_multi_winner={val_metrics.get('multisite_winner_acc_given_hit', 0.0):.3f} | "
+                    f"val_e2e_top1={val_metrics.get('end_to_end_top1', 0.0):.3f}",
+                    flush=True,
+                )
+
+                _save_two_head_shortlist_winner_v2_rebuild_multisite_pairwise_state(
+                    model=model,
+                    winner_head=winner_head,
+                    optimizer_state=multisite_pairwise_trainer.optimizer.state_dict(),
+                    trainable_module_summary=multisite_pairwise_trainer.trainable_module_summary,
+                    frozen_module_summary=multisite_pairwise_trainer.frozen_module_summary,
+                    frozen_shortlist_checkpoint_path=frozen_shortlist_checkpoint_path,
+                    output_dir=output_dir,
+                    artifact_dir=artifact_dir,
+                    args=args,
+                    history=history,
+                    best_epoch=best_epoch,
+                    best_selection=best_selection,
+                    best_model_state=best_model_state,
+                    best_winner_head_state=best_winner_head_state,
+                    base_config=base_config,
+                    checkpoint_path=checkpoint_path,
+                    split_mode=args.split_mode,
+                    split_summary=split_summary,
+                    restore_summary=restore_summary,
+                    reproducibility_metadata=reproducibility_metadata,
+                    warm_start_checkpoint_metadata=warm_start_checkpoint_metadata,
+                    frozen_shortlist_checkpoint_metadata=frozen_shortlist_checkpoint_metadata,
+                    checkpoint_identity_match=checkpoint_identity_match,
+                    status="running",
+                )
+
+                if epochs_without_improvement >= args.early_stopping_patience:
+                    print(
+                        "Early stopping two_head_shortlist_winner_v2_rebuild_multisite_pairwise "
+                        f"after epoch {epoch + 1}: no improvement for {args.early_stopping_patience} epoch(s).",
+                        flush=True,
+                    )
+                    break
+
+        except KeyboardInterrupt:
+            print(
+                "\nInterrupted. Saving current two_head_shortlist_winner_v2_rebuild_multisite_pairwise progress...",
+                flush=True,
+            )
+            latest_path, best_path, _, report_path = _save_two_head_shortlist_winner_v2_rebuild_multisite_pairwise_state(
+                model=model,
+                winner_head=winner_head,
+                optimizer_state=multisite_pairwise_trainer.optimizer.state_dict(),
+                trainable_module_summary=multisite_pairwise_trainer.trainable_module_summary,
+                frozen_module_summary=multisite_pairwise_trainer.frozen_module_summary,
+                frozen_shortlist_checkpoint_path=frozen_shortlist_checkpoint_path,
+                output_dir=output_dir,
+                artifact_dir=artifact_dir,
+                args=args,
+                history=history,
+                best_epoch=best_epoch,
+                best_selection=best_selection,
+                best_model_state=best_model_state,
+                best_winner_head_state=best_winner_head_state,
+                base_config=base_config,
+                checkpoint_path=checkpoint_path,
+                split_mode=args.split_mode,
+                split_summary=split_summary,
+                restore_summary=restore_summary,
+                reproducibility_metadata=reproducibility_metadata,
+                warm_start_checkpoint_metadata=warm_start_checkpoint_metadata,
+                frozen_shortlist_checkpoint_metadata=frozen_shortlist_checkpoint_metadata,
+                checkpoint_identity_match=checkpoint_identity_match,
+                status="interrupted",
+            )
+            print(
+                json.dumps(
+                    {
+                        "status": "interrupted",
+                        "latest_checkpoint": str(latest_path),
+                        "best_checkpoint": str(best_path),
+                        "report": str(report_path),
+                    },
+                    indent=2,
+                ),
+                flush=True,
+            )
+            return
+
+        if best_model_state is not None:
+            model.load_state_dict(best_model_state, strict=False)
+        if best_winner_head_state is not None:
+            winner_head.load_state_dict(best_winner_head_state, strict=False)
+
+        setattr(test_loader, "_current_epoch", best_epoch)
+        setattr(test_loader, "_split_name", "test")
+        test_metrics = multisite_pairwise_trainer.evaluate_loader(test_loader)
+        print(
+            json.dumps(
+                {"two_head_shortlist_winner_v2_rebuild_multisite_pairwise_test_metrics": test_metrics},
+                indent=2,
+            ),
+            flush=True,
+        )
+        latest_path, best_path, archive_path, report_path = _save_two_head_shortlist_winner_v2_rebuild_multisite_pairwise_state(
+            model=model,
+            winner_head=winner_head,
+            optimizer_state=multisite_pairwise_trainer.optimizer.state_dict(),
+            trainable_module_summary=multisite_pairwise_trainer.trainable_module_summary,
+            frozen_module_summary=multisite_pairwise_trainer.frozen_module_summary,
+            frozen_shortlist_checkpoint_path=frozen_shortlist_checkpoint_path,
+            output_dir=output_dir,
+            artifact_dir=artifact_dir,
+            args=args,
+            history=history,
+            best_epoch=best_epoch,
+            best_selection=best_selection,
+            best_model_state=best_model_state,
+            best_winner_head_state=best_winner_head_state,
             base_config=base_config,
             checkpoint_path=checkpoint_path,
             split_mode=args.split_mode,

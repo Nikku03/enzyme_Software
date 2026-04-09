@@ -333,6 +333,7 @@ if TORCH_AVAILABLE:
             source_vocab_size: int,
             source_embedding_dim: int = 8,
             use_source_features: bool = True,
+            use_source_bias: bool = False,
             use_hard_source_indicator: bool = True,
             hidden_dim: int | None = None,
             dropout: float = 0.1,
@@ -340,12 +341,18 @@ if TORCH_AVAILABLE:
             super().__init__()
             self.candidate_feature_dim = int(candidate_feature_dim)
             self.use_source_features = bool(use_source_features)
+            self.use_source_bias = bool(use_source_bias)
             self.use_hard_source_indicator = bool(use_hard_source_indicator)
             self.source_vocab_size = max(1, int(source_vocab_size))
             self.source_embedding_dim = max(1, int(source_embedding_dim))
             self.source_embedding = (
                 nn.Embedding(self.source_vocab_size, self.source_embedding_dim)
                 if self.use_source_features
+                else None
+            )
+            self.source_bias = (
+                nn.Embedding(self.source_vocab_size, 1)
+                if self.use_source_bias
                 else None
             )
             total_dim = self.candidate_feature_dim
@@ -386,7 +393,12 @@ if TORCH_AVAILABLE:
                     f"Expected combined winner context features with dim {self.feature_dim}, "
                     f"got {int(combined.size(-1))}"
                 )
-            return self.net(combined)
+            logits = self.net(combined)
+            if self.use_source_bias:
+                if source_indices is None:
+                    raise ValueError("source_indices are required when winner context source bias is enabled")
+                logits = logits + self.source_bias(source_indices.view(-1).long())
+            return logits
 else:  # pragma: no cover
     def winner_v2_feature_dim(*args, **kwargs):
         require_torch()
