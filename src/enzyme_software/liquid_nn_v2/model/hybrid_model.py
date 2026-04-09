@@ -16,7 +16,7 @@ from enzyme_software.liquid_nn_v2.model.cyp3a4_state import (
 from enzyme_software.liquid_nn_v2.model.event_context import SparseEventContext
 from enzyme_software.liquid_nn_v2.model.hybrid_modules import TopKCrossAtomReranker
 from enzyme_software.liquid_nn_v2.model.mechanistic_head import MechanisticSoMHead
-from enzyme_software.liquid_nn_v2.model.nexus_bridge import NexusHybridBridge
+from enzyme_software.liquid_nn_v2.model.nexus_bridge import NexusHybridBridge, NEXUS_AVAILABLE
 from enzyme_software.liquid_nn_v2.model.phase5_sparse_relay import Phase5SparseRelay
 from enzyme_software.liquid_nn_v2.model.precedent_logbook import AuditedEpisodeLogbook
 from enzyme_software.liquid_nn_v2.model.wave_field import WholeMoleculeWaveField
@@ -73,7 +73,8 @@ if TORCH_AVAILABLE:
                     nn.Dropout(float(getattr(self.config, "dropout", 0.1))),
                     nn.Linear(domain_hidden, 6),
                 )
-            if bool(getattr(self.config, "use_nexus_bridge", True)):
+            # Only create nexus_bridge if real nexus is available (not stubs)
+            if bool(getattr(self.config, "use_nexus_bridge", True)) and NEXUS_AVAILABLE:
                 atom_dim = int(getattr(self.config, "som_branch_dim", getattr(self.config, "shared_hidden_dim", 128)))
                 num_cyp = int(getattr(self.config, "num_cyp_classes", 9))
                 steric_dim = int(getattr(self.config, "steric_feature_dim", 8))
@@ -1454,10 +1455,6 @@ if TORCH_AVAILABLE:
 
         def _apply_nexus_bridge(self, outputs: Dict[str, object], batch: Dict[str, object]) -> Dict[str, object]:
             if self.nexus_bridge is None:
-                return outputs
-            # Skip nexus bridge if using stubs (NEXUS_AVAILABLE is False)
-            from enzyme_software.liquid_nn_v2.model.nexus_bridge import NEXUS_AVAILABLE
-            if not NEXUS_AVAILABLE:
                 return outputs
             atom_features = outputs.get("atom_features")
             if atom_features is None:
