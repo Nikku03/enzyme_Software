@@ -16,6 +16,7 @@ for candidate in (str(SRC), str(ROOT)):
         sys.path.insert(0, candidate)
 
 import torch
+from rdkit import Chem
 
 import train_hybrid_full_xtb as train_script
 from enzyme_software.liquid_nn_v2 import HybridLNNModel, LiquidMetabolismNetV2, ModelConfig
@@ -54,6 +55,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--shortlist-small-margin-threshold", type=float, default=0.05)
     parser.add_argument("--near-cutoff-rank", type=int, default=12)
     parser.add_argument("--near-true-graph-distance", type=int, default=2)
+    parser.add_argument("--attnsom-sdf", default="data/ATTNSOM/cyp_dataset/3A4.sdf")
     return parser.parse_args()
 
 
@@ -75,6 +77,145 @@ def _safe_float(value: Any) -> float | None:
     if not math.isfinite(value_f):
         return None
     return value_f
+
+
+def _canon_smiles(smiles: str) -> str:
+    mol = Chem.MolFromSmiles(str(smiles or "").strip())
+    if mol is None:
+        return ""
+    return Chem.MolToSmiles(mol, canonical=True)
+
+
+def _safe_mol_prop(mol: Chem.Mol, name: str) -> str:
+    if not mol.HasProp(name):
+        return ""
+    try:
+        return str(mol.GetProp(name))
+    except Exception:
+        try:
+            value = mol.GetPropsAsDict(includePrivate=False, includeComputed=False).get(name, "")
+            return str(value)
+        except Exception:
+            return ""
+
+
+def _parse_attnsom_som_atoms(raw: str, *, num_atoms: int) -> list[int]:
+    atoms: list[int] = []
+    for token in str(raw or "").replace(",", " ").split():
+        try:
+            atom_idx = int(token) - 1
+        except Exception:
+            continue
+        if 0 <= int(atom_idx) < int(num_atoms):
+            atoms.append(int(atom_idx))
+    return sorted(set(atoms))
+
+
+def _normalize_lookup_token(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
+def _build_attnsom_tier_lookup(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise FileNotFoundError(f"ATTNSOM SDF not found: {path}")
+    by_id: dict[str, dict[str, Any]] = {}
+    by_name: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    by_smiles: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    total_records = 0
+    primary_only_count = 0
+    secondary_present_count = 0
+    tertiary_present_count = 0
+    supplier = Chem.SDMolSupplier(str(path), removeHs=False)
+    for record_index, mol in enumerate(supplier):
+        if mol is None:
+            continue
+        base_mol = Chem.RemoveHs(mol)
+        smiles = Chem.MolToSmiles(base_mol, canonical=True)
+        num_atoms = int(base_mol.GetNumAtoms())
+        primary = _parse_attnsom_som_atoms(_safe_mol_prop(mol, "PRIMARY_SOM"), num_atoms=num_atoms)
+        secondary = _parse_attnsom_som_atoms(_safe_mol_prop(mol, "SECONDARY_SOM"), num_atoms=num_atoms)
+        tertiary = _parse_attnsom_som_atoms(_safe_mol_prop(mol, "TERTIARY_SOM"), num_atoms=num_atoms)
+        if not primary and not secondary and not tertiary:
+            continue
+        total_records += 1
+        if primary and not secondary and not tertiary:
+            primary_only_count += 1
+        if secondary:
+            secondary_present_count += 1
+        if tertiary:
+            tertiary_present_count += 1
+        mol_id = _safe_mol_prop(mol, "ID") or str(record_index)
+        name = _safe_mol_prop(mol, "ID") or _safe_mol_prop(mol, "_Name") or mol_id
+        record = {
+            "id": f"attnsom:{mol_id}",
+            "name": str(name),
+            "smiles": str(smiles),
+            "primary": list(primary),
+            "secondary": list(secondary),
+            "tertiary": list(tertiary),
+            "any_labeled": sorted(set(primary + secondary + tertiary)),
+            "citation": _safe_mol_prop(mol, "Citation"),
+        }
+        by_id[_normalize_lookup_token(record["id"])] = record
+        by_name[_normalize_lookup_token(record["name"])].append(record)
+        by_smiles[str(record["smiles"])].append(record)
+    return {
+        "by_id": by_id,
+        "by_name": dict(by_name),
+        "by_smiles": dict(by_smiles),
+        "summary": {
+            "attnsom_sdf_path": str(path),
+            "records_loaded": int(total_records),
+            "primary_only_row_count": int(primary_only_count),
+            "primary_plus_secondary_row_count": int(secondary_present_count),
+            "primary_plus_secondary_plus_tertiary_row_count": int(tertiary_present_count),
+        },
+    }
+
+
+def _resolve_attnsom_tiers_for_meta(meta: dict[str, Any], lookup: dict[str, Any] | None) -> dict[str, Any]:
+    empty = {
+        "primary": [],
+        "secondary": [],
+        "tertiary": [],
+        "any_labeled": [],
+        "citation": "",
+        "lookup_status": "not_found",
+        "lookup_match_key": "",
+    }
+    if not lookup:
+        empty["lookup_status"] = "lookup_disabled"
+        return empty
+    record = None
+    match_key = ""
+    mol_id = _normalize_lookup_token(meta.get("id"))
+    if mol_id:
+        record = (lookup.get("by_id") or {}).get(mol_id)
+        if record is not None:
+            match_key = "id"
+    if record is None:
+        name_key = _normalize_lookup_token(meta.get("name"))
+        name_matches = list((lookup.get("by_name") or {}).get(name_key, [])) if name_key else []
+        if len(name_matches) == 1:
+            record = name_matches[0]
+            match_key = "name"
+    if record is None:
+        smiles_key = _canon_smiles(str(meta.get("smiles") or ""))
+        smiles_matches = list((lookup.get("by_smiles") or {}).get(smiles_key, [])) if smiles_key else []
+        if len(smiles_matches) == 1:
+            record = smiles_matches[0]
+            match_key = "smiles"
+    if record is None:
+        return empty
+    return {
+        "primary": list(record.get("primary") or []),
+        "secondary": list(record.get("secondary") or []),
+        "tertiary": list(record.get("tertiary") or []),
+        "any_labeled": list(record.get("any_labeled") or []),
+        "citation": str(record.get("citation") or ""),
+        "lookup_status": "matched",
+        "lookup_match_key": str(match_key),
+    }
 
 
 def _softmax_prob_gap(logits: torch.Tensor) -> tuple[float | None, list[float]]:
@@ -269,6 +410,7 @@ def _build_audit_rows_for_loader(
     shortlist_small_margin_threshold: float,
     near_cutoff_rank: int,
     near_true_graph_distance: int,
+    attnsom_tier_lookup: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     device = trainer.device
@@ -317,6 +459,19 @@ def _build_audit_rows_for_loader(
                 source = _normalize_source(meta.get("source") or meta.get("data_source"))
                 if source not in hard_source_names:
                     continue
+                attnsom_tiers = (
+                    _resolve_attnsom_tiers_for_meta(meta, attnsom_tier_lookup)
+                    if source == "attnsom"
+                    else {
+                        "primary": [],
+                        "secondary": [],
+                        "tertiary": [],
+                        "any_labeled": [],
+                        "citation": "",
+                        "lookup_status": "not_applicable",
+                        "lookup_match_key": "",
+                    }
+                )
                 mol_atom_indices = torch.nonzero(batch_index == mol_idx, as_tuple=False).view(-1)
                 mol_valid = (batch_index == mol_idx) & valid
                 if not bool(mol_valid.any()):
@@ -516,6 +671,13 @@ def _build_audit_rows_for_loader(
                     "needs_manual_review": bool(needs_manual_review),
                     "manual_review_reasons": manual_review_reasons,
                     "manual_review_priority": int(manual_review_priority),
+                    "attnsom_primary_som_atoms": list(attnsom_tiers.get("primary") or []),
+                    "attnsom_secondary_som_atoms": list(attnsom_tiers.get("secondary") or []),
+                    "attnsom_tertiary_som_atoms": list(attnsom_tiers.get("tertiary") or []),
+                    "attnsom_any_labeled_atoms": list(attnsom_tiers.get("any_labeled") or []),
+                    "attnsom_citation": str(attnsom_tiers.get("citation") or ""),
+                    "attnsom_tier_lookup_status": str(attnsom_tiers.get("lookup_status") or ""),
+                    "attnsom_tier_lookup_match_key": str(attnsom_tiers.get("lookup_match_key") or ""),
                 }
                 rows.append(row)
     return rows
@@ -640,6 +802,12 @@ def main() -> None:
     )
     if not hard_source_names:
         raise ValueError("No hard sources configured")
+    attnsom_tier_lookup = None
+    attnsom_sdf_path = Path(args.attnsom_sdf).expanduser() if str(args.attnsom_sdf or "").strip() else None
+    if "attnsom" in set(hard_source_names):
+        if attnsom_sdf_path is None:
+            raise ValueError("ATTNSOM evaluation requested but no --attnsom-sdf path was provided")
+        attnsom_tier_lookup = _build_attnsom_tier_lookup(attnsom_sdf_path)
 
     rows = []
     rows.extend(
@@ -652,6 +820,7 @@ def main() -> None:
             shortlist_small_margin_threshold=float(args.shortlist_small_margin_threshold),
             near_cutoff_rank=int(args.near_cutoff_rank),
             near_true_graph_distance=int(args.near_true_graph_distance),
+            attnsom_tier_lookup=attnsom_tier_lookup,
         )
     )
     rows.extend(
@@ -664,6 +833,7 @@ def main() -> None:
             shortlist_small_margin_threshold=float(args.shortlist_small_margin_threshold),
             near_cutoff_rank=int(args.near_cutoff_rank),
             near_true_graph_distance=int(args.near_true_graph_distance),
+            attnsom_tier_lookup=attnsom_tier_lookup,
         )
     )
     rows.sort(key=lambda row: (str(row["split"]), str(row["source"]), int(row["molecule_key"])))
@@ -684,6 +854,8 @@ def main() -> None:
             "near_cutoff_rank": int(args.near_cutoff_rank),
             "near_true_graph_distance": int(args.near_true_graph_distance),
             "load_summary": load_summary,
+            "attnsom_sdf": str(attnsom_sdf_path) if attnsom_sdf_path is not None else "",
+            "attnsom_tier_lookup_summary": dict((attnsom_tier_lookup or {}).get("summary") or {}),
         }
     )
 

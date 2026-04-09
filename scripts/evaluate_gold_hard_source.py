@@ -18,6 +18,7 @@ for candidate in (str(SRC), str(ROOT)):
 
 import train_hybrid_full_xtb as train_script
 from audit_two_head_hard_sources import (
+    _build_attnsom_tier_lookup,
     _build_audit_rows_for_loader,
     _build_model_and_trainer,
     _load_checkpoint,
@@ -55,6 +56,13 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--shortlist-small-margin-threshold", type=float, default=0.05)
     parser.add_argument("--near-cutoff-rank", type=int, default=12)
     parser.add_argument("--near-true-graph-distance", type=int, default=2)
+    parser.add_argument("--attnsom-sdf", default="data/ATTNSOM/cyp_dataset/3A4.sdf")
+    parser.add_argument(
+        "--attnsom-eval-mode",
+        default="off",
+        choices=("off", "primary_only", "primary_plus_secondary", "any_labeled_site"),
+    )
+    parser.add_argument("--attnsom-eval-apply-to-source-only", default="1")
     return parser.parse_args()
 
 
@@ -157,11 +165,37 @@ def _winner_top1_prob(row: dict[str, Any]) -> float | None:
     return max(probs) if probs else None
 
 
-def _row_truth_sites(row: dict[str, Any], gold_entry: dict[str, Any] | None) -> list[int]:
+def _attnsom_mode_truth_sites(row: dict[str, Any], mode: str) -> list[int]:
+    primary = [int(v) for v in list(row.get("attnsom_primary_som_atoms") or [])]
+    secondary = [int(v) for v in list(row.get("attnsom_secondary_som_atoms") or [])]
+    tertiary = [int(v) for v in list(row.get("attnsom_tertiary_som_atoms") or [])]
+    any_labeled = [int(v) for v in list(row.get("attnsom_any_labeled_atoms") or [])]
+    if mode == "primary_only":
+        return sorted(set(primary))
+    if mode == "primary_plus_secondary":
+        return sorted(set(primary + secondary))
+    if mode == "any_labeled_site":
+        return sorted(set(any_labeled or primary + secondary + tertiary))
+    raise ValueError(f"Unsupported ATTNSOM eval mode: {mode}")
+
+
+def _row_truth_sites(
+    row: dict[str, Any],
+    gold_entry: dict[str, Any] | None,
+    *,
+    attnsom_eval_mode: str = "off",
+    attnsom_eval_apply_to_source_only: bool = True,
+) -> list[int]:
     curated = list((gold_entry or {}).get("curated_true_site_indices") or [])
+    standard_truth = [int(v) for v in curated] if curated else [int(v) for v in list(row.get("true_site_indices") or [])]
+    if attnsom_eval_mode != "off":
+        source = str(row.get("source", "")).strip().lower()
+        mode_truth = _attnsom_mode_truth_sites(row, attnsom_eval_mode) if source == "attnsom" or not attnsom_eval_apply_to_source_only else []
+        if mode_truth:
+            return mode_truth
     if curated:
         return [int(v) for v in curated]
-    return [int(v) for v in list(row.get("true_site_indices") or [])]
+    return standard_truth
 
 
 def _row_key(row: dict[str, Any]) -> tuple[str, str, int]:
@@ -177,6 +211,8 @@ def _summarize_subset(
     *,
     gold_map: dict[tuple[str, str, int], dict[str, Any]] | None = None,
     include_per_source: bool = True,
+    attnsom_eval_mode: str = "off",
+    attnsom_eval_apply_to_source_only: bool = True,
 ) -> dict[str, Any]:
     total = len(rows)
     source_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -192,7 +228,14 @@ def _summarize_subset(
     for row in rows:
         source_rows[str(row.get("source", "unknown"))].append(row)
         gold_entry = (gold_map or {}).get(_row_key(row))
-        truth_sites = set(_row_truth_sites(row, gold_entry))
+        truth_sites = set(
+            _row_truth_sites(
+                row,
+                gold_entry,
+                attnsom_eval_mode=attnsom_eval_mode,
+                attnsom_eval_apply_to_source_only=attnsom_eval_apply_to_source_only,
+            )
+        )
         top6 = set(int(v) for v in list(row.get("shortlist_top6_candidate_indices") or []))
         top12 = set(int(v) for v in list(row.get("shortlist_top12_candidate_indices") or []))
         selected = set(int(v) for v in list(row.get("shortlist_selected_candidate_indices") or []))
@@ -222,12 +265,20 @@ def _summarize_subset(
     if include_per_source and total > 0:
         for source, subset in sorted(source_rows.items()):
             if subset:
-                source_summary = _summarize_subset(subset, gold_map=gold_map, include_per_source=False)
+                source_summary = _summarize_subset(
+                    subset,
+                    gold_map=gold_map,
+                    include_per_source=False,
+                    attnsom_eval_mode=attnsom_eval_mode,
+                    attnsom_eval_apply_to_source_only=attnsom_eval_apply_to_source_only,
+                )
                 source_summary.pop("per_source", None)
                 per_source[source] = source_summary
 
     return {
         "total_examples": int(total),
+        "correct_top1_count": int(correct_top1_count),
+        "correct_top3_count": int(end_to_end_top3_count),
         "shortlist_recall_at_6": float(shortlist_hit_at_6_count) / float(total) if total > 0 else 0.0,
         "shortlist_recall_at_12": float(shortlist_hit_at_12_count) / float(total) if total > 0 else 0.0,
         "shortlist_hit_fraction_at_train_k": float(shortlist_hit_at_train_k_count) / float(total) if total > 0 else 0.0,
@@ -240,6 +291,111 @@ def _summarize_subset(
         "shortlist_rescued_by_12_fraction": float(rescued_by_12_count) / float(total) if total > 0 else 0.0,
         "winner_miss_among_rescued_by_12_count": int(winner_miss_among_rescued_by_12_count),
         "per_source": per_source,
+    }
+
+
+def _attnsom_tier_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    attnsom_rows = [row for row in rows if str(row.get("source", "")).strip().lower() == "attnsom"]
+    return {
+        "attnsom_count_evaluated": int(len(attnsom_rows)),
+        "attnsom_primary_only_row_count": int(
+            sum(
+                1
+                for row in attnsom_rows
+                if row.get("attnsom_primary_som_atoms")
+                and not row.get("attnsom_secondary_som_atoms")
+                and not row.get("attnsom_tertiary_som_atoms")
+            )
+        ),
+        "attnsom_primary_plus_secondary_row_count": int(
+            sum(1 for row in attnsom_rows if row.get("attnsom_secondary_som_atoms"))
+        ),
+        "attnsom_primary_plus_secondary_plus_tertiary_row_count": int(
+            sum(1 for row in attnsom_rows if row.get("attnsom_tertiary_som_atoms"))
+        ),
+        "attnsom_tier_lookup_matched_count": int(
+            sum(1 for row in attnsom_rows if str(row.get("attnsom_tier_lookup_status", "")) == "matched")
+        ),
+    }
+
+
+def _build_attnsom_tier_aware_report(
+    *,
+    all_rows: list[dict[str, Any]],
+    val_rows: list[dict[str, Any]],
+    test_rows: list[dict[str, Any]],
+    gold_map: dict[tuple[str, str, int], dict[str, Any]] | None,
+    selected_mode: str,
+    apply_to_source_only: bool,
+) -> dict[str, Any]:
+    attnsom_rows = [row for row in all_rows if str(row.get("source", "")).strip().lower() == "attnsom"]
+    attnsom_val_rows = [row for row in val_rows if str(row.get("source", "")).strip().lower() == "attnsom"]
+    attnsom_test_rows = [row for row in test_rows if str(row.get("source", "")).strip().lower() == "attnsom"]
+    standard_attnsom = {
+        "combined": _summarize_subset(attnsom_rows, gold_map=gold_map or {}, include_per_source=False),
+        "val": _summarize_subset(attnsom_val_rows, gold_map=gold_map or {}, include_per_source=False),
+        "test": _summarize_subset(attnsom_test_rows, gold_map=gold_map or {}, include_per_source=False),
+    }
+    mode_summaries: dict[str, Any] = {}
+    for mode in ("primary_only", "primary_plus_secondary", "any_labeled_site"):
+        mode_summaries[mode] = {
+            "combined": _summarize_subset(
+                attnsom_rows,
+                gold_map=gold_map or {},
+                include_per_source=False,
+                attnsom_eval_mode=mode,
+                attnsom_eval_apply_to_source_only=True,
+            ),
+            "val": _summarize_subset(
+                attnsom_val_rows,
+                gold_map=gold_map or {},
+                include_per_source=False,
+                attnsom_eval_mode=mode,
+                attnsom_eval_apply_to_source_only=True,
+            ),
+            "test": _summarize_subset(
+                attnsom_test_rows,
+                gold_map=gold_map or {},
+                include_per_source=False,
+                attnsom_eval_mode=mode,
+                attnsom_eval_apply_to_source_only=True,
+            ),
+        }
+    selected_adjusted_overall = {
+        "combined": _summarize_subset(
+            all_rows,
+            gold_map=gold_map or {},
+            attnsom_eval_mode=selected_mode,
+            attnsom_eval_apply_to_source_only=apply_to_source_only,
+        ),
+        "val": _summarize_subset(
+            val_rows,
+            gold_map=gold_map or {},
+            attnsom_eval_mode=selected_mode,
+            attnsom_eval_apply_to_source_only=apply_to_source_only,
+        ),
+        "test": _summarize_subset(
+            test_rows,
+            gold_map=gold_map or {},
+            attnsom_eval_mode=selected_mode,
+            attnsom_eval_apply_to_source_only=apply_to_source_only,
+        ),
+    }
+    standard_correct = int(standard_attnsom["combined"]["correct_top1_count"])
+    primary_secondary_correct = int(mode_summaries["primary_plus_secondary"]["combined"]["correct_top1_count"])
+    any_labeled_correct = int(mode_summaries["any_labeled_site"]["combined"]["correct_top1_count"])
+    return {
+        "enabled": True,
+        "selected_mode": str(selected_mode),
+        "apply_to_source_only": bool(apply_to_source_only),
+        "attnsom_tier_counts": _attnsom_tier_counts(all_rows),
+        "attnsom_standard": standard_attnsom,
+        "attnsom_primary_only": mode_summaries["primary_only"],
+        "attnsom_primary_plus_secondary": mode_summaries["primary_plus_secondary"],
+        "attnsom_any_labeled_site": mode_summaries["any_labeled_site"],
+        "selected_mode_adjusted_overall": selected_adjusted_overall,
+        "attnsom_relaxed_gain_primary_plus_secondary": int(primary_secondary_correct - standard_correct),
+        "attnsom_relaxed_gain_any_labeled_site": int(any_labeled_correct - standard_correct),
     }
 
 
@@ -322,6 +478,14 @@ def main() -> None:
     )
     if not hard_source_names:
         raise ValueError("No hard sources configured")
+    attnsom_eval_mode = str(args.attnsom_eval_mode or "off").strip()
+    attnsom_eval_apply_to_source_only = _parse_bool(args.attnsom_eval_apply_to_source_only)
+    attnsom_tier_lookup = None
+    attnsom_sdf_path = Path(args.attnsom_sdf).expanduser() if str(args.attnsom_sdf or "").strip() else None
+    if attnsom_eval_mode != "off":
+        if attnsom_sdf_path is None:
+            raise ValueError("ATTNSOM tier-aware evaluation requested but no --attnsom-sdf path was provided")
+        attnsom_tier_lookup = _build_attnsom_tier_lookup(attnsom_sdf_path)
 
     gold_map = None
     gold_slice_path = Path(args.gold_slice_path).expanduser() if str(args.gold_slice_path).strip() else None
@@ -356,6 +520,7 @@ def main() -> None:
         shortlist_small_margin_threshold=float(args.shortlist_small_margin_threshold),
         near_cutoff_rank=int(args.near_cutoff_rank),
         near_true_graph_distance=int(args.near_true_graph_distance),
+        attnsom_tier_lookup=attnsom_tier_lookup,
     )
     test_rows = _build_audit_rows_for_loader(
         trainer=trainer,
@@ -366,6 +531,7 @@ def main() -> None:
         shortlist_small_margin_threshold=float(args.shortlist_small_margin_threshold),
         near_cutoff_rank=int(args.near_cutoff_rank),
         near_true_graph_distance=int(args.near_true_graph_distance),
+        attnsom_tier_lookup=attnsom_tier_lookup,
     )
     all_rows = sorted(val_rows + test_rows, key=lambda row: (str(row["split"]), str(row["source"]), int(row["molecule_key"])))
 
@@ -433,6 +599,16 @@ def main() -> None:
         "val": _summarize_subset([row for row in high_conf_rows if str(row.get("split")) == "val"], gold_map=gold_map or {}),
         "test": _summarize_subset([row for row in high_conf_rows if str(row.get("split")) == "test"], gold_map=gold_map or {}),
     }
+    attnsom_tier_aware_report = None
+    if attnsom_eval_mode != "off":
+        attnsom_tier_aware_report = _build_attnsom_tier_aware_report(
+            all_rows=all_rows,
+            val_rows=val_rows,
+            test_rows=test_rows,
+            gold_map=gold_map or {},
+            selected_mode=attnsom_eval_mode,
+            apply_to_source_only=attnsom_eval_apply_to_source_only,
+        )
 
     rows_with_gold_flags = []
     for row in all_rows:
@@ -467,6 +643,10 @@ def main() -> None:
         "gold_policy": str(args.gold_policy),
         "clean_label_slice_path": str(clean_label_slice_path) if clean_label_slice_path is not None else "",
         "hard_failure_slice_path": str(hard_failure_slice_path) if hard_failure_slice_path is not None else "",
+        "attnsom_sdf_path": str(attnsom_sdf_path) if attnsom_sdf_path is not None else "",
+        "attnsom_eval_mode": str(attnsom_eval_mode),
+        "attnsom_eval_apply_to_source_only": bool(attnsom_eval_apply_to_source_only),
+        "attnsom_tier_lookup_summary": dict((attnsom_tier_lookup or {}).get("summary") or {}),
         "raw_benchmark": {
             "val": val_metrics,
             "test": test_metrics,
@@ -481,6 +661,45 @@ def main() -> None:
         report["clean_label_eval_subset"] = clean_label_summary
     if hard_failure_summary is not None:
         report["hard_failure_gold_subset"] = hard_failure_summary
+    if attnsom_tier_aware_report is not None:
+        report["attnsom_tier_aware_eval"] = attnsom_tier_aware_report
+        report["attnsom_count_evaluated"] = int(attnsom_tier_aware_report["attnsom_tier_counts"]["attnsom_count_evaluated"])
+        report["attnsom_primary_only_top1"] = float(
+            attnsom_tier_aware_report["attnsom_primary_only"]["combined"]["end_to_end_top1"]
+        )
+        report["attnsom_primary_plus_secondary_top1"] = float(
+            attnsom_tier_aware_report["attnsom_primary_plus_secondary"]["combined"]["end_to_end_top1"]
+        )
+        report["attnsom_any_labeled_site_top1"] = float(
+            attnsom_tier_aware_report["attnsom_any_labeled_site"]["combined"]["end_to_end_top1"]
+        )
+        report["attnsom_primary_only_top3"] = float(
+            attnsom_tier_aware_report["attnsom_primary_only"]["combined"]["end_to_end_top3"]
+        )
+        report["attnsom_primary_plus_secondary_top3"] = float(
+            attnsom_tier_aware_report["attnsom_primary_plus_secondary"]["combined"]["end_to_end_top3"]
+        )
+        report["attnsom_any_labeled_site_top3"] = float(
+            attnsom_tier_aware_report["attnsom_any_labeled_site"]["combined"]["end_to_end_top3"]
+        )
+        report["attnsom_primary_only_shortlist_recall_at_6"] = float(
+            attnsom_tier_aware_report["attnsom_primary_only"]["combined"]["shortlist_recall_at_6"]
+        )
+        report["attnsom_primary_plus_secondary_shortlist_recall_at_6"] = float(
+            attnsom_tier_aware_report["attnsom_primary_plus_secondary"]["combined"]["shortlist_recall_at_6"]
+        )
+        report["attnsom_any_labeled_site_shortlist_recall_at_6"] = float(
+            attnsom_tier_aware_report["attnsom_any_labeled_site"]["combined"]["shortlist_recall_at_6"]
+        )
+        report["attnsom_relaxed_gain_primary_plus_secondary"] = int(
+            attnsom_tier_aware_report["attnsom_relaxed_gain_primary_plus_secondary"]
+        )
+        report["attnsom_relaxed_gain_any_labeled_site"] = int(
+            attnsom_tier_aware_report["attnsom_relaxed_gain_any_labeled_site"]
+        )
+        report["tier_aware_attnsom_adjusted_overall_top1"] = float(
+            attnsom_tier_aware_report["selected_mode_adjusted_overall"]["combined"]["end_to_end_top1"]
+        )
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     if clean_label_summary is not None:
@@ -494,6 +713,8 @@ def main() -> None:
             "raw_hard_source_subset": raw_hard_summary,
             "clean_label_eval_subset": clean_label_summary,
         }
+        if attnsom_tier_aware_report is not None:
+            clean_report["attnsom_tier_aware_eval"] = attnsom_tier_aware_report
         clean_report_path.write_text(json.dumps(clean_report, indent=2), encoding="utf-8")
         _write_csv(output_dir / "clean_label_eval_rows.csv", clean_label_rows)
 
@@ -508,6 +729,8 @@ def main() -> None:
             "raw_hard_source_subset": raw_hard_summary,
             "hard_failure_gold_subset": hard_failure_summary,
         }
+        if attnsom_tier_aware_report is not None:
+            hard_report["attnsom_tier_aware_eval"] = attnsom_tier_aware_report
         hard_report_path.write_text(json.dumps(hard_report, indent=2), encoding="utf-8")
         _write_csv(output_dir / "hard_failure_gold_rows.csv", hard_failure_rows)
 
@@ -537,6 +760,15 @@ def main() -> None:
             "High-confidence subset | "
             f"coverage={high_conf_summary['coverage']:.4f} | "
             f"top1={high_conf_summary['combined']['end_to_end_top1']:.4f}",
+            flush=True,
+        )
+    if attnsom_tier_aware_report is not None:
+        print(
+            "ATTNSOM tier-aware eval | "
+            f"mode={attnsom_eval_mode} | "
+            f"primary_only_top1={report['attnsom_primary_only_top1']:.4f} | "
+            f"primary_plus_secondary_top1={report['attnsom_primary_plus_secondary_top1']:.4f} | "
+            f"any_labeled_site_top1={report['attnsom_any_labeled_site_top1']:.4f}",
             flush=True,
         )
     print(f"Eval rows: {eval_rows_path}", flush=True)

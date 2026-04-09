@@ -2028,6 +2028,12 @@ PRESETS: dict[str, dict[str, str]] = {
         "HYBRID_COLAB_HARD_SOURCE_NAMES": "attnsom,cyp_dbs_external",
         "HYBRID_COLAB_GOLD_HARD_SOURCE_POLICY": "exclude_ambiguous",
     },
+    "cyp3a4_attnsom_tier_aware_eval": {
+        "HYBRID_COLAB_PRESET_BASE": "cyp3a4_gold_hard_source_eval",
+        "HYBRID_COLAB_ATTNSOM_EVAL_MODE": "primary_plus_secondary",
+        "HYBRID_COLAB_ATTNSOM_EVAL_APPLY_TO_SOURCE_ONLY": "1",
+        "HYBRID_COLAB_ATTNSOM_SDF": "data/ATTNSOM/cyp_dataset/3A4.sdf",
+    },
     "cyp3a4_sideinfo_fullrank_phase5a_baseline_seed22": {
         "HYBRID_COLAB_DATASET": "data/prepared_training/main8_cyp3a4_augmented.json",
         "HYBRID_COLAB_STRUCTURE_SDF": "3D structures.sdf",
@@ -2587,6 +2593,15 @@ def main() -> None:
         winner_candidate_k = os.environ.get("HYBRID_COLAB_GOLD_EVAL_WINNER_TOPK", "").strip()
         if winner_candidate_k:
             argv.extend(["--winner-candidate-k", winner_candidate_k])
+        attnsom_sdf = os.environ.get("HYBRID_COLAB_ATTNSOM_SDF", "").strip()
+        if attnsom_sdf:
+            argv.extend(["--attnsom-sdf", attnsom_sdf])
+        attnsom_eval_mode = os.environ.get("HYBRID_COLAB_ATTNSOM_EVAL_MODE", "").strip()
+        if attnsom_eval_mode:
+            argv.extend(["--attnsom-eval-mode", attnsom_eval_mode])
+        attnsom_eval_apply_to_source_only = os.environ.get("HYBRID_COLAB_ATTNSOM_EVAL_APPLY_TO_SOURCE_ONLY", "").strip()
+        if attnsom_eval_apply_to_source_only:
+            argv.extend(["--attnsom-eval-apply-to-source-only", attnsom_eval_apply_to_source_only])
     else:
         argv = [
             str(REPO_DIR / "scripts" / "train_hybrid_full_xtb.py"),
