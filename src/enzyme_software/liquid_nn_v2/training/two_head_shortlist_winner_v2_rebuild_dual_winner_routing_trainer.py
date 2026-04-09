@@ -124,6 +124,8 @@ if TORCH_AVAILABLE:
             winner_top3 = 0
             end_to_end_top1 = 0
             end_to_end_top3 = 0
+            global_only_end_to_end_top1 = 0
+            specialist_only_end_to_end_top1 = 0
             hard_source_examples = []
             non_hard_source_examples = []
             specialist_used_count = 0
@@ -134,14 +136,28 @@ if TORCH_AVAILABLE:
                 winner_head, route_name, is_hard_source = self._winner_head_for_example(example)
                 with torch.no_grad():
                     logits = winner_head(example["winner_features"]).view(-1)
+                    global_logits = self.global_winner_head(example["winner_features"]).view(-1)
+                    specialist_logits = self.specialist_winner_head(example["winner_features"]).view(-1)
                 order = torch.argsort(logits, descending=True)
+                global_order = torch.argsort(global_logits, descending=True)
+                specialist_order = torch.argsort(specialist_logits, descending=True)
                 labels = example["selected_labels"] > 0.5
                 top1_hit = bool(labels[order[0]].item()) if int(order.numel()) > 0 else False
                 top3_hit = bool(labels[order[: min(3, int(order.numel()))]].any().item()) if int(order.numel()) > 0 else False
+                global_top1_hit = (
+                    bool(labels[global_order[0]].item()) if int(global_order.numel()) > 0 else False
+                )
+                specialist_top1_hit = (
+                    bool(labels[specialist_order[0]].item()) if int(specialist_order.numel()) > 0 else False
+                )
                 if top1_hit:
                     end_to_end_top1 += 1
                 if top3_hit:
                     end_to_end_top3 += 1
+                if global_top1_hit:
+                    global_only_end_to_end_top1 += 1
+                if specialist_top1_hit:
+                    specialist_only_end_to_end_top1 += 1
                 if route_name == "specialist":
                     specialist_used_count += 1
                 else:
@@ -205,6 +221,16 @@ if TORCH_AVAILABLE:
                 "dual_winner_non_hard_source_eval_count": float(len(non_hard_source_examples)),
                 "dual_winner_specialist_used_count": float(specialist_used_count),
                 "dual_winner_global_used_count": float(global_used_count),
+                "dual_winner_vs_global_only_end_to_end_top1_delta": (
+                    (float(end_to_end_top1) - float(global_only_end_to_end_top1)) / float(len(examples))
+                    if examples
+                    else 0.0
+                ),
+                "dual_winner_vs_specialist_only_end_to_end_top1_delta": (
+                    (float(end_to_end_top1) - float(specialist_only_end_to_end_top1)) / float(len(examples))
+                    if examples
+                    else 0.0
+                ),
             }
 
         def _run_batch(self, batch):

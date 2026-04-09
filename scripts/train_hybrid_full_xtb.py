@@ -2860,6 +2860,7 @@ def _save_two_head_shortlist_winner_v2_rebuild_dual_winner_routing_state(
     hard_source_winner_checkpoint_metadata: dict[str, object],
     global_winner_load_summary: dict[str, object],
     hard_source_winner_load_summary: dict[str, object],
+    architecture_compatibility_summary: dict[str, object],
     trainable_module_summary,
     frozen_module_summary,
     output_dir: Path,
@@ -2900,6 +2901,7 @@ def _save_two_head_shortlist_winner_v2_rebuild_dual_winner_routing_state(
         "dual_winner_route_by_source": bool(getattr(base_config, "dual_winner_route_by_source", True)),
         "dual_winner_use_global_for_non_hard": bool(getattr(base_config, "dual_winner_use_global_for_non_hard", True)),
         "dual_winner_use_specialist_for_hard": bool(getattr(base_config, "dual_winner_use_specialist_for_hard", True)),
+        "architecture_compatibility_summary": dict(architecture_compatibility_summary or {}),
         "restore_summary": dict(restore_summary or {}),
     }
     checkpoint = {
@@ -2926,6 +2928,7 @@ def _save_two_head_shortlist_winner_v2_rebuild_dual_winner_routing_state(
         "hard_source_winner_checkpoint_metadata": dict(hard_source_winner_checkpoint_metadata or {}),
         "global_winner_load_summary": dict(global_winner_load_summary or {}),
         "hard_source_winner_load_summary": dict(hard_source_winner_load_summary or {}),
+        "architecture_compatibility_summary": dict(architecture_compatibility_summary or {}),
         "restore_summary": dict(restore_summary or {}),
         "best_epoch": int(best_epoch),
         "best_selection": list(best_selection) if best_selection is not None else None,
@@ -2964,6 +2967,7 @@ def _save_two_head_shortlist_winner_v2_rebuild_dual_winner_routing_state(
                 "hard_source_winner_checkpoint_metadata": dict(hard_source_winner_checkpoint_metadata or {}),
                 "global_winner_load_summary": dict(global_winner_load_summary or {}),
                 "hard_source_winner_load_summary": dict(hard_source_winner_load_summary or {}),
+                "architecture_compatibility_summary": dict(architecture_compatibility_summary or {}),
                 "restore_summary": dict(restore_summary or {}),
                 "best_epoch": int(best_epoch),
                 "best_selection": list(best_selection) if best_selection is not None else None,
@@ -3938,6 +3942,24 @@ def main() -> None:
         )
         global_winner_checkpoint_metadata = _checkpoint_metadata(global_winner_checkpoint_path)
         hard_source_winner_checkpoint_metadata = _checkpoint_metadata(hard_source_winner_checkpoint_path)
+        architecture_compatibility_summary = {
+            "global_winner_feature_dim_matches": bool(
+                int(getattr(global_winner_head, "feature_dim", -1)) == int(winner_feature_dim)
+            ),
+            "hard_source_winner_feature_dim_matches": bool(
+                int(getattr(specialist_winner_head, "feature_dim", -1)) == int(winner_feature_dim)
+            ),
+            "global_winner_load_strict_match": not bool(global_winner_load_summary.get("missing_keys"))
+            and not bool(global_winner_load_summary.get("unexpected_keys")),
+            "hard_source_winner_load_strict_match": not bool(hard_source_winner_load_summary.get("missing_keys"))
+            and not bool(hard_source_winner_load_summary.get("unexpected_keys")),
+        }
+        architecture_compatibility_summary["winner_architecture_compatibility_ok"] = bool(
+            architecture_compatibility_summary["global_winner_feature_dim_matches"]
+            and architecture_compatibility_summary["hard_source_winner_feature_dim_matches"]
+            and architecture_compatibility_summary["global_winner_load_strict_match"]
+            and architecture_compatibility_summary["hard_source_winner_load_strict_match"]
+        )
         dual_winner_trainer = TwoHeadShortlistWinnerV2RebuildDualWinnerRoutingTrainer(
             model=model,
             global_winner_head=global_winner_head,
@@ -3994,6 +4016,7 @@ def main() -> None:
             hard_source_winner_checkpoint_metadata=hard_source_winner_checkpoint_metadata,
             global_winner_load_summary=global_winner_load_summary,
             hard_source_winner_load_summary=hard_source_winner_load_summary,
+            architecture_compatibility_summary=architecture_compatibility_summary,
             trainable_module_summary=dual_winner_trainer.trainable_module_summary,
             frozen_module_summary=dual_winner_trainer.frozen_module_summary,
             output_dir=output_dir,
