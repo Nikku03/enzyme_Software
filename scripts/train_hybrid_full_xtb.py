@@ -4392,10 +4392,23 @@ def main() -> None:
 
     model.to(device)
 
+    # Check if real nexus is available (not stubs)
+    try:
+        from enzyme_software.liquid_nn_v2.model.nexus_bridge import NEXUS_AVAILABLE
+    except ImportError:
+        NEXUS_AVAILABLE = False
+    
+    # Skip nexus memory rebuild if using stubs or if disabled via env
+    skip_nexus_rebuild = (
+        not NEXUS_AVAILABLE
+        or os.environ.get("HYBRID_COLAB_SKIP_NEXUS_REBUILD", "0") == "1"
+    )
+    
     if (
         getattr(base_config, "use_nexus_bridge", False)
         and getattr(base_config, "nexus_rebuild_memory_before_train", False)
         and getattr(model, "nexus_bridge", None) is not None
+        and not skip_nexus_rebuild
     ):
         memory_stats = model.rebuild_nexus_memory(train_loader, device=device)
         print(
@@ -4404,6 +4417,8 @@ def main() -> None:
             f"frozen={'yes' if base_config.nexus_memory_frozen else 'no'}",
             flush=True,
         )
+    elif skip_nexus_rebuild and getattr(model, "nexus_bridge", None) is not None:
+        print("Skipping NEXUS memory rebuild (stubs in use or disabled via env)", flush=True)
     print(
         f"Live sidecar vote inputs: wave={'yes' if live_wave_vote_inputs else 'no'} "
         f"analogical={'yes' if live_analogical_vote_inputs else 'no'}",
