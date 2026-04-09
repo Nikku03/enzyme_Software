@@ -1,0 +1,6 @@
+excluded_invalid_or_missing_label_count,excluded_non_target_cyp_count,parsed_count,parser_family,retained_cyp3a4_count,source_file,source_name
+0,0,475,attnsom_tiered,475,/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf,ATTNSOM
+0,0,475,attnsom_tiered,475,/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf,CYP_DBs_external
+146,0,679,metxbio_bom,533,/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf,MetXBioDB
+2,0,54,flat_atom_list,52,/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Peng_external_dataset/Peng_external_dataset.sdf,Peng_external
+0,0,20,flat_atom_list,20,/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Rudik_external_dataset/Rudik_external_dataset.sdf,Rudik_external

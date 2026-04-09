@@ -1,0 +1,79 @@
+{
+  "subset_name": "cyp3a4_strict_exact_clean",
+  "seed": 42,
+  "split_mode": "scaffold_source_size",
+  "train_ratio": 0.8,
+  "val_ratio": 0.1,
+  "total_rows": 143,
+  "train": {
+    "row_count": 114,
+    "source_breakdown": {
+      "ATTNSOM": 51,
+      "MetXBioDB": 8,
+      "Peng_external": 40,
+      "Rudik_external": 15
+    },
+    "source_family_breakdown": {
+      "attnsom_family": 51,
+      "metxbiodb_family": 8,
+      "peng_family": 40,
+      "rudik_family": 15
+    },
+    "label_regime_breakdown": {
+      "multi_exact": 20,
+      "single_exact": 94
+    },
+    "training_regime_breakdown": {
+      "exact_clean": 114
+    },
+    "multisite_count": 24
+  },
+  "val": {
+    "row_count": 14,
+    "source_breakdown": {
+      "ATTNSOM": 7,
+      "MetXBioDB": 1,
+      "Peng_external": 5,
+      "Rudik_external": 1
+    },
+    "source_family_breakdown": {
+      "attnsom_family": 7,
+      "metxbiodb_family": 1,
+      "peng_family": 5,
+      "rudik_family": 1
+    },
+    "label_regime_breakdown": {
+      "multi_exact": 5,
+      "single_exact": 9
+    },
+    "training_regime_breakdown": {
+      "exact_clean": 14
+    },
+    "multisite_count": 5
+  },
+  "test": {
+    "row_count": 15,
+    "source_breakdown": {
+      "ATTNSOM": 6,
+      "MetXBioDB": 2,
+      "Peng_external": 5,
+      "Rudik_external": 2
+    },
+    "source_family_breakdown": {
+      "attnsom_family": 6,
+      "metxbiodb_family": 2,
+      "peng_family": 5,
+      "rudik_family": 2
+    },
+    "label_regime_breakdown": {
+      "multi_exact": 6,
+      "single_exact": 9
+    },
+    "training_regime_breakdown": {
+      "exact_clean": 15
+    },
+    "multisite_count": 8
+  },
+  "input_dataset_path": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_downstream_subsets_stricter/cyp3a4_strict_exact_clean.json",
+  "scaffold_split_policy": "scaffold_source_size"
+}

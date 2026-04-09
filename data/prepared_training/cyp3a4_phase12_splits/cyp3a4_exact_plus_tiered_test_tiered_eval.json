@@ -1,0 +1,3626 @@
+{
+  "n_drugs": 20,
+  "n_site_labeled": 20,
+  "summary": {
+    "total_input_sources": 5,
+    "total_parsed_rows": 1703,
+    "total_retained_cyp3a4_rows": 1555,
+    "total_final_merged_rows": 194,
+    "label_regime_counts": {
+      "broad_region": 92,
+      "multi_exact": 160,
+      "single_exact": 253,
+      "tiered_multisite": 194
+    },
+    "merge_policy_counts": {
+      "conflict_preserved": 43,
+      "exact_agreement": 67,
+      "partial_agreement_union": 366,
+      "single_source": 135
+    },
+    "subset_name": "cyp3a4_exact_plus_tiered_tiered_eval",
+    "split_name": "test",
+    "row_count": 20
+  },
+  "build_stats": {
+    "target_cyp": "CYP3A4",
+    "source_specs": [
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "parser_family": "attnsom_tiered",
+        "config_keys": []
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "parser_family": "attnsom_tiered",
+        "config_keys": []
+      },
+      {
+        "source_name": "MetXBioDB",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+        "parser_family": "metxbio_bom",
+        "config_keys": [
+          "bom_field",
+          "citation_fields",
+          "confidence_override",
+          "doi_fields",
+          "fixed_cyp",
+          "flag_comments_field",
+          "id_fields",
+          "index_base",
+          "name_fields",
+          "source_detail_fields"
+        ]
+      },
+      {
+        "source_name": "Peng_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Peng_external_dataset/Peng_external_dataset.sdf",
+        "parser_family": "flat_atom_list",
+        "config_keys": [
+          "citation_fields",
+          "confidence_override",
+          "doi_fields",
+          "fixed_cyp",
+          "id_fields",
+          "index_base",
+          "name_fields",
+          "site_fields",
+          "source_detail_fields"
+        ]
+      },
+      {
+        "source_name": "Rudik_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Rudik_external_dataset/Rudik_external_dataset.sdf",
+        "parser_family": "flat_atom_list",
+        "config_keys": [
+          "citation_fields",
+          "confidence_override",
+          "doi_fields",
+          "fixed_cyp",
+          "id_fields",
+          "index_base",
+          "name_fields",
+          "site_fields",
+          "source_detail_fields"
+        ]
+      }
+    ],
+    "per_source_summary": [
+      {
+        "source_name": "ATTNSOM",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 475,
+        "retained_cyp3a4_count": 475,
+        "excluded_non_target_cyp_count": 0,
+        "excluded_invalid_or_missing_label_count": 0
+      },
+      {
+        "source_name": "CYP_DBs_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "parser_family": "attnsom_tiered",
+        "parsed_count": 475,
+        "retained_cyp3a4_count": 475,
+        "excluded_non_target_cyp_count": 0,
+        "excluded_invalid_or_missing_label_count": 0
+      },
+      {
+        "source_name": "MetXBioDB",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+        "parser_family": "metxbio_bom",
+        "parsed_count": 679,
+        "retained_cyp3a4_count": 533,
+        "excluded_non_target_cyp_count": 0,
+        "excluded_invalid_or_missing_label_count": 146
+      },
+      {
+        "source_name": "Peng_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Peng_external_dataset/Peng_external_dataset.sdf",
+        "parser_family": "flat_atom_list",
+        "parsed_count": 54,
+        "retained_cyp3a4_count": 52,
+        "excluded_non_target_cyp_count": 0,
+        "excluded_invalid_or_missing_label_count": 2
+      },
+      {
+        "source_name": "Rudik_external",
+        "source_file": "/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Rudik_external_dataset/Rudik_external_dataset.sdf",
+        "parser_family": "flat_atom_list",
+        "parsed_count": 20,
+        "retained_cyp3a4_count": 20,
+        "excluded_non_target_cyp_count": 0,
+        "excluded_invalid_or_missing_label_count": 0
+      }
+    ],
+    "property_scans": {
+      "ATTNSOM": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 25,
+          "ID": 100,
+          "New_Or_Updated_From_Original_Merck_Dataset": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 40,
+          "TERTIARY_SOM": 10
+        }
+      },
+      "CYP_DBs_external": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "Citation": 100,
+          "DOI": 25,
+          "ID": 100,
+          "New_Or_Updated_From_Original_Merck_Dataset": 100,
+          "PRIMARY_SOM": 100,
+          "SECONDARY_SOM": 40,
+          "TERTIARY_SOM": 10
+        }
+      },
+      "MetXBioDB": {
+        "scanned_records": 100,
+        "valid_records": 100,
+        "property_counts": {
+          "BOM_1A2": 100,
+          "BOM_2A6": 100,
+          "BOM_2B6": 100,
+          "BOM_2C19": 100,
+          "BOM_2C8": 100,
+          "BOM_2C9": 100,
+          "BOM_2D6": 100,
+          "BOM_2E1": 100,
+          "BOM_3A4": 100,
+          "FLAG_COMMENTS": 100,
+          "InChIKey": 100,
+          "PubChem_CID": 100,
+          "References": 100
+        }
+      },
+      "Peng_external": {
+        "scanned_records": 54,
+        "valid_records": 54,
+        "property_counts": {
+          "Name": 54,
+          "PRIMARY_SOM": 54,
+          "PotentialSOMs": 54,
+          "PredictSOMs": 25,
+          "PredictedSOMs": 29
+        }
+      },
+      "Rudik_external": {
+        "scanned_records": 20,
+        "valid_records": 20,
+        "property_counts": {
+          "ID": 20,
+          "PRIMARY_SOM": 20
+        }
+      }
+    },
+    "duplicate_group_count": 476,
+    "exact_agreement_merge_count": 67,
+    "partial_agreement_merge_count": 366,
+    "conflict_preserved_count": 43,
+    "single_source_count": 135,
+    "citation_count": 619,
+    "doi_count": 194,
+    "site_provenance_preserved_count": 699,
+    "phase12_parent_subset": "cyp3a4_exact_plus_tiered"
+  },
+  "drugs": [
+    {
+      "id": "NNK",
+      "molecule_name": "NNK",
+      "name": "NNK",
+      "canonical_smiles": "CN(CCCC(=O)c1cccnc1)N=O",
+      "smiles": "CN(CCCC(=O)c1cccnc1)N=O",
+      "inchi_key": "FLAQQSHRLBFIEZ-UHFFFAOYSA-N",
+      "formula": "C10H13N3O2",
+      "atom_count": 15,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        2,
+        3,
+        10
+      ],
+      "metabolism_sites": [
+        2,
+        3,
+        10
+      ],
+      "som": [
+        {
+          "atom_idx": 2
+        },
+        {
+          "atom_idx": 3
+        },
+        {
+          "atom_idx": 10
+        }
+      ],
+      "site_count": 3,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "NNK",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=47289",
+        "InChIKey=FLAQQSHRLBFIEZ-UHFFFAOYSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Staretz et al.,Drug Metab. Disp.,25,154,1997 | Staretz et al.,Drug Metab. Disp.,25,154,1997 PMID: 9029045\nSmith, T.J.; Guo, Z.Y.; Guengerich, F.P.; Yung, C.S. Metabolism of 4-Methylnitrosamino-1(3-pyridyl)1-butanone (NNK) by Human Cytochrome P4501A2 and Its Inhibition by Phenethyl Isothiocyanate. Carcinogenesis 1996, 17, 809-813. PMID: 8625495\nSmith et al.,Canc. Res.,52,1757,1992",
+      "doi": "",
+      "primary_site_atoms": [
+        3,
+        10
+      ],
+      "secondary_site_atoms": [
+        10
+      ],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        2,
+        3,
+        10
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [
+        "Followed Xenosite"
+      ],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_21be83511c1e411c",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "site_set_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "NNK",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Staretz et al.,Drug Metab. Disp.,25,154,1997",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            3
+          ],
+          "secondary_site_atoms": [
+            10
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            3,
+            10
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "NNK",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Staretz et al.,Drug Metab. Disp.,25,154,1997",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            3
+          ],
+          "secondary_site_atoms": [
+            10
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            3,
+            10
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "FLAQQSHRLBFIEZ-UHFFFAOYSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Staretz et al.,Drug Metab. Disp.,25,154,1997 PMID: 9029045\nSmith, T.J.; Guo, Z.Y.; Guengerich, F.P.; Yung, C.S. Metabolism of 4-Methylnitrosamino-1(3-pyridyl)1-butanone (NNK) by Human Cytochrome P4501A2 and Its Inhibition by Phenethyl Isothiocyanate. Carcinogenesis 1996, 17, 809-813. PMID: 8625495\nSmith et al.,Canc. Res.,52,1757,1992",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            3,
+            10
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            2,
+            3,
+            10
+          ],
+          "broad_region_annotations": [
+            "Followed Xenosite"
+          ]
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "NNAL",
+      "molecule_name": "NNAL",
+      "name": "NNAL",
+      "canonical_smiles": "CN(CC[C@H](O)C(=O)c1cccnc1)N=O",
+      "smiles": "CN(CC[C@H](O)C(=O)c1cccnc1)N=O",
+      "inchi_key": "IJGFYZIMQQPUTE-VIFPVBQESA-N",
+      "formula": "C10H13N3O3",
+      "atom_count": 16,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        3,
+        11
+      ],
+      "metabolism_sites": [
+        3,
+        11
+      ],
+      "som": [
+        {
+          "atom_idx": 3
+        },
+        {
+          "atom_idx": 11
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "NNAL",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf"
+      ],
+      "citation": "Staretz et al.,Drug Metab. Disp.,25,154,1997",
+      "doi": "",
+      "primary_site_atoms": [
+        3
+      ],
+      "secondary_site_atoms": [
+        11
+      ],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        3,
+        11
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external"
+      ],
+      "duplicate_group_id": "dup_cd5af9dbbee10399",
+      "merge_policy_used": "exact_agreement",
+      "conflict_flags": [],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "NNAL",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Staretz et al.,Drug Metab. Disp.,25,154,1997",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            3
+          ],
+          "secondary_site_atoms": [
+            11
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            3,
+            11
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "NNAL",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Staretz et al.,Drug Metab. Disp.,25,154,1997",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            3
+          ],
+          "secondary_site_atoms": [
+            11
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            3,
+            11
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "pinacidil",
+      "molecule_name": "pinacidil",
+      "name": "pinacidil",
+      "canonical_smiles": "C[C@@H](N/C(=N\\C#N)Nc1ccncc1)C(C)(C)C",
+      "smiles": "C[C@@H](N/C(=N\\C#N)Nc1ccncc1)C(C)(C)C",
+      "inchi_key": "IVVNZDGDKPTYHK-SNVBAGLBSA-N",
+      "formula": "C13H19N5",
+      "atom_count": 18,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        12,
+        13,
+        14
+      ],
+      "metabolism_sites": [
+        12,
+        13,
+        14
+      ],
+      "som": [
+        {
+          "atom_idx": 12
+        },
+        {
+          "atom_idx": 13
+        },
+        {
+          "atom_idx": 14
+        }
+      ],
+      "site_count": 3,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "pinacidil",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=12428581",
+        "InChIKey=IVVNZDGDKPTYHK-SNVBAGLBSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Zhang et al.,Biochemistry,41,2712,2002 | Zhang et al.,Biochemistry,41,2712,2002 PMID: 11851418",
+      "doi": "10.1021/bi0119971",
+      "primary_site_atoms": [
+        12,
+        13,
+        14
+      ],
+      "secondary_site_atoms": [
+        12
+      ],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        12,
+        13,
+        14
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_7a38c6e857dc3bbf",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "pinacidil",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Zhang et al.,Biochemistry,41,2712,2002",
+          "doi": "10.1021/bi0119971",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            13,
+            14
+          ],
+          "secondary_site_atoms": [
+            12
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            12,
+            13,
+            14
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "pinacidil",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Zhang et al.,Biochemistry,41,2712,2002",
+          "doi": "10.1021/bi0119971",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            13,
+            14
+          ],
+          "secondary_site_atoms": [
+            12
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            12,
+            13,
+            14
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "IVVNZDGDKPTYHK-SNVBAGLBSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Zhang et al.,Biochemistry,41,2712,2002 PMID: 11851418",
+          "doi": "",
+          "label_regime": "single_exact",
+          "primary_site_atoms": [
+            12
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            12,
+            13,
+            14
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": true,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "bisnor",
+      "molecule_name": "bisnor",
+      "name": "bisnor",
+      "canonical_smiles": "O=C(O)C/C=C\\C[C@H]1[C@@H]2CC[C@@H](C2)[C@@H]1NS(=O)(=O)c1ccccc1",
+      "smiles": "O=C(O)C/C=C\\C[C@H]1[C@@H]2CC[C@@H](C2)[C@@H]1NS(=O)(=O)c1ccccc1",
+      "inchi_key": "IBHYMKYJWOYNMU-KHECKTLASA-N",
+      "formula": "C18H23NO4S",
+      "atom_count": 24,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        1,
+        9
+      ],
+      "metabolism_sites": [
+        1,
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 1
+        },
+        {
+          "atom_idx": 9
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "bisnor",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=101619702",
+        "InChIKey=IBHYMKYJWOYNMU-KHECKTLASA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Yamaguchi et al.,Drug Metab. Disp.,25,75,1996 | Yamaguchi et al.,Drug Metab. Disp.,25,75,1996\nYamaguchi, Yoshitaka, et al. \"Identification of rat and human cytochrome P450 forms involved in the metabolism of the thromboxane A2 receptor antagonist (+)-S-145.\" Drug metabolism and disposition 25.1 (1997): 75-80.",
+      "doi": "",
+      "primary_site_atoms": [
+        1,
+        9
+      ],
+      "secondary_site_atoms": [
+        9
+      ],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        1,
+        9
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [
+        "The reference provied by Xenosite is wrong."
+      ],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_7cc37a8ed1b4ca44",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "bisnor",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Yamaguchi et al.,Drug Metab. Disp.,25,75,1996",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            1
+          ],
+          "secondary_site_atoms": [
+            9
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            1,
+            9
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "bisnor",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Yamaguchi et al.,Drug Metab. Disp.,25,75,1996",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            1
+          ],
+          "secondary_site_atoms": [
+            9
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            1,
+            9
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "IBHYMKYJWOYNMU-KHECKTLASA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Yamaguchi et al.,Drug Metab. Disp.,25,75,1996\nYamaguchi, Yoshitaka, et al. \"Identification of rat and human cytochrome P450 forms involved in the metabolism of the thromboxane A2 receptor antagonist (+)-S-145.\" Drug metabolism and disposition 25.1 (1997): 75-80.",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            1,
+            9
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            1,
+            9
+          ],
+          "broad_region_annotations": [
+            "The reference provied by Xenosite is wrong."
+          ]
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "midazolam",
+      "molecule_name": "midazolam",
+      "name": "midazolam",
+      "canonical_smiles": "Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2",
+      "smiles": "Cc1ncc2n1-c1ccc(Cl)cc1C(c1ccccc1F)=NC2",
+      "inchi_key": "DDLIGBOFAVUZHB-UHFFFAOYSA-N",
+      "formula": "C18H13ClFN3",
+      "atom_count": 23,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        4,
+        16
+      ],
+      "metabolism_sites": [
+        4,
+        16
+      ],
+      "som": [
+        {
+          "atom_idx": 4
+        },
+        {
+          "atom_idx": 16
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "midazolam",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=4192",
+        "InChIKey=DDLIGBOFAVUZHB-UHFFFAOYSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "K.K. Kishore et al., Mol. Pharmacol., 2002, 61, 495-506 | S. Ekins et al., J. Pharmacol. Exp. Ther., 1998, 286, 1253-1259\nK.K. Kishore et al., Mol. Pharmacol., 2002, 61, 495-506",
+      "doi": "",
+      "primary_site_atoms": [
+        4,
+        16
+      ],
+      "secondary_site_atoms": [
+        16
+      ],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        4,
+        16
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_0b9e9803cf015fe2",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "midazolam",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "K.K. Kishore et al., Mol. Pharmacol., 2002, 61, 495-506",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            4
+          ],
+          "secondary_site_atoms": [
+            16
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            4,
+            16
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "midazolam",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "K.K. Kishore et al., Mol. Pharmacol., 2002, 61, 495-506",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            4
+          ],
+          "secondary_site_atoms": [
+            16
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            4,
+            16
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "DDLIGBOFAVUZHB-UHFFFAOYSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "S. Ekins et al., J. Pharmacol. Exp. Ther., 1998, 286, 1253-1259\nK.K. Kishore et al., Mol. Pharmacol., 2002, 61, 495-506",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            4,
+            16
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            4,
+            16
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "kr_33028",
+      "molecule_name": "kr_33028",
+      "name": "kr_33028",
+      "canonical_smiles": "N#Cc1cccc2sc(C(=O)NC(=N)N)cc12",
+      "smiles": "N#Cc1cccc2sc(C(=O)NC(=N)N)cc12",
+      "inchi_key": "WGKIDCRTLNUROQ-UHFFFAOYSA-N",
+      "formula": "C11H8N4OS",
+      "atom_count": 17,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        3,
+        15
+      ],
+      "metabolism_sites": [
+        3,
+        15
+      ],
+      "som": [
+        {
+          "atom_idx": 3
+        },
+        {
+          "atom_idx": 15
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "kr_33028",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=11515637",
+        "InChIKey=WGKIDCRTLNUROQ-UHFFFAOYSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Kim et al.,Toxicol. Lett.,166,105,2006 | Kim et al.,Toxicol. Lett.,166,105,2006 PMID: 16857327",
+      "doi": "",
+      "primary_site_atoms": [
+        3,
+        15
+      ],
+      "secondary_site_atoms": [
+        15
+      ],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        3,
+        15
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_b7ad6393227e7853",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "kr_33028",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Kim et al.,Toxicol. Lett.,166,105,2006",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            3
+          ],
+          "secondary_site_atoms": [
+            15
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            3,
+            15
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "kr_33028",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Kim et al.,Toxicol. Lett.,166,105,2006",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            3
+          ],
+          "secondary_site_atoms": [
+            15
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            3,
+            15
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "WGKIDCRTLNUROQ-UHFFFAOYSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Kim et al.,Toxicol. Lett.,166,105,2006 PMID: 16857327",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            3,
+            15
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            3,
+            15
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "atorvastatin",
+      "molecule_name": "atorvastatin",
+      "name": "atorvastatin",
+      "canonical_smiles": "CC(C)c1c(C(=O)Nc2ccccc2)c(-c2ccccc2)c(-c2ccc(F)cc2)n1CC[C@@H](O)C[C@@H](O)CC(=O)O",
+      "smiles": "CC(C)c1c(C(=O)Nc2ccccc2)c(-c2ccccc2)c(-c2ccc(F)cc2)n1CC[C@@H](O)C[C@@H](O)CC(=O)O",
+      "inchi_key": "XUKUURHRXDUEBC-KAYWLYCHSA-N",
+      "formula": "C33H35FN2O5",
+      "atom_count": 41,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        12,
+        20,
+        34
+      ],
+      "metabolism_sites": [
+        12,
+        20,
+        34
+      ],
+      "som": [
+        {
+          "atom_idx": 12
+        },
+        {
+          "atom_idx": 20
+        },
+        {
+          "atom_idx": 34
+        }
+      ],
+      "site_count": 3,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "ATTNSOM",
+      "source_record_id": "atorvastatin",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf"
+      ],
+      "citation": "Jacobsen et al.,Drug Metab. Disp.,28,1369,2000",
+      "doi": "",
+      "primary_site_atoms": [
+        34
+      ],
+      "secondary_site_atoms": [
+        12,
+        20
+      ],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        12,
+        20,
+        34
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM"
+      ],
+      "duplicate_group_id": "dup_1c174d966c0f811a",
+      "merge_policy_used": "conflict_preserved",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "site_set_mismatch",
+        "site_set_disjoint",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "atorvastatin",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Jacobsen et al.,Drug Metab. Disp.,28,1369,2000",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            34
+          ],
+          "secondary_site_atoms": [
+            12,
+            20
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            12,
+            20,
+            34
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "atorvastatin",
+      "molecule_name": "atorvastatin",
+      "name": "atorvastatin",
+      "canonical_smiles": "CC(C)c1c(C(=O)Nc2ccccc2)c(-c2ccccc2)c(-c2ccc(F)cc2)n1CC[C@@H](O)C[C@@H](O)CC(=O)O",
+      "smiles": "CC(C)c1c(C(=O)Nc2ccccc2)c(-c2ccccc2)c(-c2ccc(F)cc2)n1CC[C@@H](O)C[C@@H](O)CC(=O)O",
+      "inchi_key": "XUKUURHRXDUEBC-KAYWLYCHSA-N",
+      "formula": "C33H35FN2O5",
+      "atom_count": 41,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        12,
+        20,
+        34
+      ],
+      "metabolism_sites": [
+        12,
+        20,
+        34
+      ],
+      "som": [
+        {
+          "atom_idx": 12
+        },
+        {
+          "atom_idx": 20
+        },
+        {
+          "atom_idx": 34
+        }
+      ],
+      "site_count": 3,
+      "is_multisite": true,
+      "molecule_source": "CYP_DBs_external",
+      "source": "CYP_DBs_external",
+      "site_source": "CYP_DBs_external",
+      "source_record_id": "atorvastatin",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+      "source_details": [
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf"
+      ],
+      "citation": "Jacobsen et al.,Drug Metab. Disp.,28,1369,2000",
+      "doi": "",
+      "primary_site_atoms": [
+        34
+      ],
+      "secondary_site_atoms": [
+        12,
+        20
+      ],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        12,
+        20,
+        34
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "CYP_DBs_external"
+      ],
+      "duplicate_group_id": "dup_1c174d966c0f811a",
+      "merge_policy_used": "conflict_preserved",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "site_set_mismatch",
+        "site_set_disjoint",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "atorvastatin",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Jacobsen et al.,Drug Metab. Disp.,28,1369,2000",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            34
+          ],
+          "secondary_site_atoms": [
+            12,
+            20
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            12,
+            20,
+            34
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "carvedilol",
+      "molecule_name": "carvedilol",
+      "name": "carvedilol",
+      "canonical_smiles": "COc1ccccc1OCCNC[C@H](O)COc1cccc2[nH]c3ccccc3c12",
+      "smiles": "COc1ccccc1OCCNC[C@H](O)COc1cccc2[nH]c3ccccc3c12",
+      "inchi_key": "OGHNVEJMJSYVRP-KRWDZBQOSA-N",
+      "formula": "C24H26N2O4",
+      "atom_count": 30,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        1,
+        19
+      ],
+      "metabolism_sites": [
+        1,
+        19
+      ],
+      "som": [
+        {
+          "atom_idx": 1
+        },
+        {
+          "atom_idx": 19
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "carvedilol",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=185395",
+        "InChIKey=OGHNVEJMJSYVRP-KRWDZBQOSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Oldham and Clarke,Drug Metab. Disp.,25,970,1997 | Oldham and Clarke,Drug Metab. Disp.,25,970,1997 PMID: 9280405\nZhou, Shu-Feng. \"Polymorphism of human cytochrome P450 2D6 and its clinical significance.\" Clinical pharmacokinetics 48.12 (2009): 761-804",
+      "doi": "",
+      "primary_site_atoms": [
+        1,
+        19
+      ],
+      "secondary_site_atoms": [
+        1
+      ],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        1,
+        19
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_f0a1e5efc102c4ba",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "carvedilol",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Oldham and Clarke,Drug Metab. Disp.,25,970,1997",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            19
+          ],
+          "secondary_site_atoms": [
+            1
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            1,
+            19
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "carvedilol",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Oldham and Clarke,Drug Metab. Disp.,25,970,1997",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            19
+          ],
+          "secondary_site_atoms": [
+            1
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            1,
+            19
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "OGHNVEJMJSYVRP-KRWDZBQOSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Oldham and Clarke,Drug Metab. Disp.,25,970,1997 PMID: 9280405\nZhou, Shu-Feng. \"Polymorphism of human cytochrome P450 2D6 and its clinical significance.\" Clinical pharmacokinetics 48.12 (2009): 761-804",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            1,
+            19
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            1,
+            19
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "thioridazine",
+      "molecule_name": "thioridazine",
+      "name": "thioridazine",
+      "canonical_smiles": "CSc1ccc2c(c1)N(CC[C@H]1CCCCN1C)c1ccccc1S2",
+      "smiles": "CSc1ccc2c(c1)N(CC[C@H]1CCCCN1C)c1ccccc1S2",
+      "inchi_key": "KLBQZWRITKRQQV-MRXNPFEDSA-N",
+      "formula": "C21H26N2S2",
+      "atom_count": 25,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        8,
+        12,
+        16,
+        24
+      ],
+      "metabolism_sites": [
+        8,
+        12,
+        16,
+        24
+      ],
+      "som": [
+        {
+          "atom_idx": 8
+        },
+        {
+          "atom_idx": 12
+        },
+        {
+          "atom_idx": 16
+        },
+        {
+          "atom_idx": 24
+        }
+      ],
+      "site_count": 4,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "thioridazine",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=6604030",
+        "InChIKey=KLBQZWRITKRQQV-MRXNPFEDSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Wojcikowski,Drug Metab. Disp.,34,471,2006 | Wojcikowski,Drug Metab. Disp.,34,471,2006 PMID:16272405\nWojcikowski et al.,Drug Metab. Disp.,34,471,2006",
+      "doi": "10.1124/dmd.105.006445",
+      "primary_site_atoms": [
+        12,
+        16,
+        24
+      ],
+      "secondary_site_atoms": [
+        12
+      ],
+      "tertiary_site_atoms": [
+        24
+      ],
+      "all_labeled_site_atoms": [
+        8,
+        12,
+        16,
+        24
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_a29c7df83ff11f5f",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "site_set_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "thioridazine",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Wojcikowski,Drug Metab. Disp.,34,471,2006",
+          "doi": "10.1124/dmd.105.006445",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            16
+          ],
+          "secondary_site_atoms": [
+            12
+          ],
+          "tertiary_site_atoms": [
+            24
+          ],
+          "all_labeled_site_atoms": [
+            12,
+            16,
+            24
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "thioridazine",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Wojcikowski,Drug Metab. Disp.,34,471,2006",
+          "doi": "10.1124/dmd.105.006445",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            16
+          ],
+          "secondary_site_atoms": [
+            12
+          ],
+          "tertiary_site_atoms": [
+            24
+          ],
+          "all_labeled_site_atoms": [
+            12,
+            16,
+            24
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "KLBQZWRITKRQQV-MRXNPFEDSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Wojcikowski,Drug Metab. Disp.,34,471,2006 PMID:16272405\nWojcikowski et al.,Drug Metab. Disp.,34,471,2006",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            12,
+            16,
+            24
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            8,
+            12,
+            16,
+            24
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": true,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "beta_thujone",
+      "molecule_name": "beta_thujone",
+      "name": "beta_thujone",
+      "canonical_smiles": "CC(C)[C@]12CC(=O)[C@@H](C)[C@H]1C2",
+      "smiles": "CC(C)[C@]12CC(=O)[C@@H](C)[C@H]1C2",
+      "inchi_key": "USMNOWBWPHYOEA-XKSSXDPKSA-N",
+      "formula": "C10H16O",
+      "atom_count": 11,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        1,
+        2,
+        6,
+        9
+      ],
+      "metabolism_sites": [
+        1,
+        2,
+        6,
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 1
+        },
+        {
+          "atom_idx": 2
+        },
+        {
+          "atom_idx": 6
+        },
+        {
+          "atom_idx": 9
+        }
+      ],
+      "site_count": 4,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "beta_thujone",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=91456",
+        "InChIKey=USMNOWBWPHYOEA-XKSSXDPKSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Hold et al.,Chem. Res. Toxicol.,14,589,2001 | Hold et al.,Chem. Res. Toxicol.,14,589,2001 PMID: 11368559",
+      "doi": "10.1021/tx000242c",
+      "primary_site_atoms": [
+        6,
+        9
+      ],
+      "secondary_site_atoms": [
+        6
+      ],
+      "tertiary_site_atoms": [
+        1,
+        2
+      ],
+      "all_labeled_site_atoms": [
+        1,
+        2,
+        6,
+        9
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_19899e3a855cbba3",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "beta_thujone",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Hold et al.,Chem. Res. Toxicol.,14,589,2001",
+          "doi": "10.1021/tx000242c",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            9
+          ],
+          "secondary_site_atoms": [
+            6
+          ],
+          "tertiary_site_atoms": [
+            1,
+            2
+          ],
+          "all_labeled_site_atoms": [
+            1,
+            2,
+            6,
+            9
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "beta_thujone",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Hold et al.,Chem. Res. Toxicol.,14,589,2001",
+          "doi": "10.1021/tx000242c",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            9
+          ],
+          "secondary_site_atoms": [
+            6
+          ],
+          "tertiary_site_atoms": [
+            1,
+            2
+          ],
+          "all_labeled_site_atoms": [
+            1,
+            2,
+            6,
+            9
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "USMNOWBWPHYOEA-XKSSXDPKSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Hold et al.,Chem. Res. Toxicol.,14,589,2001 PMID: 11368559",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            6,
+            9
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            1,
+            2,
+            6,
+            9
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": true,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "alpha_thujone",
+      "molecule_name": "alpha_thujone",
+      "name": "alpha_thujone",
+      "canonical_smiles": "CC(C)[C@]12CC(=O)[C@H](C)[C@H]1C2",
+      "smiles": "CC(C)[C@]12CC(=O)[C@H](C)[C@H]1C2",
+      "inchi_key": "USMNOWBWPHYOEA-MRTMQBJTSA-N",
+      "formula": "C10H16O",
+      "atom_count": 11,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        1,
+        2,
+        6,
+        9
+      ],
+      "metabolism_sites": [
+        1,
+        2,
+        6,
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 1
+        },
+        {
+          "atom_idx": 2
+        },
+        {
+          "atom_idx": 6
+        },
+        {
+          "atom_idx": 9
+        }
+      ],
+      "site_count": 4,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "alpha_thujone",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=261491",
+        "InChIKey=USMNOWBWPHYOEA-MRTMQBJTSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Hold et al.,Chem. Res. Toxicol.,14,589,2001 | Hold et al.,Chem. Res. Toxicol.,14,589,2001 PMID: 11368559",
+      "doi": "10.1021/tx000242c",
+      "primary_site_atoms": [
+        6,
+        9
+      ],
+      "secondary_site_atoms": [
+        9
+      ],
+      "tertiary_site_atoms": [
+        1,
+        2
+      ],
+      "all_labeled_site_atoms": [
+        1,
+        2,
+        6,
+        9
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_21a5cb630c2a6e36",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "alpha_thujone",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Hold et al.,Chem. Res. Toxicol.,14,589,2001",
+          "doi": "10.1021/tx000242c",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            6
+          ],
+          "secondary_site_atoms": [
+            9
+          ],
+          "tertiary_site_atoms": [
+            1,
+            2
+          ],
+          "all_labeled_site_atoms": [
+            1,
+            2,
+            6,
+            9
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "alpha_thujone",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Hold et al.,Chem. Res. Toxicol.,14,589,2001",
+          "doi": "10.1021/tx000242c",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            6
+          ],
+          "secondary_site_atoms": [
+            9
+          ],
+          "tertiary_site_atoms": [
+            1,
+            2
+          ],
+          "all_labeled_site_atoms": [
+            1,
+            2,
+            6,
+            9
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "USMNOWBWPHYOEA-MRTMQBJTSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Hold et al.,Chem. Res. Toxicol.,14,589,2001 PMID: 11368559",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            6,
+            9
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            1,
+            2,
+            6,
+            9
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": true,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "sirolimus",
+      "molecule_name": "sirolimus",
+      "name": "sirolimus",
+      "canonical_smiles": "CO[C@H]1C[C@@H]2CC[C@@H](C)[C@@](O)(O2)C(=O)C(=O)N2CCCC[C@H]2C(=O)O[C@H]([C@H](C)C[C@@H]2CC[C@@H](O)[C@H](OC)C2)CC(=O)[C@H](C)/C=C(\\C)[C@@H](O)[C@@H](OC)C(=O)[C@H](C)C[C@H](C)/C=C/C=C/C=C/1C",
+      "smiles": "CO[C@H]1C[C@@H]2CC[C@@H](C)[C@@](O)(O2)C(=O)C(=O)N2CCCC[C@H]2C(=O)O[C@H]([C@H](C)C[C@@H]2CC[C@@H](O)[C@H](OC)C2)CC(=O)[C@H](C)/C=C(\\C)[C@@H](O)[C@@H](OC)C(=O)[C@H](C)C[C@H](C)/C=C/C=C/C=C/1C",
+      "inchi_key": "QFJCIRLUMZQUOT-HPLJOQBZSA-N",
+      "formula": "C51H79NO13",
+      "atom_count": 65,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        0,
+        1,
+        32,
+        34,
+        41,
+        47,
+        48,
+        59,
+        64
+      ],
+      "metabolism_sites": [
+        0,
+        1,
+        32,
+        34,
+        41,
+        47,
+        48,
+        59,
+        64
+      ],
+      "som": [
+        {
+          "atom_idx": 0
+        },
+        {
+          "atom_idx": 1
+        },
+        {
+          "atom_idx": 32
+        },
+        {
+          "atom_idx": 34
+        },
+        {
+          "atom_idx": 41
+        },
+        {
+          "atom_idx": 47
+        },
+        {
+          "atom_idx": 48
+        },
+        {
+          "atom_idx": 59
+        },
+        {
+          "atom_idx": 64
+        }
+      ],
+      "site_count": 9,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "sirolimus",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=5284616",
+        "InChIKey=QFJCIRLUMZQUOT-HPLJOQBZSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Cummins et al.,J. Pharm. Exp. Thera.,308,143,2004 | Cummins et al.,J. Pharm. Exp. Thera.,308,143,2004 PMID: 14569063",
+      "doi": "10.1124/jpet.103.058065",
+      "primary_site_atoms": [
+        0,
+        1,
+        34,
+        41,
+        48,
+        59,
+        64
+      ],
+      "secondary_site_atoms": [
+        0,
+        1,
+        41,
+        48,
+        64
+      ],
+      "tertiary_site_atoms": [
+        34
+      ],
+      "all_labeled_site_atoms": [
+        0,
+        1,
+        32,
+        34,
+        41,
+        47,
+        48,
+        59,
+        64
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_5bbbf43e490da65b",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "site_set_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "sirolimus",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Cummins et al.,J. Pharm. Exp. Thera.,308,143,2004",
+          "doi": "10.1124/jpet.103.058065",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            59
+          ],
+          "secondary_site_atoms": [
+            0,
+            1,
+            41,
+            48,
+            64
+          ],
+          "tertiary_site_atoms": [
+            34
+          ],
+          "all_labeled_site_atoms": [
+            0,
+            1,
+            34,
+            41,
+            48,
+            59,
+            64
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "sirolimus",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Cummins et al.,J. Pharm. Exp. Thera.,308,143,2004",
+          "doi": "10.1124/jpet.103.058065",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            59
+          ],
+          "secondary_site_atoms": [
+            0,
+            1,
+            41,
+            48,
+            64
+          ],
+          "tertiary_site_atoms": [
+            34
+          ],
+          "all_labeled_site_atoms": [
+            0,
+            1,
+            34,
+            41,
+            48,
+            59,
+            64
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "QFJCIRLUMZQUOT-HPLJOQBZSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Cummins et al.,J. Pharm. Exp. Thera.,308,143,2004 PMID: 14569063",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            0,
+            1,
+            34,
+            41,
+            48,
+            59,
+            64
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            0,
+            1,
+            32,
+            34,
+            41,
+            47,
+            48,
+            59,
+            64
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": true,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "everolimus",
+      "molecule_name": "everolimus",
+      "name": "everolimus",
+      "canonical_smiles": "CO[C@H]1C[C@@H]2CC[C@@H](C)[C@@](O)(O2)C(=O)C(=O)N2CCCC[C@H]2C(=O)O[C@H]([C@H](C)C[C@@H]2CC[C@@H](OCCO)[C@H](OC)C2)CC(=O)[C@H](C)/C=C(\\C)[C@@H](O)[C@@H](OC)C(=O)[C@H](C)C[C@H](C)/C=C/C=C/C=C/1C",
+      "smiles": "CO[C@H]1C[C@@H]2CC[C@@H](C)[C@@](O)(O2)C(=O)C(=O)N2CCCC[C@H]2C(=O)O[C@H]([C@H](C)C[C@@H]2CC[C@@H](OCCO)[C@H](OC)C2)CC(=O)[C@H](C)/C=C(\\C)[C@@H](O)[C@@H](OC)C(=O)[C@H](C)C[C@H](C)/C=C/C=C/C=C/1C",
+      "inchi_key": "HKVAMNSJSFKALM-GKUWKFKPSA-N",
+      "formula": "C53H83NO14",
+      "atom_count": 68,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        0,
+        1,
+        35,
+        36,
+        46,
+        52,
+        55,
+        66
+      ],
+      "metabolism_sites": [
+        0,
+        1,
+        35,
+        36,
+        46,
+        52,
+        55,
+        66
+      ],
+      "som": [
+        {
+          "atom_idx": 0
+        },
+        {
+          "atom_idx": 1
+        },
+        {
+          "atom_idx": 35
+        },
+        {
+          "atom_idx": 36
+        },
+        {
+          "atom_idx": 46
+        },
+        {
+          "atom_idx": 52
+        },
+        {
+          "atom_idx": 55
+        },
+        {
+          "atom_idx": 66
+        }
+      ],
+      "site_count": 8,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "everolimus",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=6442177",
+        "InChIKey=HKVAMNSJSFKALM-GKUWKFKPSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Kuhn et al.,J. Med. Chem.,44,2027,2001 | Kuhn et al.,J. Med. Chem.,44,2027,2001 PMID: 11384247",
+      "doi": "",
+      "primary_site_atoms": [
+        36,
+        52,
+        55
+      ],
+      "secondary_site_atoms": [
+        0,
+        1,
+        55,
+        66
+      ],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        0,
+        1,
+        35,
+        36,
+        46,
+        52,
+        55,
+        66
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [
+        "Xenosite also reports 67, 60, 22 and 17 as SoM but can not be identified."
+      ],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_246628d56c30eba6",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "site_set_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "everolimus",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Kuhn et al.,J. Med. Chem.,44,2027,2001",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            36
+          ],
+          "secondary_site_atoms": [
+            0,
+            1,
+            55,
+            66
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            0,
+            1,
+            36,
+            55,
+            66
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "everolimus",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Kuhn et al.,J. Med. Chem.,44,2027,2001",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            36
+          ],
+          "secondary_site_atoms": [
+            0,
+            1,
+            55,
+            66
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            0,
+            1,
+            36,
+            55,
+            66
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "HKVAMNSJSFKALM-GKUWKFKPSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Kuhn et al.,J. Med. Chem.,44,2027,2001 PMID: 11384247",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            52,
+            55
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            35,
+            46,
+            52,
+            55
+          ],
+          "broad_region_annotations": [
+            "Xenosite also reports 67, 60, 22 and 17 as SoM but can not be identified."
+          ]
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "2n_propylquinoline",
+      "molecule_name": "2n_propylquinoline",
+      "name": "2n_propylquinoline",
+      "canonical_smiles": "CCCc1ccc2ccccc2n1",
+      "smiles": "CCCc1ccc2ccccc2n1",
+      "inchi_key": "IZXJPGLOYYDHRM-UHFFFAOYSA-N",
+      "formula": "C12H13N",
+      "atom_count": 13,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        0,
+        2,
+        4,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "metabolism_sites": [
+        0,
+        2,
+        4,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "som": [
+        {
+          "atom_idx": 0
+        },
+        {
+          "atom_idx": 2
+        },
+        {
+          "atom_idx": 4
+        },
+        {
+          "atom_idx": 6
+        },
+        {
+          "atom_idx": 7
+        },
+        {
+          "atom_idx": 8
+        },
+        {
+          "atom_idx": 9
+        },
+        {
+          "atom_idx": 10
+        }
+      ],
+      "site_count": 8,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "2n_propylquinoline",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=74166",
+        "InChIKey=IZXJPGLOYYDHRM-UHFFFAOYSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Belliard et al.,Xenobiotica,33,341,2003 | Belliard et al.,Xenobiotica,33,341,2003 PMID:12745870",
+      "doi": "",
+      "primary_site_atoms": [
+        0,
+        2,
+        4,
+        6,
+        7,
+        8
+      ],
+      "secondary_site_atoms": [
+        7
+      ],
+      "tertiary_site_atoms": [
+        0,
+        4,
+        6,
+        8,
+        9,
+        10
+      ],
+      "all_labeled_site_atoms": [
+        0,
+        2,
+        4,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_3d9eb4ae7ebcb379",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "2n_propylquinoline",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Belliard et al.,Xenobiotica,33,341,2003",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            2
+          ],
+          "secondary_site_atoms": [
+            7
+          ],
+          "tertiary_site_atoms": [
+            0,
+            4,
+            6,
+            8,
+            9,
+            10
+          ],
+          "all_labeled_site_atoms": [
+            0,
+            2,
+            4,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "2n_propylquinoline",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Belliard et al.,Xenobiotica,33,341,2003",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            2
+          ],
+          "secondary_site_atoms": [
+            7
+          ],
+          "tertiary_site_atoms": [
+            0,
+            4,
+            6,
+            8,
+            9,
+            10
+          ],
+          "all_labeled_site_atoms": [
+            0,
+            2,
+            4,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "IZXJPGLOYYDHRM-UHFFFAOYSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Belliard et al.,Xenobiotica,33,341,2003 PMID:12745870",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            0,
+            2,
+            4,
+            6,
+            7,
+            8
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            0,
+            2,
+            4,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "quinoline",
+      "molecule_name": "quinoline",
+      "name": "quinoline",
+      "canonical_smiles": "c1ccc2ncccc2c1",
+      "smiles": "c1ccc2ncccc2c1",
+      "inchi_key": "SMWDFEZZVXVKRB-UHFFFAOYSA-N",
+      "formula": "C9H7N",
+      "atom_count": 10,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        1,
+        2,
+        5,
+        6,
+        9
+      ],
+      "metabolism_sites": [
+        1,
+        2,
+        5,
+        6,
+        9
+      ],
+      "som": [
+        {
+          "atom_idx": 1
+        },
+        {
+          "atom_idx": 2
+        },
+        {
+          "atom_idx": 5
+        },
+        {
+          "atom_idx": 6
+        },
+        {
+          "atom_idx": 9
+        }
+      ],
+      "site_count": 5,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "quinoline",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=7047",
+        "InChIKey=SMWDFEZZVXVKRB-UHFFFAOYSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Dowers et al.,Drug Metab. Disp.,32,328,2004 | Reigh et al., Carcinogenesis, 1996, 17, 1989-1996 PMID:8824525\nG. Reigh et al., Carcinogenesis, 1996, 17, 1989-1996 PMID:8824525\nDowers et al.,Drug Metab. Disp.,32,328,2004 PMID:14977867",
+      "doi": "",
+      "primary_site_atoms": [
+        5,
+        6,
+        9
+      ],
+      "secondary_site_atoms": [
+        5,
+        6
+      ],
+      "tertiary_site_atoms": [
+        1,
+        2
+      ],
+      "all_labeled_site_atoms": [
+        1,
+        2,
+        5,
+        6,
+        9
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [
+        "Some metablites are generated by rat CYP450 enzymes."
+      ],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_67f5b964cb7890d6",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "quinoline",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Dowers et al.,Drug Metab. Disp.,32,328,2004",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            9
+          ],
+          "secondary_site_atoms": [
+            5,
+            6
+          ],
+          "tertiary_site_atoms": [
+            1,
+            2
+          ],
+          "all_labeled_site_atoms": [
+            1,
+            2,
+            5,
+            6,
+            9
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "quinoline",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Dowers et al.,Drug Metab. Disp.,32,328,2004",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            9
+          ],
+          "secondary_site_atoms": [
+            5,
+            6
+          ],
+          "tertiary_site_atoms": [
+            1,
+            2
+          ],
+          "all_labeled_site_atoms": [
+            1,
+            2,
+            5,
+            6,
+            9
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "SMWDFEZZVXVKRB-UHFFFAOYSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Reigh et al., Carcinogenesis, 1996, 17, 1989-1996 PMID:8824525\nG. Reigh et al., Carcinogenesis, 1996, 17, 1989-1996 PMID:8824525\nDowers et al.,Drug Metab. Disp.,32,328,2004 PMID:14977867",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            5,
+            6,
+            9
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            1,
+            2,
+            5,
+            6,
+            9
+          ],
+          "broad_region_annotations": [
+            "Some metablites are generated by rat CYP450 enzymes."
+          ]
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "ethinylestradiol",
+      "molecule_name": "ethinylestradiol",
+      "name": "ethinylestradiol",
+      "canonical_smiles": "C#C[C@]1(O)CC[C@H]2[C@@H]3CCc4cc(O)ccc4[C@H]3CC[C@@]21C",
+      "smiles": "C#C[C@]1(O)CC[C@H]2[C@@H]3CCc4cc(O)ccc4[C@H]3CC[C@@]21C",
+      "inchi_key": "BFPYWIDHMRZLRN-SLHNCBLASA-N",
+      "formula": "C20H24O2",
+      "atom_count": 22,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        10,
+        14
+      ],
+      "metabolism_sites": [
+        10,
+        14
+      ],
+      "som": [
+        {
+          "atom_idx": 10
+        },
+        {
+          "atom_idx": 14
+        }
+      ],
+      "site_count": 2,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "ethinylestradiol",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=5991",
+        "InChIKey=BFPYWIDHMRZLRN-SLHNCBLASA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Wang et al., Drug Metab. Dispos. 2004, 32, 1209-1212 | Wang et al., Drug Metab. Dispos. 2004, 32, 1209-1212 PMID: 15304426",
+      "doi": "10.1124/dmd.104.000182",
+      "primary_site_atoms": [
+        10,
+        14
+      ],
+      "secondary_site_atoms": [
+        10
+      ],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        10,
+        14
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_11c6a65e01cd2c87",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "ethinylestradiol",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Wang et al., Drug Metab. Dispos. 2004, 32, 1209-1212",
+          "doi": "10.1124/dmd.104.000182",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            14
+          ],
+          "secondary_site_atoms": [
+            10
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            10,
+            14
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "ethinylestradiol",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Wang et al., Drug Metab. Dispos. 2004, 32, 1209-1212",
+          "doi": "10.1124/dmd.104.000182",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            14
+          ],
+          "secondary_site_atoms": [
+            10
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            10,
+            14
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "BFPYWIDHMRZLRN-SLHNCBLASA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Wang et al., Drug Metab. Dispos. 2004, 32, 1209-1212 PMID: 15304426",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            10,
+            14
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            10,
+            14
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": true,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "estradiol",
+      "molecule_name": "estradiol",
+      "name": "estradiol",
+      "canonical_smiles": "C[C@]12CC[C@@H]3c4ccc(O)cc4CC[C@H]3[C@@H]1CC[C@@H]2O",
+      "smiles": "C[C@]12CC[C@@H]3c4ccc(O)cc4CC[C@H]3[C@@H]1CC[C@@H]2O",
+      "inchi_key": "VOXZDWNPVJITMN-ZBRFXRBCSA-N",
+      "formula": "C18H24O2",
+      "atom_count": 20,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        4,
+        6,
+        10,
+        17,
+        18,
+        19
+      ],
+      "metabolism_sites": [
+        4,
+        6,
+        10,
+        17,
+        18,
+        19
+      ],
+      "som": [
+        {
+          "atom_idx": 4
+        },
+        {
+          "atom_idx": 6
+        },
+        {
+          "atom_idx": 10
+        },
+        {
+          "atom_idx": 17
+        },
+        {
+          "atom_idx": 18
+        },
+        {
+          "atom_idx": 19
+        }
+      ],
+      "site_count": 6,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "estradiol",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=14880",
+        "InChIKey=VOXZDWNPVJITMN-NZKIEYOBSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Lee et al.,Endocrinology,144,3382,2003 | Lee et al.,Endocrinology,144,3382,2003 PMID: 12865317 \nOhe et al.,Drug Metab. Disp.,28,110,1999 PMID: 9884318",
+      "doi": "10.1210/en.2003-0192",
+      "primary_site_atoms": [
+        4,
+        6,
+        10,
+        17,
+        18,
+        19
+      ],
+      "secondary_site_atoms": [
+        10
+      ],
+      "tertiary_site_atoms": [
+        4,
+        17,
+        18,
+        19
+      ],
+      "all_labeled_site_atoms": [
+        4,
+        6,
+        10,
+        17,
+        18,
+        19
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_252cce46dfd70bb6",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "estradiol",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Lee et al.,Endocrinology,144,3382,2003",
+          "doi": "10.1210/en.2003-0192",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            6
+          ],
+          "secondary_site_atoms": [
+            10
+          ],
+          "tertiary_site_atoms": [
+            4,
+            17,
+            18,
+            19
+          ],
+          "all_labeled_site_atoms": [
+            4,
+            6,
+            10,
+            17,
+            18,
+            19
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "estradiol",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Lee et al.,Endocrinology,144,3382,2003",
+          "doi": "10.1210/en.2003-0192",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            6
+          ],
+          "secondary_site_atoms": [
+            10
+          ],
+          "tertiary_site_atoms": [
+            4,
+            17,
+            18,
+            19
+          ],
+          "all_labeled_site_atoms": [
+            4,
+            6,
+            10,
+            17,
+            18,
+            19
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "VOXZDWNPVJITMN-NZKIEYOBSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Lee et al.,Endocrinology,144,3382,2003 PMID: 12865317 \nOhe et al.,Drug Metab. Disp.,28,110,1999 PMID: 9884318",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            4,
+            6,
+            10,
+            17,
+            18,
+            19
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            4,
+            6,
+            10,
+            17,
+            18,
+            19
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": true,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "rotenone",
+      "molecule_name": "rotenone",
+      "name": "rotenone",
+      "canonical_smiles": "C=C(C)[C@H]1Cc2c(ccc3c2O[C@@H]2COc4cc(OC)c(OC)cc4[C@H]2C3=O)O1",
+      "smiles": "C=C(C)[C@H]1Cc2c(ccc3c2O[C@@H]2COc4cc(OC)c(OC)cc4[C@H]2C3=O)O1",
+      "inchi_key": "JUVIOZPCNVVQFO-MAODMQOUSA-N",
+      "formula": "C23H22O6",
+      "atom_count": 29,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        8,
+        12,
+        13,
+        20,
+        26,
+        28
+      ],
+      "metabolism_sites": [
+        8,
+        12,
+        13,
+        20,
+        26,
+        28
+      ],
+      "som": [
+        {
+          "atom_idx": 8
+        },
+        {
+          "atom_idx": 12
+        },
+        {
+          "atom_idx": 13
+        },
+        {
+          "atom_idx": 20
+        },
+        {
+          "atom_idx": 26
+        },
+        {
+          "atom_idx": 28
+        }
+      ],
+      "site_count": 6,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "rotenone",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "PubChem_CID=7057975",
+        "InChIKey=JUVIOZPCNVVQFO-MAODMQOUSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Caboni et al.,Chem. Res. Toxicol.,17,1540,2004 | Caboni et al.,Chem. Res. Toxicol.,17,1540,2004 PMID: 15540952",
+      "doi": "",
+      "primary_site_atoms": [
+        8,
+        13,
+        26
+      ],
+      "secondary_site_atoms": [
+        20,
+        26,
+        28
+      ],
+      "tertiary_site_atoms": [
+        13
+      ],
+      "all_labeled_site_atoms": [
+        8,
+        12,
+        13,
+        20,
+        26,
+        28
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_e4ad3006dae955fb",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "site_set_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "rotenone",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Caboni et al.,Chem. Res. Toxicol.,17,1540,2004",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            8
+          ],
+          "secondary_site_atoms": [
+            20,
+            26,
+            28
+          ],
+          "tertiary_site_atoms": [
+            13
+          ],
+          "all_labeled_site_atoms": [
+            8,
+            13,
+            20,
+            26,
+            28
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "rotenone",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Caboni et al.,Chem. Res. Toxicol.,17,1540,2004",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            8
+          ],
+          "secondary_site_atoms": [
+            20,
+            26,
+            28
+          ],
+          "tertiary_site_atoms": [
+            13
+          ],
+          "all_labeled_site_atoms": [
+            8,
+            13,
+            20,
+            26,
+            28
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "JUVIOZPCNVVQFO-MAODMQOUSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Caboni et al.,Chem. Res. Toxicol.,17,1540,2004 PMID: 15540952",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            8,
+            13,
+            26
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            8,
+            12,
+            13,
+            20,
+            26,
+            28
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    },
+    {
+      "id": "L_775606",
+      "molecule_name": "L_775606",
+      "name": "L_775606",
+      "canonical_smiles": "Fc1cccc(CCN2CCN(CCCc3cc4cc(-n5cnnc5)ccc4[nH]3)CC2)c1",
+      "smiles": "Fc1cccc(CCN2CCN(CCCc3cc4cc(-n5cnnc5)ccc4[nH]3)CC2)c1",
+      "inchi_key": "HYDKUVPEVOHALC-UHFFFAOYSA-N",
+      "formula": "C25H29FN6",
+      "atom_count": 32,
+      "target_cyp": "CYP3A4",
+      "primary_cyp": "CYP3A4",
+      "all_cyps": [
+        "CYP3A4"
+      ],
+      "site_atoms": [
+        0,
+        1,
+        4
+      ],
+      "metabolism_sites": [
+        0,
+        1,
+        4
+      ],
+      "som": [
+        {
+          "atom_idx": 0
+        },
+        {
+          "atom_idx": 1
+        },
+        {
+          "atom_idx": 4
+        }
+      ],
+      "site_count": 3,
+      "is_multisite": true,
+      "molecule_source": "ATTNSOM",
+      "source": "ATTNSOM",
+      "site_source": "merged_multi_source",
+      "source_record_id": "L_775606",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "source_details": [
+        "ATTNSOM",
+        "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+        "CYP_DBs_external",
+        "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+        "MetXBioDB",
+        "InChIKey=HYDKUVPEVOHALC-UHFFFAOYSA-N",
+        "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf"
+      ],
+      "citation": "Prueksaritanont et al., Xenobiotica, 2000, 30, 47-59",
+      "doi": "",
+      "primary_site_atoms": [
+        0,
+        1
+      ],
+      "secondary_site_atoms": [
+        0
+      ],
+      "tertiary_site_atoms": [],
+      "all_labeled_site_atoms": [
+        0,
+        1,
+        4
+      ],
+      "label_regime": "tiered_multisite",
+      "broad_region_annotations": [],
+      "merged_from_sources": [
+        "ATTNSOM",
+        "CYP_DBs_external",
+        "MetXBioDB"
+      ],
+      "duplicate_group_id": "dup_d6ed195a4903665f",
+      "merge_policy_used": "partial_agreement_union",
+      "conflict_flags": [
+        "label_regime_mismatch",
+        "site_set_mismatch",
+        "tier_assignment_mismatch"
+      ],
+      "per_source_site_annotations": [
+        {
+          "site_source": "ATTNSOM",
+          "source_record_id": "L_775606",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+          "citation": "Prueksaritanont et al., Xenobiotica, 2000, 30, 47-59",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            1
+          ],
+          "secondary_site_atoms": [
+            0
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            0,
+            1
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "CYP_DBs_external",
+          "source_record_id": "L_775606",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+          "citation": "Prueksaritanont et al., Xenobiotica, 2000, 30, 47-59",
+          "doi": "",
+          "label_regime": "tiered_multisite",
+          "primary_site_atoms": [
+            1
+          ],
+          "secondary_site_atoms": [
+            0
+          ],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            0,
+            1
+          ],
+          "broad_region_annotations": []
+        },
+        {
+          "site_source": "MetXBioDB",
+          "source_record_id": "HYDKUVPEVOHALC-UHFFFAOYSA-N",
+          "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+          "citation": "Prueksaritanont et al., Xenobiotica, 2000, 30, 47-59",
+          "doi": "",
+          "label_regime": "multi_exact",
+          "primary_site_atoms": [
+            0,
+            1
+          ],
+          "secondary_site_atoms": [],
+          "tertiary_site_atoms": [],
+          "all_labeled_site_atoms": [
+            0,
+            1,
+            4
+          ],
+          "broad_region_annotations": []
+        }
+      ],
+      "full_xtb_status": "unknown",
+      "confidence": "medium",
+      "citation_available": true,
+      "doi_available": false,
+      "site_provenance_preserved": true,
+      "reactions": [],
+      "symmetry_expanded": false,
+      "symmetry_expanded_added_atoms": [],
+      "symmetry_expanded_groups": [],
+      "source_family": "attnsom_family",
+      "merged_from_source_families": [
+        "attnsom_family",
+        "metxbiodb_family"
+      ],
+      "training_regime": "tiered_multisite"
+    }
+  ]
+}

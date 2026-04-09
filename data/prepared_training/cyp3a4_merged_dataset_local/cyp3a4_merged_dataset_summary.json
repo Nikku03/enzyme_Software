@@ -1,0 +1,85 @@
+{
+  "total_input_sources": 5,
+  "total_parsed_rows": 1703,
+  "total_retained_cyp3a4_rows": 1555,
+  "total_final_merged_rows": 699,
+  "dataset_output": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_merged_dataset_local/cyp3a4_merged_dataset.json",
+  "duplicate_group_count": 476,
+  "exact_agreement_merge_count": 67,
+  "partial_agreement_merge_count": 366,
+  "conflict_preserved_count": 43,
+  "single_exact_count": 253,
+  "multi_exact_count": 160,
+  "tiered_multisite_count": 194,
+  "broad_region_count": 92,
+  "unknown_count": 0,
+  "citation_count": 619,
+  "doi_count": 194,
+  "site_provenance_preserved_count": 699,
+  "per_source_summary": [
+    {
+      "source_name": "ATTNSOM",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/data/ATTNSOM/cyp_dataset/3A4.sdf",
+      "parser_family": "attnsom_tiered",
+      "parsed_count": 475,
+      "retained_cyp3a4_count": 475,
+      "excluded_non_target_cyp_count": 0,
+      "excluded_invalid_or_missing_label_count": 0
+    },
+    {
+      "source_name": "CYP_DBs_external",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/CYP_DBs/3A4.sdf",
+      "parser_family": "attnsom_tiered",
+      "parsed_count": 475,
+      "retained_cyp3a4_count": 475,
+      "excluded_non_target_cyp_count": 0,
+      "excluded_invalid_or_missing_label_count": 0
+    },
+    {
+      "source_name": "MetXBioDB",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/metxbio data.cleaned.sdf",
+      "parser_family": "metxbio_bom",
+      "parsed_count": 679,
+      "retained_cyp3a4_count": 533,
+      "excluded_non_target_cyp_count": 0,
+      "excluded_invalid_or_missing_label_count": 146
+    },
+    {
+      "source_name": "Peng_external",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Peng_external_dataset/Peng_external_dataset.sdf",
+      "parser_family": "flat_atom_list",
+      "parsed_count": 54,
+      "retained_cyp3a4_count": 52,
+      "excluded_non_target_cyp_count": 0,
+      "excluded_invalid_or_missing_label_count": 2
+    },
+    {
+      "source_name": "Rudik_external",
+      "source_file": "/Users/deepika/Desktop/books/enzyme_Software/suppl_info/Rudik_external_dataset/Rudik_external_dataset.sdf",
+      "parser_family": "flat_atom_list",
+      "parsed_count": 20,
+      "retained_cyp3a4_count": 20,
+      "excluded_non_target_cyp_count": 0,
+      "excluded_invalid_or_missing_label_count": 0
+    }
+  ],
+  "merge_policy": {
+    "exact_agreement": "Merged to one row when all source-specific label signatures matched exactly.",
+    "partial_agreement_union": "Merged to one row with union site set and preserved per-source annotations when site sets differed but were not disjoint/broad-region conflicts.",
+    "conflict_preserved": "Kept source-specific rows separate with shared duplicate_group_id when label regimes conflicted, broad-region labels were involved, or site sets were disjoint."
+  },
+  "normalization_policy": {
+    "sanitization": "RDKit SDF parsing + canonical SMILES generation via canonicalize_mol_with_mapping",
+    "hydrogen_handling": "RemoveHs before canonicalization to stay consistent with existing repo builders",
+    "salt_fragment_policy": "No extra salt stripping or charge neutralization beyond RDKit canonicalization",
+    "atom_index_policy": "Site indices are remapped through canonicalize_mol_with_mapping when canonical atom order changes"
+  },
+  "outputs": {
+    "merged_dataset_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_merged_dataset_local/cyp3a4_merged_dataset.json",
+    "summary_json": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_merged_dataset_local/cyp3a4_merged_dataset_summary.json",
+    "duplicate_audit_csv": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_merged_dataset_local/cyp3a4_duplicate_audit.csv",
+    "conflict_audit_csv": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_merged_dataset_local/cyp3a4_label_conflict_audit.csv",
+    "source_breakdown_csv": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_merged_dataset_local/cyp3a4_source_breakdown.csv",
+    "provenance_audit_csv": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_merged_dataset_local/cyp3a4_provenance_audit.csv"
+  }
+}

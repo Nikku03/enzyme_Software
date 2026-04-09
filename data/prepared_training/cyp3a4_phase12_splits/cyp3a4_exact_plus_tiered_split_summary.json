@@ -1,0 +1,98 @@
+{
+  "subset_name": "cyp3a4_exact_plus_tiered",
+  "seed": 42,
+  "split_mode": "scaffold_source_size",
+  "train_ratio": 0.8,
+  "val_ratio": 0.1,
+  "total_rows": 337,
+  "train": {
+    "row_count": 269,
+    "source_breakdown": {
+      "ATTNSOM": 203,
+      "CYP_DBs_external": 4,
+      "MetXBioDB": 9,
+      "Peng_external": 39,
+      "Rudik_external": 14
+    },
+    "source_family_breakdown": {
+      "attnsom_family": 207,
+      "metxbiodb_family": 9,
+      "peng_family": 39,
+      "rudik_family": 14
+    },
+    "label_regime_breakdown": {
+      "multi_exact": 27,
+      "single_exact": 86,
+      "tiered_multisite": 156
+    },
+    "training_regime_breakdown": {
+      "exact_clean": 113,
+      "tiered_multisite": 156
+    },
+    "multisite_count": 187
+  },
+  "val": {
+    "row_count": 34,
+    "source_breakdown": {
+      "ATTNSOM": 24,
+      "CYP_DBs_external": 1,
+      "MetXBioDB": 1,
+      "Peng_external": 6,
+      "Rudik_external": 2
+    },
+    "source_family_breakdown": {
+      "attnsom_family": 25,
+      "metxbiodb_family": 1,
+      "peng_family": 6,
+      "rudik_family": 2
+    },
+    "label_regime_breakdown": {
+      "multi_exact": 2,
+      "single_exact": 14,
+      "tiered_multisite": 18
+    },
+    "training_regime_breakdown": {
+      "exact_clean": 16,
+      "tiered_multisite": 18
+    },
+    "multisite_count": 21
+  },
+  "test": {
+    "row_count": 34,
+    "source_breakdown": {
+      "ATTNSOM": 25,
+      "CYP_DBs_external": 1,
+      "MetXBioDB": 1,
+      "Peng_external": 5,
+      "Rudik_external": 2
+    },
+    "source_family_breakdown": {
+      "attnsom_family": 26,
+      "metxbiodb_family": 1,
+      "peng_family": 5,
+      "rudik_family": 2
+    },
+    "label_regime_breakdown": {
+      "multi_exact": 2,
+      "single_exact": 12,
+      "tiered_multisite": 20
+    },
+    "training_regime_breakdown": {
+      "exact_clean": 14,
+      "tiered_multisite": 20
+    },
+    "multisite_count": 23
+  },
+  "input_strict_exact_dataset_path": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_downstream_subsets_stricter/cyp3a4_strict_exact_clean.json",
+  "input_tiered_dataset_path": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_downstream_subsets_stricter/cyp3a4_tiered_multisite_eval.json",
+  "scaffold_split_policy": "scaffold_source_size",
+  "exact_clean_row_count": 143,
+  "tiered_multisite_row_count": 194,
+  "broad_conflict_rows_excluded_count": 0,
+  "phase2_eval_artifacts": {
+    "val_exact_clean": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_phase12_splits/cyp3a4_exact_plus_tiered_val_exact_clean_eval.json",
+    "test_exact_clean": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_phase12_splits/cyp3a4_exact_plus_tiered_test_exact_clean_eval.json",
+    "val_tiered_eval": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_phase12_splits/cyp3a4_exact_plus_tiered_val_tiered_eval.json",
+    "test_tiered_eval": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/cyp3a4_phase12_splits/cyp3a4_exact_plus_tiered_test_tiered_eval.json"
+  }
+}
