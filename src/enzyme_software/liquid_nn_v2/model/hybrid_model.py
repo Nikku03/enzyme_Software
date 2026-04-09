@@ -15,6 +15,7 @@ from enzyme_software.liquid_nn_v2.model.cyp3a4_state import (
 )
 from enzyme_software.liquid_nn_v2.model.event_context import SparseEventContext
 from enzyme_software.liquid_nn_v2.model.hybrid_modules import TopKCrossAtomReranker
+from enzyme_software.liquid_nn_v2.model.mechanistic_head import MechanisticSoMHead
 from enzyme_software.liquid_nn_v2.model.nexus_bridge import NexusHybridBridge
 from enzyme_software.liquid_nn_v2.model.phase5_sparse_relay import Phase5SparseRelay
 from enzyme_software.liquid_nn_v2.model.precedent_logbook import AuditedEpisodeLogbook
@@ -372,6 +373,15 @@ if TORCH_AVAILABLE:
                     residual_scale=float(getattr(self.config, "topk_reranker_residual_scale", 0.75)),
                     use_gate=bool(getattr(self.config, "topk_reranker_use_gate", True)),
                     gate_bias=float(getattr(self.config, "topk_reranker_gate_bias", -2.0)),
+                )
+            # Mechanistic SoM Head - encodes CYP450 reaction mechanism
+            self.mechanistic_som_head = None
+            if bool(getattr(self.config, "use_mechanistic_som_head", False)):
+                self.mechanistic_som_head = MechanisticSoMHead(
+                    hidden_dim=int(getattr(self.config, "mechanistic_hidden_dim", 64)),
+                    dropout=float(getattr(self.config, "mechanistic_dropout", 0.1)),
+                    use_learned_weights=bool(getattr(self.config, "mechanistic_use_learned_weights", True)),
+                    init_scale=float(getattr(self.config, "mechanistic_init_scale", 0.1)),
                 )
 
         def _optional_feature(self, value, rows: int, width: int, *, device, dtype) -> torch.Tensor:
@@ -1015,6 +1025,52 @@ if TORCH_AVAILABLE:
             result["diagnostics"] = diagnostics
             return result
 
+        def _apply_mechanistic_som_head(
+            self,
+            outputs: Dict[str, object],
+            batch: Dict[str, object],
+        ) -> Dict[str, object]:
+            """Apply physics-informed mechanistic SoM head."""
+            if self.mechanistic_som_head is None:
+                return outputs
+            site_logits = outputs.get("site_logits")
+            if site_logits is None or not getattr(site_logits, "numel", lambda: 0)():
+                return outputs
+            
+            # Build batch dict for mechanistic head
+            mech_batch = {
+                "phase5_atom_features": batch.get("phase5_atom_features"),
+                "local_chem_features": batch.get("local_chem_features"),
+                "physics_features": batch.get("physics_features"),
+                "x": batch.get("x"),
+            }
+            
+            mech_out = self.mechanistic_som_head(mech_batch, base_site_logits=site_logits)
+            
+            blend_mode = str(getattr(self.config, "mechanistic_blend_mode", "additive"))
+            if blend_mode == "replace":
+                final_logits = mech_out["mechanistic_logits"]
+            elif blend_mode == "gated":
+                # Use the blend gate from mechanistic head
+                final_logits = mech_out["combined_logits"]
+            else:  # additive (default)
+                final_logits = mech_out["combined_logits"]
+            
+            final_logits = torch.nan_to_num(final_logits, nan=0.0, posinf=20.0, neginf=-20.0).clamp(-20.0, 20.0)
+            
+            result = dict(outputs)
+            result.setdefault("site_logits_base", site_logits)
+            result["site_logits_pre_mechanistic"] = site_logits
+            result["site_logits"] = final_logits
+            result["reranked_site_logits"] = final_logits
+            result["site_scores"] = torch.sigmoid(final_logits)
+            result["mechanistic_outputs"] = mech_out
+            
+            diagnostics = dict(result.get("diagnostics") or {})
+            diagnostics["mechanistic_som"] = mech_out.get("diagnostics", {})
+            result["diagnostics"] = diagnostics
+            return result
+
         def _site_logits_from_sideinfo(
             self,
             outputs: Dict[str, object],
@@ -1545,6 +1601,7 @@ if TORCH_AVAILABLE:
             outputs = self._apply_nexus_bridge(outputs, batch)
             outputs = self._apply_cyp3a4_state_rescorer(outputs, batch)
             outputs = self._apply_topk_reranker(outputs, batch)
+            outputs = self._apply_mechanistic_som_head(outputs, batch)
             outputs = self._apply_candidate_mask(outputs, batch)
             prior = route_prior
             if prior is None:

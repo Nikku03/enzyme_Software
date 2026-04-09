@@ -377,6 +377,14 @@ class ModelConfig:
     topk_reranker_ce_weight: float = 0.25
     topk_reranker_margin_weight: float = 0.25
     topk_reranker_margin_value: float = 0.30
+    # Mechanistic SoM Head - encodes CYP450 reaction mechanism as inductive bias
+    use_mechanistic_som_head: bool = False
+    mechanistic_hidden_dim: int = 64
+    mechanistic_dropout: float = 0.1
+    mechanistic_init_scale: float = 0.1
+    mechanistic_use_learned_weights: bool = True
+    mechanistic_blend_mode: str = "additive"  # "additive", "gated", "replace"
+    mechanistic_loss_weight: float = 0.0  # auxiliary loss on mechanistic logits alone
     domain_adv_weight: float = 0.0
     domain_adv_grad_scale: float = 0.1
     domain_adv_hidden_dim: int = 64
