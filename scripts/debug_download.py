@@ -2,6 +2,8 @@
 Debug script to check downloaded CYP450 files
 """
 import os
+import zipfile
+import urllib.request
 
 # Check file sizes
 files = [
