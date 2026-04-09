@@ -1,0 +1,107 @@
+{
+  "input_dataset": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/main8_cyp3a4_augmented.json",
+  "output_dataset": "/Users/deepika/Desktop/books/enzyme_Software/data/prepared_training/main8_cyp3a4_no_attnsom.json",
+  "original_total_rows": 694,
+  "rows_removed_due_to_attnsom_exclusion": 273,
+  "rows_removed_due_to_tail_source_exclusion": 4,
+  "final_kept_total": 417,
+  "kept_source_buckets": [
+    "AZ120",
+    "DrugBank",
+    "MetXBioDB",
+    "cyp_dbs_external"
+  ],
+  "excluded_source_buckets": [
+    "ATTNSOM",
+    "literature",
+    "MetaPred",
+    "validated"
+  ],
+  "per_source_counts": {
+    "AZ120": 104,
+    "DrugBank": 135,
+    "MetXBioDB": 149,
+    "cyp_dbs_external": 29
+  },
+  "single_vs_multi_site_counts": {
+    "multi_site": 357,
+    "single_site": 60
+  },
+  "atom_count_bucket_counts": {
+    "16-25": 113,
+    "26-40": 239,
+    "41-60": 36,
+    "61+": 13,
+    "<=15": 16
+  },
+  "confidence_counts": {
+    "high": 178,
+    "medium": 19,
+    "validated": 220
+  },
+  "merged_metxbiodb_rows": 149,
+  "raw_source_counts_before_normalization": {
+    "ATTNSOM": 273,
+    "AZ120": 104,
+    "CYP_DBs_external": 29,
+    "DrugBank": 135,
+    "MetXBioDB": 119,
+    "MetaPred": 1,
+    "literature": 2,
+    "metxbiodb": 30,
+    "validated": 1
+  },
+  "normalized_source_counts_before_filtering": {
+    "attnsom": 273,
+    "az120": 104,
+    "cyp_dbs_external": 29,
+    "drugbank": 135,
+    "literature": 2,
+    "metapred": 1,
+    "metxbiodb": 149,
+    "validated": 1
+  },
+  "kept_source_counts": {
+    "AZ120": 104,
+    "DrugBank": 135,
+    "MetXBioDB": 149,
+    "cyp_dbs_external": 29
+  },
+  "excluded_source_counts": {
+    "ATTNSOM": 273,
+    "MetaPred": 1,
+    "literature": 2,
+    "validated": 1
+  },
+  "excluded_reason_counts": {
+    "attnsom_removed": 273,
+    "excluded_tail_source": 4
+  },
+  "skipped_schema_counts": {},
+  "source_names_before_normalization": [
+    "ATTNSOM",
+    "AZ120",
+    "CYP_DBs_external",
+    "DrugBank",
+    "MetXBioDB",
+    "MetaPred",
+    "literature",
+    "metxbiodb",
+    "validated"
+  ],
+  "source_names_after_normalization": [
+    "attnsom",
+    "az120",
+    "cyp_dbs_external",
+    "drugbank",
+    "literature",
+    "metapred",
+    "metxbiodb",
+    "validated"
+  ],
+  "normalized_merges_applied": {
+    "metxbiodb": "MetXBioDB",
+    "MetXBioDB": "MetXBioDB"
+  },
+  "warnings": []
+}
