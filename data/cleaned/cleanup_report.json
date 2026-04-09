@@ -1,0 +1,3532 @@
+{
+  "timestamp": "2026-04-09T17:21:14.672620",
+  "input_file": "/home/claude/enzyme_Software/data/prepared_training/cyp3a4_merged_dataset_local/cyp3a4_merged_dataset.json",
+  "original_drug_count": 699,
+  "actions": {
+    "removed": [
+      {
+        "name": "NNK",
+        "smiles": "CN(CCCC(=O)c1cccnc1)N=O",
+        "reason": "NNK \u03b1-hydroxylation primarily by CYP2A6/2A13, not CYP3A4",
+        "primary_enzyme": "CYP2A6/CYP2A13"
+      },
+      {
+        "name": "nicotine",
+        "smiles": "CN1CCC[C@H]1c1cccnc1",
+        "reason": "CYP2A6 handles 70-80% via 5'-hydroxylation \u2192 cotinine. CYP3A4 not significant.",
+        "primary_enzyme": "CYP2A6"
+      },
+      {
+        "name": "N_nitrosonornicotine",
+        "smiles": "O=NN1CCC[C@H]1c1cccnc1",
+        "reason": "CYP2A6 primary for 5'-hydroxylation; CYP3A4 does 2'-OH at different site",
+        "primary_enzyme": "CYP2A6"
+      }
+    ],
+    "site_corrected": [
+      {
+        "name": "zileuton",
+        "old_site": 2,
+        "new_site": 10,
+        "reason": "CYP3A4 exclusively does sulfoxidation; ring hydroxylation is CYP1A2/CYP2C9"
+      },
+      {
+        "name": "diclofenac",
+        "old_site": 1,
+        "new_site": 16,
+        "reason": "CYP2C9 does 4'-hydroxylation (>99%); CYP3A4 does 5-hydroxylation (minor)"
+      }
+    ],
+    "flagged_minor_pathway": [
+      {
+        "name": "phenprocoumon",
+        "confidence": "low",
+        "reason": "CYP2C9 dominant (S-phenprocoumon); CYP3A4 minor"
+      },
+      {
+        "name": "mianserin",
+        "confidence": "low",
+        "reason": "CYP2D6/CYP1A2 are dominant; CYP3A4 minor contributor"
+      },
+      {
+        "name": "hydromorphone",
+        "confidence": "low",
+        "reason": "UGT-mediated glucuronidation dominant; CYP role minimal"
+      }
+    ],
+    "flagged_insufficient_evidence": [
+      {
+        "name": "mesoridazine",
+        "confidence": "medium",
+        "reason": "Limited specific CYP3A4 data"
+      },
+      {
+        "name": "rifalazil",
+        "confidence": "medium",
+        "reason": "Limited literature on CYP3A4 specificity"
+      },
+      {
+        "name": "tamarixetin",
+        "confidence": "medium",
+        "reason": "Flavonoid, complex metabolism"
+      },
+      {
+        "name": "ezlopitant",
+        "confidence": "medium",
+        "reason": "NK1 antagonist, limited metabolism data"
+      },
+      {
+        "name": "voriconazole",
+        "confidence": "medium",
+        "reason": "CYP2C19/CYP3A4 both contribute"
+      },
+      {
+        "name": "reduced_diclofenac",
+        "confidence": "medium",
+        "reason": "Derivative, limited data"
+      }
+    ],
+    "verified_correct": [
+      {
+        "name": "quinine",
+        "confidence": "high"
+      },
+      {
+        "name": "hydrocodone",
+        "confidence": "high"
+      }
+    ],
+    "default_confidence": [
+      {
+        "name": "selegiline",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "org_30659",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ethinylestradiol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "cinnarizine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "valspodar",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "cyclosporine_a",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "sdz_imm_125",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "trans_phenylpropene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "SENECIONINE",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "perhexiline",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "sparteine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "limonene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "rotenone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "cj_12_458",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Etacrynic acid",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "riddelliine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "vitamin_d2",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "acrylonitrile",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "butadiene",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "fk_506_M1",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "fk_506",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "myristicin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "magnolol",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "safrole",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "quinidine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "styrene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "styrene",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "styrene",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "mifepristone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "warfarin-s",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "warfarin-r",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "indiplon",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ketoconazole",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "N_ac_FFVC",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "N_ac_DFEC",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "acetaminophen",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "acetaminophen",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "acetaminophen",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "2-acetylaminofluorene",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "docetaxel",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "TAXOL",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "pregnenolone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "progesterone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "2-acetylbenzothiophene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "indinavir",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "saquinavir",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "finasteride",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "AMG853_M1",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "timolol",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "tazofelone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ebastine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "terfenadine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "montelukast",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Ciprofibrate",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "ps_15",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "jpc_2056",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "chlorproguanil",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "5betacholestane-3_7_12_trihydroxy",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "5betacholestane-3_7_12_trihydroxy",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "tentoxin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "sibutramine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "bortezomib",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "bortezomib",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "bromocriptine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Ibuprofen",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "disopyramide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "proguanil",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "bisoprolol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Propranolol",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "delavirdine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ipriflavone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "alpha_dihydroergocryptine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "beta_thujone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "alpha_thujone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "1_4_cineole",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "atorvastatin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "atorvastatin",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "atorvastatin",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "Atovastatin",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "propofol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Rosuvastatin",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "fluvastatin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "trichloroethane",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "4_hydroxytamoxifen",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "tamoxifen",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "tamoxifen",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "tamoxifen",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "tamoxifen",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "eicosapentaenoic_acid",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "gepirone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "licofelone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "1_8_cineole",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "trans_retinoic_acid",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "all_trans_retinal",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "all_trans_retinol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "all_trans_retinol",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "all_trans_retinol",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "13_cis_retinoic_acid",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "9_cis_retinoic_acid",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "9_cis_retinal",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "seratrodast",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "sulindac",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "eltrombopag",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "acetaldehyde",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "methadone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ketobemidone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "alfentanil",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "fentanyl",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "miocamycin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "miocamycin",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "miocamycin",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "dextropropoxyphene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "simvastatin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "simvastatin_hydroxy_acid",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "TAME",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "valproic_acid",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "linoleic_acid",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "arachidonic_acid",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "irbesartan",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "hexane",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "myristic_acid",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "palmitic_acid",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "stearic_acid",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "7-hexoxycoumarin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "MNAN",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "N_nitrosodiamylamine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dexloxiglumide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "7-pentoxycoumarin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "7-pentoxyresorufin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "prostaglandin_H2",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "prostaglandin_H2",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "prostaglandin_H2",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "7-hydroxy-delta_8_tetrahydrocannabinol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "7-hydroxy-delta_8_tetrahydrocannabinol",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "7-hydroxy-delta_8_tetrahydrocannabinol",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "11_oxo_delta8_tetrahydrocannabinol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "delta9_tetrahydrocannabinol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "NMBA",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "halofantrine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "bupivacaine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "butachlor",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "butachlor",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "butachlor",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "7-benzyloxy-4-trifluoromethylcoumarin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "7-butoxycoumarin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "E3179",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Losartan",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "losartan",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "amiodarone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ne_100",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ropinirole",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "NDPA",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ropivacaine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "osu_6162",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "chlorpropamide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Propafenone",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "propafenone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "uk_343664",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "da_8159",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "albendazole",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "clindamycin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "budesonide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "rpr_106541",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "2n_propylquinoline",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Telmisartan",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "sildenafil",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "laquinimod",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "zaleplon",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "NMEA",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "NN_diethylformamide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "DETC_Me",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "milnacipran_carbamic_acid",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "NN_dimethyl_M_toluamide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "DDTC_Me",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ns_21",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "oxybutynin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "lidocaine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "quinacrine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "chloroquine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "metoclopramide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "C-1311",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "amodiaquine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "NDEA",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "cqa_206_291",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "DHEA",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "HMEA",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "mde",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "terbuthylazine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "atrazine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "terbutryne",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ametryne",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "V11294",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ethanol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ethanol",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "ethanol",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "meperidine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "FELODIPINE",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "nitrendipine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "malathion",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "malathion",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "malathion",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "loratadine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ETBE",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "acetochlor",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "acetochlor",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "acetochlor",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "no_1886",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "diazinon",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "diazinon",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "diazinon",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "parathion",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "parathion",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "parathion",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "chlorpyrifos",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "chlorpyrifos",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "chlorpyrifos",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "phorate",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "beta_arteether",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "repaglinide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "PF-04971729",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "phenacetin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "4-chloromethyl-7-ethoxycoumarin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ethylmorphine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ethylmorphine",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "ethylmorphine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "7-ethoxycoumarin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "tamsulosin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "reboxetine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Candesartan",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "MBDB",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "laam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "nor_laam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "emetine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ibogaine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "lovastatin",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "itraconazole",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "BDB",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "CLARITHROMYCIN",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "roxithromycin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "erythromycin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ethosuximide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ethiprole",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "irinotecan",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "etizolam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "clotiazepam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "pioglitazone",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "metolachlor",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "metolachlor",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "metolachlor",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "alachlor",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "alachlor",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "alachlor",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "bufuralol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "etoperidone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "nefazodone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "tpa023",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "lu25_109",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "roquinimex",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "loperamide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "diuron",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dimethylformamide",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "olopatadine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "doxepin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "cyclobenzaprine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "amitriptyline",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "imipramine",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "chlorpromazine_compound_1",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "clomipramine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "imipramine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "chlorpromazine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "promazine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "C-1305",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "citalopram",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "diphenhydramine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "zotepine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "deramciclane",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "toremifene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "almotriptan",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ly_333531",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "adinazolam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "NDMA",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "hexamethylphosphoramide",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "tauromustine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "lilopristone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "onapristone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "aminopyrine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "terbinafine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "NNAL",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "rosiglitazone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "NNAL",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "clobazam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "cotinine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "diazepam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "flunitrazepam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "trimethadione",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "temazepam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "mptp",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "pizotifen",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "azelastine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "eletriptan",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "k_11777",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "zopiclone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "clozapine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "perazine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "elzasonan_M3",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "mirtazapine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dextrorphan",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "morphine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "asenapine",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "granisetron",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "zatosetron",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "tropisetron",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "e_2101",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "methiocarb",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "carbofuran",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "carbaryl",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ecabapide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "methylformamide",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "nortriptyline",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "desimipramine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "fluoxetine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "atomoxetine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "voreloxin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ketamine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "MDMA",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "sertraline",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "N_desacetyl_indiplon",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "MOP-13031",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "MOP-13031",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "MOP-13031",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "nifedipine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "pranidipine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "nicardipine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "barnidipine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "bms_275183",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "clopidogrel",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "eplerenone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "2-oxo-clopidogrel",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "2-oxo-clopidogrel",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "2-oxo-clopidogrel",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "cocaine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "yohimbine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dehydropranidipine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dehydropranidipine",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "dehydropranidipine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "ddb",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "KR_31543",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "fluvoxamine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "rabeprazole_thioether",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "18_methoxycoronaridine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "METOPROLOL",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "vicriviroc",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "cerivastatin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "rifabutin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "sirolimus",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "everolimus",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ivermectin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "buprenorphine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "mycophenolic_acid",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "BIIB021_M7",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "tangeretin_T27",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "territrem_A",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "zafirlukast",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "iloperidone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "capsaicin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "MK_0767",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ATI-7500",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "cisapride",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "RVX-208",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "deoxypodophyllotoxin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "teniposide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "etoposide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "py74",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dy_9760e",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "colchicine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "aflatoxin_b1",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "nuciferine",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "gefitinib",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "gefitinib",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "gefitinib",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "tangeretin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "pimobendan",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "GTS-21",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "darexaban",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "methoxychlor",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "verapamil",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "astemizole",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "norverapamil",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "kr_60436",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "cp_199331",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "muraglitazar",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "peliglitazar",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "CP_677_623",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "CP_122_721",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "venlafaxine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "methoxychlor_catechol",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "methoxychlor_mono_OH",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "diltiazem",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "compound_A",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "4-nitroanisole",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "omeprazole",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "pinoline",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "foxy",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "melatonin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "bpr0l075",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "3-methoxy-4-trifluoromethylcoumarin",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "pyrazoloacridine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "indomethacin",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "3-methylether-estradiol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dextromethorphan",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "indomethacin_phenethylamide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "2prime_hydroxy_indomethacin_phenethylamide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "2prime_hydroxy_indomethacin_phenethylamide",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "2prime_hydroxy_indomethacin_phenethylamide",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "oxycodone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "codeine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dihydrocodeine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "sarpogrelate",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "sarpogrelate_M-1",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "r_568",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "tramadol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Carvedilol",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "carvedilol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "bosentan",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "pantoprazole",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "PR-104A",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "thioridazine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ml_3403",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "abt_761",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "abt_438",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Dobutamine",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "fenproporex",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "MDA",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "pinacidil",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "bupropion",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ml_3603",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "lisofylline",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "aprepitant",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "aprepitant_M1",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "aprepitant_M1",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "aprepitant_M1",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "traxoprodil",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "mexazolam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "tirilazad",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dexamethasone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "fluticasone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "fluticasone",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "fluticasone",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "sni_2011",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "lithocholic_acid",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "deoxycholic_acid",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "deoxycholic_acid",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "deoxycholic_acid",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "chenodeoxycholic_acid",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "cholic_acid",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "cholic_acid",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "cholic_acid",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "trimipramine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "cyamemazine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "benzphetamine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "abbott-66193",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ochratoxin_a",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "digitoxin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "digitoxin",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "digitoxin",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "artelinic_acid",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Methyldopa",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "androstenedione",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "CORTISOL",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "estrone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "estradiol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dhea",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "testosterone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "troglitazone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "troglitazone",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "troglitazone",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "nelfinavir",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "lansoprazole",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "DMBA",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "7MBAC",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ellipticine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "3-methylindole",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "minaprine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "antipyrine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "etravirine",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "BPU",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "mk_0457",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "brivanib_M9",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "brivanib",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "olanzapine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "4_demethyl_olanzapine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "6_methylchrysene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "5_methylchrysene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "celecoxib",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "zolpidem",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "etoricoxib",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "p-xylene",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "imatinib",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "tolterodine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "LuAA2004_2",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "m-xylene",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "abt_378",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "MEXILETINE",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "methaqualone",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "o-xylene",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "M17055",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "nevirapine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "meloxicam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "N7-methylfurafylline",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "risperidone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "9_OH_risperidone",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "Morinidazole",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "midazolam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "4-hydroxymidazolam",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "furametpyr",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "alprazolam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "triazolam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "brotizolam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "flucloxacillin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "valdecoxib",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "bromodichloromethane",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "bromodichloromethane",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "bromodichloromethane",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "dichloromethane",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "pentachlorobenzene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "2-2prime-4-5-5prime-pentachlorobiphenyl",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "1_2_4_trichlorobenzene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "estazolam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "meta_chlorophenylpiperazine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "ticlopidine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ticlopidine",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "ticlopidine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "ortho_dichlorobenzene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "theophylline",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "caffeine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "flosequinan",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "TFMPP",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "enflurane",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "gbr_12909",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "L_775606",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "quazepam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "quazepam",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "quazepam",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "M3-2.mol",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "M1-1",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "kr_33028",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "fipronil",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "debrisoquine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "CARBAMAZEPINE",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "eslicarbazepine",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "CMV423",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ROX_M-4",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "Dopamine",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "tyramine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "zonisamide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "zonisamide",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "zonisamide",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "Furosemide",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "spirosulfonamide",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "N_ac_PCBC",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ambroxol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "6-aminochrysene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "MOCA",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dapsone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "FLU-1",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "aniline",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "mirabegron",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "O6-benzylguanine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "pradefovir",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "pradefovir",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "pradefovir",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "haloperidol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "chloramphenicol",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "rebamipide",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "TCC-2OH",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "TCC-3OH",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "TCC-6OH",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "bisnor",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "s_145",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "JWH-018M6",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "JWH-073M6",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "tetranor",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "urporphyrinogen",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "T-5224",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "Pitavastatin",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "cp_195543",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "salicylate",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dibenzylfluorescein",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "reduced_dolasetron",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "PF-00734200_M5",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "raloxifene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "JWH-018M5",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "JWH-073M5",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "tienilic_acid_derivative",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "sulfinpyrazone_sulfide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "sulfinpyrazone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "R_95913",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "R_95913",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "R_95913",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "thalidomide",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "cilostazol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "aripiprazole",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "aripiprazole",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "aripiprazole",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "nordiazepam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "2-oxoquazepam",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ziprasidone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "phenytoin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "phenytoin",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "phenytoin",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "4_hpph",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "3_hpph",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "sertindole",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "efavirenz",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Ezetimibe",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "irilone",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "9_anthraldehyde",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "NPYR",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "compound_1",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "imidacloprid",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "imidacloprid",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "imidacloprid",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "6-nitrochrysene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "6-nitrochrysene",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "6-nitrochrysene",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "2_nitropyrene",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "4_nitropyrene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "4_nitro_phenol",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "1_nitropyrene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "trofosfamide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "cyclophosphamide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "ifosfamide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "h259_31",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "endosulfan",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "endosulfan",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "endosulfan",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "tegafur",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "chlorzoxazone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "pimozide",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "domperidone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "rutaecarpine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "BFBFC",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "BFC",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "psoralen",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "coumarin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "vivid_red",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "7-benzyloxyresorufin",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "trazodone",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "RHP+",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "RHP+",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "RHP+",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "BMP",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "ROX_M_5",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "perphenazine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "quetiapine",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "salmeterol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "1-hydroxymidazolam",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "reduced_haloperidol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Nebivolol",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "methoxychlor_bis_OH",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "CP_125_611",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "Fenoldopam",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "serm_I",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dihydropyrrolopyrimidine",
+        "source": "Peng_external",
+        "confidence": "high"
+      },
+      {
+        "name": "Phenol",
+        "source": "Rudik_external",
+        "confidence": "high"
+      },
+      {
+        "name": "o-phenylphenol",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "delta9_tetrahydrocannabinol",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "phencyclidine",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "cibenzoline",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "cibenzoline",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "cibenzoline",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "7-benzyloxyquinoline",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dibenzo_a_l_pyrene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "benzo_a_pyrene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dibenzo_a_h_anthracene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "dibenzo_a_h_anthracene",
+        "source": "CYP_DBs_external",
+        "confidence": "low"
+      },
+      {
+        "name": "dibenzo_a_h_anthracene",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      },
+      {
+        "name": "phenanthrene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "DBAJAC",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "naphthalene",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "isoquinoline",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "quinoline",
+        "source": "ATTNSOM",
+        "confidence": "medium"
+      },
+      {
+        "name": "benzene",
+        "source": "MetXBioDB",
+        "confidence": "high"
+      }
+    ]
+  },
+  "summary": {
+    "original_count": 699,
+    "final_count": 696,
+    "removed_count": 3,
+    "site_corrected_count": 2,
+    "flagged_minor_count": 3,
+    "flagged_insufficient_count": 6,
+    "verified_correct_count": 2,
+    "default_confidence_count": 683,
+    "confidence_breakdown": {
+      "high": 195,
+      "medium": 455,
+      "low": 46
+    }
+  }
+}
