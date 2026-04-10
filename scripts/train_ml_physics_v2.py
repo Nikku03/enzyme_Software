@@ -318,8 +318,8 @@ class SoMGNN(nn.Module):
         
         return atomic_nums, features, edge_index
     
-    def forward(self, smiles: str, physics_scores: Optional[torch.Tensor] = None
-                ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, smiles: str, physics_scores: Optional[torch.Tensor] = None,
+                device: Optional[torch.device] = None) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Forward pass.
         
@@ -332,6 +332,14 @@ class SoMGNN(nn.Module):
             raise ValueError(f"Invalid SMILES: {smiles}")
         
         atomic_nums, features, edge_index = self.encode_molecule(mol)
+        
+        # Move to device
+        if device is None:
+            device = next(self.parameters()).device
+        
+        atomic_nums = atomic_nums.to(device)
+        features = features.to(device)
+        edge_index = edge_index.to(device)
         
         # Encode
         h = self.encoder(atomic_nums, features)
@@ -348,6 +356,7 @@ class SoMGNN(nn.Module):
             physics_scores = compute_physics_scores(smiles)
         
         if physics_scores is not None:
+            physics_scores = physics_scores.to(device)
             # Learned weighted combination
             w = torch.sigmoid(self.physics_weight)  # Keep in [0, 1]
             combined = (1 - w) * ml_scores + w * physics_scores
@@ -412,13 +421,13 @@ def evaluate(model: SoMGNN, data: List[Dict], device: torch.device
                 continue
             
             try:
-                _, combined = model(smiles)
+                _, combined = model(smiles, device=device)
                 
                 # All carbons are candidates
                 candidate_mask = torch.tensor([
                     a.GetAtomicNum() == 6
                     for a in mol.GetAtoms()
-                ], dtype=torch.bool)
+                ], dtype=torch.bool, device=device)
                 
                 masked_scores = combined.clone()
                 masked_scores[~candidate_mask] = float('-inf')
@@ -472,7 +481,7 @@ def train_epoch(model: SoMGNN, data: List[Dict], optimizer: torch.optim.Optimize
             continue
         
         n_atoms = mol.GetNumAtoms()
-        labels = torch.zeros(n_atoms)
+        labels = torch.zeros(n_atoms, device=device)
         for s in sites:
             if s < n_atoms:
                 labels[s] = 1.0
@@ -481,21 +490,19 @@ def train_epoch(model: SoMGNN, data: List[Dict], optimizer: torch.optim.Optimize
         candidate_mask = torch.tensor([
             a.GetAtomicNum() == 6
             for a in mol.GetAtoms()
-        ], dtype=torch.bool)
+        ], dtype=torch.bool, device=device)
         
         # Check if any positive site is a candidate
         pos_in_candidates = (labels > 0) & candidate_mask
         if not pos_in_candidates.any():
             skip_reasons['no_pos_candidates'] += 1
             n_skipped += 1
-            if debug and idx < 3:
-                print(f"  Debug: sites={sites}, labels sum={labels.sum()}, candidate_mask sum={candidate_mask.sum()}")
             continue
         
         try:
             optimizer.zero_grad()
             
-            ml_scores, combined = model(smiles)
+            ml_scores, combined = model(smiles, device=device)
             
             # Loss on combined scores
             loss = ranking_loss(combined, labels, candidate_mask)
