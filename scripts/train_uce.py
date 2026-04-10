@@ -41,18 +41,43 @@ from src.enzyme_software.liquid_nn_v2.model.uce import (
 
 def load_data(path: str) -> List[Dict]:
     with open(path) as f:
-        return json.load(f)
+        raw = json.load(f)
+    
+    # Handle different JSON structures
+    if isinstance(raw, list):
+        return raw
+    elif isinstance(raw, dict):
+        # Check for common keys
+        if 'drugs' in raw:
+            return raw['drugs']
+        elif 'molecules' in raw:
+            return raw['molecules']
+        elif 'data' in raw:
+            return raw['data']
+        else:
+            # Maybe it's a dict of molecules keyed by name/id
+            return list(raw.values()) if all(isinstance(v, dict) for v in raw.values()) else []
+    return []
 
 
 def get_smiles_and_sites(entry: Dict) -> Tuple[str, List[int]]:
     smiles = entry.get('smiles', entry.get('SMILES', ''))
     sites = []
-    if 'som_site' in entry:
+    
+    # Try different field names
+    if 'site_atoms' in entry:
+        sites = entry['site_atoms']
+    elif 'som_site' in entry:
         sites = entry['som_site'] if isinstance(entry['som_site'], list) else [entry['som_site']]
     elif 'atom_indices' in entry:
         sites = entry['atom_indices']
     elif 'positive_atoms' in entry:
         sites = entry['positive_atoms']
+    
+    # Ensure it's a list
+    if not isinstance(sites, list):
+        sites = [sites] if sites is not None else []
+    
     return smiles, sites
 
 
