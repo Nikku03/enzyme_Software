@@ -87,435 +87,320 @@ except ImportError:
 
 
 # ============================================================================
-# THE THREE FACTORS
+# BOND DISSOCIATION ENERGIES (kcal/mol)
+# ============================================================================
+# These are EXPERIMENTAL values from the literature.
+# Source: Blanksby & Ellison (2003) Acc. Chem. Res., NIST, and Luo (2007)
+
+# Base BDE values for different carbon types
+BDE_TABLE = {
+    # === UNACTIVATED C-H BONDS ===
+    'CH4':           105.0,   # Methane (reference)
+    'PRIMARY':       101.0,   # R-CH3
+    'SECONDARY':      98.5,   # R2-CH2
+    'TERTIARY':       96.0,   # R3-CH
+    
+    # === RESONANCE-STABILIZED (π-delocalization) ===
+    'BENZYLIC_1':     90.0,   # Ph-CH3 (toluene)
+    'BENZYLIC_2':     87.0,   # Ph-CHR2
+    'BENZYLIC_3':     85.0,   # Ph-CR3
+    'ALLYLIC_1':      88.0,   # CH2=CH-CH3 (propene)
+    'ALLYLIC_2':      85.0,   # Secondary allylic
+    'ALLYLIC_3':      83.0,   # Tertiary allylic
+    
+    # === HETEROATOM-ACTIVATED (lone pair donation into SOMO) ===
+    # This is THE key insight for CYP metabolism!
+    # The heteroatom lone pair stabilizes the incipient radical
+    'ALPHA_N_1':      84.0,   # N-CH3 (primary α-N, N-dealkylation!)
+    'ALPHA_N_2':      81.0,   # N-CHR (secondary α-N)
+    'ALPHA_N_3':      79.0,   # N-CR2 (tertiary α-N)
+    'ALPHA_O_1':      86.0,   # O-CH3 (ether, O-dealkylation)
+    'ALPHA_O_2':      83.0,   # O-CHR
+    'ALPHA_S_1':      87.0,   # S-CH3
+    'ALPHA_S_2':      84.0,   # S-CHR
+    'ALPHA_CARBONYL': 92.0,   # C(=O)-CH3 (destabilized by EWG!)
+    
+    # === DEACTIVATED (avoid these) ===
+    'AROMATIC':      113.0,   # Benzene C-H (very strong!)
+    'VINYL':         111.0,   # CH2=CH2
+    'ACETYLENIC':    133.0,   # HC≡CH (strongest C-H)
+    
+    # === HETEROATOM DIRECT OXIDATION ===
+    # Not C-H abstraction, but direct oxygen transfer
+    'N_OXIDATION':    95.0,   # Arbitrary, represents relative ease
+    'S_OXIDATION':    90.0,   # Sulfur very easy to oxidize
+}
+
+
+# ============================================================================
+# THE ONE FUNCTION: Estimate BDE from Structure
 # ============================================================================
 
-@dataclass
-class SiteScore:
-    """Complete scoring for one atomic site."""
-    atom_idx: int
-    radical_stability: float   # How stable is R• ?
-    electronic_boost: float    # Heteroatom activation?
-    accessibility: float       # Can it reach the heme?
-    
-    @property
-    def total(self) -> float:
-        """Multiplicative model - all factors matter."""
-        return self.radical_stability * self.electronic_boost * self.accessibility
-    
-    @property
-    def reaction_type(self) -> str:
-        """Descriptive label for the dominant reaction."""
-        # This is inferred from the factors
-        return self._reaction_type
-    
-    @reaction_type.setter
-    def reaction_type(self, value: str):
-        self._reaction_type = value
-
-
-# ============================================================================
-# FACTOR 1: RADICAL STABILITY
-# ============================================================================
-
-def get_radical_stability(mol: Chem.Mol, atom_idx: int) -> Tuple[float, str]:
+def estimate_BDE(mol: Chem.Mol, atom_idx: int) -> Tuple[float, str]:
     """
-    Compute radical stability for a carbon (or heteroatom).
+    Estimate the C-H Bond Dissociation Energy for a given carbon.
     
-    Based on:
-    - Degree of substitution (1°, 2°, 3°)
-    - Resonance stabilization (benzylic, allylic)
-    - Heteroatom lone pair donation (α-N, α-O, α-S)
+    This is THE core function. Everything else is bookkeeping.
     
-    Returns: (stability_score, reaction_type)
+    Returns: (BDE in kcal/mol, reaction type label)
     """
     atom = mol.GetAtomWithIdx(atom_idx)
     symbol = atom.GetSymbol()
     
-    # ========== CARBON SITES ==========
-    if symbol == 'C':
-        neighbors = atom.GetNeighbors()
-        num_H = atom.GetTotalNumHs()
-        is_aromatic = atom.GetIsAromatic()
-        
-        # Count heavy neighbors (degree)
-        heavy_neighbors = [n for n in neighbors if n.GetSymbol() != 'H']
-        degree = len(heavy_neighbors)
-        
-        # Check for resonance stabilization
-        is_benzylic = False
-        is_allylic = False
-        is_alpha_N = False
-        is_alpha_O_ether = False
-        is_alpha_S = False
-        is_alpha_carbonyl = False
-        
-        for nbr in heavy_neighbors:
-            nbr_symbol = nbr.GetSymbol()
-            
-            # Benzylic: attached to aromatic carbon
-            if nbr_symbol == 'C' and nbr.GetIsAromatic():
-                is_benzylic = True
-            
-            # Allylic: attached to sp2 carbon (C=C)
-            if nbr_symbol == 'C' and not nbr.GetIsAromatic():
-                if nbr.GetHybridization() == Chem.HybridizationType.SP2:
-                    # Check it's C=C not C=O
-                    has_double_bond_to_C = False
-                    for nbr2 in nbr.GetNeighbors():
-                        if nbr2.GetIdx() != atom_idx:
-                            bond = mol.GetBondBetweenAtoms(nbr.GetIdx(), nbr2.GetIdx())
-                            if bond and bond.GetBondType() == Chem.BondType.DOUBLE:
-                                if nbr2.GetSymbol() == 'C':
-                                    has_double_bond_to_C = True
-                                elif nbr2.GetSymbol() == 'O':
-                                    is_alpha_carbonyl = True
-                    if has_double_bond_to_C:
-                        is_allylic = True
-            
-            # Alpha to nitrogen
-            if nbr_symbol == 'N':
-                is_alpha_N = True
-            
-            # Alpha to oxygen (ether, not carbonyl or alcohol)
-            if nbr_symbol == 'O':
-                # Check if it's an ether (O bonded to 2 carbons)
-                o_neighbors = [x for x in nbr.GetNeighbors() if x.GetSymbol() == 'C']
-                if len(o_neighbors) >= 2:
-                    is_alpha_O_ether = True
-            
-            # Alpha to sulfur
-            if nbr_symbol == 'S':
-                is_alpha_S = True
-        
-        # ===== SCORE BASED ON HIERARCHY =====
-        # Note: These values are calibrated to match experimental data
-        
-        # Can't abstract H from aromatic C directly (would break aromaticity)
-        # But CAN form epoxide intermediate on aromatic ring
-        if is_aromatic:
-            if num_H == 0:
-                # No H on this aromatic C - not a direct H-abstraction site
-                # But could be part of epoxide formation (electron-rich site)
-                return (0.3, 'AROMATIC_NO_H')
-            else:
-                # Aromatic C-H: rarely abstracted, but possible via addition-rearrangement
-                return (0.5, 'AROMATIC')
-        
-        # === HETEROATOM-ACTIVATED CARBONS (highest priority for CYP3A4) ===
-        if is_alpha_N:
-            # N-dealkylation: THE dominant CYP3A4 reaction
-            # The nitrogen lone pair stabilizes the radical tremendously
-            if degree == 1:  # -CH2-N (primary carbon)
-                return (3.5, 'N_DEALKYLATION')
-            elif degree == 2:  # >CH-N (secondary)
-                return (4.0, 'N_DEALKYLATION')
-            else:  # (C)3C-N (tertiary, rare)
-                return (4.2, 'N_DEALKYLATION')
-        
-        if is_alpha_O_ether:
-            # O-dealkylation: very common, oxygen lone pair helps
-            if degree == 1:
-                return (3.0, 'O_DEALKYLATION')
-            elif degree == 2:
-                return (3.4, 'O_DEALKYLATION')
-            else:
-                return (3.6, 'O_DEALKYLATION')
-        
-        if is_alpha_S:
-            # S-dealkylation: sulfur even better at stabilizing radicals
-            if degree == 1:
-                return (2.8, 'S_DEALKYLATION')
-            elif degree == 2:
-                return (3.2, 'S_DEALKYLATION')
-            else:
-                return (3.4, 'S_DEALKYLATION')
-        
-        # === RESONANCE-STABILIZED CARBONS ===
-        if is_benzylic:
-            # Benzylic radical very stable due to resonance with ring
-            if degree == 1:
-                return (2.5, 'BENZYLIC')
-            elif degree == 2:
-                return (2.8, 'BENZYLIC')
-            else:
-                return (3.0, 'BENZYLIC')
-        
-        if is_allylic:
-            if degree == 1:
-                return (2.2, 'ALLYLIC')
-            elif degree == 2:
-                return (2.5, 'ALLYLIC')
-            else:
-                return (2.7, 'ALLYLIC')
-        
-        if is_alpha_carbonyl:
-            # Alpha to C=O, moderately stabilized
-            if degree == 1:
-                return (1.8, 'ALPHA_CARBONYL')
-            elif degree == 2:
-                return (2.0, 'ALPHA_CARBONYL')
-            else:
-                return (2.2, 'ALPHA_CARBONYL')
-        
-        # === SIMPLE ALKYL CARBONS ===
-        if num_H == 0:
-            # Quaternary carbon - no H to abstract
-            return (0.0, 'NONE')
-        
-        if degree == 3:  # Tertiary
-            return (1.5, 'TERTIARY_C')
-        elif degree == 2:  # Secondary
-            return (1.2, 'SECONDARY_C')
-        elif degree == 1:  # Primary (CH3)
-            return (0.8, 'PRIMARY_C')
-        else:  # Methane-like
-            return (0.5, 'METHYL')
-    
-    # ========== NITROGEN SITES (N-oxidation) ==========
-    elif symbol == 'N':
-        # N-oxidation: direct oxygen transfer to nitrogen lone pair
-        # Tertiary amines most susceptible
-        neighbors = atom.GetNeighbors()
-        heavy_neighbors = [n for n in neighbors if n.GetSymbol() != 'H']
-        num_H = atom.GetTotalNumHs()
-        
+    # === NITROGEN: N-oxidation ===
+    if symbol == 'N':
         if atom.GetIsAromatic():
-            # Aromatic N: can be oxidized but less common
-            return (0.8, 'N_OXIDE_AROMATIC')
+            return (BDE_TABLE['N_OXIDATION'] + 5, 'N_OXIDE_AROMATIC')
         
-        if len(heavy_neighbors) == 3 and num_H == 0:
-            # Tertiary amine: good N-oxide substrate
-            return (1.5, 'N_OXIDE_TERTIARY')
-        elif len(heavy_neighbors) == 2 and num_H == 1:
-            # Secondary amine: can be oxidized
-            return (1.0, 'N_OXIDE_SECONDARY')
-        elif len(heavy_neighbors) == 1 and num_H == 2:
-            # Primary amine: possible but uncommon
-            return (0.6, 'N_OXIDE_PRIMARY')
+        heavy_nbrs = [n for n in atom.GetNeighbors() if n.GetSymbol() != 'H']
+        n_H = atom.GetTotalNumHs()
+        
+        if len(heavy_nbrs) == 3 and n_H == 0:  # Tertiary amine
+            return (BDE_TABLE['N_OXIDATION'] - 5, 'N_OXIDE_TERTIARY')
+        elif len(heavy_nbrs) == 2:  # Secondary
+            return (BDE_TABLE['N_OXIDATION'], 'N_OXIDE_SECONDARY')
         else:
-            return (0.3, 'N_OXIDE_OTHER')
+            return (BDE_TABLE['N_OXIDATION'] + 5, 'N_OXIDE_PRIMARY')
     
-    # ========== SULFUR SITES (S-oxidation) ==========
-    elif symbol == 'S':
-        neighbors = atom.GetNeighbors()
-        heavy_neighbors = [n for n in neighbors if n.GetSymbol() != 'H']
-        
-        # Already oxidized?
-        formal_charge = atom.GetFormalCharge()
+    # === SULFUR: S-oxidation ===
+    if symbol == 'S':
         valence = atom.GetTotalValence()
+        if valence >= 4:  # Already oxidized
+            return (120.0, 'S_ALREADY_OX')
         
-        if valence >= 4:
-            # Already a sulfoxide or sulfone
-            return (0.3, 'S_ALREADY_OXIDIZED')
+        heavy_nbrs = [n for n in atom.GetNeighbors() if n.GetSymbol() != 'H']
+        if len(heavy_nbrs) == 2:  # Thioether
+            return (BDE_TABLE['S_OXIDATION'], 'S_OXIDATION')
+        return (BDE_TABLE['S_OXIDATION'] + 5, 'S_OXIDATION')
+    
+    # === NOT CARBON: Skip ===
+    if symbol != 'C':
+        return (200.0, 'NONE')  # Impossibly high = won't be selected
+    
+    # =========================================================================
+    # CARBON: The main event
+    # =========================================================================
+    
+    n_H = atom.GetTotalNumHs()
+    if n_H == 0:
+        # No hydrogen to abstract!
+        # But aromatic C can still undergo epoxidation pathway...
+        if atom.GetIsAromatic():
+            return (BDE_TABLE['AROMATIC'] + 10, 'AROMATIC_NO_H')
+        return (200.0, 'NONE')
+    
+    neighbors = list(atom.GetNeighbors())
+    heavy_nbrs = [n for n in neighbors if n.GetSymbol() != 'H']
+    degree = len(heavy_nbrs)  # 1=primary, 2=secondary, 3=tertiary
+    
+    # --- Check for heteroatom activation (most important!) ---
+    is_alpha_N = False
+    is_alpha_O_ether = False
+    is_alpha_S = False
+    is_alpha_carbonyl = False
+    is_benzylic = False
+    is_allylic = False
+    
+    for nbr in heavy_nbrs:
+        nbr_sym = nbr.GetSymbol()
         
-        if len(heavy_neighbors) == 2:
-            # Thioether: good S-oxidation substrate
-            return (2.0, 'S_OXIDATION')
-        else:
-            return (1.0, 'S_OXIDATION_OTHER')
-    
-    # Other atoms: not typical CYP substrates
-    return (0.0, 'NONE')
-
-
-# ============================================================================
-# FACTOR 2: ELECTRONIC BOOST
-# ============================================================================
-
-def get_electronic_boost(mol: Chem.Mol, atom_idx: int) -> float:
-    """
-    Electronic effects that activate or deactivate a site.
-    
-    Key effects:
-    - Electron-donating groups (EDG) activate
-    - Electron-withdrawing groups (EWG) deactivate
-    - Conjugation with electron-rich systems activates
-    
-    This is in ADDITION to radical stability (which already accounts
-    for immediate neighbors). This looks at longer-range effects.
-    """
-    atom = mol.GetAtomWithIdx(atom_idx)
-    symbol = atom.GetSymbol()
-    
-    if symbol not in ('C', 'N', 'S'):
-        return 1.0  # Neutral for other atoms
-    
-    boost = 1.0
-    
-    # Check for electron-withdrawing groups nearby (2-3 bonds away)
-    # These DEACTIVATE the site by pulling electron density away
-    ewg_count = 0
-    edg_count = 0
-    
-    # Look at atoms 2-3 bonds away
-    for nbr1 in atom.GetNeighbors():
-        for nbr2 in nbr1.GetNeighbors():
-            if nbr2.GetIdx() == atom_idx:
-                continue
-            
-            nbr2_sym = nbr2.GetSymbol()
-            
-            # EWG: F, Cl, CF3, NO2, CN, C=O
-            if nbr2_sym == 'F':
-                ewg_count += 0.5
-            elif nbr2_sym == 'Cl':
-                ewg_count += 0.3
-            elif nbr2_sym == 'N':
-                # Check for NO2 or CN
-                if nbr2.GetFormalCharge() == 1:
-                    ewg_count += 0.5
-            elif nbr2_sym == 'O':
-                # Check if it's C=O
-                bond = mol.GetBondBetweenAtoms(nbr1.GetIdx(), nbr2.GetIdx())
+        # α-Nitrogen (N-dealkylation site)
+        if nbr_sym == 'N':
+            is_alpha_N = True
+        
+        # α-Oxygen: distinguish ether from carbonyl
+        if nbr_sym == 'O':
+            # Is this oxygen in an ether? (bonded to 2 carbons)
+            o_carbons = [x for x in nbr.GetNeighbors() if x.GetSymbol() == 'C']
+            if len(o_carbons) >= 2:
+                is_alpha_O_ether = True
+        
+        # α-Sulfur
+        if nbr_sym == 'S':
+            is_alpha_S = True
+        
+        # α-Carbonyl
+        if nbr_sym == 'C':
+            for nbr2 in nbr.GetNeighbors():
+                if nbr2.GetIdx() == atom_idx:
+                    continue
+                bond = mol.GetBondBetweenAtoms(nbr.GetIdx(), nbr2.GetIdx())
                 if bond and bond.GetBondType() == Chem.BondType.DOUBLE:
-                    if nbr1.GetSymbol() == 'C':
-                        ewg_count += 0.4
-            
-            # EDG: alkyl groups, OR, NR2
-            if nbr2_sym == 'C' and not nbr2.GetIsAromatic():
-                # Alkyl group - mild EDG
-                edg_count += 0.1
+                    if nbr2.GetSymbol() == 'O':
+                        is_alpha_carbonyl = True
+        
+        # Benzylic
+        if nbr_sym == 'C' and nbr.GetIsAromatic():
+            is_benzylic = True
+        
+        # Allylic
+        if nbr_sym == 'C' and not nbr.GetIsAromatic():
+            if nbr.GetHybridization() == Chem.HybridizationType.SP2:
+                for nbr2 in nbr.GetNeighbors():
+                    if nbr2.GetIdx() == atom_idx:
+                        continue
+                    bond = mol.GetBondBetweenAtoms(nbr.GetIdx(), nbr2.GetIdx())
+                    if bond and bond.GetBondType() == Chem.BondType.DOUBLE:
+                        if nbr2.GetSymbol() == 'C':
+                            is_allylic = True
     
-    # Apply effects
-    # EWG reduce reactivity, EDG increase it
-    boost = boost * (1.0 + 0.1 * edg_count) / (1.0 + 0.15 * ewg_count)
+    # Aromatic C-H
+    if atom.GetIsAromatic():
+        return (BDE_TABLE['AROMATIC'], 'AROMATIC')
     
-    # Clamp to reasonable range
-    return max(0.5, min(1.5, boost))
+    # =========================================================================
+    # PRIORITY ORDER (based on experimental BDE data)
+    # Lower BDE = weaker bond = more likely SoM
+    # =========================================================================
+    
+    # HETEROATOM-ACTIVATED (lowest BDE, most reactive)
+    if is_alpha_N:
+        if degree == 1:
+            return (BDE_TABLE['ALPHA_N_1'], 'N_DEALKYLATION')
+        elif degree == 2:
+            return (BDE_TABLE['ALPHA_N_2'], 'N_DEALKYLATION')
+        else:
+            return (BDE_TABLE['ALPHA_N_3'], 'N_DEALKYLATION')
+    
+    if is_alpha_O_ether:
+        if degree == 1:
+            return (BDE_TABLE['ALPHA_O_1'], 'O_DEALKYLATION')
+        else:
+            return (BDE_TABLE['ALPHA_O_2'], 'O_DEALKYLATION')
+    
+    if is_alpha_S:
+        if degree == 1:
+            return (BDE_TABLE['ALPHA_S_1'], 'S_DEALKYLATION')
+        else:
+            return (BDE_TABLE['ALPHA_S_2'], 'S_DEALKYLATION')
+    
+    # RESONANCE-STABILIZED
+    if is_benzylic:
+        if degree == 1:
+            return (BDE_TABLE['BENZYLIC_1'], 'BENZYLIC')
+        elif degree == 2:
+            return (BDE_TABLE['BENZYLIC_2'], 'BENZYLIC')
+        else:
+            return (BDE_TABLE['BENZYLIC_3'], 'BENZYLIC')
+    
+    if is_allylic:
+        if degree == 1:
+            return (BDE_TABLE['ALLYLIC_1'], 'ALLYLIC')
+        elif degree == 2:
+            return (BDE_TABLE['ALLYLIC_2'], 'ALLYLIC')
+        else:
+            return (BDE_TABLE['ALLYLIC_3'], 'ALLYLIC')
+    
+    # α-CARBONYL (slightly deactivated by EWG)
+    if is_alpha_carbonyl:
+        return (BDE_TABLE['ALPHA_CARBONYL'], 'ALPHA_CARBONYL')
+    
+    # SIMPLE ALIPHATIC
+    if degree == 3:
+        return (BDE_TABLE['TERTIARY'], 'TERTIARY_C')
+    elif degree == 2:
+        return (BDE_TABLE['SECONDARY'], 'SECONDARY_C')
+    elif degree == 1:
+        return (BDE_TABLE['PRIMARY'], 'PRIMARY_C')
+    else:
+        return (BDE_TABLE['CH4'], 'METHYL')
 
 
 # ============================================================================
-# FACTOR 3: ACCESSIBILITY
+# THE SCORER: Wraps estimate_BDE with accessibility correction
 # ============================================================================
 
-def get_accessibility(mol: Chem.Mol, atom_idx: int) -> float:
+def get_accessibility_penalty(mol: Chem.Mol, atom_idx: int) -> float:
     """
-    Steric accessibility of a site.
+    Accessibility penalty based on steric crowding.
     
-    CYP3A4 has a large active site, so most sites are accessible.
-    But deeply buried carbons (surrounded by many heavy atoms) are protected.
+    Returns: Penalty to ADD to BDE (0 to ~5 kcal/mol)
     
-    Simple approximation:
-    - Count heavy atoms within 2-3 bonds
-    - More crowded = less accessible
-    - Terminal positions are most accessible
+    More crowded = higher penalty = less reactive
     """
     atom = mol.GetAtomWithIdx(atom_idx)
-    symbol = atom.GetSymbol()
     
-    if symbol not in ('C', 'N', 'S', 'O'):
-        return 0.0
+    # Count bulky neighbors (anything bigger than H)
+    heavy_neighbors = [n for n in atom.GetNeighbors() if n.GetSymbol() != 'H']
     
-    # Count heavy neighbors at distance 1, 2, 3
-    neighbors_1 = len([n for n in atom.GetNeighbors() if n.GetSymbol() != 'H'])
+    # Count neighbors of neighbors (steric bulk)
+    bulk_score = 0
+    for nbr in heavy_neighbors:
+        nbr_heavy = len([n for n in nbr.GetNeighbors() if n.GetSymbol() != 'H'])
+        bulk_score += nbr_heavy
     
-    neighbors_2 = 0
-    neighbors_3 = 0
-    seen = {atom_idx}
+    # Terminal positions (low bulk) = 0 penalty
+    # Buried positions (high bulk) = up to 5 kcal/mol penalty
+    penalty = min(5.0, bulk_score * 0.3)
     
-    for nbr1 in atom.GetNeighbors():
-        if nbr1.GetSymbol() == 'H':
-            continue
-        seen.add(nbr1.GetIdx())
-        for nbr2 in nbr1.GetNeighbors():
-            if nbr2.GetIdx() in seen:
-                continue
-            if nbr2.GetSymbol() == 'H':
-                continue
-            neighbors_2 += 1
-            seen.add(nbr2.GetIdx())
-            for nbr3 in nbr2.GetNeighbors():
-                if nbr3.GetIdx() in seen:
-                    continue
-                if nbr3.GetSymbol() == 'H':
-                    continue
-                neighbors_3 += 1
-    
-    # Crowding score: weighted sum of neighbors
-    crowding = neighbors_1 * 1.0 + neighbors_2 * 0.3 + neighbors_3 * 0.1
-    
-    # Convert to accessibility (inverse of crowding)
-    # Terminal CH3: crowding ~1 → accessibility ~1.0
-    # Highly branched: crowding ~5 → accessibility ~0.5
-    accessibility = 1.0 / (1.0 + 0.15 * crowding)
-    
-    # CYP3A4 has a large pocket, so even somewhat buried sites are accessible
-    # Apply a floor
-    return max(0.4, accessibility)
+    return penalty
 
-
-# ============================================================================
-# THE UNIFIED SCORER
-# ============================================================================
 
 class HydrogenTheftScorer:
     """
-    The Genius Simple Model.
+    The One-Equation Model.
     
-    Score = RadicalStability × ElectronicBoost × Accessibility
+    Score = 1 / (BDE + accessibility_penalty)
+    
+    Lower BDE → Higher score → Predicted SoM
     """
     
-    def __init__(self, debug: bool = False):
+    def __init__(self, use_accessibility: bool = True, debug: bool = False):
+        self.use_accessibility = use_accessibility
         self.debug = debug
     
     def score_molecule(self, smiles: str) -> Dict:
-        """
-        Score all potential sites in a molecule.
-        
-        Returns:
-            Dict with 'scores' list and 'rankings' list
-        """
+        """Score all sites in a molecule."""
         mol = Chem.MolFromSmiles(smiles)
         if mol is None:
-            return {'scores': [], 'rankings': [], 'error': 'Invalid SMILES'}
+            return {'sites': [], 'error': 'Invalid SMILES'}
         
-        # Add hydrogens for accurate counting
-        mol = Chem.AddHs(mol)
+        mol_h = Chem.AddHs(mol)
+        num_orig = mol.GetNumAtoms()
         
-        scores = []
+        sites = []
         
-        for atom in mol.GetAtoms():
+        for atom in mol_h.GetAtoms():
             idx = atom.GetIdx()
-            symbol = atom.GetSymbol()
+            if idx >= num_orig:  # Skip explicit H atoms
+                continue
             
-            # Only score C, N, S
+            symbol = atom.GetSymbol()
             if symbol not in ('C', 'N', 'S'):
                 continue
             
-            # Get the three factors
-            radical_stability, rxn_type = get_radical_stability(mol, idx)
-            electronic_boost = get_electronic_boost(mol, idx)
-            accessibility = get_accessibility(mol, idx)
+            bde, rxn_type = estimate_BDE(mol_h, idx)
             
-            site_score = SiteScore(
-                atom_idx=idx,
-                radical_stability=radical_stability,
-                electronic_boost=electronic_boost,
-                accessibility=accessibility
-            )
-            site_score.reaction_type = rxn_type
+            if bde >= 150:  # Skip impossible sites
+                continue
             
-            if site_score.total > 0:
-                scores.append(site_score)
-        
-        # Sort by total score (descending)
-        scores.sort(key=lambda s: s.total, reverse=True)
-        
-        # Create rankings (1-indexed, handling ties)
-        rankings = []
-        for i, score in enumerate(scores):
-            rankings.append({
-                'rank': i + 1,
-                'atom_idx': score.atom_idx,
-                'total_score': round(score.total, 3),
-                'radical_stability': round(score.radical_stability, 3),
-                'electronic_boost': round(score.electronic_boost, 3),
-                'accessibility': round(score.accessibility, 3),
-                'reaction_type': score.reaction_type
+            # Add accessibility penalty
+            if self.use_accessibility:
+                penalty = get_accessibility_penalty(mol_h, idx)
+            else:
+                penalty = 0
+            
+            effective_bde = bde + penalty
+            score = 100.0 / effective_bde  # Scale for readability
+            
+            sites.append({
+                'atom_idx': idx,
+                'symbol': symbol,
+                'bde': round(bde, 1),
+                'penalty': round(penalty, 1),
+                'effective_bde': round(effective_bde, 1),
+                'score': round(score, 3),
+                'reaction_type': rxn_type
             })
         
-        return {'scores': scores, 'rankings': rankings}
+        # Sort by score (descending = lowest BDE first)
+        sites.sort(key=lambda x: x['score'], reverse=True)
+        
+        # Add rank
+        for i, site in enumerate(sites):
+            site['rank'] = i + 1
+        
+        return {'sites': sites}
     
     def predict_top_k(self, smiles: str, k: int = 3) -> List[int]:
         """Return top-k predicted atom indices."""
@@ -523,27 +408,7 @@ class HydrogenTheftScorer:
         if 'error' in result:
             return []
         
-        # Map back to original indices (before AddHs)
-        mol_orig = Chem.MolFromSmiles(smiles)
-        if mol_orig is None:
-            return []
-        
-        mol_with_h = Chem.AddHs(mol_orig)
-        
-        # Build mapping from AddHs index to original index
-        # Atoms added by AddHs have idx >= num_atoms in original
-        num_orig_atoms = mol_orig.GetNumAtoms()
-        
-        top_k_orig = []
-        for ranking in result['rankings'][:k * 2]:  # Get extra in case some map to same
-            h_idx = ranking['atom_idx']
-            if h_idx < num_orig_atoms:
-                if h_idx not in top_k_orig:
-                    top_k_orig.append(h_idx)
-                    if len(top_k_orig) >= k:
-                        break
-        
-        return top_k_orig
+        return [site['atom_idx'] for site in result['sites'][:k]]
 
 
 # ============================================================================
@@ -551,19 +416,17 @@ class HydrogenTheftScorer:
 # ============================================================================
 
 def evaluate_on_dataset(data_path: str, scorer: HydrogenTheftScorer) -> Dict:
-    """Evaluate scorer on a dataset."""
+    """Evaluate on a dataset."""
     with open(data_path) as f:
         data = json.load(f)
     
     drugs = data if isinstance(data, list) else data.get('drugs', [])
     
-    correct_top1 = 0
-    correct_top2 = 0
-    correct_top3 = 0
+    correct = {1: 0, 2: 0, 3: 0}
     total = 0
     
-    errors_by_type = {}
-    correct_by_type = {}
+    by_true_type = {}  # What reaction types are we getting right/wrong?
+    by_pred_type = {'correct': {}, 'wrong': {}}
     
     for drug in drugs:
         smiles = drug.get('smiles', '')
@@ -572,45 +435,35 @@ def evaluate_on_dataset(data_path: str, scorer: HydrogenTheftScorer) -> Dict:
         if not smiles or not sites:
             continue
         
-        # Get predictions
-        predictions = scorer.predict_top_k(smiles, k=3)
-        
-        if not predictions:
+        result = scorer.score_molecule(smiles)
+        if 'error' in result or not result['sites']:
             continue
         
         total += 1
-        true_sites = set(sites)
+        true_set = set(sites)
+        predictions = [s['atom_idx'] for s in result['sites'][:3]]
+        pred_types = [s['reaction_type'] for s in result['sites'][:3]]
         
-        # Check top-k accuracy
-        if predictions[0] in true_sites:
-            correct_top1 += 1
-        if any(p in true_sites for p in predictions[:2]):
-            correct_top2 += 1
-        if any(p in true_sites for p in predictions[:3]):
-            correct_top3 += 1
+        # Top-k accuracy
+        for k in [1, 2, 3]:
+            if any(p in true_set for p in predictions[:k]):
+                correct[k] += 1
         
-        # Track what we got wrong
-        if predictions[0] not in true_sites:
-            result = scorer.score_molecule(smiles)
-            if result['rankings']:
-                pred_type = result['rankings'][0]['reaction_type']
-                errors_by_type[pred_type] = errors_by_type.get(pred_type, 0) + 1
+        # Track by reaction type
+        if predictions[0] in true_set:
+            t = pred_types[0]
+            by_pred_type['correct'][t] = by_pred_type['correct'].get(t, 0) + 1
         else:
-            result = scorer.score_molecule(smiles)
-            if result['rankings']:
-                pred_type = result['rankings'][0]['reaction_type']
-                correct_by_type[pred_type] = correct_by_type.get(pred_type, 0) + 1
+            t = pred_types[0]
+            by_pred_type['wrong'][t] = by_pred_type['wrong'].get(t, 0) + 1
     
-    results = {
+    return {
         'total': total,
-        'top1': correct_top1 / total if total > 0 else 0,
-        'top2': correct_top2 / total if total > 0 else 0,
-        'top3': correct_top3 / total if total > 0 else 0,
-        'correct_by_type': correct_by_type,
-        'errors_by_type': errors_by_type
+        'top1': correct[1] / total if total > 0 else 0,
+        'top2': correct[2] / total if total > 0 else 0,
+        'top3': correct[3] / total if total > 0 else 0,
+        'by_pred_type': by_pred_type
     }
-    
-    return results
 
 
 def main():
@@ -618,36 +471,46 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description="Hydrogen Theft Theory v3")
-    parser.add_argument('--data', type=str, required=True, help="Dataset JSON path")
-    parser.add_argument('--debug', action='store_true', help="Debug output")
+    parser.add_argument('--data', type=str, required=True)
+    parser.add_argument('--no-accessibility', action='store_true')
     args = parser.parse_args()
     
-    print("=" * 70)
-    print("HYDROGEN THEFT THEORY v3: The Genius Simplification")
-    print("=" * 70)
     print()
-    print("Model: Score = RadicalStability × ElectronicBoost × Accessibility")
+    print("═" * 70)
+    print("       HYDROGEN THEFT THEORY v3: The One Equation Model")
+    print("═" * 70)
+    print()
+    print("  Core Insight: CYP metabolism = H-atom abstraction")
+    print("  The site with the WEAKEST C-H bond wins.")
+    print()
+    print("  Score = 1 / BDE(C-H)")
+    print()
+    print("═" * 70)
     print()
     
-    scorer = HydrogenTheftScorer(debug=args.debug)
+    scorer = HydrogenTheftScorer(use_accessibility=not args.no_accessibility)
     results = evaluate_on_dataset(args.data, scorer)
     
-    print(f"Evaluated on {results['total']} molecules")
+    print(f"Dataset: {args.data}")
+    print(f"Molecules evaluated: {results['total']}")
     print()
-    print("ACCURACY:")
-    print(f"  Top-1: {results['top1']*100:.1f}%")
-    print(f"  Top-2: {results['top2']*100:.1f}%")
-    print(f"  Top-3: {results['top3']*100:.1f}%")
+    print("┌────────────────────────────────┐")
+    print("│          ACCURACY              │")
+    print("├────────────────────────────────┤")
+    print(f"│  Top-1:  {results['top1']*100:5.1f}%               │")
+    print(f"│  Top-2:  {results['top2']*100:5.1f}%               │")
+    print(f"│  Top-3:  {results['top3']*100:5.1f}%               │")
+    print("└────────────────────────────────┘")
     print()
     
-    print("CORRECT PREDICTIONS BY REACTION TYPE:")
-    for rxn_type, count in sorted(results['correct_by_type'].items(), key=lambda x: -x[1]):
-        print(f"  {rxn_type}: {count}")
+    print("CORRECT predictions by reaction type:")
+    for t, c in sorted(results['by_pred_type']['correct'].items(), key=lambda x: -x[1]):
+        print(f"  {t}: {c}")
     print()
     
-    print("ERRORS BY PREDICTED TYPE:")
-    for rxn_type, count in sorted(results['errors_by_type'].items(), key=lambda x: -x[1]):
-        print(f"  {rxn_type}: {count}")
+    print("WRONG predictions by reaction type:")
+    for t, c in sorted(results['by_pred_type']['wrong'].items(), key=lambda x: -x[1]):
+        print(f"  {t}: {c}")
 
 
 if __name__ == "__main__":
