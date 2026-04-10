@@ -149,45 +149,68 @@ def load_phase5_checkpoint(checkpoint_path: str, device: torch.device):
 
 
 # =============================================================================
-# SIMPLE BATCH CREATION
+# SIMPLE BATCH CREATION (no external featurizer needed)
 # =============================================================================
+
+def featurize_atom(atom) -> List[float]:
+    """Simple atom featurization."""
+    features = [
+        atom.GetAtomicNum() / 50.0,
+        atom.GetTotalDegree() / 4.0,
+        atom.GetTotalNumHs() / 4.0,
+        atom.GetFormalCharge() / 2.0,
+        1.0 if atom.GetIsAromatic() else 0.0,
+        1.0 if atom.IsInRing() else 0.0,
+        atom.GetMass() / 100.0,
+    ]
+    # Hybridization one-hot
+    hyb = atom.GetHybridization()
+    features.extend([
+        1.0 if hyb == Chem.HybridizationType.SP else 0.0,
+        1.0 if hyb == Chem.HybridizationType.SP2 else 0.0,
+        1.0 if hyb == Chem.HybridizationType.SP3 else 0.0,
+    ])
+    return features
+
 
 def create_batch(smiles_list: List[str], sites_list: List[List[int]], 
                  device: torch.device) -> Optional[Dict]:
     """
-    Create a batch for the hybrid model.
+    Create a batch for the hybrid model using simple featurization.
     """
-    from enzyme_software.liquid_nn_v2.data.featurizer import featurize_molecule
-    
     all_atom_features = []
     all_edge_index = []
-    all_edge_attr = []
     all_labels = []
     all_candidate_mask = []
     batch_idx = []
+    all_smiles = []
     
     atom_offset = 0
-    valid_smiles = []
     
     for mol_idx, (smiles, sites) in enumerate(zip(smiles_list, sites_list)):
         mol = Chem.MolFromSmiles(smiles)
         if mol is None:
             continue
         
-        try:
-            features = featurize_molecule(smiles)
-            if features is None:
-                continue
-        except:
-            # Fallback: simple features
-            n_atoms = mol.GetNumAtoms()
-            features = {
-                'atom_features': torch.randn(n_atoms, 128),
-                'edge_index': torch.zeros(2, 0, dtype=torch.long),
-                'edge_attr': torch.zeros(0, 16),
-            }
+        n_atoms = mol.GetNumAtoms()
         
-        n_atoms = features['atom_features'].shape[0]
+        # Atom features
+        atom_feats = []
+        for atom in mol.GetAtoms():
+            atom_feats.append(featurize_atom(atom))
+        atom_feats = torch.tensor(atom_feats, dtype=torch.float32)
+        
+        # Pad to expected dimension (128)
+        if atom_feats.shape[1] < 128:
+            padding = torch.zeros(n_atoms, 128 - atom_feats.shape[1])
+            atom_feats = torch.cat([atom_feats, padding], dim=1)
+        
+        # Edge index
+        edges_src, edges_dst = [], []
+        for bond in mol.GetBonds():
+            i, j = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
+            edges_src.extend([i + atom_offset, j + atom_offset])
+            edges_dst.extend([j + atom_offset, i + atom_offset])
         
         # Labels
         labels = torch.zeros(n_atoms)
@@ -201,37 +224,35 @@ def create_batch(smiles_list: List[str], sites_list: List[List[int]],
             for i in range(n_atoms)
         ], dtype=torch.bool)
         
-        all_atom_features.append(features['atom_features'])
+        all_atom_features.append(atom_feats)
         all_labels.append(labels)
         all_candidate_mask.append(candidate_mask)
-        batch_idx.extend([len(valid_smiles)] * n_atoms)
+        batch_idx.extend([len(all_smiles)] * n_atoms)
+        all_smiles.append(smiles)
         
-        # Offset edges
-        if features['edge_index'].numel() > 0:
-            all_edge_index.append(features['edge_index'] + atom_offset)
-            all_edge_attr.append(features['edge_attr'])
+        if edges_src:
+            all_edge_index.append(torch.tensor([edges_src, edges_dst], dtype=torch.long))
         
         atom_offset += n_atoms
-        valid_smiles.append(smiles)
     
-    if not valid_smiles:
+    if not all_smiles:
         return None
     
-    # Stack
+    # Stack everything
     batch = {
         'atom_features': torch.cat(all_atom_features, dim=0).to(device),
+        'x': torch.cat(all_atom_features, dim=0).to(device),  # Alternative name
         'labels': torch.cat(all_labels, dim=0).to(device),
         'candidate_mask': torch.cat(all_candidate_mask, dim=0).to(device),
         'batch': torch.tensor(batch_idx, dtype=torch.long, device=device),
-        'smiles': valid_smiles,
+        'smiles': all_smiles,
+        'num_atoms': atom_offset,
     }
     
     if all_edge_index:
         batch['edge_index'] = torch.cat(all_edge_index, dim=1).to(device)
-        batch['edge_attr'] = torch.cat(all_edge_attr, dim=0).to(device)
     else:
         batch['edge_index'] = torch.zeros(2, 0, dtype=torch.long, device=device)
-        batch['edge_attr'] = torch.zeros(0, 16, device=device)
     
     return batch
 
@@ -337,11 +358,12 @@ def evaluate_simple(model: nn.Module, data: List[Dict], device: torch.device
 
 
 def train_epoch(model: nn.Module, data: List[Dict], optimizer: torch.optim.Optimizer,
-                device: torch.device, batch_size: int = 8) -> Tuple[float, int]:
+                device: torch.device, batch_size: int = 8, debug: bool = False) -> Tuple[float, int]:
     """Train one epoch."""
     model.train()
     total_loss = 0.0
     n_batches = 0
+    n_errors = 0
     
     random.shuffle(data)
     
@@ -370,18 +392,32 @@ def train_epoch(model: nn.Module, data: List[Dict], optimizer: torch.optim.Optim
             # Forward
             output = model(batch)
             
+            if debug and n_batches == 0:
+                print(f"  DEBUG: output type = {type(output)}")
+                if isinstance(output, dict):
+                    print(f"  DEBUG: output keys = {output.keys()}")
+                    for k, v in output.items():
+                        if isinstance(v, torch.Tensor):
+                            print(f"    {k}: shape={v.shape}")
+            
             # Get scores
             if isinstance(output, dict):
-                scores = output.get('site_logits', output.get('logits', None))
+                scores = output.get('site_logits', output.get('logits', output.get('som_logits', None)))
                 aux_loss = output.get('aux_loss', 0.0)
             else:
                 scores = output
                 aux_loss = 0.0
             
             if scores is None:
+                if debug and n_errors < 3:
+                    print(f"  DEBUG: No scores found in output")
+                n_errors += 1
                 continue
             
             scores = scores.squeeze()
+            
+            if debug and n_batches == 0:
+                print(f"  DEBUG: scores shape = {scores.shape}, labels shape = {batch['labels'].shape}")
             
             # Compute loss
             loss = ranking_loss(scores, batch['labels'], batch['candidate_mask'])
@@ -389,7 +425,7 @@ def train_epoch(model: nn.Module, data: List[Dict], optimizer: torch.optim.Optim
             if isinstance(aux_loss, torch.Tensor):
                 loss = loss + 0.1 * aux_loss
             
-            if loss.requires_grad:
+            if loss.requires_grad and loss.item() > 0:
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
@@ -398,7 +434,13 @@ def train_epoch(model: nn.Module, data: List[Dict], optimizer: torch.optim.Optim
                 n_batches += 1
                 
         except Exception as e:
+            if debug and n_errors < 5:
+                print(f"  DEBUG: Exception in batch {i}: {e}")
+            n_errors += 1
             continue
+    
+    if n_batches == 0 and debug:
+        print(f"  DEBUG: No batches trained! Errors: {n_errors}")
     
     return total_loss / max(n_batches, 1), n_batches
 
@@ -489,8 +531,9 @@ def main():
     patience = 5
     
     for epoch in range(args.epochs):
-        # Train
-        train_loss, n = train_epoch(model, train_data, optimizer, device, args.batch_size)
+        # Train (debug on first epoch)
+        train_loss, n = train_epoch(model, train_data, optimizer, device, args.batch_size, 
+                                     debug=(epoch == 0))
         scheduler.step()
         
         # Evaluate
