@@ -150,33 +150,36 @@ def estimate_BDE(mol: Chem.Mol, atom_idx: int) -> Tuple[float, str]:
     symbol = atom.GetSymbol()
     
     # === NITROGEN: N-oxidation ===
-    # N-oxidation is LESS common than N-dealkylation!
-    # The carbon α to N is the primary site, not the N itself.
+    # N-oxidation is RARE compared to C-oxidation!
+    # Only ~8% of CYP sites are nitrogen itself.
+    # The carbon α to N (N-dealkylation) is FAR more common.
+    # Set very high "BDE" to deprioritize.
     if symbol == 'N':
         if atom.GetIsAromatic():
-            return (BDE_TABLE['N_OXIDATION'] + 10, 'N_OXIDE_AROMATIC')
+            return (140.0, 'N_OXIDE_AROMATIC')  # Very rare
         
         heavy_nbrs = [n for n in atom.GetNeighbors() if n.GetSymbol() != 'H']
         n_H = atom.GetTotalNumHs()
         
         if len(heavy_nbrs) == 3 and n_H == 0:  # Tertiary amine
-            # N-oxide formation possible but less common than N-dealkylation
-            return (BDE_TABLE['N_OXIDATION'], 'N_OXIDE_TERTIARY')
+            return (125.0, 'N_OXIDE_TERTIARY')  # Possible but uncommon
         elif len(heavy_nbrs) == 2:  # Secondary
-            return (BDE_TABLE['N_OXIDATION'] + 5, 'N_OXIDE_SECONDARY')
+            return (130.0, 'N_OXIDE_SECONDARY')
         else:
-            return (BDE_TABLE['N_OXIDATION'] + 10, 'N_OXIDE_PRIMARY')
+            return (140.0, 'N_OXIDE_PRIMARY')
     
     # === SULFUR: S-oxidation ===
+    # S-oxidation is only ~1.5% of sites!
+    # Much rarer than S-dealkylation (oxidizing C next to S)
     if symbol == 'S':
         valence = atom.GetTotalValence()
         if valence >= 4:  # Already oxidized
-            return (120.0, 'S_ALREADY_OX')
+            return (200.0, 'S_ALREADY_OX')
         
         heavy_nbrs = [n for n in atom.GetNeighbors() if n.GetSymbol() != 'H']
         if len(heavy_nbrs) == 2:  # Thioether
-            return (BDE_TABLE['S_OXIDATION'], 'S_OXIDATION')
-        return (BDE_TABLE['S_OXIDATION'] + 5, 'S_OXIDATION')
+            return (115.0, 'S_OXIDATION')  # Uncommon
+        return (130.0, 'S_OXIDATION')
     
     # === NOT CARBON: Skip ===
     if symbol != 'C':
