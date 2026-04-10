@@ -111,12 +111,17 @@ def load_phase5_checkpoint(checkpoint_path: str, device: torch.device):
     ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
     
     # Get config from checkpoint
-    config = ckpt.get('config', ckpt.get('model_config', None))
+    config_data = ckpt.get('config', ckpt.get('model_config', None))
     
-    if config is None:
-        # Try to infer config from state dict
+    if config_data is None:
         print("No config in checkpoint, using defaults...")
         config = ModelConfig()
+    elif isinstance(config_data, dict):
+        print("Converting dict config to ModelConfig...")
+        config = ModelConfig(**{k: v for k, v in config_data.items() 
+                                if hasattr(ModelConfig, k) or k in ModelConfig.__dataclass_fields__})
+    else:
+        config = config_data
     
     # Create base LNN model
     base_lnn = LiquidMetabolismNetV2(config)
