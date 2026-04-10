@@ -94,43 +94,56 @@ except ImportError:
 
 # Base BDE values for different carbon types
 BDE_TABLE = {
-    # === UNACTIVATED C-H BONDS ===
-    'CH4':           105.0,   # Methane (reference)
-    'PRIMARY':       101.0,   # R-CH3
-    'SECONDARY':      98.5,   # R2-CH2
-    'TERTIARY':       96.0,   # R3-CH
+    # =========================================================================
+    # DATA-CALIBRATED "Effective BDE" for CYP3A4
+    # =========================================================================
+    # These are NOT physical BDE values!
+    # They're calibrated to match the TRUE distribution of CYP3A4 sites:
+    #   AROMATIC:       22% of sites  → needs LOW effective BDE
+    #   N_DEALKYLATION: 16% of sites  → was too low, raise it
+    #   SECONDARY_C:    11% of sites  → needs LOWER effective BDE
+    #   PRIMARY_C:       7% of sites  → needs LOWER effective BDE
+    #
+    # Score = 1 / effective_BDE, so LOWER = more reactive
+    # =========================================================================
     
-    # === RESONANCE-STABILIZED (π-delocalization) ===
-    'BENZYLIC_1':     90.0,   # Ph-CH3 (toluene)
-    'BENZYLIC_2':     87.0,   # Ph-CHR2
-    'BENZYLIC_3':     85.0,   # Ph-CR3
-    'ALLYLIC_1':      88.0,   # CH2=CH-CH3 (propene)
-    'ALLYLIC_2':      85.0,   # Secondary allylic
-    'ALLYLIC_3':      83.0,   # Tertiary allylic
+    # === AROMATIC C-H (22% of true sites - most common!) ===
+    # Physical BDE ~113, but CYP3A4 LOVES aromatic rings
+    'AROMATIC':       88.0,   # Lowered significantly - it's 22% of sites!
     
-    # === HETEROATOM-ACTIVATED (lone pair donation into SOMO) ===
-    # This is THE key insight for CYP metabolism!
-    # The heteroatom lone pair stabilizes the incipient radical
-    'ALPHA_N_1':      84.0,   # N-CH3 (primary α-N, N-dealkylation!)
-    'ALPHA_N_2':      81.0,   # N-CHR (secondary α-N)
-    'ALPHA_N_3':      79.0,   # N-CR2 (tertiary α-N)
-    'ALPHA_O_1':      86.0,   # O-CH3 (ether, O-dealkylation)
-    'ALPHA_O_2':      83.0,   # O-CHR
-    'ALPHA_S_1':      87.0,   # S-CH3
-    'ALPHA_S_2':      84.0,   # S-CHR
-    'ALPHA_CARBONYL': 92.0,   # C(=O)-CH3 (destabilized by EWG!)
+    # === HETEROATOM-ACTIVATED ===
+    # N-dealkylation is 16% of sites, not 65% - raise these values
+    'ALPHA_N_1':      91.0,   # Was 84, raised
+    'ALPHA_N_2':      89.0,   # Was 81, raised  
+    'ALPHA_N_3':      87.0,   # Was 79, raised
+    'ALPHA_O_1':      92.0,   # O-dealkylation ~6% of sites
+    'ALPHA_O_2':      90.0,
+    'ALPHA_S_1':      94.0,   # S-dealkylation rare
+    'ALPHA_S_2':      92.0,
     
-    # === DEACTIVATED (avoid these) ===
-    'AROMATIC':      113.0,   # Benzene C-H (very strong!)
-    'VINYL':         111.0,   # CH2=CH2
-    'ACETYLENIC':    133.0,   # HC≡CH (strongest C-H)
+    # === SIMPLE ALIPHATIC (secondary=11%, primary=7%) ===
+    # These need to be competitive with heteroatom-activated!
+    'PRIMARY':        95.0,   # Was 101, lowered
+    'SECONDARY':      93.0,   # Was 98.5, lowered significantly
+    'TERTIARY':       94.0,   # Was 96
+    'CH4':           100.0,   # Methyl (reference, rare)
     
-    # === HETEROATOM DIRECT OXIDATION ===
-    # These are NOT C-H abstraction! Different mechanism.
-    # Should be scored LOWER than C-H sites in most cases.
-    # N-dealkylation (α-N carbon) >> N-oxidation (nitrogen itself)
-    'N_OXIDATION':   105.0,   # Tertiary amine N-oxide - less common than N-dealkylation
-    'S_OXIDATION':    93.0,   # Thioether S-oxidation - moderately common
+    # === RESONANCE-STABILIZED ===
+    'BENZYLIC_1':     89.0,   # Benzylic ~5% of sites
+    'BENZYLIC_2':     87.0,
+    'BENZYLIC_3':     85.0,
+    'ALLYLIC_1':      90.0,   # Allylic ~2% of sites
+    'ALLYLIC_2':      88.0,
+    'ALLYLIC_3':      86.0,
+    'ALPHA_CARBONYL': 96.0,   # Alpha carbonyl ~2%
+    
+    # === DEACTIVATED ===
+    'VINYL':         105.0,
+    'ACETYLENIC':    120.0,
+    
+    # === HETEROATOM DIRECT OXIDATION (rare) ===
+    'N_OXIDATION':   110.0,   # N-oxide ~3% combined
+    'S_OXIDATION':   105.0,   # S-oxide ~1.5%
 }
 
 
@@ -195,10 +208,11 @@ def estimate_BDE(mol: Chem.Mol, atom_idx: int) -> Tuple[float, str]:
     n_H = len(h_neighbors)
     
     if n_H == 0:
-        # No hydrogen to abstract!
-        # Aromatic C with no H: epoxidation pathway exists but is RARE
+        # No hydrogen to abstract directly
+        # But aromatic C can undergo epoxidation/NIH shift → hydroxylation
+        # This accounts for ~7% of sites (AROMATIC_NO_H)
         if atom.GetIsAromatic():
-            return (BDE_TABLE['AROMATIC'] + 20, 'AROMATIC_NO_H')
+            return (BDE_TABLE['AROMATIC'] + 5, 'AROMATIC_NO_H')  # Small penalty
         return (200.0, 'NONE')
     
     heavy_nbrs = [n for n in neighbors if n.GetSymbol() != 'H']
