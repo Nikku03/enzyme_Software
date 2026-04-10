@@ -632,7 +632,7 @@ def main():
     # Load best model if exists
     best_path = os.path.join(args.output_dir, 'ml_physics_best.pt')
     if os.path.exists(best_path):
-        ckpt = torch.load(best_path)
+        ckpt = torch.load(best_path, weights_only=False)
         model.load_state_dict(ckpt['model_state_dict'])
         print(f"Loaded best model from epoch {ckpt.get('epoch', '?')}")
     else:
