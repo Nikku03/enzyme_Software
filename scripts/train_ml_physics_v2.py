@@ -444,23 +444,30 @@ def evaluate(model: SoMGNN, data: List[Dict], device: torch.device
 
 
 def train_epoch(model: SoMGNN, data: List[Dict], optimizer: torch.optim.Optimizer,
-                device: torch.device) -> Tuple[float, int]:
+                device: torch.device, debug: bool = False) -> Tuple[float, int]:
     """Train one epoch."""
     model.train()
     total_loss = 0.0
     n_samples = 0
     n_skipped = 0
+    skip_reasons = {'no_smiles': 0, 'no_sites': 0, 'bad_mol': 0, 'no_pos_candidates': 0, 'exception': 0}
     
     random.shuffle(data)
     
-    for entry in data:
+    for idx, entry in enumerate(data):
         smiles, sites = get_smiles_and_sites(entry)
-        if not smiles or not sites:
+        if not smiles:
+            skip_reasons['no_smiles'] += 1
+            n_skipped += 1
+            continue
+        if not sites:
+            skip_reasons['no_sites'] += 1
             n_skipped += 1
             continue
         
         mol = Chem.MolFromSmiles(smiles)
         if mol is None:
+            skip_reasons['bad_mol'] += 1
             n_skipped += 1
             continue
         
@@ -470,7 +477,7 @@ def train_epoch(model: SoMGNN, data: List[Dict], optimizer: torch.optim.Optimize
             if s < n_atoms:
                 labels[s] = 1.0
         
-        # All carbons are candidates (not just those with H)
+        # All carbons are candidates
         candidate_mask = torch.tensor([
             a.GetAtomicNum() == 6
             for a in mol.GetAtoms()
@@ -479,7 +486,10 @@ def train_epoch(model: SoMGNN, data: List[Dict], optimizer: torch.optim.Optimize
         # Check if any positive site is a candidate
         pos_in_candidates = (labels > 0) & candidate_mask
         if not pos_in_candidates.any():
+            skip_reasons['no_pos_candidates'] += 1
             n_skipped += 1
+            if debug and idx < 3:
+                print(f"  Debug: sites={sites}, labels sum={labels.sum()}, candidate_mask sum={candidate_mask.sum()}")
             continue
         
         try:
@@ -489,6 +499,9 @@ def train_epoch(model: SoMGNN, data: List[Dict], optimizer: torch.optim.Optimize
             
             # Loss on combined scores
             loss = ranking_loss(combined, labels, candidate_mask)
+            
+            if debug and idx < 3:
+                print(f"  Debug mol {idx}: loss={loss.item():.4f}, requires_grad={loss.requires_grad}")
             
             # Always backprop if loss requires grad
             if loss.requires_grad:
@@ -500,12 +513,15 @@ def train_epoch(model: SoMGNN, data: List[Dict], optimizer: torch.optim.Optimize
                 n_samples += 1
                 
         except Exception as e:
+            skip_reasons['exception'] += 1
             n_skipped += 1
+            if debug and idx < 10:
+                print(f"  Exception on mol {idx}: {e}")
             continue
     
-    # Debug: print skip rate on first epoch
+    # Debug: print skip reasons
     if n_samples == 0:
-        print(f"  WARNING: No samples trained! Skipped: {n_skipped}")
+        print(f"  WARNING: No samples trained! Skip reasons: {skip_reasons}")
     
     return total_loss / max(n_samples, 1), n_samples
 
@@ -565,8 +581,8 @@ def main():
     patience_counter = 0
     
     for epoch in range(args.epochs):
-        # Train
-        train_loss, n = train_epoch(model, train_data, optimizer, device)
+        # Train (debug on first epoch)
+        train_loss, n = train_epoch(model, train_data, optimizer, device, debug=(epoch == 0))
         scheduler.step()
         
         # Evaluate
