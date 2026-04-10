@@ -172,9 +172,9 @@ def compute_physics_scores(smiles: str) -> Optional[torch.Tensor]:
     for i in range(n_atoms):
         atom = mol.GetAtomWithIdx(i)
         
-        # Only score carbons with H
-        if atom.GetAtomicNum() != 6 or atom.GetTotalNumHs() == 0:
-            scores[i] = -10.0  # Very low score
+        # Score all carbons (some SoM sites don't have H)
+        if atom.GetAtomicNum() != 6:
+            scores[i] = -10.0  # Very low score for non-carbons
             continue
         
         # Get BDE-based score
@@ -363,25 +363,36 @@ class SoMGNN(nn.Module):
 
 def ranking_loss(scores: torch.Tensor, labels: torch.Tensor, 
                  mask: torch.Tensor) -> torch.Tensor:
-    """ListMLE ranking loss."""
-    if not mask.any() or labels[mask].sum() == 0:
-        return scores.new_zeros(1)
+    """ListMLE ranking loss with margin."""
+    # Get positive and negative indices
+    pos_mask = (labels > 0) & mask
+    neg_mask = (labels == 0) & mask
     
-    valid_scores = scores[mask]
-    valid_labels = labels[mask]
+    if not pos_mask.any() or not neg_mask.any():
+        # Fallback: use BCE-style loss
+        if mask.any():
+            return F.binary_cross_entropy_with_logits(
+                scores[mask], labels[mask], reduction='mean'
+            )
+        return scores.new_zeros(1, requires_grad=True)
     
-    # Sort by ground truth
-    sorted_idx = torch.argsort(valid_labels, descending=True)
-    sorted_scores = valid_scores[sorted_idx]
+    # Margin ranking loss: positive should be higher than negative
+    pos_scores = scores[pos_mask]
+    neg_scores = scores[neg_mask]
     
-    # ListMLE
-    n = len(sorted_scores)
+    # All pairs margin loss
     loss = 0.0
-    for i in range(n):
-        remaining = sorted_scores[i:]
-        loss = loss - sorted_scores[i] + torch.logsumexp(remaining, dim=0)
+    n_pairs = 0
+    for p in pos_scores:
+        for n in neg_scores:
+            # Margin of 1.0: positive should be at least 1.0 higher
+            loss = loss + F.relu(1.0 - (p - n))
+            n_pairs += 1
     
-    return loss / n
+    if n_pairs > 0:
+        return loss / n_pairs
+    
+    return scores.new_zeros(1, requires_grad=True)
 
 
 def evaluate(model: SoMGNN, data: List[Dict], device: torch.device
@@ -403,9 +414,9 @@ def evaluate(model: SoMGNN, data: List[Dict], device: torch.device
             try:
                 _, combined = model(smiles)
                 
-                # Mask non-candidates
+                # All carbons are candidates
                 candidate_mask = torch.tensor([
-                    a.GetAtomicNum() == 6 and a.GetTotalNumHs() > 0
+                    a.GetAtomicNum() == 6
                     for a in mol.GetAtoms()
                 ], dtype=torch.bool)
                 
@@ -438,16 +449,19 @@ def train_epoch(model: SoMGNN, data: List[Dict], optimizer: torch.optim.Optimize
     model.train()
     total_loss = 0.0
     n_samples = 0
+    n_skipped = 0
     
     random.shuffle(data)
     
     for entry in data:
         smiles, sites = get_smiles_and_sites(entry)
         if not smiles or not sites:
+            n_skipped += 1
             continue
         
         mol = Chem.MolFromSmiles(smiles)
         if mol is None:
+            n_skipped += 1
             continue
         
         n_atoms = mol.GetNumAtoms()
@@ -456,10 +470,17 @@ def train_epoch(model: SoMGNN, data: List[Dict], optimizer: torch.optim.Optimize
             if s < n_atoms:
                 labels[s] = 1.0
         
+        # All carbons are candidates (not just those with H)
         candidate_mask = torch.tensor([
-            a.GetAtomicNum() == 6 and a.GetTotalNumHs() > 0
+            a.GetAtomicNum() == 6
             for a in mol.GetAtoms()
         ], dtype=torch.bool)
+        
+        # Check if any positive site is a candidate
+        pos_in_candidates = (labels > 0) & candidate_mask
+        if not pos_in_candidates.any():
+            n_skipped += 1
+            continue
         
         try:
             optimizer.zero_grad()
@@ -469,7 +490,8 @@ def train_epoch(model: SoMGNN, data: List[Dict], optimizer: torch.optim.Optimize
             # Loss on combined scores
             loss = ranking_loss(combined, labels, candidate_mask)
             
-            if loss.item() > 0:
+            # Always backprop if loss requires grad
+            if loss.requires_grad:
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
@@ -477,8 +499,13 @@ def train_epoch(model: SoMGNN, data: List[Dict], optimizer: torch.optim.Optimize
                 total_loss += loss.item()
                 n_samples += 1
                 
-        except Exception:
+        except Exception as e:
+            n_skipped += 1
             continue
+    
+    # Debug: print skip rate on first epoch
+    if n_samples == 0:
+        print(f"  WARNING: No samples trained! Skipped: {n_skipped}")
     
     return total_loss / max(n_samples, 1), n_samples
 
@@ -579,9 +606,14 @@ def main():
     print("FINAL RESULTS")
     print("=" * 70)
     
-    # Load best model
-    ckpt = torch.load(os.path.join(args.output_dir, 'ml_physics_best.pt'))
-    model.load_state_dict(ckpt['model_state_dict'])
+    # Load best model if exists
+    best_path = os.path.join(args.output_dir, 'ml_physics_best.pt')
+    if os.path.exists(best_path):
+        ckpt = torch.load(best_path)
+        model.load_state_dict(ckpt['model_state_dict'])
+        print(f"Loaded best model from epoch {ckpt.get('epoch', '?')}")
+    else:
+        print("No best model saved, using final state")
     
     final_metrics = evaluate(model, val_data, device)
     print(f"Best Top-1: {best_top1*100:.1f}%")
