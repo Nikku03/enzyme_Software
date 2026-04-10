@@ -441,8 +441,21 @@ def main():
     print("\nLoading Phase 5 model...")
     model, config = load_phase5_checkpoint(args.checkpoint, device)
     
-    n_params = sum(p.numel() for p in model.parameters())
-    n_trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    # Initialize lazy parameters with a dummy forward pass
+    print("Initializing model with dummy forward pass...")
+    try:
+        dummy_smiles = "CCO"  # Simple ethanol
+        dummy_batch = create_batch([dummy_smiles], [[0]], device)
+        if dummy_batch is not None:
+            with torch.no_grad():
+                _ = model(dummy_batch)
+            print("Model initialized")
+    except Exception as e:
+        print(f"Warning during initialization: {e}")
+    
+    # Count parameters (only initialized ones)
+    n_params = sum(p.numel() for p in model.parameters() if p.data.numel() > 0)
+    n_trainable = sum(p.numel() for p in model.parameters() if p.requires_grad and p.data.numel() > 0)
     print(f"Total parameters: {n_params:,}")
     print(f"Trainable parameters: {n_trainable:,}")
     
