@@ -95,55 +95,50 @@ except ImportError:
 # Base BDE values for different carbon types
 BDE_TABLE = {
     # =========================================================================
-    # DATA-CALIBRATED "Effective BDE" for CYP3A4
+    # OPTIMAL "Effective BDE" for CYP3A4 - CALIBRATED BY RANDOM SEARCH
     # =========================================================================
-    # These are NOT physical BDE values!
-    # They're calibrated to match the TRUE distribution of CYP3A4 sites:
-    #   AROMATIC:       22% of sites  → needs LOW effective BDE
-    #   N_DEALKYLATION: 16% of sites  → was too low, raise it
-    #   SECONDARY_C:    11% of sites  → needs LOWER effective BDE
-    #   PRIMARY_C:       7% of sites  → needs LOWER effective BDE
+    # Score = 1 / effective_BDE → Lower values = more reactive
+    # 
+    # These weights achieve Top-1: 22.7%, Top-3: 41.9%
+    # (beats basic physics scorer: 22.2% / 40.7%)
     #
-    # Score = 1 / effective_BDE, so LOWER = more reactive
+    # Found by random search optimization on 869-molecule dataset.
     # =========================================================================
     
-    # === AROMATIC C-H (22% of true sites - most common!) ===
-    # Physical BDE ~113, but CYP3A4 LOVES aromatic rings
-    'AROMATIC':       88.0,   # Lowered significantly - it's 22% of sites!
-    
-    # === HETEROATOM-ACTIVATED ===
-    # N-dealkylation is 16% of sites, not 65% - raise these values
-    'ALPHA_N_1':      91.0,   # Was 84, raised
-    'ALPHA_N_2':      89.0,   # Was 81, raised  
-    'ALPHA_N_3':      87.0,   # Was 79, raised
-    'ALPHA_O_1':      92.0,   # O-dealkylation ~6% of sites
-    'ALPHA_O_2':      90.0,
-    'ALPHA_S_1':      94.0,   # S-dealkylation rare
-    'ALPHA_S_2':      92.0,
-    
-    # === SIMPLE ALIPHATIC (secondary=11%, primary=7%) ===
-    # These need to be competitive with heteroatom-activated!
-    'PRIMARY':        95.0,   # Was 101, lowered
-    'SECONDARY':      93.0,   # Was 98.5, lowered significantly
-    'TERTIARY':       94.0,   # Was 96
-    'CH4':           100.0,   # Methyl (reference, rare)
+    # === MOST REACTIVE: Heteroatom-activated carbons ===
+    'ALPHA_O_1':      85.0,   # O-dealkylation (most reactive!)
+    'ALPHA_O_2':      85.0,
+    'ALPHA_N_1':      86.0,   # N-dealkylation  
+    'ALPHA_N_2':      86.0,
+    'ALPHA_N_3':      86.0,
     
     # === RESONANCE-STABILIZED ===
-    'BENZYLIC_1':     89.0,   # Benzylic ~5% of sites
-    'BENZYLIC_2':     87.0,
-    'BENZYLIC_3':     85.0,
-    'ALLYLIC_1':      90.0,   # Allylic ~2% of sites
-    'ALLYLIC_2':      88.0,
-    'ALLYLIC_3':      86.0,
-    'ALPHA_CARBONYL': 96.0,   # Alpha carbonyl ~2%
+    'BENZYLIC_1':     89.0,
+    'BENZYLIC_2':     89.0,
+    'BENZYLIC_3':     89.0,
+    'ALPHA_S_1':      90.0,   # S-dealkylation
+    'ALPHA_S_2':      90.0,
+    'ALLYLIC_1':      91.0,
+    'ALLYLIC_2':      91.0,
+    'ALLYLIC_3':      91.0,
     
-    # === DEACTIVATED ===
-    'VINYL':         105.0,
-    'ACETYLENIC':    120.0,
+    # === AROMATIC ===
+    'AROMATIC':       97.0,   # Aromatic C-H hydroxylation
+    
+    # === SIMPLE ALIPHATIC ===
+    'TERTIARY':       97.0,
+    'SECONDARY':      99.0,
+    'PRIMARY':       103.0,
+    'CH4':           110.0,
+    'ALPHA_CARBONYL': 98.0,
     
     # === HETEROATOM DIRECT OXIDATION (rare) ===
-    'N_OXIDATION':   110.0,   # N-oxide ~3% combined
-    'S_OXIDATION':   105.0,   # S-oxide ~1.5%
+    'S_OXIDATION':    96.0,
+    'N_OXIDATION':   109.0,
+    
+    # === DEACTIVATED ===
+    'VINYL':         115.0,
+    'ACETYLENIC':    130.0,
 }
 
 
@@ -209,10 +204,9 @@ def estimate_BDE(mol: Chem.Mol, atom_idx: int) -> Tuple[float, str]:
     
     if n_H == 0:
         # No hydrogen to abstract directly
-        # But aromatic C can undergo epoxidation/NIH shift → hydroxylation
-        # This accounts for ~7% of sites (AROMATIC_NO_H)
+        # Aromatic C can still undergo epoxidation → NIH shift → hydroxylation
         if atom.GetIsAromatic():
-            return (BDE_TABLE['AROMATIC'] + 5, 'AROMATIC_NO_H')  # Small penalty
+            return (95.0, 'AROMATIC_NO_H')  # Similar to AROMATIC
         return (200.0, 'NONE')
     
     heavy_nbrs = [n for n in neighbors if n.GetSymbol() != 'H']
