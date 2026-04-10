@@ -173,6 +173,81 @@ def featurize_atom(atom) -> List[float]:
     return features
 
 
+# BDE lookup from hydrogen_theft_v3
+BDE_TABLE = {
+    'ALPHA_O': 80, 'S_OXIDE': 80, 'ALPHA_N': 84, 'ALPHA_S': 85,
+    'ALLYLIC': 86, 'PRIMARY': 96, 'AROMATIC': 97, 'SECONDARY': 98,
+    'BENZYLIC': 99, 'AROMATIC_NO_H': 107, 'TERTIARY': 110, 'N_OXIDE': 111
+}
+
+def classify_carbon(mol, idx: int) -> str:
+    """Classify carbon type for BDE estimation."""
+    atom = mol.GetAtomWithIdx(idx)
+    if atom.GetAtomicNum() != 6:
+        return 'NON_CARBON'
+    
+    n_H = atom.GetTotalNumHs()
+    if n_H == 0:
+        return 'AROMATIC_NO_H' if atom.GetIsAromatic() else 'TERTIARY'
+    
+    neighbors = list(atom.GetNeighbors())
+    
+    # Check for alpha positions
+    for n in neighbors:
+        sym = n.GetSymbol()
+        if sym == 'O':
+            return 'ALPHA_O'
+        if sym == 'N':
+            return 'ALPHA_N'
+        if sym == 'S':
+            return 'ALPHA_S'
+    
+    # Check for benzylic/allylic
+    for n in neighbors:
+        if n.GetIsAromatic():
+            return 'BENZYLIC'
+    
+    if atom.GetIsAromatic():
+        return 'AROMATIC'
+    
+    n_heavy = len(neighbors)
+    if n_heavy == 1:
+        return 'PRIMARY'
+    elif n_heavy == 2:
+        return 'SECONDARY'
+    else:
+        return 'TERTIARY'
+
+
+def compute_physics_features(mol, device) -> Dict[str, torch.Tensor]:
+    """Compute physics features dict for the model."""
+    n_atoms = mol.GetNumAtoms()
+    
+    # BDE values
+    bde_values = torch.zeros(n_atoms, device=device)
+    for i in range(n_atoms):
+        c_type = classify_carbon(mol, i)
+        bde_values[i] = BDE_TABLE.get(c_type, 100)
+    
+    # Simple physics tensor
+    physics_tensor = torch.zeros(n_atoms, 8, device=device)
+    for i in range(n_atoms):
+        atom = mol.GetAtomWithIdx(i)
+        physics_tensor[i, 0] = atom.GetAtomicNum() / 50.0
+        physics_tensor[i, 1] = atom.GetTotalDegree() / 4.0
+        physics_tensor[i, 2] = atom.GetTotalNumHs() / 4.0
+        physics_tensor[i, 3] = 1.0 if atom.GetIsAromatic() else 0.0
+        physics_tensor[i, 4] = bde_values[i] / 110.0  # Normalized BDE
+        physics_tensor[i, 5] = 1.0 if atom.GetAtomicNum() == 6 else 0.0  # Is carbon
+        physics_tensor[i, 6] = 1.0 if atom.IsInRing() else 0.0
+        physics_tensor[i, 7] = atom.GetMass() / 100.0
+    
+    return {
+        'bde_values': bde_values,
+        'tensor': physics_tensor,
+    }
+
+
 def create_batch(smiles_list: List[str], sites_list: List[List[int]], 
                  device: torch.device) -> Optional[Dict]:
     """
@@ -182,6 +257,8 @@ def create_batch(smiles_list: List[str], sites_list: List[List[int]],
     all_edge_index = []
     all_labels = []
     all_candidate_mask = []
+    all_bde_values = []
+    all_physics_tensors = []
     batch_idx = []
     all_smiles = []
     
@@ -198,11 +275,11 @@ def create_batch(smiles_list: List[str], sites_list: List[List[int]],
         atom_feats = []
         for atom in mol.GetAtoms():
             atom_feats.append(featurize_atom(atom))
-        atom_feats = torch.tensor(atom_feats, dtype=torch.float32)
+        atom_feats = torch.tensor(atom_feats, dtype=torch.float32, device=device)
         
         # Pad to expected dimension (128)
         if atom_feats.shape[1] < 128:
-            padding = torch.zeros(n_atoms, 128 - atom_feats.shape[1])
+            padding = torch.zeros(n_atoms, 128 - atom_feats.shape[1], device=device)
             atom_feats = torch.cat([atom_feats, padding], dim=1)
         
         # Edge index
@@ -213,7 +290,7 @@ def create_batch(smiles_list: List[str], sites_list: List[List[int]],
             edges_dst.extend([j + atom_offset, i + atom_offset])
         
         # Labels
-        labels = torch.zeros(n_atoms)
+        labels = torch.zeros(n_atoms, device=device)
         for s in sites:
             if s < n_atoms:
                 labels[s] = 1.0
@@ -222,7 +299,12 @@ def create_batch(smiles_list: List[str], sites_list: List[List[int]],
         candidate_mask = torch.tensor([
             mol.GetAtomWithIdx(i).GetAtomicNum() == 6
             for i in range(n_atoms)
-        ], dtype=torch.bool)
+        ], dtype=torch.bool, device=device)
+        
+        # Physics features
+        physics = compute_physics_features(mol, device)
+        all_bde_values.append(physics['bde_values'])
+        all_physics_tensors.append(physics['tensor'])
         
         all_atom_features.append(atom_feats)
         all_labels.append(labels)
@@ -231,7 +313,7 @@ def create_batch(smiles_list: List[str], sites_list: List[List[int]],
         all_smiles.append(smiles)
         
         if edges_src:
-            all_edge_index.append(torch.tensor([edges_src, edges_dst], dtype=torch.long))
+            all_edge_index.append(torch.tensor([edges_src, edges_dst], dtype=torch.long, device=device))
         
         atom_offset += n_atoms
     
@@ -240,17 +322,21 @@ def create_batch(smiles_list: List[str], sites_list: List[List[int]],
     
     # Stack everything
     batch = {
-        'atom_features': torch.cat(all_atom_features, dim=0).to(device),
-        'x': torch.cat(all_atom_features, dim=0).to(device),  # Alternative name
-        'labels': torch.cat(all_labels, dim=0).to(device),
-        'candidate_mask': torch.cat(all_candidate_mask, dim=0).to(device),
+        'atom_features': torch.cat(all_atom_features, dim=0),
+        'x': torch.cat(all_atom_features, dim=0),
+        'labels': torch.cat(all_labels, dim=0),
+        'candidate_mask': torch.cat(all_candidate_mask, dim=0),
         'batch': torch.tensor(batch_idx, dtype=torch.long, device=device),
         'smiles': all_smiles,
         'num_atoms': atom_offset,
+        'physics_features': {
+            'bde_values': torch.cat(all_bde_values, dim=0),
+            'tensor': torch.cat(all_physics_tensors, dim=0),
+        },
     }
     
     if all_edge_index:
-        batch['edge_index'] = torch.cat(all_edge_index, dim=1).to(device)
+        batch['edge_index'] = torch.cat(all_edge_index, dim=1)
     else:
         batch['edge_index'] = torch.zeros(2, 0, dtype=torch.long, device=device)
     
