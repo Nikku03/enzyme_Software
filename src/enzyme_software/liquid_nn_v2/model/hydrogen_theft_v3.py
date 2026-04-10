@@ -126,9 +126,11 @@ BDE_TABLE = {
     'ACETYLENIC':    133.0,   # HC≡CH (strongest C-H)
     
     # === HETEROATOM DIRECT OXIDATION ===
-    # Not C-H abstraction, but direct oxygen transfer
-    'N_OXIDATION':    95.0,   # Arbitrary, represents relative ease
-    'S_OXIDATION':    90.0,   # Sulfur very easy to oxidize
+    # These are NOT C-H abstraction! Different mechanism.
+    # Should be scored LOWER than C-H sites in most cases.
+    # N-dealkylation (α-N carbon) >> N-oxidation (nitrogen itself)
+    'N_OXIDATION':   105.0,   # Tertiary amine N-oxide - less common than N-dealkylation
+    'S_OXIDATION':    93.0,   # Thioether S-oxidation - moderately common
 }
 
 
@@ -148,19 +150,22 @@ def estimate_BDE(mol: Chem.Mol, atom_idx: int) -> Tuple[float, str]:
     symbol = atom.GetSymbol()
     
     # === NITROGEN: N-oxidation ===
+    # N-oxidation is LESS common than N-dealkylation!
+    # The carbon α to N is the primary site, not the N itself.
     if symbol == 'N':
         if atom.GetIsAromatic():
-            return (BDE_TABLE['N_OXIDATION'] + 5, 'N_OXIDE_AROMATIC')
+            return (BDE_TABLE['N_OXIDATION'] + 10, 'N_OXIDE_AROMATIC')
         
         heavy_nbrs = [n for n in atom.GetNeighbors() if n.GetSymbol() != 'H']
         n_H = atom.GetTotalNumHs()
         
         if len(heavy_nbrs) == 3 and n_H == 0:  # Tertiary amine
-            return (BDE_TABLE['N_OXIDATION'] - 5, 'N_OXIDE_TERTIARY')
+            # N-oxide formation possible but less common than N-dealkylation
+            return (BDE_TABLE['N_OXIDATION'], 'N_OXIDE_TERTIARY')
         elif len(heavy_nbrs) == 2:  # Secondary
-            return (BDE_TABLE['N_OXIDATION'], 'N_OXIDE_SECONDARY')
+            return (BDE_TABLE['N_OXIDATION'] + 5, 'N_OXIDE_SECONDARY')
         else:
-            return (BDE_TABLE['N_OXIDATION'] + 5, 'N_OXIDE_PRIMARY')
+            return (BDE_TABLE['N_OXIDATION'] + 10, 'N_OXIDE_PRIMARY')
     
     # === SULFUR: S-oxidation ===
     if symbol == 'S':
@@ -184,9 +189,9 @@ def estimate_BDE(mol: Chem.Mol, atom_idx: int) -> Tuple[float, str]:
     n_H = atom.GetTotalNumHs()
     if n_H == 0:
         # No hydrogen to abstract!
-        # But aromatic C can still undergo epoxidation pathway...
+        # Aromatic C with no H: epoxidation pathway exists but is RARE
         if atom.GetIsAromatic():
-            return (BDE_TABLE['AROMATIC'] + 10, 'AROMATIC_NO_H')
+            return (BDE_TABLE['AROMATIC'] + 20, 'AROMATIC_NO_H')
         return (200.0, 'NONE')
     
     neighbors = list(atom.GetNeighbors())
