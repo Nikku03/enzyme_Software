@@ -189,7 +189,11 @@ def estimate_BDE(mol: Chem.Mol, atom_idx: int) -> Tuple[float, str]:
     # CARBON: The main event
     # =========================================================================
     
-    n_H = atom.GetTotalNumHs()
+    # Count hydrogens - after AddHs, they're explicit neighbors
+    neighbors = list(atom.GetNeighbors())
+    h_neighbors = [n for n in neighbors if n.GetSymbol() == 'H']
+    n_H = len(h_neighbors)
+    
     if n_H == 0:
         # No hydrogen to abstract!
         # Aromatic C with no H: epoxidation pathway exists but is RARE
@@ -197,7 +201,6 @@ def estimate_BDE(mol: Chem.Mol, atom_idx: int) -> Tuple[float, str]:
             return (BDE_TABLE['AROMATIC'] + 20, 'AROMATIC_NO_H')
         return (200.0, 'NONE')
     
-    neighbors = list(atom.GetNeighbors())
     heavy_nbrs = [n for n in neighbors if n.GetSymbol() != 'H']
     degree = len(heavy_nbrs)  # 1=primary, 2=secondary, 3=tertiary
     
