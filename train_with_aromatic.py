@@ -423,7 +423,6 @@ class HybridAromaticLoss(nn.Module):
         super().__init__()
         self.aromatic_weight = aromatic_weight
         self.physics_weight = physics_weight
-        self.base_loss = HybridLoss(physics_weight=physics_weight)
     
     def forward(
         self,
@@ -432,29 +431,46 @@ class HybridAromaticLoss(nn.Module):
         valid_mask: torch.Tensor,
         aromatic_mask: Optional[torch.Tensor] = None,
     ):
-        # Base loss
-        base_loss, base_metrics = self.base_loss(outputs, som_mask, valid_mask)
+        final_scores = outputs['final_scores']
+        physics_scores = outputs['physics_scores']
         
-        # Aromatic-specific loss (only for aromatic SoMs)
+        # Normalize SoM mask
+        som_sum = som_mask.sum(dim=-1, keepdim=True).clamp(min=1e-8)
+        som_normalized = som_mask / som_sum
+        
+        # Main ranking loss
+        log_probs = F.log_softmax(final_scores, dim=-1).clamp(min=-100)
+        main_loss = -(som_normalized * log_probs).sum(dim=-1).mean()
+        
+        # Physics consistency loss
+        physics_log_probs = F.log_softmax(physics_scores, dim=-1).clamp(min=-100)
+        physics_loss = -(som_normalized * physics_log_probs).sum(dim=-1).mean()
+        
+        # Aromatic-specific loss
         aromatic_loss = torch.tensor(0.0, device=som_mask.device)
         
-        if aromatic_mask is not None and aromatic_mask.sum() > 0:
+        if aromatic_mask is not None and 'aromatic_scores' in outputs:
             aromatic_scores = outputs['aromatic_scores']
-            
-            # Target: aromatic SoM atoms
             aromatic_som = som_mask * aromatic_mask
             
             if aromatic_som.sum() > 0:
-                # Cross-entropy style loss for aromatic predictions
-                log_probs = F.log_softmax(aromatic_scores, dim=-1).clamp(min=-100)
                 aromatic_som_norm = aromatic_som / (aromatic_som.sum(dim=-1, keepdim=True) + 1e-8)
-                aromatic_loss = -(aromatic_som_norm * log_probs).sum(dim=-1)
-                aromatic_loss = aromatic_loss[aromatic_som.sum(dim=-1) > 0].mean()
+                arom_log_probs = F.log_softmax(aromatic_scores, dim=-1).clamp(min=-100)
+                aromatic_loss = -(aromatic_som_norm * arom_log_probs).sum(dim=-1)
+                # Only average over molecules with aromatic SoMs
+                has_aromatic_som = (aromatic_som.sum(dim=-1) > 0)
+                if has_aromatic_som.sum() > 0:
+                    aromatic_loss = aromatic_loss[has_aromatic_som].mean()
+                else:
+                    aromatic_loss = torch.tensor(0.0, device=som_mask.device)
         
-        total_loss = base_loss + self.aromatic_weight * aromatic_loss
+        total_loss = main_loss + self.physics_weight * physics_loss + self.aromatic_weight * aromatic_loss
         
-        metrics = base_metrics.copy()
-        metrics['aromatic_loss'] = aromatic_loss.item() if torch.is_tensor(aromatic_loss) else aromatic_loss
+        metrics = {
+            'main_loss': main_loss.item(),
+            'physics_loss': physics_loss.item(),
+            'aromatic_loss': aromatic_loss.item() if torch.is_tensor(aromatic_loss) else aromatic_loss,
+        }
         
         return total_loss, metrics
 
