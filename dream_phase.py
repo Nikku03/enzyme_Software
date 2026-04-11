@@ -37,7 +37,7 @@ class DreamMemory:
     losses: List[float] = field(default_factory=list)
     difficulties: List[float] = field(default_factory=list)  # How hard was this example?
     
-    max_size: int = 500
+    max_size: int = 1000
     
     def add(
         self,
@@ -186,36 +186,61 @@ class DreamPhase(nn.Module):
         
         The noise simulates "fuzzy" recall during dreaming and builds robustness.
         """
-        embeddings = batch['embeddings']
-        som_masks = batch['som_masks']
+        embeddings = batch['embeddings']  # [B, hidden_dim]
+        som_masks = batch['som_masks']    # [B, N]
+        predictions = batch['predictions']  # [B, N]
         
-        # Add noise (dream distortion)
+        B = embeddings.shape[0]
+        N = som_masks.shape[1]
+        
+        # Add noise to embeddings (dream distortion)
         noise = torch.randn_like(embeddings) * self.noise_scale
         noisy_embeddings = embeddings + noise
         
-        # Also try slight variations of the SoM targets (counterfactual dreaming)
-        # "What if the SoM was slightly different?"
-        som_noise = torch.rand_like(som_masks) * 0.1
-        noisy_som = (som_masks + som_noise).clamp(0, 1)
-        noisy_som = noisy_som / (noisy_som.sum(dim=-1, keepdim=True) + 1e-8)
+        # Create per-atom features by combining global embedding with position encoding
+        # This gives each atom a unique representation
+        position_encoding = torch.zeros(B, N, self.hidden_dim, device=embeddings.device)
+        for i in range(N):
+            # Simple sinusoidal position encoding
+            position_encoding[:, i, :] = torch.sin(
+                torch.arange(self.hidden_dim, device=embeddings.device).float() * (i + 1) / 100
+            )
         
-        # Forward pass through model's scoring head only
-        # (We use the stored embeddings, not full forward)
+        # Combine global embedding with position
+        atom_features = noisy_embeddings.unsqueeze(1) + 0.1 * position_encoding
+        
+        # Add noise to predictions (counterfactual targets)
+        pred_noise = torch.randn_like(predictions) * 0.1
+        noisy_targets = (predictions.softmax(dim=-1) + pred_noise).clamp(min=1e-8)
+        noisy_targets = noisy_targets / noisy_targets.sum(dim=-1, keepdim=True)
+        
+        # Also use actual SoM as soft target
+        som_normalized = som_masks / (som_masks.sum(dim=-1, keepdim=True) + 1e-8)
+        
+        # Mix: 70% actual SoM, 30% noisy prediction
+        target = 0.7 * som_normalized + 0.3 * noisy_targets
+        target = target / (target.sum(dim=-1, keepdim=True) + 1e-8)
+        
+        # Forward through fusion head
         if hasattr(model, 'fusion'):
-            # Get memory hints (zeros during replay - pure physics)
-            B, N = som_masks.shape[0], som_masks.shape[1]
-            
-            # Expand embeddings to atom level (simplified)
-            atom_features = noisy_embeddings.unsqueeze(1).expand(-1, N, -1)
             memory_hints = torch.zeros(B, N, device=embeddings.device)
-            
             scores, physics_scores, _ = model.fusion(atom_features, memory_hints)
             
-            # Replay loss
+            # Replay loss with label smoothing
             log_probs = F.log_softmax(scores, dim=-1).clamp(min=-100)
-            loss = -(noisy_som * log_probs).sum(dim=-1).mean()
+            loss = -(target * log_probs).sum(dim=-1).mean()
             
-            if torch.isfinite(loss):
+            # Add consistency loss: physics should match final
+            physics_log_probs = F.log_softmax(physics_scores, dim=-1).clamp(min=-100)
+            consistency = F.kl_div(
+                physics_log_probs,
+                scores.softmax(dim=-1).detach(),
+                reduction='batchmean'
+            ).clamp(max=5.0)
+            
+            loss = loss + 0.1 * consistency
+            
+            if torch.isfinite(loss) and loss.requires_grad:
                 optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
@@ -236,52 +261,69 @@ class DreamPhase(nn.Module):
         This explores the manifold between known examples, potentially discovering
         new patterns that help generalization.
         """
-        embeddings = batch['embeddings']
-        som_masks = batch['som_masks']
+        embeddings = batch['embeddings']  # [B, hidden_dim]
+        som_masks = batch['som_masks']    # [B, N]
         
         B = embeddings.shape[0]
+        N = som_masks.shape[1]
+        
         if B < 2:
             return 0.0
         
-        # Encode to latent
+        # Encode to latent (VAE-style)
         encoded = self.imagination_encoder(embeddings)
         mu, logvar = encoded.chunk(2, dim=-1)
+        logvar = logvar.clamp(-10, 10)  # Prevent extreme values
         
-        # Sample (reparameterization trick)
+        # Sample with reparameterization
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std) * self.imagination_temperature
         z = mu + eps * std
         
-        # Interpolate between random pairs
-        idx1 = torch.randperm(B)
-        idx2 = torch.randperm(B)
+        # Interpolate between random pairs (imagine hybrid molecules)
+        idx1 = torch.randperm(B, device=embeddings.device)
+        idx2 = torch.randperm(B, device=embeddings.device)
         alpha = torch.rand(B, 1, device=embeddings.device)
         
         z_interp = alpha * z[idx1] + (1 - alpha) * z[idx2]
+        
+        # Interpolate SoM targets too
         som_interp = alpha * som_masks[idx1] + (1 - alpha) * som_masks[idx2]
         som_interp = som_interp / (som_interp.sum(dim=-1, keepdim=True) + 1e-8)
         
-        # Decode imagined molecules
+        # Decode imagined embeddings
         imagined = self.imagination_decoder(z_interp)
+        
+        # Create per-atom features with position encoding
+        position_encoding = torch.zeros(B, N, self.hidden_dim, device=embeddings.device)
+        for i in range(N):
+            position_encoding[:, i, :] = torch.sin(
+                torch.arange(self.hidden_dim, device=embeddings.device).float() * (i + 1) / 100
+            )
+        
+        atom_features = imagined.unsqueeze(1) + 0.1 * position_encoding
         
         # Score imagined molecules
         if hasattr(model, 'fusion'):
-            N = som_masks.shape[1]
-            atom_features = imagined.unsqueeze(1).expand(-1, N, -1)
             memory_hints = torch.zeros(B, N, device=embeddings.device)
-            
             scores, _, _ = model.fusion(atom_features, memory_hints)
             
             # Imagination loss: predicted should match interpolated target
             log_probs = F.log_softmax(scores, dim=-1).clamp(min=-100)
             recon_loss = -(som_interp * log_probs).sum(dim=-1).mean()
             
-            # KL divergence for VAE regularization
+            # KL divergence for VAE regularization (encourage diverse latents)
             kl_loss = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+            kl_loss = kl_loss.clamp(max=10.0)
             
-            loss = recon_loss + 0.01 * kl_loss
+            # Smoothness loss: nearby latents should have similar predictions
+            z_diff = (z[idx1] - z[idx2]).norm(dim=-1, keepdim=True)
+            som_diff = (som_masks[idx1] - som_masks[idx2]).abs().sum(dim=-1, keepdim=True)
+            smoothness = (z_diff * som_diff).mean()
             
-            if torch.isfinite(loss):
+            loss = recon_loss + 0.01 * kl_loss + 0.01 * smoothness
+            
+            if torch.isfinite(loss) and loss.requires_grad:
                 optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
