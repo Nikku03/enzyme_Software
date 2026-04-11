@@ -95,27 +95,39 @@ class CYP3A4Dataset(Dataset):
         """Convert SMILES to feature tensors."""
         try:
             from rdkit import Chem
-            from rdkit.Chem import AllChem, Descriptors
+            from rdkit.Chem import AllChem
             
             mol = Chem.MolFromSmiles(smiles)
             if mol is None:
                 raise ValueError(f"Invalid SMILES: {smiles}")
             
             mol = Chem.AddHs(mol)
-            
-            # Generate 3D coordinates
-            AllChem.EmbedMolecule(mol, randomSeed=42)
-            if mol.GetNumConformers() == 0:
-                AllChem.EmbedMolecule(mol, useRandomCoords=True, randomSeed=42)
-            
             n_atoms = mol.GetNumAtoms()
             n_atoms = min(n_atoms, self.max_atoms)
+            
+            # Generate 3D coordinates with multiple fallbacks
+            conf = None
+            try:
+                # Try ETKDG first
+                result = AllChem.EmbedMolecule(mol, AllChem.ETKDGv3())
+                if result == 0 and mol.GetNumConformers() > 0:
+                    AllChem.MMFFOptimizeMolecule(mol, maxIters=200)
+                    conf = mol.GetConformer()
+            except:
+                pass
+            
+            if conf is None:
+                try:
+                    # Fallback: random coords
+                    result = AllChem.EmbedMolecule(mol, useRandomCoords=True, randomSeed=42)
+                    if result == 0 and mol.GetNumConformers() > 0:
+                        conf = mol.GetConformer()
+                except:
+                    pass
             
             # Extract features
             features = torch.zeros(self.max_atoms, 128)
             coords = torch.zeros(self.max_atoms, 3)
-            
-            conf = mol.GetConformer() if mol.GetNumConformers() > 0 else None
             
             for i in range(n_atoms):
                 atom = mol.GetAtomWithIdx(i)
@@ -124,7 +136,7 @@ class CYP3A4Dataset(Dataset):
                 features[i, 0] = atom.GetAtomicNum() / 20.0
                 features[i, 1] = atom.GetDegree() / 4.0
                 features[i, 2] = atom.GetTotalNumHs() / 4.0
-                features[i, 3] = atom.GetFormalCharge()
+                features[i, 3] = atom.GetFormalCharge() / 2.0
                 features[i, 4] = 1.0 if atom.GetIsAromatic() else 0.0
                 features[i, 5] = atom.GetMass() / 32.0
                 
@@ -161,20 +173,37 @@ class CYP3A4Dataset(Dataset):
                 features[i, 21] = 1.0 if atom.IsInRingSize(5) else 0.0
                 features[i, 22] = 1.0 if atom.IsInRingSize(6) else 0.0
                 
-                # Coordinates
+                # Coordinates (use 0 if no conf, or generate pseudo-random based on index)
                 if conf is not None:
-                    pos = conf.GetAtomPosition(i)
-                    coords[i, 0] = pos.x
-                    coords[i, 1] = pos.y
-                    coords[i, 2] = pos.z
+                    try:
+                        pos = conf.GetAtomPosition(i)
+                        coords[i, 0] = pos.x
+                        coords[i, 1] = pos.y
+                        coords[i, 2] = pos.z
+                    except:
+                        # Pseudo-random coords based on atom properties
+                        coords[i, 0] = (i * 1.5) % 10 - 5
+                        coords[i, 1] = (z * 0.7) % 10 - 5
+                        coords[i, 2] = (i * z * 0.3) % 10 - 5
+                else:
+                    # Pseudo-random coords
+                    coords[i, 0] = (i * 1.5) % 10 - 5
+                    coords[i, 1] = (z * 0.7) % 10 - 5
+                    coords[i, 2] = (i * z * 0.3) % 10 - 5
             
             return features, coords, n_atoms
             
         except Exception as e:
-            # Fallback: random features
+            # Fallback: minimal features
             n_atoms = 20
-            features = torch.randn(self.max_atoms, 128) * 0.1
-            coords = torch.randn(self.max_atoms, 3) * 5
+            features = torch.zeros(self.max_atoms, 128)
+            features[:n_atoms, 0] = 0.3  # Carbon-like
+            features[:n_atoms, 10] = 1.0  # Carbon
+            coords = torch.zeros(self.max_atoms, 3)
+            for i in range(n_atoms):
+                coords[i, 0] = (i * 1.5) % 10 - 5
+                coords[i, 1] = (i * 0.7) % 10 - 5
+                coords[i, 2] = i * 0.3
             return features, coords, n_atoms
 
 

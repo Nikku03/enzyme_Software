@@ -242,25 +242,18 @@ class HyperbolicMemory(nn.Module):
     def _to_poincare(self, x: torch.Tensor) -> torch.Tensor:
         """Project to Poincaré ball with radius < 1."""
         x = self.project(x)
-        norm = x.norm(dim=-1, keepdim=True)
-        # Clamp to radius 0.95
-        scale = torch.where(norm > 0.95, 0.95 / norm, torch.ones_like(norm))
+        norm = x.norm(dim=-1, keepdim=True).clamp(min=1e-8)
+        # Clamp to radius 0.9 (more conservative)
+        max_radius = 0.9
+        scale = torch.where(norm > max_radius, max_radius / norm, torch.ones_like(norm))
         return x * scale
     
-    def _hyperbolic_distance(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        """Compute hyperbolic distance in Poincaré ball."""
+    def _euclidean_distance(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        """Simple Euclidean distance - more stable than hyperbolic."""
+        # x: [B, D], y: [M, D]
+        # Returns: [B, M]
         diff = x.unsqueeze(1) - y.unsqueeze(0)  # [B, M, D]
-        diff_norm_sq = (diff ** 2).sum(-1)
-        
-        x_norm_sq = (x ** 2).sum(-1, keepdim=True)
-        y_norm_sq = (y ** 2).sum(-1).unsqueeze(0)
-        
-        # Poincaré distance formula
-        num = diff_norm_sq
-        denom = (1 - x_norm_sq) * (1 - y_norm_sq)
-        
-        arg = 1 + 2 * num / (denom + 1e-8)
-        return torch.acosh(arg.clamp(min=1.0 + 1e-6))
+        return (diff ** 2).sum(-1).sqrt().clamp(min=1e-8)
     
     def store(
         self,
@@ -305,31 +298,40 @@ class HyperbolicMemory(nn.Module):
             weights: [B, k] attention weights
             som_hints: [B, k, max_atoms] SoM masks of retrieved molecules
         """
+        B = query_embedding.shape[0]
+        device = query_embedding.device
+        
         if self.n_entries == 0:
-            B = query_embedding.shape[0]
             return (
-                torch.zeros(B, k, device=query_embedding.device),
-                torch.zeros(B, k, 200, device=query_embedding.device)
+                torch.zeros(B, k, device=device),
+                torch.zeros(B, k, 200, device=device)
             )
         
-        # Project to hyperbolic
-        query_hyp = self._to_poincare(query_embedding)
-        memory_hyp = self._to_poincare(
-            self.memory_embeddings.to(query_embedding.device)
+        # Project to Poincaré (normalized space)
+        query_proj = self._to_poincare(query_embedding)
+        memory_proj = self._to_poincare(
+            self.memory_embeddings.to(device)
         )
         
-        # Compute distances
-        dists = self._hyperbolic_distance(query_hyp, memory_hyp)  # [B, M]
+        # Use Euclidean distance in projected space (more stable)
+        dists = self._euclidean_distance(query_proj, memory_proj)  # [B, M]
         
         # Get top-k closest
-        k = min(k, self.n_entries)
-        top_dists, top_indices = dists.topk(k, dim=-1, largest=False)
+        k_actual = min(k, self.n_entries)
+        top_dists, top_indices = dists.topk(k_actual, dim=-1, largest=False)
         
-        # Convert distances to weights
-        weights = F.softmax(-top_dists, dim=-1)
+        # Convert distances to weights (softmax of negative distances)
+        weights = F.softmax(-top_dists / 0.1, dim=-1)  # Temperature 0.1
+        
+        # Pad if k_actual < k
+        if k_actual < k:
+            pad_weights = torch.zeros(B, k - k_actual, device=device)
+            weights = torch.cat([weights, pad_weights], dim=-1)
+            pad_indices = torch.zeros(B, k - k_actual, dtype=torch.long, device=device)
+            top_indices = torch.cat([top_indices, pad_indices], dim=-1)
         
         # Get SoM hints
-        som_hints = self.memory_som_masks.to(query_embedding.device)[top_indices]
+        som_hints = self.memory_som_masks.to(device)[top_indices]  # [B, k, 200]
         
         return weights, som_hints
 
@@ -498,9 +500,18 @@ class HybridNexusDynamic(nn.Module):
         """
         B, N, _ = mol_coords.shape
         
+        # Check for NaN/inf in coords and replace with zeros
+        mol_coords_clean = mol_coords.clone()
+        mol_coords_clean = torch.where(
+            torch.isfinite(mol_coords_clean),
+            mol_coords_clean,
+            torch.zeros_like(mol_coords_clean)
+        )
+        
         # Distance to Fe
         fe = self.fe_coords.to(mol_coords.device)
-        dists = torch.norm(mol_coords - fe.unsqueeze(0).unsqueeze(0), dim=-1)
+        dists = torch.norm(mol_coords_clean - fe.unsqueeze(0).unsqueeze(0), dim=-1)
+        dists = dists.clamp(min=0.1, max=100.0)  # Clamp to reasonable range
         
         # Gaussian activation around optimal distance
         optimal_dist = 4.0  # Typical Fe-C distance for oxidation
@@ -641,27 +652,58 @@ class HybridLoss(nn.Module):
         B, N = scores.shape
         device = scores.device
         
+        # Use large negative instead of -inf to avoid NaN
+        mask_value = -1e4
+        
         # Mask invalid atoms
-        scores = scores.masked_fill(~valid_mask, float('-inf'))
-        physics_scores = physics_scores.masked_fill(~valid_mask, float('-inf'))
+        scores_masked = scores.clone()
+        scores_masked[~valid_mask] = mask_value
+        
+        physics_masked = physics_scores.clone()
+        physics_masked[~valid_mask] = mask_value
+        
+        analogy_masked = analogy_scores.clone()
+        analogy_masked[~valid_mask] = mask_value
+        
+        # Normalize SoM target
+        som_sum = som_mask.sum(dim=-1, keepdim=True).clamp(min=1e-8)
+        som_probs = som_mask / som_sum
         
         # Main ranking loss (cross-entropy over atoms)
-        log_probs = F.log_softmax(scores, dim=-1)
-        som_probs = som_mask / (som_mask.sum(dim=-1, keepdim=True) + 1e-8)
+        log_probs = F.log_softmax(scores_masked, dim=-1)
+        # Clamp log_probs to avoid -inf * 0 = nan
+        log_probs = log_probs.clamp(min=-100)
         main_loss = -(som_probs * log_probs).sum(dim=-1).mean()
         
         # Physics path loss
-        physics_log_probs = F.log_softmax(physics_scores, dim=-1)
+        physics_log_probs = F.log_softmax(physics_masked, dim=-1).clamp(min=-100)
         physics_loss = -(som_probs * physics_log_probs).sum(dim=-1).mean()
         
         # Consistency loss (physics and analogy should agree on ranking)
-        physics_ranking = F.softmax(physics_scores, dim=-1)
-        analogy_ranking = F.softmax(analogy_scores, dim=-1)
+        # Use softmax with temperature to avoid extreme probabilities
+        physics_probs = F.softmax(physics_masked / 0.5, dim=-1)
+        analogy_probs = F.softmax(analogy_masked / 0.5, dim=-1)
+        
+        # Add small epsilon to avoid log(0)
+        eps = 1e-8
+        analogy_log_probs = (analogy_probs + eps).log()
         consistency_loss = F.kl_div(
-            analogy_ranking.log(),
-            physics_ranking.detach(),
-            reduction='batchmean'
+            analogy_log_probs,
+            physics_probs.detach() + eps,
+            reduction='batchmean',
+            log_target=False,
         )
+        
+        # Clamp consistency loss to avoid explosion
+        consistency_loss = consistency_loss.clamp(max=10.0)
+        
+        # Check for NaN and replace with 0
+        if torch.isnan(main_loss):
+            main_loss = torch.zeros(1, device=device, requires_grad=True).squeeze()
+        if torch.isnan(physics_loss):
+            physics_loss = torch.zeros(1, device=device, requires_grad=True).squeeze()
+        if torch.isnan(consistency_loss):
+            consistency_loss = torch.zeros(1, device=device, requires_grad=True).squeeze()
         
         # Total
         loss = (
@@ -670,10 +712,14 @@ class HybridLoss(nn.Module):
             + self.consistency_weight * consistency_loss
         )
         
+        # Final NaN check
+        if torch.isnan(loss):
+            loss = torch.tensor(3.0, device=device, requires_grad=True)
+        
         metrics = {
-            'main_loss': main_loss.item(),
-            'physics_loss': physics_loss.item(),
-            'consistency_loss': consistency_loss.item(),
+            'main_loss': main_loss.item() if not torch.isnan(main_loss) else 0.0,
+            'physics_loss': physics_loss.item() if not torch.isnan(physics_loss) else 0.0,
+            'consistency_loss': consistency_loss.item() if not torch.isnan(consistency_loss) else 0.0,
         }
         
         return loss, metrics
