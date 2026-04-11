@@ -374,6 +374,7 @@ def compute_laplacian_features(mol, k: int = 8) -> np.ndarray:
     """
     Compute graph Laplacian eigenvector features.
     These encode the topological "peripherality" and "flexibility" of each atom.
+    Always outputs (n, k + 2) features with padding for small molecules.
     """
     n = mol.GetNumAtoms()
     
@@ -395,24 +396,25 @@ def compute_laplacian_features(mol, k: int = 8) -> np.ndarray:
         eigvals = np.ones(n)
         eigvecs = np.eye(n)
     
-    # Use first k non-trivial eigenvectors
-    k = min(k, n - 1)
-    features = np.zeros((n, k + 2))
+    # FIXED: Always output k + 2 features (pad with zeros for small molecules)
+    features = np.zeros((n, k + 2), dtype=np.float32)
+    
+    k_actual = min(k, n - 1)
     
     for i in range(n):
         # Peripherality: contribution to highest eigenvectors
-        k_start = max(1, n - k)
+        k_start = max(1, n - k_actual)
         features[i, 0] = sum(eigvecs[i, j]**2 for j in range(k_start, n))
         
         # Flexibility: weighted contribution to low eigenvectors
-        k_end = min(k, n)
+        k_end = min(k_actual, n)
         features[i, 1] = sum(eigvecs[i, j]**2 / (eigvals[j] + 0.1) for j in range(1, k_end))
         
-        # Eigenvector components
-        for j in range(min(k, n - 1)):
+        # Eigenvector components (pad with zeros if molecule is small)
+        for j in range(min(k_actual, n - 1)):
             features[i, j + 2] = eigvecs[i, j + 1]  # Skip trivial eigenvector
     
-    return features.astype(np.float32)
+    return features
 
 
 def mol_to_graph_data(
