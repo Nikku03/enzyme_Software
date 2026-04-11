@@ -226,9 +226,8 @@ class DynamicLoss(nn.Module):
         log_probs = F.log_softmax(final_scores, dim=-1).clamp(min=-100)
         main_loss = -(som_normalized * log_probs).sum(dim=-1).mean()
         
-        # Pose diversity loss: encourage different poses to predict different atoms
+        # Pose diversity loss: encourage different poses to be used
         pose_weights = outputs['pose_weights']  # [B, N, n_poses]
-        pose_reactivities = outputs['pose_reactivities']  # [B, N, n_poses]
         
         # Entropy over poses (higher = more diverse)
         pose_entropy = -(pose_weights * (pose_weights + 1e-8).log()).sum(dim=-1).mean()
