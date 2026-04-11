@@ -1258,13 +1258,21 @@ def train(config: Config):
     
     # Load datasets
     print("\nLoading datasets...")
+    
+    # Parse train/val sources from config
+    train_sources = config.train_sources.split(',') if hasattr(config, 'train_sources') and config.train_sources else ['Zaretzki', 'DrugBank', 'MetXBioDB']
+    val_sources = config.val_sources.split(',') if hasattr(config, 'val_sources') and config.val_sources else ['AZ120']
+    
+    print(f"Train sources: {train_sources}")
+    print(f"Val sources: {val_sources}")
+    
     train_dataset = CYP3A4Dataset(
         config.data_path, pocket,
-        sources=['Zaretzki', 'DrugBank', 'MetXBioDB']
+        sources=train_sources
     )
     val_dataset = CYP3A4Dataset(
         config.data_path, pocket,
-        sources=['AZ120']
+        sources=val_sources
     )
     
     train_loader = DataLoader(
@@ -1389,6 +1397,10 @@ def main():
     parser.add_argument('--data_path', type=str, 
                         default='data/curated/merged_cyp3a4_extended.json')
     parser.add_argument('--enzyme_pdb', type=str, default='1W0E.pdb')
+    parser.add_argument('--train_sources', type=str, default='Zaretzki,DrugBank,MetXBioDB',
+                        help='Comma-separated list of training sources')
+    parser.add_argument('--val_sources', type=str, default='AZ120',
+                        help='Comma-separated list of validation sources')
     
     # Model arguments
     parser.add_argument('--hidden_dim', type=int, default=128)
@@ -1431,6 +1443,10 @@ def main():
         checkpoint_dir=args.checkpoint_dir,
         log_interval=args.log_interval,
     )
+    
+    # Add train/val sources
+    config.train_sources = args.train_sources
+    config.val_sources = args.val_sources
     
     # Train
     train(config)
