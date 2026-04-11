@@ -452,6 +452,24 @@ class DynamicReverseGeometryEngine(nn.Module):
         mol_encoded = self.mol_encoder(mol_features)  # (B, N, state_dim)
         mol_global = mol_encoded.mean(dim=1)  # (B, state_dim)
         
+        # During training with SoM labels: try to create new states
+        if self.training and som_mask is not None:
+            for b in range(B):
+                # Get SoM positions for this molecule
+                som_indices = torch.where(som_mask[b] > 0)[0]
+                if len(som_indices) == 0:
+                    continue
+                
+                # Get average SoM position
+                som_pos = mol_coords[b, som_indices].mean(dim=0)  # (3,)
+                
+                # Create context embedding from mol + SoM position
+                context_input = torch.cat([mol_global[b], som_pos], dim=-1)
+                context_emb = self.state_bank.context_encoder(context_input)
+                
+                # Try to find or create state
+                self.state_bank.find_or_create_state(context_emb, training=True)
+        
         # Get state-weighted pocket
         weighted_pocket, state_probs, active_indices = self.state_bank(
             mol_global, pocket_features
