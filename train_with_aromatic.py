@@ -391,7 +391,10 @@ class HybridNexusWithAromatic(nn.Module):
         gate = self.aromatic_gate(gate_input).squeeze(-1)  # [B, N]
         
         # Only apply aromatic gate to aromatic atoms
+        # Force MINIMUM 0.3 gate for aromatic atoms (don't let it collapse to 0)
+        min_gate = 0.3
         gate = gate * is_aromatic
+        gate = torch.where(is_aromatic > 0, gate.clamp(min=min_gate), gate)
         
         # Combine scores
         base_scores = base_outputs['final_scores']
