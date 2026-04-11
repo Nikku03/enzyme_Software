@@ -524,6 +524,9 @@ class CYP3A4Dataset(Dataset):
         data_path: str,
         pocket: EnzymePocket,
         sources: List[str] = None,
+        split: str = None,  # 'train', 'val', or None for all
+        val_fraction: float = 0.2,
+        seed: int = 42,
     ):
         self.pocket = pocket
         self.data = []
@@ -538,6 +541,7 @@ class CYP3A4Dataset(Dataset):
         
         # Process molecules
         print(f"Processing {len(raw_data)} molecules...")
+        all_data = []
         for d in raw_data:
             smiles = d.get('smiles', '')
             sites = d.get('site_atoms', [])
@@ -556,11 +560,26 @@ class CYP3A4Dataset(Dataset):
                 graph_data['smiles'] = smiles
                 graph_data['source'] = source
                 graph_data['name'] = name
-                self.data.append(graph_data)
+                all_data.append(graph_data)
             except Exception as e:
                 continue
         
-        print(f"Loaded {len(self.data)} valid molecules")
+        # Split if requested
+        if split is not None:
+            np.random.seed(seed)
+            indices = np.random.permutation(len(all_data))
+            n_val = int(len(all_data) * val_fraction)
+            
+            if split == 'val':
+                indices = indices[:n_val]
+            elif split == 'train':
+                indices = indices[n_val:]
+            
+            self.data = [all_data[i] for i in indices]
+        else:
+            self.data = all_data
+        
+        print(f"Loaded {len(self.data)} valid molecules ({split if split else 'all'})")
     
     def __len__(self):
         return len(self.data)
@@ -1266,14 +1285,30 @@ def train(config: Config):
     print(f"Train sources: {train_sources}")
     print(f"Val sources: {val_sources}")
     
-    train_dataset = CYP3A4Dataset(
-        config.data_path, pocket,
-        sources=train_sources
-    )
-    val_dataset = CYP3A4Dataset(
-        config.data_path, pocket,
-        sources=val_sources
-    )
+    # Check if train and val sources are the same (need to split)
+    if set(train_sources) == set(val_sources):
+        print("Same sources for train/val - using 80/20 split")
+        train_dataset = CYP3A4Dataset(
+            config.data_path, pocket,
+            sources=train_sources,
+            split='train',
+            val_fraction=0.2,
+        )
+        val_dataset = CYP3A4Dataset(
+            config.data_path, pocket,
+            sources=val_sources,
+            split='val',
+            val_fraction=0.2,
+        )
+    else:
+        train_dataset = CYP3A4Dataset(
+            config.data_path, pocket,
+            sources=train_sources
+        )
+        val_dataset = CYP3A4Dataset(
+            config.data_path, pocket,
+            sources=val_sources
+        )
     
     train_loader = DataLoader(
         train_dataset,
