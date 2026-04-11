@@ -464,14 +464,11 @@ class ReverseGeometryEngine(nn.Module):
         # Score each atom
         atom_scores = self.atom_scorer(combined).squeeze(-1)  # (B, N)
         
-        # Combine with Fe distance scores
-        scores = atom_scores + fe_scores
+        # Combine with Fe distance scores (weighted)
+        scores = atom_scores + 0.5 * fe_scores
         
-        # State confidence
+        # State confidence (for output only, don't multiply scores)
         confidence = self.state_confidence(mol_global)  # (B, 1)
-        
-        # Modulate scores by confidence
-        scores = scores * confidence
         
         # Prepare output
         output = {
@@ -551,14 +548,18 @@ class ReverseGeometryLoss(nn.Module):
             if len(som_indices) == 0 or len(non_som_indices) == 0:
                 continue
             
-            # Margin ranking loss
+            # Use contrastive softmax loss instead of margin
+            som_scores = s[som_indices]  # (n_som,)
+            non_som_scores = s[non_som_indices]  # (n_non_som,)
+            
+            # For each SoM, compute softmax over all valid atoms
+            all_valid_scores = s[mask]  # (n_valid,)
+            
             for som_idx in som_indices:
                 som_score = s[som_idx]
-                non_som_scores = s[non_som_indices]
-                
-                # SoM should be higher by at least margin=1
-                margin_loss = F.relu(1.0 - som_score + non_som_scores).mean()
-                ranking_loss = ranking_loss + margin_loss
+                # Cross-entropy: SoM should have highest score
+                log_softmax = som_score - torch.logsumexp(all_valid_scores, dim=0)
+                ranking_loss = ranking_loss - log_softmax
                 count += 1
         
         if count > 0:
@@ -567,20 +568,17 @@ class ReverseGeometryLoss(nn.Module):
         total_loss = total_loss + self.ranking_weight * ranking_loss
         loss_dict['ranking'] = ranking_loss.item()
         
-        # 2. State consistency loss (if training)
+        # 2. State consistency loss (if training) - reduced weight
         if 'inferred_state_logits' in output:
             inferred_logits = output['inferred_state_logits']  # (B, n_states)
             predicted_probs = state_probs  # (B, n_states)
             
             # The predicted state should match the inferred state
-            inferred_probs = F.softmax(inferred_logits, dim=-1)
-            state_loss = F.kl_div(
-                torch.log(predicted_probs + 1e-8),
-                inferred_probs,
-                reduction='batchmean',
-            )
+            # Use cross-entropy instead of KL for better gradients
+            inferred_targets = F.softmax(inferred_logits.detach(), dim=-1)
+            state_loss = -(inferred_targets * torch.log(predicted_probs + 1e-8)).sum(dim=-1).mean()
             
-            total_loss = total_loss + self.state_weight * state_loss
+            total_loss = total_loss + 0.1 * self.state_weight * state_loss
             loss_dict['state_consistency'] = state_loss.item()
         
         # 3. State diversity loss (states should be different)

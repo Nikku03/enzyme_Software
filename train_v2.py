@@ -45,8 +45,8 @@ class Config:
     # Training
     batch_size: int = 16
     epochs: int = 100
-    lr: float = 5e-4
-    weight_decay: float = 0.01
+    lr: float = 1e-3  # Higher LR
+    weight_decay: float = 1e-4  # Lower weight decay
     warmup_epochs: int = 5
     
     # Loss weights
