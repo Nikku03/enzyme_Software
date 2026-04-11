@@ -408,7 +408,7 @@ class HybridNexusWithAromatic(nn.Module):
             'aromatic_scores': aromatic_scores,
             'aromatic_gate': gate,
             'physics_scores': base_outputs['physics_scores'],
-            'state_ids': base_outputs['state_ids'],
+            'state_probs': base_outputs.get('state_probs'),
         }
 
 
