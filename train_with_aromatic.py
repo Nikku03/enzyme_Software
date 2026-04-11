@@ -98,6 +98,16 @@ class CYP3A4DatasetWithAromatic(Dataset):
             if mol is None:
                 raise ValueError(f"Invalid SMILES: {smiles}")
             
+            # Extract aromatic features FIRST (before adding H)
+            # This ensures atom indices match
+            try:
+                aromatic_feats = self.aromatic_extractor.extract(mol)
+            except:
+                aromatic_feats = {}
+            
+            # Now get number of heavy atoms (this is what aromatic_feats uses)
+            n_heavy = mol.GetNumAtoms()
+            
             mol_with_h = Chem.AddHs(mol)
             n_atoms = min(mol_with_h.GetNumAtoms(), self.max_atoms)
             
@@ -118,12 +128,6 @@ class CYP3A4DatasetWithAromatic(Dataset):
                         conf = mol_with_h.GetConformer()
                 except:
                     pass
-            
-            # Extract aromatic features (on mol without H for indexing consistency)
-            try:
-                aromatic_feats = self.aromatic_extractor.extract(mol)
-            except:
-                aromatic_feats = {}
             
             features = torch.zeros(self.max_atoms, 128)
             coords = torch.zeros(self.max_atoms, 3)
@@ -162,9 +166,9 @@ class CYP3A4DatasetWithAromatic(Dataset):
                 features[i, 21] = 1.0 if atom.IsInRingSize(5) else 0.0
                 features[i, 22] = 1.0 if atom.IsInRingSize(6) else 0.0
                 
-                # Add aromatic features if available
-                # Map from mol (no H) to mol_with_h indices
-                if i < mol.GetNumAtoms() and i in aromatic_feats:
+                # Add aromatic features - ONLY for heavy atoms (i < n_heavy)
+                # Heavy atoms keep same indices, H atoms are added at the end
+                if i < n_heavy and i in aromatic_feats:
                     aromatic_features[i, :] = torch.tensor(aromatic_feats[i], dtype=torch.float32)
                     # Also add key aromatic features to main features
                     features[i, 30:35] = aromatic_features[i, :5]  # HOMO, LUMO, dual, gap, HOMO_sq
