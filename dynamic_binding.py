@@ -305,12 +305,12 @@ class DynamicReactivityModel(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
         )
         
-        # Pose-specific features encoder
+        # Pose-specific features encoder - larger for better discrimination
         # Input: [fe_distance, is_accessible, pose_probability]
         self.pose_encoder = nn.Sequential(
-            nn.Linear(3, hidden_dim // 4),
+            nn.Linear(3, hidden_dim // 2),
             nn.SiLU(),
-            nn.Linear(hidden_dim // 4, hidden_dim // 2),
+            nn.Linear(hidden_dim // 2, hidden_dim // 2),
         )
         
         # Combined reactivity predictor
@@ -330,10 +330,12 @@ class DynamicReactivityModel(nn.Module):
             nn.Linear(hidden_dim // 2, 1),
         )
         
-        # Pose weighting network
+        # Pose weighting network - ONLY depends on pose features
+        # This allows poses to differentiate based on their properties
         self.pose_weight_net = nn.Sequential(
-            nn.Linear(hidden_dim + hidden_dim // 2, 1),
-            nn.Softplus(),
+            nn.Linear(hidden_dim // 2, hidden_dim // 4),
+            nn.SiLU(),
+            nn.Linear(hidden_dim // 4, 1),
         )
     
     def forward(
@@ -376,8 +378,9 @@ class DynamicReactivityModel(nn.Module):
             reactivity = self.reactivity_head(combined).squeeze(-1)  # [B, N]
             pose_reactivities.append(reactivity)
             
-            # Pose weight (learned, but initialized from pose_probability)
-            weight = self.pose_weight_net(combined).squeeze(-1)  # [B, N]
+            # Pose weight - ONLY depends on pose features, not atom features
+            # This allows poses to differentiate based on their properties
+            weight = self.pose_weight_net(pose_encoded).squeeze(-1)  # [B, N]
             pose_weights.append(weight)
         
         # Stack and normalize weights
