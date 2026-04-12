@@ -13,6 +13,7 @@ from .priors import ManualEnginePriorEncoder, ResidualFusionHead
 from .relational_proposer import RelationalProposer, RelationalFusionHead, RelationalSelfAttention, PairwiseAggregator
 from .pairwise_reranker import PairwiseReranker
 from .steric_branch import Steric3DBranch, StericFeatureProjector
+from .hamiltonian_dynamics_loss import HamiltonianDynamicsLoss, TrajectoryPredictionLoss, dynamic_train_step
 
 __all__ = [
     "AdvancedLiquidMetabolismPredictor",
@@ -54,4 +55,7 @@ __all__ = [
     "Steric3DBranch",
     "StericFeatureProjector",
     "SelectiveHybridLiquidMetabolismPredictor",
+    "HamiltonianDynamicsLoss",
+    "TrajectoryPredictionLoss",
+    "dynamic_train_step",
 ]
