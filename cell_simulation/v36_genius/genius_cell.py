@@ -950,11 +950,37 @@ class GeniusCellSimulator:
     
     def _predict_regulation(self) -> Dict[Tuple[str, str], float]:
         """
-        Predict regulatory interactions from "structure".
+        Predict regulatory interactions from protein STRUCTURE.
         
-        In full version: ESM-2 embeddings + binding prediction
-        Here: known biology shortcuts
+        This is the key innovation - regulation EMERGES from
+        sequence/structure, not hardcoded rules.
         """
+        try:
+            from esm_binding import discover_regulation, PROTEIN_SEQUENCES, METABOLITE_FEATURES
+            
+            # Use real structure-based prediction
+            regulation = discover_regulation(
+                protein_sequences=PROTEIN_SEQUENCES,
+                metabolites=METABOLITE_FEATURES,
+                verbose=False
+            )
+            
+            # Convert to gene-based format
+            gene_regulation = {}
+            for (prot_id, met_id), effect in regulation.items():
+                if prot_id in self.genes:
+                    gene_regulation[(prot_id, met_id)] = effect
+            
+            print(f"  {len(gene_regulation)} regulatory interactions (from structure)")
+            return gene_regulation
+            
+        except ImportError:
+            # Fallback to basic rules if ESM binding not available
+            print("  Using fallback regulation (ESM binding not available)")
+            return self._predict_regulation_fallback()
+    
+    def _predict_regulation_fallback(self) -> Dict[Tuple[str, str], float]:
+        """Fallback regulation rules when ESM binding unavailable."""
         regulation = {}
         
         # ATP inhibits PFK (classic feedback)
